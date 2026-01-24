@@ -15666,3 +15666,6 @@ Error: %8$@";
 
 "Conversation.Summary.Title" = "AI Summary";
 "Conversation.Summary.Text" = "Tap to see original text";
+
+"Conversation.Summary.Limit.Title" = "AI Summary";
+"Conversation.Summary.Limit.Text" = "Summarize large messages with AI – unlimited with Telegram Premium.";

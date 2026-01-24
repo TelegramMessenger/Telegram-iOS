@@ -1218,7 +1218,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         }
                                         
                                         if !data.includePeers.peers.isEmpty && data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty {
-                                            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.ChatList_ContextMenuShare, textColor: .primary, badge: data.hasSharedLinks ? nil : ContextMenuActionBadge(value: self.presentationData.strings.ChatList_ContextMenuBadgeNew, color: .accent, style: .label), icon: { theme in
+                                            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.ChatList_ContextMenuShare, textColor: .primary, badge: nil, icon: { theme in
                                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                             }, action: { [weak self] c, f in
                                                 c?.dismiss(completion: {
@@ -2545,13 +2545,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         guard let strongSelf, currentValues.contains(.setupPasskey) else {
                             return
                         }
-                        if let navigationController = strongSelf.navigationController as? NavigationController {
-                            let controller = strongSelf.context.sharedContext.makePasskeySetupController(context: strongSelf.context, displaySkip: true, navigationController: navigationController, completion: {
-                                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPasskey.id).startStandalone()
-                            }, dismiss: {
-                                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPasskey.id).startStandalone()
-                            })
-                            navigationController.pushViewController(controller)
+                        
+                        Task { @MainActor [weak strongSelf] in
+                            guard let strongSelf else {
+                                return
+                            }
+                            
+                            let passkeysData = await strongSelf.context.engine.auth.passkeysData().get()
+                            if !passkeysData.isEmpty {
+                                return
+                            }
+                            
+                            if let navigationController = strongSelf.navigationController as? NavigationController {
+                                let controller = strongSelf.context.sharedContext.makePasskeySetupController(context: strongSelf.context, displaySkip: true, navigationController: navigationController, completion: {
+                                    let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPasskey.id).startStandalone()
+                                }, dismiss: {
+                                    let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion.setupPasskey.id).startStandalone()
+                                })
+                                navigationController.pushViewController(controller)
+                            }
                         }
                     })
                     

@@ -15,7 +15,7 @@ final class MutableDeletedMessagesView: MutablePostboxView {
             for operation in operations {
                 switch operation {
                     case let .Remove(indices):
-                        for (index, _) in indices {
+                        for (index, _, _) in indices {
                             testMessageIds.append(index.id)
                         }
                     default:

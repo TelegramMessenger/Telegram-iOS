@@ -2090,6 +2090,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     currentState: previousChatHistoryEntriesForViewState,
                     context: context,
                     location: chatLocation,
+                    subject: subject,
                     view: view,
                     includeUnreadEntry: mode == .bubbles,
                     includeEmptyEntry: mode == .bubbles && tag == nil,
@@ -2323,6 +2324,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 
                 var keyboardButtonsMessage = view.topTaggedMessages.first
+                if keyboardButtonsMessage != nil && keyboardButtonsMessage?.threadId != chatLocation.threadId {
+                    keyboardButtonsMessage = nil
+                }
                 if let keyboardButtonsMessageValue = keyboardButtonsMessage, keyboardButtonsMessageValue.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with({ $0 })) {
                     keyboardButtonsMessage = nil
                 }

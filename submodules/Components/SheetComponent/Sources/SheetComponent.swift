@@ -341,7 +341,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
                 let contentOffset = (self.scrollView.contentOffset.y + self.scrollView.contentInset.top - self.scrollView.contentSize.height) * -1.0
                 let dismissalOffset = self.scrollView.contentSize.height + abs(contentView.frame.minY)
                 let delta = dismissalOffset - contentOffset
-                var targetPosition = self.scrollView.center.y + delta
+                var targetPosition = self.scrollView.center.y + delta + 6.0
                 if self.isCentered {
                     targetPosition = self.frame.height + self.scrollView.frame.height * 0.5
                 }
@@ -350,7 +350,7 @@ public final class SheetComponent<ChildEnvironmentType: Sendable & Equatable>: C
                     completion()
                 })
             } else {
-                var targetOffset: CGFloat = self.scrollView.contentSize.height + abs(contentView.frame.minY)
+                var targetOffset: CGFloat = self.scrollView.contentSize.height + abs(contentView.frame.minY) + 6.0
                 if self.isCentered {
                     targetOffset = self.frame.height + self.scrollView.frame.height * 0.5
                 }

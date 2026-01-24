@@ -35,17 +35,20 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
     
     let context: AccountContext
     let auctionContext: GiftAuctionContext
+    let peerId: EnginePeer.Id?
     let animateOut: ActionSlot<Action<()>>
     let getController: () -> ViewController?
     
     init(
         context: AccountContext,
         auctionContext: GiftAuctionContext,
+        peerId: EnginePeer.Id?,
         animateOut: ActionSlot<Action<()>>,
         getController: @escaping () -> ViewController?
     ) {
         self.context = context
         self.auctionContext = auctionContext
+        self.peerId = peerId
         self.animateOut = animateOut
         self.getController = getController
     }
@@ -62,6 +65,7 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
         
         private let context: AccountContext
         private let auctionContext: GiftAuctionContext
+        private let peerId: EnginePeer.Id?
         private let animateOut: ActionSlot<Action<()>>
         private let getController: () -> ViewController?
         
@@ -93,11 +97,13 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
         init(
             context: AccountContext,
             auctionContext: GiftAuctionContext,
+            peerId: EnginePeer.Id?,
             animateOut: ActionSlot<Action<()>>,
             getController: @escaping () -> ViewController?
         ) {
             self.context = context
             self.auctionContext = auctionContext
+            self.peerId = peerId
             self.animateOut = animateOut
             self.getController = getController
             
@@ -399,7 +405,7 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
             }
             let storeController = self.context.sharedContext.makeGiftStoreController(
                 context: self.context,
-                peerId: self.context.account.peerId,
+                peerId: self.peerId ?? self.context.account.peerId,
                 gift: gift
             )
             controller.push(storeController)
@@ -473,7 +479,7 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, auctionContext: self.auctionContext, animateOut: self.animateOut, getController: self.getController)
+        return State(context: self.context, auctionContext: self.auctionContext, peerId: self.peerId, animateOut: self.animateOut, getController: self.getController)
     }
     
     static var body: Body {
@@ -1277,13 +1283,16 @@ final class GiftAuctionViewSheetComponent: CombinedComponent {
     
     let context: AccountContext
     let auctionContext: GiftAuctionContext
+    let peerId: EnginePeer.Id?
     
     init(
         context: AccountContext,
-        auctionContext: GiftAuctionContext
+        auctionContext: GiftAuctionContext,
+        peerId: EnginePeer.Id?
     ) {
         self.context = context
         self.auctionContext = auctionContext
+        self.peerId = peerId
     }
     
     static func ==(lhs: GiftAuctionViewSheetComponent, rhs: GiftAuctionViewSheetComponent) -> Bool {
@@ -1308,6 +1317,7 @@ final class GiftAuctionViewSheetComponent: CombinedComponent {
                     content: AnyComponent<EnvironmentType>(GiftAuctionViewSheetContent(
                         context: context.component.context,
                         auctionContext: context.component.auctionContext,
+                        peerId: context.component.peerId,
                         animateOut: animateOut,
                         getController: controller
                     )),
@@ -1392,6 +1402,7 @@ public final class GiftAuctionViewScreen: ViewControllerComponentContainer {
     public init(
         context: AccountContext,
         auctionContext: GiftAuctionContext,
+        peerId: EnginePeer.Id?,
         completion: @escaping (Signal<[GiftAuctionAcquiredGift], NoError>, [StarGift.UniqueGift.Attribute]?) -> Void
     ) {
         self.completion = completion
@@ -1400,7 +1411,8 @@ public final class GiftAuctionViewScreen: ViewControllerComponentContainer {
             context: context,
             component: GiftAuctionViewSheetComponent(
                 context: context,
-                auctionContext: auctionContext
+                auctionContext: auctionContext,
+                peerId: peerId
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,

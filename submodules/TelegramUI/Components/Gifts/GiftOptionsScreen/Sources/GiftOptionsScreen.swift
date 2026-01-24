@@ -369,7 +369,7 @@ final class GiftOptionsScreenComponent: Component {
                         return
                     }
                     
-                    if gift.flags.contains(.isAuction) {
+                    if gift.flags.contains(.isAuction) && !((gift.availability?.resale ?? 0) > 0 && component.peerId != component.context.account.peerId) {
                         guard let giftAuctionsManager = component.context.giftAuctionsManager else {
                             return
                         }
@@ -419,6 +419,7 @@ final class GiftOptionsScreenComponent: Component {
                                         let giftController = component.context.sharedContext.makeGiftAuctionViewScreen(
                                             context: component.context,
                                             auctionContext: auctionContext,
+                                            peerId: component.peerId,
                                             completion: { [weak mainController] acquiredGifts, upgradeAttributes in
                                                 if component.peerId == context.account.peerId, let upgradeAttributes, let navigationController = mainController?.navigationController as? NavigationController {
                                                     let controller = context.sharedContext.makeGiftAuctionWearPreviewScreen(context: context, auctionContext: auctionContext, acquiredGifts: acquiredGifts, attributes: upgradeAttributes, completion: {

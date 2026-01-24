@@ -345,6 +345,7 @@ public final class TabBarComponent: Component {
         private let liquidLensView: LiquidLensView
         private let contextGestureContainerView: ContextControllerSourceView
         
+        private var measureItemViews: [AnyHashable: ComponentView<Empty>] = [:]
         private var itemViews: [AnyHashable: ComponentView<Empty>] = [:]
         private var selectedItemViews: [AnyHashable: ComponentView<Empty>] = [:]
 
@@ -356,7 +357,7 @@ public final class TabBarComponent: Component {
         private var component: TabBarComponent?
         private weak var state: EmptyComponentState?
 
-        private var selectionGestureState: (startX: CGFloat, currentX: CGFloat, itemId: AnyHashable)?
+        private var selectionGestureState: (startX: CGFloat, currentX: CGFloat, itemWidth: CGFloat, itemId: AnyHashable)?
         private var overrideSelectedItemId: AnyHashable?
 
         public var currentSearchNode: ASDisplayNode? {
@@ -473,7 +474,7 @@ public final class TabBarComponent: Component {
                 if let search = component.search, search.isActive {
                 } else if let itemId = self.item(at: recognizer.location(in: self)), let itemView = self.itemViews[itemId]?.view {
                     let startX = itemView.frame.minX - 4.0
-                    self.selectionGestureState = (startX, startX, itemId)
+                    self.selectionGestureState = (startX, startX, itemView.bounds.width, itemId)
                     self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
                 }
             case .changed:
@@ -569,16 +570,72 @@ public final class TabBarComponent: Component {
             if component.search != nil {
                 availableItemsWidth -= barHeight + 8.0
             }
-
-            let itemSize = CGSize(width: floor(availableItemsWidth / CGFloat(component.items.count)), height: 56.0)
-            let contentWidth: CGFloat = innerInset * 2.0 + CGFloat(component.items.count) * itemSize.width
-            let tabsSize = CGSize(width: min(availableSize.width, contentWidth), height: itemSize.height + innerInset * 2.0)
-
+            
+            var unboundItemWidths: [CGFloat] = []
+            
             var validIds: [AnyHashable] = []
-            var selectionFrame: CGRect?
+            var unboundItemWidthSum: CGFloat = 0.0
             for index in 0 ..< component.items.count {
                 let item = component.items[index]
                 validIds.append(item.id)
+                
+                let measureItemView: ComponentView<Empty>
+                if let current = self.measureItemViews[item.id] {
+                    measureItemView = current
+                } else {
+                    measureItemView = ComponentView()
+                    self.measureItemViews[item.id] = measureItemView
+                }
+                
+                let itemSize = measureItemView.update(
+                    transition: .immediate,
+                    component: AnyComponent(ItemComponent(
+                        item: item,
+                        theme: component.theme,
+                        isCompact: false,
+                        isSelected: false,
+                        isUnconstrained: true
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 200.0, height: 56.0)
+                )
+                
+                unboundItemWidths.append(itemSize.width)
+                unboundItemWidthSum += itemSize.width
+            }
+            
+            let itemWidths: [CGFloat]
+            let totalItemsWidth: CGFloat
+
+            let equalWidth = floorToScreenPixels(availableItemsWidth / CGFloat(component.items.count))
+            if unboundItemWidths.allSatisfy({ $0 <= equalWidth }) {
+                // All items fit in equal width — use equal widths for optical alignment
+                itemWidths = Array(repeating: equalWidth, count: component.items.count)
+                totalItemsWidth = equalWidth * CGFloat(component.items.count)
+            } else {
+                // Some items need more space — use weighted fit
+                let itemWeightNorm: CGFloat = availableItemsWidth / unboundItemWidthSum
+                var widths: [CGFloat] = []
+                var total: CGFloat = 0.0
+                for index in 0 ..< component.items.count {
+                    let itemWidth = floorToScreenPixels(unboundItemWidths[index] * itemWeightNorm)
+                    widths.append(itemWidth)
+                    total += itemWidth
+                }
+                itemWidths = widths
+                totalItemsWidth = total
+            }
+
+            let itemHeight: CGFloat = 56.0
+            let contentWidth: CGFloat = innerInset * 2.0 + totalItemsWidth
+            let tabsSize = CGSize(width: min(availableSize.width, contentWidth), height: itemHeight + innerInset * 2.0)
+
+            var selectionFrame: CGRect?
+            var nextItemX: CGFloat = innerInset
+            for index in 0 ..< component.items.count {
+                let item = component.items[index]
+                
+                let itemSize = CGSize(width: itemWidths[index], height: itemHeight)
                 
                 let itemView: ComponentView<Empty>
                 var itemTransition = transition
@@ -612,7 +669,8 @@ public final class TabBarComponent: Component {
                         item: item,
                         theme: component.theme,
                         isCompact: component.search?.isActive == true,
-                        isSelected: false
+                        isSelected: false,
+                        isUnconstrained: false
                     )),
                     environment: {},
                     containerSize: itemSize
@@ -623,13 +681,15 @@ public final class TabBarComponent: Component {
                         item: item,
                         theme: component.theme,
                         isCompact: component.search?.isActive == true,
-                        isSelected: true
+                        isSelected: true,
+                        isUnconstrained: false
                     )),
                     environment: {},
                     containerSize: itemSize
                 )
                 
-                var itemFrame = CGRect(origin: CGPoint(x: innerInset + CGFloat(index) * itemSize.width, y: floor((tabsSize.height - itemSize.height) * 0.5)), size: itemSize)
+                var itemFrame = CGRect(origin: CGPoint(x: nextItemX, y: floor((tabsSize.height - itemSize.height) * 0.5)), size: itemSize)
+                nextItemX += itemSize.width
                 if isItemSelected {
                     selectionFrame = itemFrame
                 }
@@ -688,6 +748,7 @@ public final class TabBarComponent: Component {
             for id in removeIds {
                 self.itemViews.removeValue(forKey: id)
                 self.selectedItemViews.removeValue(forKey: id)
+                self.measureItemViews.removeValue(forKey: id)
             }
             
             var tabsFrame = CGRect(origin: CGPoint(), size: tabsSize)
@@ -702,11 +763,11 @@ public final class TabBarComponent: Component {
             
             var lensSelection: (x: CGFloat, width: CGFloat)
             if let selectionGestureState = self.selectionGestureState {
-                lensSelection = (selectionGestureState.currentX, itemSize.width + innerInset * 2.0)
+                lensSelection = (selectionGestureState.currentX, selectionGestureState.itemWidth + innerInset * 2.0)
             } else if let selectionFrame {
-                lensSelection = (selectionFrame.minX - innerInset, itemSize.width + innerInset * 2.0)
+                lensSelection = (selectionFrame.minX - innerInset, selectionFrame.width + innerInset * 2.0)
             } else {
-                lensSelection = (0.0, itemSize.width)
+                lensSelection = (0.0, 56.0)
             }
 
             var lensSize: CGSize = tabsSize
@@ -795,12 +856,14 @@ private final class ItemComponent: Component {
     let theme: PresentationTheme
     let isCompact: Bool
     let isSelected: Bool
+    let isUnconstrained: Bool
     
-    init(item: TabBarComponent.Item, theme: PresentationTheme, isCompact: Bool, isSelected: Bool) {
+    init(item: TabBarComponent.Item, theme: PresentationTheme, isCompact: Bool, isSelected: Bool, isUnconstrained: Bool) {
         self.item = item
         self.theme = theme
         self.isCompact = isCompact
         self.isSelected = isSelected
+        self.isUnconstrained = isUnconstrained
     }
     
     static func ==(lhs: ItemComponent, rhs: ItemComponent) -> Bool {
@@ -814,6 +877,9 @@ private final class ItemComponent: Component {
             return false
         }
         if lhs.isSelected != rhs.isSelected {
+            return false
+        }
+        if lhs.isUnconstrained != rhs.isUnconstrained {
             return false
         }
         return true
@@ -1042,7 +1108,11 @@ private final class ItemComponent: Component {
             transition.setFrame(view: self.contextContainerView.contentView, frame: CGRect(origin: CGPoint(), size: availableSize))
             self.contextContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
             
-            return availableSize
+            if component.isUnconstrained {
+                return CGSize(width: titleSize.width + 10.0 * 2.0, height: availableSize.height)
+            } else {
+                return availableSize
+            }
         }
     }
     

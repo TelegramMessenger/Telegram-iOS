@@ -788,6 +788,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let topInset = navigationBarHeight
         
         var filtersInsets = UIEdgeInsets(top: 0.0, left: 12.0, bottom: layout.insets(options: [.input]).bottom, right: 12.0)
+        if filtersInsets.bottom == 84.0 {
+            filtersInsets.bottom -= 6.0
+        }
         if layout.insets(options: [.input]).bottom <= 30.0 {
             filtersInsets = ContainerViewLayout.concentricInsets(bottomInset: layout.insets(options: [.input]).bottom, innerDiameter: 40.0, sideInset: 32.0)
         } else if layout.insets(options: [.input]).bottom <= 84.0 {

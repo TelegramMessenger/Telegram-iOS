@@ -33,23 +33,15 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePlainData.securePlainEmail(email: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SecurePlainData.securePlainEmail(email: _1!)
         }
         public static func parse_securePlainPhone(_ reader: BufferReader) -> SecurePlainData? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePlainData.securePlainPhone(phone: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SecurePlainData.securePlainPhone(phone: _1!)
         }
     
     }
@@ -99,12 +91,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SecureRequiredType.secureRequiredType(flags: _1!, type: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.SecureRequiredType.secureRequiredType(flags: _1!, type: _2!)
         }
         public static func parse_secureRequiredTypeOneOf(_ reader: BufferReader) -> SecureRequiredType? {
             var _1: [Api.SecureRequiredType]?
@@ -112,12 +101,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureRequiredType.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecureRequiredType.secureRequiredTypeOneOf(types: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SecureRequiredType.secureRequiredTypeOneOf(types: _1!)
         }
     
     }
@@ -158,12 +143,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureSecretSettings.secureSecretSettings(secureAlgo: _1!, secureSecret: _2!, secureSecretId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureSecretSettings.secureSecretSettings(secureAlgo: _1!, secureSecret: _2!, secureSecretId: _3!)
         }
     
     }
@@ -254,12 +237,17 @@ public extension Api {
             let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 5) == 0) || _9 != nil
             let _c10 = _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.SecureValue.secureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, translation: _7, files: _8, plainData: _9, hash: _10!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            return Api.SecureValue.secureValue(flags: _1!, type: _2!, data: _3, frontSide: _4, reverseSide: _5, selfie: _6, translation: _7, files: _8, plainData: _9, hash: _10!)
         }
     
     }
@@ -397,12 +385,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueError(type: _1!, hash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueError(type: _1!, hash: _2!, text: _3!)
         }
         public static func parse_secureValueErrorData(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -419,12 +405,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SecureValueError.secureValueErrorData(type: _1!, dataHash: _2!, field: _3!, text: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.SecureValueError.secureValueErrorData(type: _1!, dataHash: _2!, field: _3!, text: _4!)
         }
         public static func parse_secureValueErrorFile(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -438,12 +423,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorFile(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueErrorFile(type: _1!, fileHash: _2!, text: _3!)
         }
         public static func parse_secureValueErrorFiles(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -459,12 +442,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorFiles(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueErrorFiles(type: _1!, fileHash: _2!, text: _3!)
         }
         public static func parse_secureValueErrorFrontSide(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -478,12 +459,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorFrontSide(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueErrorFrontSide(type: _1!, fileHash: _2!, text: _3!)
         }
         public static func parse_secureValueErrorReverseSide(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -497,12 +476,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorReverseSide(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueErrorReverseSide(type: _1!, fileHash: _2!, text: _3!)
         }
         public static func parse_secureValueErrorSelfie(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -516,12 +493,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorSelfie(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueErrorSelfie(type: _1!, fileHash: _2!, text: _3!)
         }
         public static func parse_secureValueErrorTranslationFile(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -535,12 +510,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorTranslationFile(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueErrorTranslationFile(type: _1!, fileHash: _2!, text: _3!)
         }
         public static func parse_secureValueErrorTranslationFiles(_ reader: BufferReader) -> SecureValueError? {
             var _1: Api.SecureValueType?
@@ -556,12 +529,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureValueError.secureValueErrorTranslationFiles(type: _1!, fileHash: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureValueError.secureValueErrorTranslationFiles(type: _1!, fileHash: _2!, text: _3!)
         }
     
     }
@@ -598,12 +569,9 @@ public extension Api {
             _2 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SecureValueHash.secureValueHash(type: _1!, hash: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.SecureValueHash.secureValueHash(type: _1!, hash: _2!)
         }
     
     }
@@ -812,12 +780,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SendAsPeer.sendAsPeer(flags: _1!, peer: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.SendAsPeer.sendAsPeer(flags: _1!, peer: _2!)
         }
     
     }
@@ -1030,23 +995,17 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SendMessageAction.sendMessageEmojiInteraction(emoticon: _1!, msgId: _2!, interaction: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SendMessageAction.sendMessageEmojiInteraction(emoticon: _1!, msgId: _2!, interaction: _3!)
         }
         public static func parse_sendMessageEmojiInteractionSeen(_ reader: BufferReader) -> SendMessageAction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageEmojiInteractionSeen(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SendMessageAction.sendMessageEmojiInteractionSeen(emoticon: _1!)
         }
         public static func parse_sendMessageGamePlayAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageGamePlayAction
@@ -1058,12 +1017,8 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageHistoryImportAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SendMessageAction.sendMessageHistoryImportAction(progress: _1!)
         }
         public static func parse_sendMessageRecordAudioAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageRecordAudioAction
@@ -1083,12 +1038,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SendMessageAction.sendMessageTextDraftAction(randomId: _1!, text: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.SendMessageAction.sendMessageTextDraftAction(randomId: _1!, text: _2!)
         }
         public static func parse_sendMessageTypingAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageTypingAction
@@ -1097,56 +1049,36 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadAudioAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SendMessageAction.sendMessageUploadAudioAction(progress: _1!)
         }
         public static func parse_sendMessageUploadDocumentAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadDocumentAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SendMessageAction.sendMessageUploadDocumentAction(progress: _1!)
         }
         public static func parse_sendMessageUploadPhotoAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadPhotoAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SendMessageAction.sendMessageUploadPhotoAction(progress: _1!)
         }
         public static func parse_sendMessageUploadRoundAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadRoundAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SendMessageAction.sendMessageUploadRoundAction(progress: _1!)
         }
         public static func parse_sendMessageUploadVideoAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadVideoAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SendMessageAction.sendMessageUploadVideoAction(progress: _1!)
         }
         public static func parse_speakingInGroupCallAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.speakingInGroupCallAction

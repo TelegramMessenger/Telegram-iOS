@@ -83,6 +83,7 @@ import TelegramAnimatedStickerNode
 import LottieMetal
 import AvatarNode
 import ChatMessageSuggestedPostInfoNode
+import PremiumAlertController
 
 private struct BubbleItemAttributes {
     var index: Int?
@@ -6994,7 +6995,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             if requestSummary {
                 let _ = (item.context.engine.messages.summarizeMessage(messageId: item.message.id, translateToLang: translateToLanguage)
-                |> deliverOnMainQueue).start()
+                |> deliverOnMainQueue).start(error: { error in
+                    if case .limitExceededPremium = error, let parentController = item.controllerInteraction.navigationController()?.topViewController as? ViewController {
+                        item.controllerInteraction.summarizedMessageIds.remove(item.message.id)
+                        let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+                        let controller = premiumAlertController(
+                            context: item.context,
+                            parentController: parentController,
+                            title: item.presentationData.strings.Conversation_Summary_Limit_Title,
+                            text: item.presentationData.strings.Conversation_Summary_Limit_Text
+                        )
+                        parentController.present(controller, in: .window(.root))
+                    }
+                })
             }
         }
     }

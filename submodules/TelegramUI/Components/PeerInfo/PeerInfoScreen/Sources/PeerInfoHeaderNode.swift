@@ -153,6 +153,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let usernameNode: MultiScaleTextNode
     var actionButtonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderActionButtonNode] = [:]
     var buttonNodes: [PeerInfoHeaderButtonKey: PeerInfoHeaderButtonNode] = [:]
+    let headerEdgeEffectContainer: UIView
     let headerEdgeEffectView: EdgeEffectView
     var navigationTitle: String?
     let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
@@ -293,6 +294,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.headerEdgeEffectView = EdgeEffectView()
         self.headerEdgeEffectView.isUserInteractionEnabled = false
         
+        self.headerEdgeEffectContainer = UIView()
+        self.headerEdgeEffectContainer.addSubview(self.headerEdgeEffectView)
+        
         self.editingEdgeEffectView = EdgeEffectView()
         self.editingEdgeEffectView.isUserInteractionEnabled = false
         
@@ -305,7 +309,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self?.requestUpdateLayout?(false)
         }
         
-        self.view.addSubview(self.headerEdgeEffectView)
         self.view.addSubview(self.backgroundBannerView)
         self.titleNodeContainer.addSubnode(self.titleNode)
         self.subtitleNodeContainer.addSubnode(self.subtitleNode)
@@ -2542,8 +2545,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
-        let edgeEffectHeight: CGFloat = 40.0
-        let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: backgroundFrame.width, height: navigationHeight + 18.0))
+        let edgeEffectHeight: CGFloat = 60.0
+        var edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: -50.0), size: CGSize(width: backgroundFrame.width, height: navigationHeight + 18.0 + 50.0))
+        edgeEffectFrame.origin.y += floorToScreenPixels(realAreaExpansionFraction * 50.0)
         
         if additive {
             transition.updateFrameAdditive(layer: self.headerEdgeEffectView.layer, frame: edgeEffectFrame)

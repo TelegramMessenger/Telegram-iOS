@@ -604,7 +604,7 @@ def remote_build_tart(macos_version, bazel_cache_host, configuration, build_inpu
             else:
                 guest_build_sh += '--cacheHost="$CACHE_HOST" \\'
         guest_build_sh += 'build \\'
-        guest_build_sh += '--lock \\'
+        #guest_build_sh += '--lock \\'
         guest_build_sh += '--buildNumber={} \\'.format(build_number)
         guest_build_sh += '--configuration={} \\'.format(configuration)
         guest_build_sh += '--configurationPath=$HOME/telegram-build-input/configuration.json \\'

@@ -1258,7 +1258,14 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             if let current = self.shimmeringNode {
                 shimmeringNode = current
             } else {
-                shimmeringNode = ShimmeringLinkNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.secondaryTextColor.withAlphaComponent(0.1) : item.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor.withAlphaComponent(0.1))
+                let color: UIColor
+                let isIncoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                if item.presentationData.theme.theme.overallDarkAppearance {
+                    color = isIncoming ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor.withAlphaComponent(0.1) : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor.withAlphaComponent(0.1)
+                } else {
+                    color = isIncoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor.withAlphaComponent(0.1) : item.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor.withAlphaComponent(0.1)
+                }
+                shimmeringNode = ShimmeringLinkNode(color: color)
                 shimmeringNode.updateRects(rects)
                 shimmeringNode.frame = self.textNode.textNode.frame
                 shimmeringNode.updateLayout(self.textNode.textNode.frame.size)

@@ -254,6 +254,7 @@ public final class ChatTitleComponent: Component {
         private let contentContainer: UIView
         private let title = ComponentView<Empty>()
         private var subtitleNode: ChatTitleActivityNode?
+        private var activityMeasureSubtitleNode: ChatTitleActivityNode?
         private var leftIcon: ComponentView<Empty>?
         private var rightIcon: ComponentView<Empty>?
         private var credibilityIcon: ComponentView<Empty>?
@@ -1003,9 +1004,25 @@ public final class ChatTitleComponent: Component {
             let _ = subtitleNode.transitionToState(state, animation: transition.animation.isImmediate ? .none : .slide)
             let subtitleSize = subtitleNode.updateLayout(CGSize(width: availableSize.width - containerSideInset * 2.0, height: 100.0), alignment: .center)
             
+            var minSubtitleWidth: CGFloat?
+            let activityMeasureSubtitleNode: ChatTitleActivityNode
+            if let current = self.activityMeasureSubtitleNode {
+                activityMeasureSubtitleNode = current
+            } else {
+                activityMeasureSubtitleNode = ChatTitleActivityNode()
+                self.activityMeasureSubtitleNode = activityMeasureSubtitleNode
+            }
+            let measureTypingTextString = NSAttributedString(string: component.strings.Conversation_typing, font: subtitleFont, textColor: .black)
+            let _ = activityMeasureSubtitleNode.transitionToState(.typingText(measureTypingTextString, .black), animation: .none)
+            let activityMeasureSubtitleSize = activityMeasureSubtitleNode.updateLayout(CGSize(width: availableSize.width - containerSideInset * 2.0, height: 100.0), alignment: .center)
+            minSubtitleWidth = activityMeasureSubtitleSize.width
+            
             var contentSize = titleSize
             contentSize.width += titleLeftIconsWidth + titleRightIconsWidth
             contentSize.width = max(contentSize.width, subtitleSize.width)
+            if let minSubtitleWidth {
+                contentSize.width = max(contentSize.width, minSubtitleWidth)
+            }
             contentSize.height += subtitleSize.height
             
             let containerSize = CGSize(width: contentSize.width + containerSideInset * 2.0, height: 44.0)

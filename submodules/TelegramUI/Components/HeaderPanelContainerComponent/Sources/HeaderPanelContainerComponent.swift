@@ -239,12 +239,16 @@ public final class HeaderPanelContainerComponent: Component {
                 self.panelViews.removeValue(forKey: key)
             }
             
-            transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: size))
-            self.backgroundContainer.update(size: size, isDark: component.theme.overallDarkAppearance, transition: transition)
+            let backgroundSize = CGSize(width: size.width, height: max(40.0, size.height))
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: size.width - sideInset * 2.0, height: size.height))
+            transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: backgroundSize))
+            self.backgroundContainer.update(size: backgroundSize, isDark: component.theme.overallDarkAppearance, transition: transition)
+            
+            let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: size.width - sideInset * 2.0, height: backgroundSize.height))
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, cornerRadius: 20.0, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: UIColor(white: component.theme.overallDarkAppearance ? 0.0 : 1.0, alpha: 0.6)), isInteractive: true, transition: transition)
+            
+            transition.setAlpha(view: self.backgroundContainer, alpha: (component.tabs != nil || !component.panels.isEmpty) ? 1.0 : 0.0)
             
             transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
             self.contentContainer.layer.cornerRadius = 20.0

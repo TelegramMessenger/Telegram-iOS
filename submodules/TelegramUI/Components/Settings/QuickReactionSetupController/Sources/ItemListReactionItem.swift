@@ -372,7 +372,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                     
                     if let animationContent = animationContent {
                         let iconBoundingSize = CGSize(width: 28.0, height: 28.0)
-                        let iconOffsetX: CGFloat = 0.0
+                        let iconOffsetX: CGFloat = -6.0
                         let iconSize = strongSelf.iconView.update(
                             transition: .immediate,
                             component: AnyComponent(EmojiStatusComponent(

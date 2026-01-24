@@ -59,45 +59,50 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
     
     public var stableId: UInt64 {
         switch self {
-            case let .MessageEntry(message, _, _, _, _, attributes):
-                let type: UInt64
-                switch attributes.contentTypeHint {
-                    case .generic:
-                        type = 2
-                    case .largeEmoji:
-                        type = 3
-                    case .animatedEmoji:
-                        type = 4
-                }
-                return UInt64(message.stableId) | ((type << 40))
-            case let .MessageGroupEntry(groupInfo, _, _):
-                return UInt64(bitPattern: groupInfo) | ((UInt64(2) << 40))
-            case .UnreadEntry:
-                return UInt64(4) << 40
-            case .ReplyCountEntry:
-                return UInt64(5) << 40
-            case .ChatInfoEntry:
+        case let .MessageEntry(message, _, _, _, _, attributes):
+            let type: UInt64
+            switch attributes.contentTypeHint {
+            case .generic:
+                type = 2
+            case .largeEmoji:
+                type = 3
+            case .animatedEmoji:
+                type = 4
+            }
+            return UInt64(message.stableId) | ((type << 40))
+        case let .MessageGroupEntry(groupInfo, _, _):
+            return UInt64(bitPattern: groupInfo) | ((UInt64(2) << 40))
+        case .UnreadEntry:
+            return UInt64(4) << 40
+        case .ReplyCountEntry:
+            return UInt64(5) << 40
+        case let .ChatInfoEntry(infoData, _):
+            switch infoData {
+            case .newThreadInfo:
+                return UInt64(7) << 40
+            default:
                 return UInt64(6) << 40
+            }   
         }
     }
     
     public var index: MessageIndex {
         switch self {
-            case let .MessageEntry(message, _, _, _, _, _):
-                return message.index
-            case let .MessageGroupEntry(_, messages, _):
-                return messages[messages.count - 1].0.index
-            case let .UnreadEntry(index, _):
-                return index
-            case let .ReplyCountEntry(index, _, _, _):
-                return index
-            case let .ChatInfoEntry(infoData, _):
-                switch infoData {
-                case .newThreadInfo:
-                    return MessageIndex.absoluteUpperBound()
-                default:
-                    return MessageIndex.absoluteLowerBound()
-                }
+        case let .MessageEntry(message, _, _, _, _, _):
+            return message.index
+        case let .MessageGroupEntry(_, messages, _):
+            return messages[messages.count - 1].0.index
+        case let .UnreadEntry(index, _):
+            return index
+        case let .ReplyCountEntry(index, _, _, _):
+            return index
+        case let .ChatInfoEntry(infoData, _):
+            switch infoData {
+            case .newThreadInfo:
+                return MessageIndex.absoluteUpperBound()
+            default:
+                return MessageIndex.absoluteLowerBound()
+            }
         }
     }
     

@@ -30,12 +30,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.KeyboardButton.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.KeyboardButtonRow.keyboardButtonRow(buttons: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.KeyboardButtonRow.keyboardButtonRow(buttons: _1!)
         }
     
     }
@@ -70,12 +66,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.LabeledPrice.labeledPrice(label: _1!, amount: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.LabeledPrice.labeledPrice(label: _1!, amount: _2!)
         }
     
     }
@@ -124,12 +117,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.LangPackDifference.langPackDifference(langCode: _1!, fromVersion: _2!, version: _3!, strings: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.LangPackDifference.langPackDifference(langCode: _1!, fromVersion: _2!, version: _3!, strings: _4!)
         }
     
     }
@@ -192,12 +184,16 @@ public extension Api {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.LangPackLanguage.langPackLanguage(flags: _1!, name: _2!, nativeName: _3!, langCode: _4!, baseLangCode: _5, pluralCode: _6!, stringsCount: _7!, translatedCount: _8!, translationsUrl: _9!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.LangPackLanguage.langPackLanguage(flags: _1!, name: _2!, nativeName: _3!, langCode: _4!, baseLangCode: _5, pluralCode: _6!, stringsCount: _7!, translatedCount: _8!, translationsUrl: _9!)
         }
     
     }
@@ -257,23 +253,16 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.LangPackString.langPackString(key: _1!, value: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.LangPackString.langPackString(key: _1!, value: _2!)
         }
         public static func parse_langPackStringDeleted(_ reader: BufferReader) -> LangPackString? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.LangPackString.langPackStringDeleted(key: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.LangPackString.langPackStringDeleted(key: _1!)
         }
         public static func parse_langPackStringPluralized(_ reader: BufferReader) -> LangPackString? {
             var _1: Int32?
@@ -300,12 +289,15 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.LangPackString.langPackStringPluralized(flags: _1!, key: _2!, zeroValue: _3, oneValue: _4, twoValue: _5, fewValue: _6, manyValue: _7, otherValue: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.LangPackString.langPackStringPluralized(flags: _1!, key: _2!, zeroValue: _3, oneValue: _4, twoValue: _5, fewValue: _6, manyValue: _7, otherValue: _8!)
         }
     
     }
@@ -348,12 +340,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MaskCoords.maskCoords(n: _1!, x: _2!, y: _3!, zoom: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MaskCoords.maskCoords(n: _1!, x: _2!, y: _3!, zoom: _4!)
         }
     
     }
@@ -488,12 +479,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MediaArea.inputMediaAreaChannelPost(coordinates: _1!, channel: _2!, msgId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MediaArea.inputMediaAreaChannelPost(coordinates: _1!, channel: _2!, msgId: _3!)
         }
         public static func parse_inputMediaAreaVenue(_ reader: BufferReader) -> MediaArea? {
             var _1: Api.MediaAreaCoordinates?
@@ -507,12 +496,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MediaArea.inputMediaAreaVenue(coordinates: _1!, queryId: _2!, resultId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MediaArea.inputMediaAreaVenue(coordinates: _1!, queryId: _2!, resultId: _3!)
         }
         public static func parse_mediaAreaChannelPost(_ reader: BufferReader) -> MediaArea? {
             var _1: Api.MediaAreaCoordinates?
@@ -526,12 +513,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MediaArea.mediaAreaChannelPost(coordinates: _1!, channelId: _2!, msgId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MediaArea.mediaAreaChannelPost(coordinates: _1!, channelId: _2!, msgId: _3!)
         }
         public static func parse_mediaAreaGeoPoint(_ reader: BufferReader) -> MediaArea? {
             var _1: Int32?
@@ -552,12 +537,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MediaArea.mediaAreaGeoPoint(flags: _1!, coordinates: _2!, geo: _3!, address: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MediaArea.mediaAreaGeoPoint(flags: _1!, coordinates: _2!, geo: _3!, address: _4)
         }
         public static func parse_mediaAreaStarGift(_ reader: BufferReader) -> MediaArea? {
             var _1: Api.MediaAreaCoordinates?
@@ -568,12 +552,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MediaArea.mediaAreaStarGift(coordinates: _1!, slug: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MediaArea.mediaAreaStarGift(coordinates: _1!, slug: _2!)
         }
         public static func parse_mediaAreaSuggestedReaction(_ reader: BufferReader) -> MediaArea? {
             var _1: Int32?
@@ -589,12 +570,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MediaArea.mediaAreaSuggestedReaction(flags: _1!, coordinates: _2!, reaction: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MediaArea.mediaAreaSuggestedReaction(flags: _1!, coordinates: _2!, reaction: _3!)
         }
         public static func parse_mediaAreaUrl(_ reader: BufferReader) -> MediaArea? {
             var _1: Api.MediaAreaCoordinates?
@@ -605,12 +584,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MediaArea.mediaAreaUrl(coordinates: _1!, url: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MediaArea.mediaAreaUrl(coordinates: _1!, url: _2!)
         }
         public static func parse_mediaAreaVenue(_ reader: BufferReader) -> MediaArea? {
             var _1: Api.MediaAreaCoordinates?
@@ -638,12 +614,14 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.MediaArea.mediaAreaVenue(coordinates: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.MediaArea.mediaAreaVenue(coordinates: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!)
         }
         public static func parse_mediaAreaWeather(_ reader: BufferReader) -> MediaArea? {
             var _1: Api.MediaAreaCoordinates?
@@ -660,12 +638,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MediaArea.mediaAreaWeather(coordinates: _1!, emoji: _2!, temperatureC: _3!, color: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MediaArea.mediaAreaWeather(coordinates: _1!, emoji: _2!, temperatureC: _3!, color: _4!)
         }
     
     }
@@ -720,12 +697,14 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.MediaAreaCoordinates.mediaAreaCoordinates(flags: _1!, x: _2!, y: _3!, w: _4!, h: _5!, rotation: _6!, radius: _7)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.MediaAreaCoordinates.mediaAreaCoordinates(flags: _1!, x: _2!, y: _3!, w: _4!, h: _5!, rotation: _6!, radius: _7)
         }
     
     }
@@ -947,12 +926,40 @@ public extension Api {
             let _c31 = (Int(_2!) & Int(1 << 7) == 0) || _31 != nil
             let _c32 = (Int(_2!) & Int(1 << 10) == 0) || _32 != nil
             let _c33 = (Int(_2!) & Int(1 << 11) == 0) || _33 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 {
-                return Api.Message.message(flags: _1!, flags2: _2!, id: _3!, fromId: _4, fromBoostsApplied: _5, peerId: _6!, savedPeerId: _7, fwdFrom: _8, viaBotId: _9, viaBusinessBotId: _10, replyTo: _11, date: _12!, message: _13!, media: _14, replyMarkup: _15, entities: _16, views: _17, forwards: _18, replies: _19, editDate: _20, postAuthor: _21, groupedId: _22, reactions: _23, restrictionReason: _24, ttlPeriod: _25, quickReplyShortcutId: _26, effect: _27, factcheck: _28, reportDeliveryUntilDate: _29, paidMessageStars: _30, suggestedPost: _31, scheduleRepeatPeriod: _32, summaryFromLanguage: _33)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            if !_c14 { return nil }
+            if !_c15 { return nil }
+            if !_c16 { return nil }
+            if !_c17 { return nil }
+            if !_c18 { return nil }
+            if !_c19 { return nil }
+            if !_c20 { return nil }
+            if !_c21 { return nil }
+            if !_c22 { return nil }
+            if !_c23 { return nil }
+            if !_c24 { return nil }
+            if !_c25 { return nil }
+            if !_c26 { return nil }
+            if !_c27 { return nil }
+            if !_c28 { return nil }
+            if !_c29 { return nil }
+            if !_c30 { return nil }
+            if !_c31 { return nil }
+            if !_c32 { return nil }
+            if !_c33 { return nil }
+            return Api.Message.message(flags: _1!, flags2: _2!, id: _3!, fromId: _4, fromBoostsApplied: _5, peerId: _6!, savedPeerId: _7, fwdFrom: _8, viaBotId: _9, viaBusinessBotId: _10, replyTo: _11, date: _12!, message: _13!, media: _14, replyMarkup: _15, entities: _16, views: _17, forwards: _18, replies: _19, editDate: _20, postAuthor: _21, groupedId: _22, reactions: _23, restrictionReason: _24, ttlPeriod: _25, quickReplyShortcutId: _26, effect: _27, factcheck: _28, reportDeliveryUntilDate: _29, paidMessageStars: _30, suggestedPost: _31, scheduleRepeatPeriod: _32, summaryFromLanguage: _33)
         }
         public static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
             var _1: Int32?
@@ -966,12 +973,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Message.messageEmpty(flags: _1!, id: _2!, peerId: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.Message.messageEmpty(flags: _1!, id: _2!, peerId: _3)
         }
         public static func parse_messageService(_ reader: BufferReader) -> Message? {
             var _1: Int32?
@@ -1016,12 +1021,17 @@ public extension Api {
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 20) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 25) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.Message.messageService(flags: _1!, id: _2!, fromId: _3, peerId: _4!, savedPeerId: _5, replyTo: _6, date: _7!, action: _8!, reactions: _9, ttlPeriod: _10)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            return Api.Message.messageService(flags: _1!, id: _2!, fromId: _3, peerId: _4!, savedPeerId: _5, replyTo: _6, date: _7!, action: _8!, reactions: _9, ttlPeriod: _10)
         }
     
     }
@@ -1739,12 +1749,8 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionBoostApply(boosts: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionBoostApply(boosts: _1!)
         }
         public static func parse_messageActionBotAllowed(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -1758,23 +1764,17 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionBotAllowed(flags: _1!, domain: _2, app: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageAction.messageActionBotAllowed(flags: _1!, domain: _2, app: _3)
         }
         public static func parse_messageActionChannelCreate(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionChannelCreate(title: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionChannelCreate(title: _1!)
         }
         public static func parse_messageActionChannelMigrateFrom(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
@@ -1783,12 +1783,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionChannelMigrateFrom(title: _1!, chatId: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionChannelMigrateFrom(title: _1!, chatId: _2!)
         }
         public static func parse_messageActionChatAddUser(_ reader: BufferReader) -> MessageAction? {
             var _1: [Int64]?
@@ -1796,12 +1793,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionChatAddUser(users: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionChatAddUser(users: _1!)
         }
         public static func parse_messageActionChatCreate(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
@@ -1812,12 +1805,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionChatCreate(title: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionChatCreate(title: _1!, users: _2!)
         }
         public static func parse_messageActionChatDeletePhoto(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionChatDeletePhoto
@@ -1826,12 +1816,8 @@ public extension Api {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionChatDeleteUser(userId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionChatDeleteUser(userId: _1!)
         }
         public static func parse_messageActionChatEditPhoto(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.Photo?
@@ -1839,34 +1825,22 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Photo
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionChatEditPhoto(photo: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionChatEditPhoto(photo: _1!)
         }
         public static func parse_messageActionChatEditTitle(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionChatEditTitle(title: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionChatEditTitle(title: _1!)
         }
         public static func parse_messageActionChatJoinedByLink(_ reader: BufferReader) -> MessageAction? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionChatJoinedByLink(inviterId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionChatJoinedByLink(inviterId: _1!)
         }
         public static func parse_messageActionChatJoinedByRequest(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionChatJoinedByRequest
@@ -1875,12 +1849,8 @@ public extension Api {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionChatMigrateTo(channelId: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionChatMigrateTo(channelId: _1!)
         }
         public static func parse_messageActionConferenceCall(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -1897,12 +1867,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageAction.messageActionConferenceCall(flags: _1!, callId: _2!, duration: _3, otherParticipants: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MessageAction.messageActionConferenceCall(flags: _1!, callId: _2!, duration: _3, otherParticipants: _4)
         }
         public static func parse_messageActionContactSignUp(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionContactSignUp
@@ -1911,12 +1880,8 @@ public extension Api {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionCustomAction(message: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionCustomAction(message: _1!)
         }
         public static func parse_messageActionEmpty(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionEmpty
@@ -1928,12 +1893,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionGameScore(gameId: _1!, score: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionGameScore(gameId: _1!, score: _2!)
         }
         public static func parse_messageActionGeoProximityReached(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.Peer?
@@ -1949,12 +1911,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionGeoProximityReached(fromId: _1!, toId: _2!, distance: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageAction.messageActionGeoProximityReached(fromId: _1!, toId: _2!, distance: _3!)
         }
         public static func parse_messageActionGiftCode(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -1988,12 +1948,16 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.MessageAction.messageActionGiftCode(flags: _1!, boostPeer: _2, days: _3!, slug: _4!, currency: _5, amount: _6, cryptoCurrency: _7, cryptoAmount: _8, message: _9)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.MessageAction.messageActionGiftCode(flags: _1!, boostPeer: _2, days: _3!, slug: _4!, currency: _5, amount: _6, cryptoCurrency: _7, cryptoAmount: _8, message: _9)
         }
         public static func parse_messageActionGiftPremium(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2019,12 +1983,14 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.MessageAction.messageActionGiftPremium(flags: _1!, currency: _2!, amount: _3!, days: _4!, cryptoCurrency: _5, cryptoAmount: _6, message: _7)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.MessageAction.messageActionGiftPremium(flags: _1!, currency: _2!, amount: _3!, days: _4!, cryptoCurrency: _5, cryptoAmount: _6, message: _7)
         }
         public static func parse_messageActionGiftStars(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2048,12 +2014,14 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.MessageAction.messageActionGiftStars(flags: _1!, currency: _2!, amount: _3!, stars: _4!, cryptoCurrency: _5, cryptoAmount: _6, transactionId: _7)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.MessageAction.messageActionGiftStars(flags: _1!, currency: _2!, amount: _3!, stars: _4!, cryptoCurrency: _5, cryptoAmount: _6, transactionId: _7)
         }
         public static func parse_messageActionGiftTon(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2074,12 +2042,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.MessageAction.messageActionGiftTon(flags: _1!, currency: _2!, amount: _3!, cryptoCurrency: _4!, cryptoAmount: _5!, transactionId: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.MessageAction.messageActionGiftTon(flags: _1!, currency: _2!, amount: _3!, cryptoCurrency: _4!, cryptoAmount: _5!, transactionId: _6)
         }
         public static func parse_messageActionGiveawayLaunch(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2088,12 +2057,9 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionGiveawayLaunch(flags: _1!, stars: _2)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionGiveawayLaunch(flags: _1!, stars: _2)
         }
         public static func parse_messageActionGiveawayResults(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2105,12 +2071,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionGiveawayResults(flags: _1!, winnersCount: _2!, unclaimedCount: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageAction.messageActionGiveawayResults(flags: _1!, winnersCount: _2!, unclaimedCount: _3!)
         }
         public static func parse_messageActionGroupCall(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2124,12 +2088,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionGroupCall(flags: _1!, call: _2!, duration: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageAction.messageActionGroupCall(flags: _1!, call: _2!, duration: _3)
         }
         public static func parse_messageActionGroupCallScheduled(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.InputGroupCall?
@@ -2140,12 +2102,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionGroupCallScheduled(call: _1!, scheduleDate: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionGroupCallScheduled(call: _1!, scheduleDate: _2!)
         }
         public static func parse_messageActionHistoryClear(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionHistoryClear
@@ -2161,12 +2120,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, users: _2!)
         }
         public static func parse_messageActionPaidMessagesPrice(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2175,12 +2131,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionPaidMessagesPrice(flags: _1!, stars: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionPaidMessagesPrice(flags: _1!, stars: _2!)
         }
         public static func parse_messageActionPaidMessagesRefunded(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2189,12 +2142,9 @@ public extension Api {
             _2 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionPaidMessagesRefunded(count: _1!, stars: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionPaidMessagesRefunded(count: _1!, stars: _2!)
         }
         public static func parse_messageActionPaymentRefunded(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2219,12 +2169,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.MessageAction.messageActionPaymentRefunded(flags: _1!, peer: _2!, currency: _3!, totalAmount: _4!, payload: _5, charge: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.MessageAction.messageActionPaymentRefunded(flags: _1!, peer: _2!, currency: _3!, totalAmount: _4!, payload: _5, charge: _6!)
         }
         public static func parse_messageActionPaymentSent(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2242,12 +2193,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageAction.messageActionPaymentSent(flags: _1!, currency: _2!, totalAmount: _3!, invoiceSlug: _4, subscriptionUntilDate: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.MessageAction.messageActionPaymentSent(flags: _1!, currency: _2!, totalAmount: _3!, invoiceSlug: _4, subscriptionUntilDate: _5)
         }
         public static func parse_messageActionPaymentSentMe(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2278,12 +2229,15 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.MessageAction.messageActionPaymentSentMe(flags: _1!, currency: _2!, totalAmount: _3!, payload: _4!, info: _5, shippingOptionId: _6, charge: _7!, subscriptionUntilDate: _8)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.MessageAction.messageActionPaymentSentMe(flags: _1!, currency: _2!, totalAmount: _3!, payload: _4!, info: _5, shippingOptionId: _6, charge: _7!, subscriptionUntilDate: _8)
         }
         public static func parse_messageActionPhoneCall(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2300,12 +2254,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageAction.messageActionPhoneCall(flags: _1!, callId: _2!, reason: _3, duration: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MessageAction.messageActionPhoneCall(flags: _1!, callId: _2!, reason: _3, duration: _4)
         }
         public static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionPinMessage
@@ -2328,12 +2281,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageAction.messageActionPrizeStars(flags: _1!, stars: _2!, transactionId: _3!, boostPeer: _4!, giveawayMsgId: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.MessageAction.messageActionPrizeStars(flags: _1!, stars: _2!, transactionId: _3!, boostPeer: _4!, giveawayMsgId: _5!)
         }
         public static func parse_messageActionRequestedPeer(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2344,12 +2297,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionRequestedPeer(buttonId: _1!, peers: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionRequestedPeer(buttonId: _1!, peers: _2!)
         }
         public static func parse_messageActionRequestedPeerSentMe(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2360,12 +2310,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionRequestedPeerSentMe(buttonId: _1!, peers: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionRequestedPeerSentMe(buttonId: _1!, peers: _2!)
         }
         public static func parse_messageActionScreenshotTaken(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionScreenshotTaken
@@ -2376,12 +2323,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SecureValueType.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSecureValuesSent(types: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionSecureValuesSent(types: _1!)
         }
         public static func parse_messageActionSecureValuesSentMe(_ reader: BufferReader) -> MessageAction? {
             var _1: [Api.SecureValue]?
@@ -2394,12 +2337,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionSecureValuesSentMe(values: _1!, credentials: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionSecureValuesSentMe(values: _1!, credentials: _2!)
         }
         public static func parse_messageActionSetChatTheme(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.ChatTheme?
@@ -2407,12 +2347,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.ChatTheme
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSetChatTheme(theme: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionSetChatTheme(theme: _1!)
         }
         public static func parse_messageActionSetChatWallPaper(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2423,12 +2359,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionSetChatWallPaper(flags: _1!, wallpaper: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionSetChatWallPaper(flags: _1!, wallpaper: _2!)
         }
         public static func parse_messageActionSetMessagesTTL(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2440,12 +2373,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionSetMessagesTTL(flags: _1!, period: _2!, autoSettingFrom: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageAction.messageActionSetMessagesTTL(flags: _1!, period: _2!, autoSettingFrom: _3)
         }
         public static func parse_messageActionStarGift(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2497,12 +2428,20 @@ public extension Api {
             let _c11 = (Int(_1!) & Int(1 << 15) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 18) == 0) || _12 != nil
             let _c13 = (Int(_1!) & Int(1 << 19) == 0) || _13 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
-                return Api.MessageAction.messageActionStarGift(flags: _1!, gift: _2!, message: _3, convertStars: _4, upgradeMsgId: _5, upgradeStars: _6, fromId: _7, peer: _8, savedId: _9, prepaidUpgradeHash: _10, giftMsgId: _11, toId: _12, giftNum: _13)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            return Api.MessageAction.messageActionStarGift(flags: _1!, gift: _2!, message: _3, convertStars: _4, upgradeMsgId: _5, upgradeStars: _6, fromId: _7, peer: _8, savedId: _9, prepaidUpgradeHash: _10, giftMsgId: _11, toId: _12, giftNum: _13)
         }
         public static func parse_messageActionStarGiftPurchaseOffer(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2521,12 +2460,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageAction.messageActionStarGiftPurchaseOffer(flags: _1!, gift: _2!, price: _3!, expiresAt: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MessageAction.messageActionStarGiftPurchaseOffer(flags: _1!, gift: _2!, price: _3!, expiresAt: _4!)
         }
         public static func parse_messageActionStarGiftPurchaseOfferDeclined(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2542,12 +2480,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionStarGiftPurchaseOfferDeclined(flags: _1!, gift: _2!, price: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageAction.messageActionStarGiftPurchaseOfferDeclined(flags: _1!, gift: _2!, price: _3!)
         }
         public static func parse_messageActionStarGiftUnique(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2591,12 +2527,18 @@ public extension Api {
             let _c9 = (Int(_1!) & Int(1 << 9) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 10) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 12) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.MessageAction.messageActionStarGiftUnique(flags: _1!, gift: _2!, canExportAt: _3, transferStars: _4, fromId: _5, peer: _6, savedId: _7, resaleAmount: _8, canTransferAt: _9, canResellAt: _10, dropOriginalDetailsStars: _11)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.MessageAction.messageActionStarGiftUnique(flags: _1!, gift: _2!, canExportAt: _3, transferStars: _4, fromId: _5, peer: _6, savedId: _7, resaleAmount: _8, canTransferAt: _9, canResellAt: _10, dropOriginalDetailsStars: _11)
         }
         public static func parse_messageActionSuggestBirthday(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.Birthday?
@@ -2604,12 +2546,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Birthday
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSuggestBirthday(birthday: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionSuggestBirthday(birthday: _1!)
         }
         public static func parse_messageActionSuggestProfilePhoto(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.Photo?
@@ -2617,12 +2555,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Photo
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSuggestProfilePhoto(photo: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionSuggestProfilePhoto(photo: _1!)
         }
         public static func parse_messageActionSuggestedPostApproval(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2639,23 +2573,18 @@ public extension Api {
             let _c2 = (Int(_1!) & Int(1 << 2) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageAction.messageActionSuggestedPostApproval(flags: _1!, rejectComment: _2, scheduleDate: _3, price: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MessageAction.messageActionSuggestedPostApproval(flags: _1!, rejectComment: _2, scheduleDate: _3, price: _4)
         }
         public static func parse_messageActionSuggestedPostRefund(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSuggestedPostRefund(flags: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionSuggestedPostRefund(flags: _1!)
         }
         public static func parse_messageActionSuggestedPostSuccess(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.StarsAmount?
@@ -2663,12 +2592,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.StarsAmount
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSuggestedPostSuccess(price: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionSuggestedPostSuccess(price: _1!)
         }
         public static func parse_messageActionTodoAppendTasks(_ reader: BufferReader) -> MessageAction? {
             var _1: [Api.TodoItem]?
@@ -2676,12 +2601,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.TodoItem.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionTodoAppendTasks(list: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionTodoAppendTasks(list: _1!)
         }
         public static func parse_messageActionTodoCompletions(_ reader: BufferReader) -> MessageAction? {
             var _1: [Int32]?
@@ -2694,12 +2615,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionTodoCompletions(completed: _1!, incompleted: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionTodoCompletions(completed: _1!, incompleted: _2!)
         }
         public static func parse_messageActionTopicCreate(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2714,12 +2632,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageAction.messageActionTopicCreate(flags: _1!, title: _2!, iconColor: _3!, iconEmojiId: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MessageAction.messageActionTopicCreate(flags: _1!, title: _2!, iconColor: _3!, iconEmojiId: _4)
         }
         public static func parse_messageActionTopicEdit(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
@@ -2741,23 +2658,19 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageAction.messageActionTopicEdit(flags: _1!, title: _2, iconEmojiId: _3, closed: _4, hidden: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.MessageAction.messageActionTopicEdit(flags: _1!, title: _2, iconEmojiId: _3, closed: _4, hidden: _5)
         }
         public static func parse_messageActionWebViewDataSent(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionWebViewDataSent(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageAction.messageActionWebViewDataSent(text: _1!)
         }
         public static func parse_messageActionWebViewDataSentMe(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
@@ -2766,12 +2679,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionWebViewDataSentMe(text: _1!, data: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageAction.messageActionWebViewDataSentMe(text: _1!, data: _2!)
         }
     
     }

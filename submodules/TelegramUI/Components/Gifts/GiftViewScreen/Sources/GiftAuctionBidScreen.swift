@@ -2083,7 +2083,7 @@ private final class GiftAuctionBidScreenComponent: Component {
                     if case .finished = auctionState?.auctionState, let controller = self.environment?.controller() {
                         if let navigationController = controller.navigationController as? NavigationController {
                             controller.dismiss()
-                            let auctionController = context.sharedContext.makeGiftAuctionViewScreen(context: context, auctionContext: auctionContext, completion: { _, _ in })
+                            let auctionController = context.sharedContext.makeGiftAuctionViewScreen(context: context, auctionContext: auctionContext, peerId: nil, completion: { _, _ in })
                             navigationController.pushViewController(auctionController)
                         }
                     }

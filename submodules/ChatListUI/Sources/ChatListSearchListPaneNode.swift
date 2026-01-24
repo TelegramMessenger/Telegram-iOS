@@ -38,6 +38,7 @@ import MultilineTextComponent
 import ButtonComponent
 import BundleIconComponent
 import AnimatedTextComponent
+import TextFormat
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -4507,7 +4508,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 return
                             }
                             dismissImpl?()
-                            if let value = attributes[NSAttributedString.Key(rawValue: "URL")] as? String {
+                            if let value = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                 if !value.isEmpty {
                                     context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: value, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: {})
                                 } else {

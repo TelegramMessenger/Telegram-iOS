@@ -1524,6 +1524,7 @@ func openResolvedUrlImpl(
                     let controller = context.sharedContext.makeGiftAuctionViewScreen(
                         context: context,
                         auctionContext: auctionContext,
+                        peerId: nil,
                         completion: { [weak navigationController] acquiredGifts, upgradeAttributes in
                             if let upgradeAttributes {
                                 let controller = context.sharedContext.makeGiftAuctionWearPreviewScreen(context: context, auctionContext: auctionContext, acquiredGifts: acquiredGifts, attributes: upgradeAttributes, completion: {

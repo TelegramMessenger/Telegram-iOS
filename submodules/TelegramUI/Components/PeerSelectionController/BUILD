@@ -21,7 +21,7 @@ swift_library(
         "//submodules/ChatListUI",
         "//submodules/SearchBarNode",
         "//submodules/ContactListUI",
-        "//submodules/SegmentedControlNode",
+        "//submodules/TelegramUI/Components/SegmentControlComponent",
         "//submodules/AttachmentTextInputPanelNode",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/ChatSendMessageActionUI",
@@ -36,6 +36,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ForwardAccessoryPanelNode",
         "//submodules/CounterControllerTitleView",
         "//submodules/TelegramUI/Components/ChatList/ChatListFilterTabContainerNode",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/EdgeEffect",
     ],
     visibility = [
         "//visibility:public",

@@ -27,9 +27,9 @@ build:swift_profile --local_cpu_resources=1
 build:swift_profile --features=-swift.enable_batch_mode
 build:swift_profile --experimental_ui_max_stdouterr_bytes=104857600
 build:swift_profile --@build_bazel_rules_swift//swift:copt=-Xfrontend
-build:swift_profile --@build_bazel_rules_swift//swift:copt=-debug-time-function-bodies
+build:swift_profile --@build_bazel_rules_swift//swift:copt=-warn-long-function-bodies=350
 build:swift_profile --@build_bazel_rules_swift//swift:copt=-Xfrontend
-build:swift_profile --@build_bazel_rules_swift//swift:copt=-debug-time-expression-type-checking
+build:swift_profile --@build_bazel_rules_swift//swift:copt=-warn-long-expression-type-checking=350
 
 common:index_build --experimental_convenience_symlinks=ignore
 common:index_build --bes_backend= --bes_results_url=

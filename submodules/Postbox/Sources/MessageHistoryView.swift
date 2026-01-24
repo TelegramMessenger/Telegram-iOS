@@ -676,7 +676,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
                             }
                         }
                     case let .Remove(indicesAndTags):
-                        for (index, _) in indicesAndTags {
+                        for (index, _, _) in indicesAndTags {
                             if self.namespaces.contains(index.id.namespace) {
                                 if loadedState.remove(index: index) {
                                     hasChanges = true
@@ -821,7 +821,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
                     }
                 case let .Remove(indices):
                     if !self.topTaggedMessages.isEmpty {
-                        for (index, _) in indices {
+                        for (index, _, _) in indices {
                             if let maybeCurrentTopMessage = self.topTaggedMessages[index.id.namespace], let currentTopMessage = maybeCurrentTopMessage, index.id == currentTopMessage.id {
                                 let item: MessageHistoryTopTaggedMessage? = nil
                                 self.topTaggedMessages[index.id.namespace] = item
@@ -873,7 +873,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
                                 break findOperation
                             }
                         case let .Remove(indices):
-                            for (index, _) in indices {
+                            for (index, _, _) in indices {
                                 if currentIds.contains(index.id) {
                                     updateMessage = true
                                     break findOperation
@@ -956,7 +956,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
                                     break outer
                                 }
                             case let .Remove(indicesWithTags):
-                                for (index, _) in indicesWithTags {
+                                for (index, _, _) in indicesWithTags {
                                     if cachedData.messageIds.contains(index.id) {
                                         updatedCachedPeerDataMessages = true
                                         break outer

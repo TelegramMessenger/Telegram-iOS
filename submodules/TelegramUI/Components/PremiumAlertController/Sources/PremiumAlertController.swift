@@ -3,17 +3,15 @@ import UIKit
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
-import ComponentFlow
 import Postbox
 import TelegramCore
 import TelegramPresentationData
-import TelegramUIPreferences
 import AccountContext
-import AppBundle
+import ComponentFlow
 import AlertComponent
 import PremiumStarComponent
 
-func premiumAlertController(
+public func premiumAlertController(
     context: AccountContext,
     parentController: ViewController,
     title: String? = nil,
@@ -30,7 +28,7 @@ func premiumAlertController(
         )
     ))
     
-    let title = title ?? strings.PremiumNeeded_Title
+    let title = strings.PremiumNeeded_Title
     content.append(AnyComponentWithIdentity(
         id: "title",
         component: AnyComponent(

@@ -27,6 +27,7 @@ import MediaEditor
 import AvatarBackground
 import LottieComponent
 import UndoUI
+import PremiumAlertController
 
 public struct AvatarKeyboardInputData: Equatable {
     var emoji: EmojiPagerContentComponent

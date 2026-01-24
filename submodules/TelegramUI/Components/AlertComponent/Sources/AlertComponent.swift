@@ -725,6 +725,7 @@ open class AlertScreen: ViewControllerComponentContainer, KeyShortcutResponder {
         configuration: Configuration = Configuration(),
         title: String? = nil,
         text: String,
+        textAction: @escaping ([NSAttributedString.Key: Any]) -> Void = { _ in },
         actions: [Action],
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)
     ) {
@@ -741,7 +742,7 @@ open class AlertScreen: ViewControllerComponentContainer, KeyShortcutResponder {
             content.append(AnyComponentWithIdentity(
                 id: "text",
                 component: AnyComponent(
-                    AlertTextComponent(content: .plain(text))
+                    AlertTextComponent(content: .plain(text), action: textAction)
                 )
             ))
         }

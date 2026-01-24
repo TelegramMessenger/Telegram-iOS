@@ -93,7 +93,7 @@ public final class ShimmeringLinkNode: ASDisplayNode {
         self.shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: size), within: size)
         self.borderShimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: size), within: size)
         
-        self.shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: self.color.withAlphaComponent(min(1.0, self.color.alpha * 1.2)), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
-        self.borderShimmerEffectNode.update(backgroundColor: .clear, foregroundColor: self.color.withAlphaComponent(min(1.0, self.color.alpha * 1.5)), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
+        self.shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: self.color.withMultipliedAlpha(1.75), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
+        self.borderShimmerEffectNode.update(backgroundColor: .clear, foregroundColor: self.color.withMultipliedAlpha(2.0), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
     }
 }

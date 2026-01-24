@@ -807,7 +807,7 @@ public extension GlassBackgroundView {
                 }
             }
             
-            addShadow(context, true, CGPoint(), 30.0, 0.0, UIColor(white: 0.0, alpha: 0.075), .normal)
+            addShadow(context, true, CGPoint(), 30.0, 0.0, UIColor(white: 0.0, alpha: 0.045), .normal)
             addShadow(context, true, CGPoint(), 20.0, 0.0, UIColor(white: 0.0, alpha: 0.01), .normal)
             
             var a: CGFloat = 0.0

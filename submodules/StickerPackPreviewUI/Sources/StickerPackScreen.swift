@@ -1676,18 +1676,23 @@ private final class StickerPackContainer: ASDisplayNode {
             self.onLoading()
             
             var loadedCount = 0
-            var error = false
+            var fetchingCount = 0
             for content in contents {
-                if case .result = content {
+                switch content {
+                case .result:
                     loadedCount += 1
-                } else if case .none = content {
-                    error = true
+                case .fetching:
+                    fetchingCount += 1
+                default:
+                    break
                 }
             }
             
-            if error {
-                self.onError()
-            } else if loadedCount == contents.count {
+            if fetchingCount == 0 {
+                if loadedCount == 0 {
+                    self.onError()
+                    return
+                }
                 self.onReady()
                 
                 if !contents.isEmpty && self.currentStickerPacks.isEmpty {

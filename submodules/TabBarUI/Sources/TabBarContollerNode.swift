@@ -371,7 +371,7 @@ final class TabBarControllerNode: ASDisplayNode {
             }
         }
         
-        return params.layout.size.height - tabBarFrame.minY - 6.0
+        return params.layout.size.height - tabBarFrame.minY
     }
     
     func frameForControllerTab(at index: Int) -> CGRect? {

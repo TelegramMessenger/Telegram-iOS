@@ -239,12 +239,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageEntity.inputMessageEntityMentionName(offset: _1!, length: _2!, userId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageEntity.inputMessageEntityMentionName(offset: _1!, length: _2!, userId: _3!)
         }
         public static func parse_messageEntityBankCard(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -253,12 +251,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityBankCard(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityBankCard(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityBlockquote(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -270,12 +265,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageEntity.messageEntityBlockquote(flags: _1!, offset: _2!, length: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageEntity.messageEntityBlockquote(flags: _1!, offset: _2!, length: _3!)
         }
         public static func parse_messageEntityBold(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -284,12 +277,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityBold(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityBold(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityBotCommand(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -298,12 +288,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityBotCommand(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityBotCommand(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityCashtag(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -312,12 +299,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityCashtag(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityCashtag(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityCode(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -326,12 +310,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityCode(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityCode(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityCustomEmoji(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -343,12 +324,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageEntity.messageEntityCustomEmoji(offset: _1!, length: _2!, documentId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageEntity.messageEntityCustomEmoji(offset: _1!, length: _2!, documentId: _3!)
         }
         public static func parse_messageEntityEmail(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -357,12 +336,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityEmail(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityEmail(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityHashtag(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -371,12 +347,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityHashtag(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityHashtag(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityItalic(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -385,12 +358,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityItalic(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityItalic(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityMention(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -399,12 +369,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityMention(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityMention(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityMentionName(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -416,12 +383,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageEntity.messageEntityMentionName(offset: _1!, length: _2!, userId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageEntity.messageEntityMentionName(offset: _1!, length: _2!, userId: _3!)
         }
         public static func parse_messageEntityPhone(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -430,12 +395,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityPhone(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityPhone(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityPre(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -447,12 +409,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageEntity.messageEntityPre(offset: _1!, length: _2!, language: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageEntity.messageEntityPre(offset: _1!, length: _2!, language: _3!)
         }
         public static func parse_messageEntitySpoiler(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -461,12 +421,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntitySpoiler(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntitySpoiler(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityStrike(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -475,12 +432,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityStrike(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityStrike(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityTextUrl(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -492,12 +446,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageEntity.messageEntityTextUrl(offset: _1!, length: _2!, url: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageEntity.messageEntityTextUrl(offset: _1!, length: _2!, url: _3!)
         }
         public static func parse_messageEntityUnderline(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -506,12 +458,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityUnderline(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityUnderline(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityUnknown(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -520,12 +469,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityUnknown(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityUnknown(offset: _1!, length: _2!)
         }
         public static func parse_messageEntityUrl(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
@@ -534,12 +480,9 @@ public extension Api {
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityUrl(offset: _1!, length: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageEntity.messageEntityUrl(offset: _1!, length: _2!)
         }
     
     }
@@ -585,12 +528,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.MessageMedia
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageExtendedMedia.messageExtendedMedia(media: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageExtendedMedia.messageExtendedMedia(media: _1!)
         }
         public static func parse_messageExtendedMediaPreview(_ reader: BufferReader) -> MessageExtendedMedia? {
             var _1: Int32?
@@ -610,12 +549,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageExtendedMedia.messageExtendedMediaPreview(flags: _1!, w: _2, h: _3, thumb: _4, videoDuration: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.MessageExtendedMedia.messageExtendedMediaPreview(flags: _1!, w: _2, h: _3, thumb: _4, videoDuration: _5)
         }
     
     }
@@ -696,12 +635,19 @@ public extension Api {
             let _c10 = (Int(_1!) & Int(1 << 9) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 10) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 6) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.MessageFwdHeader.messageFwdHeader(flags: _1!, fromId: _2, fromName: _3, date: _4!, channelPost: _5, postAuthor: _6, savedFromPeer: _7, savedFromMsgId: _8, savedFromId: _9, savedFromName: _10, savedDate: _11, psaType: _12)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            return Api.MessageFwdHeader.messageFwdHeader(flags: _1!, fromId: _2, fromName: _3, date: _4!, channelPost: _5, postAuthor: _6, savedFromPeer: _7, savedFromMsgId: _8, savedFromId: _9, savedFromName: _10, savedDate: _11, psaType: _12)
         }
     
     }
@@ -987,12 +933,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageMedia.messageMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!, userId: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.MessageMedia.messageMediaContact(phoneNumber: _1!, firstName: _2!, lastName: _3!, vcard: _4!, userId: _5!)
         }
         public static func parse_messageMediaDice(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1009,12 +955,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageMedia.messageMediaDice(flags: _1!, value: _2!, emoticon: _3!, gameOutcome: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MessageMedia.messageMediaDice(flags: _1!, value: _2!, emoticon: _3!, gameOutcome: _4)
         }
         public static func parse_messageMediaDocument(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1041,12 +986,13 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 9) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 10) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.MessageMedia.messageMediaDocument(flags: _1!, document: _2, altDocuments: _3, videoCover: _4, videoTimestamp: _5, ttlSeconds: _6)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.MessageMedia.messageMediaDocument(flags: _1!, document: _2, altDocuments: _3, videoCover: _4, videoTimestamp: _5, ttlSeconds: _6)
         }
         public static func parse_messageMediaEmpty(_ reader: BufferReader) -> MessageMedia? {
             return Api.MessageMedia.messageMediaEmpty
@@ -1057,12 +1003,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.Game
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageMedia.messageMediaGame(game: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageMedia.messageMediaGame(game: _1!)
         }
         public static func parse_messageMediaGeo(_ reader: BufferReader) -> MessageMedia? {
             var _1: Api.GeoPoint?
@@ -1070,12 +1012,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.GeoPoint
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageMedia.messageMediaGeo(geo: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.MessageMedia.messageMediaGeo(geo: _1!)
         }
         public static func parse_messageMediaGeoLive(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1095,12 +1033,12 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageMedia.messageMediaGeoLive(flags: _1!, geo: _2!, heading: _3, period: _4!, proximityNotificationRadius: _5)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.MessageMedia.messageMediaGeoLive(flags: _1!, geo: _2!, heading: _3, period: _4!, proximityNotificationRadius: _5)
         }
         public static func parse_messageMediaGiveaway(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1131,12 +1069,15 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.MessageMedia.messageMediaGiveaway(flags: _1!, channels: _2!, countriesIso2: _3, prizeDescription: _4, quantity: _5!, months: _6, stars: _7, untilDate: _8!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.MessageMedia.messageMediaGiveaway(flags: _1!, channels: _2!, countriesIso2: _3, prizeDescription: _4, quantity: _5!, months: _6, stars: _7, untilDate: _8!)
         }
         public static func parse_messageMediaGiveawayResults(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1174,12 +1115,18 @@ public extension Api {
             let _c9 = (Int(_1!) & Int(1 << 5) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
             let _c11 = _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.MessageMedia.messageMediaGiveawayResults(flags: _1!, channelId: _2!, additionalPeersCount: _3, launchMsgId: _4!, winnersCount: _5!, unclaimedCount: _6!, winners: _7!, months: _8, stars: _9, prizeDescription: _10, untilDate: _11!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            return Api.MessageMedia.messageMediaGiveawayResults(flags: _1!, channelId: _2!, additionalPeersCount: _3, launchMsgId: _4!, winnersCount: _5!, unclaimedCount: _6!, winners: _7!, months: _8, stars: _9, prizeDescription: _10, untilDate: _11!)
         }
         public static func parse_messageMediaInvoice(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1213,12 +1160,16 @@ public extension Api {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.MessageMedia.messageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, receiptMsgId: _5, currency: _6!, totalAmount: _7!, startParam: _8!, extendedMedia: _9)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            return Api.MessageMedia.messageMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, receiptMsgId: _5, currency: _6!, totalAmount: _7!, startParam: _8!, extendedMedia: _9)
         }
         public static func parse_messageMediaPaidMedia(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int64?
@@ -1229,12 +1180,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageMedia.messageMediaPaidMedia(starsAmount: _1!, extendedMedia: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageMedia.messageMediaPaidMedia(starsAmount: _1!, extendedMedia: _2!)
         }
         public static func parse_messageMediaPhoto(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1248,12 +1196,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageMedia.messageMediaPhoto(flags: _1!, photo: _2, ttlSeconds: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageMedia.messageMediaPhoto(flags: _1!, photo: _2, ttlSeconds: _3)
         }
         public static func parse_messageMediaPoll(_ reader: BufferReader) -> MessageMedia? {
             var _1: Api.Poll?
@@ -1266,12 +1212,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageMedia.messageMediaPoll(poll: _1!, results: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageMedia.messageMediaPoll(poll: _1!, results: _2!)
         }
         public static func parse_messageMediaStory(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1290,12 +1233,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageMedia.messageMediaStory(flags: _1!, peer: _2!, id: _3!, story: _4)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.MessageMedia.messageMediaStory(flags: _1!, peer: _2!, id: _3!, story: _4)
         }
         public static func parse_messageMediaToDo(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1311,12 +1253,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageMedia.messageMediaToDo(flags: _1!, todo: _2!, completions: _3)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.MessageMedia.messageMediaToDo(flags: _1!, todo: _2!, completions: _3)
         }
         public static func parse_messageMediaUnsupported(_ reader: BufferReader) -> MessageMedia? {
             return Api.MessageMedia.messageMediaUnsupported
@@ -1342,12 +1282,13 @@ public extension Api {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.MessageMedia.messageMediaVenue(geo: _1!, title: _2!, address: _3!, provider: _4!, venueId: _5!, venueType: _6!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            return Api.MessageMedia.messageMediaVenue(geo: _1!, title: _2!, address: _3!, provider: _4!, venueId: _5!, venueType: _6!)
         }
         public static func parse_messageMediaVideoStream(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1358,12 +1299,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageMedia.messageMediaVideoStream(flags: _1!, call: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageMedia.messageMediaVideoStream(flags: _1!, call: _2!)
         }
         public static func parse_messageMediaWebPage(_ reader: BufferReader) -> MessageMedia? {
             var _1: Int32?
@@ -1374,12 +1312,9 @@ public extension Api {
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageMedia.messageMediaWebPage(flags: _1!, webpage: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.MessageMedia.messageMediaWebPage(flags: _1!, webpage: _2!)
         }
     
     }

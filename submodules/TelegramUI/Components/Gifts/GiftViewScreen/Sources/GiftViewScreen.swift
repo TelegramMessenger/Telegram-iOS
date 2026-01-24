@@ -2551,6 +2551,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         let upgradePerks = Child(List<Empty>.self)
         let upgradeKeepName = Child(PlainButtonComponent.self)
         let upgradePriceButton = Child(PlainButtonComponent.self)
+        let variantsMeasureDescription = Child(MultilineTextComponent.self)
     
         let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
         
@@ -3076,6 +3077,16 @@ private final class GiftViewSheetContent: CombinedComponent {
                     if let previewPatternColor = giftCompositionExternalState.previewPatternColor {
                         buttonColor = previewPatternColor
                     }
+                    
+                    let variantsMeasureDescription = variantsMeasureDescription.update(
+                        component: MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Upgrade_ViewAllVariants, font: Font.semibold(13.0), textColor: .clear))),
+                        availableSize: context.availableSize,
+                        transition: .immediate
+                    )
+                    context.add(variantsMeasureDescription
+                        .position(CGPoint(x: -10000.0, y: -10000.0))
+                    )
+                    
                     let upgradeDescription = upgradeDescription.update(
                         component: PlainButtonComponent(
                             content: AnyComponent(
@@ -3131,7 +3142,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             },
                             animateScale: false
                         ),
-                        availableSize: CGSize(width: 280.0, height: 24.0),
+                        availableSize: CGSize(width: variantsMeasureDescription.size.width + 87.0, height: 24.0),
                         transition: context.transition
                     )
                   

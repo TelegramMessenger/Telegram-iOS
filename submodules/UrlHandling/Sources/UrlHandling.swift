@@ -1261,9 +1261,9 @@ public func isTelegramMeLink(_ url: String) -> Bool {
 
 public func isTelegraPhLink(_ url: String) -> Bool {
     let schemes = ["http://", "https://", ""]
-    for basePath in baseTelegramMePaths {
+    for basePath in baseTelegraPhPaths {
         for scheme in schemes {
-            let basePrefix = scheme + basePath + "/"
+            let basePrefix = scheme + basePath
             if url.lowercased().hasPrefix(basePrefix) {
                 return true
             }

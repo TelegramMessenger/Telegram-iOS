@@ -9,6 +9,7 @@ public enum SummarizeError {
     case invalidMessageId
     case limitExceeded
     case invalidLanguage
+    case limitExceededPremium
 }
 
 func _internal_summarizeMessage(account: Account, messageId: EngineMessage.Id, translateToLang: String?) -> Signal<Never, SummarizeError> {
@@ -35,6 +36,8 @@ func _internal_summarizeMessage(account: Account, messageId: EngineMessage.Id, t
                 return .invalidMessageId
             } else if error.errorDescription == "TO_LANG_INVALID" {
                 return .invalidLanguage
+            } else if error.errorDescription == "SUMMARY_FLOOD_PREMIUM" {
+                return .limitExceededPremium
             } else {
                 return .generic
             }

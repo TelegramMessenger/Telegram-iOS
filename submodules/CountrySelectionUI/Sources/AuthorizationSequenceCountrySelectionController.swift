@@ -334,7 +334,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
         self.displayCodes = displayCodes
         self.glass = glass
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme, hideBackground: glass, hideSeparator: glass), strings: NavigationBarStrings(presentationStrings: strings)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme, hideBackground: glass, hideSeparator: glass, style: glass ? .glass : .legacy), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self._hasGlassStyle = glass
         
@@ -443,15 +443,17 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
             self.closeButtonNode = closeButtonNode
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: closeButtonNode)
         }
-                
-        let searchButtonNode: BarComponentHostNode
-        if let current = self.searchButtonNode {
-            searchButtonNode = current
-            searchButtonNode.component = searchComponent
-        } else {
-            searchButtonNode = BarComponentHostNode(component: searchComponent, size: barButtonSize)
-            self.searchButtonNode = searchButtonNode
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: searchButtonNode)
+         
+        if !self.glass {
+            let searchButtonNode: BarComponentHostNode
+            if let current = self.searchButtonNode {
+                searchButtonNode = current
+                searchButtonNode.component = searchComponent
+            } else {
+                searchButtonNode = BarComponentHostNode(component: searchComponent, size: barButtonSize)
+                self.searchButtonNode = searchButtonNode
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: searchButtonNode)
+            }
         }
     }
     

@@ -32,12 +32,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.RestrictionReason.restrictionReason(platform: _1!, reason: _2!, text: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.RestrictionReason.restrictionReason(platform: _1!, reason: _2!, text: _3!)
         }
     
     }
@@ -219,12 +217,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.RichText.textAnchor(text: _1!, name: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.RichText.textAnchor(text: _1!, name: _2!)
         }
         public static func parse_textBold(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -232,12 +227,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textBold(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textBold(text: _1!)
         }
         public static func parse_textConcat(_ reader: BufferReader) -> RichText? {
             var _1: [Api.RichText]?
@@ -245,12 +236,8 @@ public extension Api {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RichText.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textConcat(texts: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textConcat(texts: _1!)
         }
         public static func parse_textEmail(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -261,12 +248,9 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.RichText.textEmail(text: _1!, email: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.RichText.textEmail(text: _1!, email: _2!)
         }
         public static func parse_textEmpty(_ reader: BufferReader) -> RichText? {
             return Api.RichText.textEmpty
@@ -277,12 +261,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textFixed(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textFixed(text: _1!)
         }
         public static func parse_textImage(_ reader: BufferReader) -> RichText? {
             var _1: Int64?
@@ -294,12 +274,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.RichText.textImage(documentId: _1!, w: _2!, h: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.RichText.textImage(documentId: _1!, w: _2!, h: _3!)
         }
         public static func parse_textItalic(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -307,12 +285,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textItalic(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textItalic(text: _1!)
         }
         public static func parse_textMarked(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -320,12 +294,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textMarked(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textMarked(text: _1!)
         }
         public static func parse_textPhone(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -336,23 +306,16 @@ public extension Api {
             _2 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.RichText.textPhone(text: _1!, phone: _2!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            return Api.RichText.textPhone(text: _1!, phone: _2!)
         }
         public static func parse_textPlain(_ reader: BufferReader) -> RichText? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textPlain(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textPlain(text: _1!)
         }
         public static func parse_textStrike(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -360,12 +323,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textStrike(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textStrike(text: _1!)
         }
         public static func parse_textSubscript(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -373,12 +332,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textSubscript(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textSubscript(text: _1!)
         }
         public static func parse_textSuperscript(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -386,12 +341,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textSuperscript(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textSuperscript(text: _1!)
         }
         public static func parse_textUnderline(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -399,12 +350,8 @@ public extension Api {
                 _1 = Api.parse(reader, signature: signature) as? Api.RichText
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.RichText.textUnderline(text: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.RichText.textUnderline(text: _1!)
         }
         public static func parse_textUrl(_ reader: BufferReader) -> RichText? {
             var _1: Api.RichText?
@@ -418,12 +365,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.RichText.textUrl(text: _1!, url: _2!, webpageId: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.RichText.textUrl(text: _1!, url: _2!, webpageId: _3!)
         }
     
     }
@@ -466,12 +411,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SavedContact.savedPhoneContact(phone: _1!, firstName: _2!, lastName: _3!, date: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.SavedContact.savedPhoneContact(phone: _1!, firstName: _2!, lastName: _3!, date: _4!)
         }
     
     }
@@ -545,12 +489,15 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 1) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.SavedDialog.monoForumDialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadReactionsCount: _7!, draft: _8)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            return Api.SavedDialog.monoForumDialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadReactionsCount: _7!, draft: _8)
         }
         public static func parse_savedDialog(_ reader: BufferReader) -> SavedDialog? {
             var _1: Int32?
@@ -564,12 +511,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SavedDialog.savedDialog(flags: _1!, peer: _2!, topMessage: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SavedDialog.savedDialog(flags: _1!, peer: _2!, topMessage: _3!)
         }
     
     }
@@ -614,12 +559,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SavedReactionTag.savedReactionTag(flags: _1!, reaction: _2!, title: _3, count: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.SavedReactionTag.savedReactionTag(flags: _1!, reaction: _2!, title: _3, count: _4!)
         }
     
     }
@@ -726,12 +670,24 @@ public extension Api {
             let _c15 = (Int(_1!) & Int(1 << 16) == 0) || _15 != nil
             let _c16 = (Int(_1!) & Int(1 << 18) == 0) || _16 != nil
             let _c17 = (Int(_1!) & Int(1 << 19) == 0) || _17 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
-                return Api.SavedStarGift.savedStarGift(flags: _1!, fromId: _2, date: _3!, gift: _4!, message: _5, msgId: _6, savedId: _7, convertStars: _8, upgradeStars: _9, canExportAt: _10, transferStars: _11, canTransferAt: _12, canResellAt: _13, collectionId: _14, prepaidUpgradeHash: _15, dropOriginalDetailsStars: _16, giftNum: _17)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            if !_c8 { return nil }
+            if !_c9 { return nil }
+            if !_c10 { return nil }
+            if !_c11 { return nil }
+            if !_c12 { return nil }
+            if !_c13 { return nil }
+            if !_c14 { return nil }
+            if !_c15 { return nil }
+            if !_c16 { return nil }
+            if !_c17 { return nil }
+            return Api.SavedStarGift.savedStarGift(flags: _1!, fromId: _2, date: _3!, gift: _4!, message: _5, msgId: _6, savedId: _7, convertStars: _8, upgradeStars: _9, canExportAt: _10, transferStars: _11, canTransferAt: _12, canResellAt: _13, collectionId: _14, prepaidUpgradeHash: _15, dropOriginalDetailsStars: _16, giftNum: _17)
         }
     
     }
@@ -778,12 +734,12 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.SearchPostsFlood.searchPostsFlood(flags: _1!, totalDaily: _2!, remains: _3!, waitTill: _4, starsAmount: _5!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            return Api.SearchPostsFlood.searchPostsFlood(flags: _1!, totalDaily: _2!, remains: _3!, waitTill: _4, starsAmount: _5!)
         }
     
     }
@@ -826,12 +782,11 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SearchResultsCalendarPeriod.searchResultsCalendarPeriod(date: _1!, minMsgId: _2!, maxMsgId: _3!, count: _4!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            return Api.SearchResultsCalendarPeriod.searchResultsCalendarPeriod(date: _1!, minMsgId: _2!, maxMsgId: _3!, count: _4!)
         }
     
     }
@@ -870,12 +825,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SearchResultsPosition.searchResultPosition(msgId: _1!, date: _2!, offset: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SearchResultsPosition.searchResultPosition(msgId: _1!, date: _2!, offset: _3!)
         }
     
     }
@@ -914,12 +867,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureCredentialsEncrypted.secureCredentialsEncrypted(data: _1!, hash: _2!, secret: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureCredentialsEncrypted.secureCredentialsEncrypted(data: _1!, hash: _2!, secret: _3!)
         }
     
     }
@@ -958,12 +909,10 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SecureData.secureData(data: _1!, dataHash: _2!, secret: _3!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            return Api.SecureData.secureData(data: _1!, dataHash: _2!, secret: _3!)
         }
     
     }
@@ -1027,12 +976,14 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.SecureFile.secureFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, date: _5!, fileHash: _6!, secret: _7!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            if !_c2 { return nil }
+            if !_c3 { return nil }
+            if !_c4 { return nil }
+            if !_c5 { return nil }
+            if !_c6 { return nil }
+            if !_c7 { return nil }
+            return Api.SecureFile.secureFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, date: _5!, fileHash: _6!, secret: _7!)
         }
         public static func parse_secureFileEmpty(_ reader: BufferReader) -> SecureFile? {
             return Api.SecureFile.secureFileEmpty
@@ -1084,23 +1035,15 @@ public extension Api {
             var _1: Buffer?
             _1 = parseBytes(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: _1!)
         }
         public static func parse_securePasswordKdfAlgoSHA512(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
             var _1: Buffer?
             _1 = parseBytes(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoSHA512(salt: _1!)
-            }
-            else {
-                return nil
-            }
+            if !_c1 { return nil }
+            return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoSHA512(salt: _1!)
         }
         public static func parse_securePasswordKdfAlgoUnknown(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
             return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoUnknown

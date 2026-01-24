@@ -183,7 +183,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         
         if let down = self.directionButtonState.down {
             self.downButton.imageView.alpha = down.isEnabled ? 1.0 : 0.5
-            self.downButton.buttonNode.isEnabled = down.isEnabled
+            self.downButton.isEnabled = down.isEnabled
             
             mentionsOffset += buttonSize.height + 12.0
             upOffset += buttonSize.height + 12.0
@@ -203,7 +203,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         
         if let up = self.directionButtonState.up {
             self.upButton.imageView.alpha = up.isEnabled ? 1.0 : 0.5
-            self.upButton.buttonNode.isEnabled = up.isEnabled
+            self.upButton.isEnabled = up.isEnabled
             
             mentionsOffset += buttonSize.height + 12.0
 

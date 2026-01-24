@@ -75,6 +75,9 @@ public func textAlertController(
         ),
         title: title,
         text: text,
+        textAction: { attributes in
+            linkAction?(attributes, 0)
+        },
         actions: mappedActions,
         updatedPresentationData: (initial: presentationData, signal: updatedPresentationDataSignal)
     )
