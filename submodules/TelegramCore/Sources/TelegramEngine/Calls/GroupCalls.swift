@@ -3594,6 +3594,8 @@ private func serializeGroupCallMessage(randomId: Int64, text: String, entities: 
             case let .CustomEmoji(_, fileId):
                 entityDict["_"] = "messageEntityCustomEmoji"
                 entityDict["document_id"] = "\(fileId)"
+            case .FormattedDate:
+                return nil
             case .Custom:
                 return nil
             }

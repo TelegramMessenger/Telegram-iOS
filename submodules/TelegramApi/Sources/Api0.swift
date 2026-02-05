@@ -649,6 +649,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[681706865] = { return Api.MessageEntity.parse_messageEntityCode($0) }
     dict[-925956616] = { return Api.MessageEntity.parse_messageEntityCustomEmoji($0) }
     dict[1692693954] = { return Api.MessageEntity.parse_messageEntityEmail($0) }
+    dict[-1874147385] = { return Api.MessageEntity.parse_messageEntityFormattedDate($0) }
     dict[1868782349] = { return Api.MessageEntity.parse_messageEntityHashtag($0) }
     dict[-2106619040] = { return Api.MessageEntity.parse_messageEntityItalic($0) }
     dict[-100378723] = { return Api.MessageEntity.parse_messageEntityMention($0) }
