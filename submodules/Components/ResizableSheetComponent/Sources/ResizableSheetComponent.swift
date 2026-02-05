@@ -9,6 +9,11 @@ import TelegramPresentationData
 import EdgeEffect
 
 public final class ResizableSheetComponentEnvironment: Equatable {
+    public struct BoundsUpdate {
+        public let bounds: CGRect
+        public let isInteractive: Bool
+    }
+    
     public let theme: PresentationTheme
     public let statusBarHeight: CGFloat
     public let safeInsets: UIEdgeInsets
@@ -19,7 +24,7 @@ public final class ResizableSheetComponentEnvironment: Equatable {
     public let screenSize: CGSize
     public let regularMetricsSize: CGSize?
     public let dismiss: (Bool) -> Void
-    public let boundsUpdated: ActionSlot<CGRect>
+    public let boundsUpdated: ActionSlot<BoundsUpdate>
     
     public init(
         theme: PresentationTheme,
@@ -32,7 +37,7 @@ public final class ResizableSheetComponentEnvironment: Equatable {
         screenSize: CGSize,
         regularMetricsSize: CGSize?,
         dismiss: @escaping (Bool) -> Void,
-        boundsUpdated: ActionSlot<CGRect> = ActionSlot<CGRect>()
+        boundsUpdated: ActionSlot<BoundsUpdate> = ActionSlot<BoundsUpdate>()
     ) {
         self.theme = theme
         self.statusBarHeight = statusBarHeight
@@ -479,7 +484,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             
             var bounds = self.scrollView.bounds
             bounds.size.width = itemLayout.fillingSize
-            self.environment?.boundsUpdated.invoke(bounds)
+            self.environment?.boundsUpdated.invoke(ResizableSheetComponentEnvironment.BoundsUpdate(bounds: bounds, isInteractive: self.scrollView.isTracking))
         }
         
         private var didPlayAppearanceAnimation = false

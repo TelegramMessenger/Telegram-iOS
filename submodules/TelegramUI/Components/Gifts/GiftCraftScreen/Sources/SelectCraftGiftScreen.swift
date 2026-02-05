@@ -35,7 +35,7 @@ final class SelectGiftPageContent: Component {
     let starsTopUpOptions: Signal<[StarsTopUpOption]?, NoError>
     let selectGift: (GiftItem) -> Void
     let dismiss: () -> Void
-    let boundsUpdated: ActionSlot<CGRect>
+    let boundsUpdated: ActionSlot<ResizableSheetComponentEnvironment.BoundsUpdate>
     
     init(
         context: AccountContext,
@@ -47,7 +47,7 @@ final class SelectGiftPageContent: Component {
         starsTopUpOptions: Signal<[StarsTopUpOption]?, NoError>,
         selectGift: @escaping (GiftItem) -> Void,
         dismiss: @escaping () -> Void,
-        boundsUpdated: ActionSlot<CGRect>
+        boundsUpdated: ActionSlot<ResizableSheetComponentEnvironment.BoundsUpdate>
     ) {
         self.context = context
         self.craftContext = craftContext
@@ -310,6 +310,13 @@ final class SelectGiftPageContent: Component {
                 storeGiftsView.updateScrolling(bounds: bounds.offsetBy(dx: 0.0, dy: -contentHeight), interactive: interactive, transition: .immediate)
             }
             
+            let bottomContentOffset = max(0.0, contentHeight - bounds.origin.y - bounds.height)
+            if interactive, bottomContentOffset < 800.0 {
+                Queue.mainQueue().justDispatch {
+                    component.craftContext.loadMore()
+                }
+            }
+            
             return contentHeight
         }
                 
@@ -323,12 +330,12 @@ final class SelectGiftPageContent: Component {
             if self.component == nil {
                 self.currentBounds = CGRect(origin: .zero, size: availableSize)
                 
-                component.boundsUpdated.connect { [weak self] bounds in
+                component.boundsUpdated.connect { [weak self] update in
                     guard let self else {
                         return
                     }
-                    self.currentBounds = bounds
-                    let _ = self.updateScrolling(interactive: true, transition: .immediate)
+                    self.currentBounds = update.bounds
+                    let _ = self.updateScrolling(interactive: update.isInteractive, transition: .immediate)
                 }
                 
                 let initialGiftItem = GiftItem(
@@ -370,7 +377,9 @@ final class SelectGiftPageContent: Component {
                     self.availableGifts = items
                     self.giftMap = giftMap
                     
-                    self.state?.updated(transition: .spring(duration: 0.4))
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    }
                 })
             }
             
@@ -545,7 +554,7 @@ private final class SheetContainerComponent: CombinedComponent {
         let sheet = Child(ResizableSheetComponent<EnvironmentType>.self)
         let animateOut = StoredActionSlot(Action<Void>.self)
         
-        let boundsUpdated = ActionSlot<CGRect>()
+        let boundsUpdated = ActionSlot<ResizableSheetComponentEnvironment.BoundsUpdate>()
                         
         return { context in
             let component = context.component

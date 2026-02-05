@@ -103,6 +103,15 @@ public final class GiftStoreContentComponent: Component {
         if lhs.gift != rhs.gift {
             return false
         }
+        if lhs.safeInsets != rhs.safeInsets {
+            return false
+        }
+        if lhs.statusBarHeight != rhs.statusBarHeight {
+            return false
+        }
+        if lhs.navigationHeight != rhs.navigationHeight {
+            return false
+        }
         return true
     }
     

@@ -15679,7 +15679,6 @@ Error: %8$@";
 "Gift.Craft.ViewVariants" = "View all craftable models";
 "Gift.Craft.BackdropTooltip" = "**%1$@%** chance the crafted gift will have **%2$@** backdrop.";
 "Gift.Craft.SymbolTooltip" = "**%1$@%** chance the crafted gift will have **%2$@** symbol.";
-"Gift.Craft.SuccessChanceSuffix" = "% Success Chance";
 "Gift.Craft.Craft" = "Craft %@";
 "Gift.Craft.Crafting.Title" = "Crafting";
 "Gift.Craft.Crafting.Description" = "If crafting fails, all used gifts\nwill be lost.";
@@ -15768,3 +15767,5 @@ Error: %8$@";
 "AppointAnotherOwner.Title" = "Choose New Owner";
 
 "Gift.View.Context.Craft" = "Craft";
+
+"Group.OwnershipTransfer.DescriptionShortInfo" = "This will transfer the full **owner rights** for **%1$@** to **%2$@**.";

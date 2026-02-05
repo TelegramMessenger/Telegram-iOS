@@ -1543,17 +1543,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                     
                     self?.shareGift()
                 })))
-                
-                var canCraft = false
-                if let data = self.context.currentAppConfiguration.with({ $0 }).data {
-                    if let _ = data["ios_enable_crafting"] {
-                        canCraft = true
-                    } else if let isDev = data["dev"] as? Double, isDev == 1.0 {
-                        canCraft = true
-                    }
-                }
-                                
-                if let _ = arguments.canCraftDate, canCraft {
+                          
+                if let _ = arguments.canCraftDate {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Craft, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Premium/Craft/Craft"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] c, _ in
@@ -5279,27 +5270,16 @@ private final class GiftViewSheetContent: CombinedComponent {
             var rightControlItems: [GlassControlGroupComponent.Item] = []
             if uniqueGift != nil && !showWearPreview && !isDismantled {
                 if let _ = component.subject.arguments?.canCraftDate {
-                    var canCraft = false
-                    if let data = component.context.currentAppConfiguration.with({ $0 }).data {
-                        if let _ = data["ios_enable_crafting"] {
-                            canCraft = true
-                        } else if let isDev = data["dev"] as? Double, isDev == 1.0 {
-                            canCraft = true
-                        }
-                    }
-                    
-                    if canCraft {
-                        rightControlItems.append(GlassControlGroupComponent.Item(
-                            id: AnyHashable("craft"),
-                            content: .icon("Premium/Craft"),
-                            action: { [weak state] in
-                                guard let state else {
-                                    return
-                                }
-                                state.craftGift()
+                    rightControlItems.append(GlassControlGroupComponent.Item(
+                        id: AnyHashable("craft"),
+                        content: .icon("Premium/Craft"),
+                        action: { [weak state] in
+                            guard let state else {
+                                return
                             }
-                        ))
-                    }
+                            state.craftGift()
+                        }
+                    ))
                 }
 
                 rightControlItems.append(GlassControlGroupComponent.Item(

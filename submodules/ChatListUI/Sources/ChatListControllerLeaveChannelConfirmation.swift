@@ -135,6 +135,7 @@ extension ChatListControllerImpl {
                                     updatedPresentationData: nil,
                                     peer: chatPeer,
                                     member: user,
+                                    onLeave: true,
                                     initialError: error,
                                     present: { c, a in
                                         presentController(c)

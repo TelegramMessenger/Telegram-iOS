@@ -716,7 +716,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             guard let strongSelf = self, let (layout, navigationBarHeight) = strongSelf.validLayout, strongSelf.listNode.scrollEnabled else {
                 return
             }
-            let overlap: CGFloat = 6.0
+            let overlap: CGFloat = 0.0
             strongSelf.listOffset = max(0.0, offset)
             let headerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(0.0, offset + overlap)))
             listTransition.updateFrame(node: strongSelf.headerNode, frame: headerFrame)
@@ -940,7 +940,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             }
         }
         
-        let overlap: CGFloat = 6.0
+        let overlap: CGFloat = 0.0
         var topInset: CGFloat = layout.size.height - layout.intrinsicInsets.bottom - overlap
         if !self.isStoryLocation {
             topInset -= 100.0

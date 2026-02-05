@@ -263,7 +263,7 @@ private final class CraftGiftPageContent: Component {
                 
                 self.craftStateDisposable = (component.craftContext.state
                 |> deliverOnMainQueue).start(next: { [weak self] state in
-                    guard let self else {
+                    guard let self, let component = self.component else {
                         return
                     }
                     self.craftState = state
@@ -297,6 +297,10 @@ private final class CraftGiftPageContent: Component {
                     self.component?.externalState.giftsMap = self.giftMap
                     
                     self.state?.updated(transition: .spring(duration: 0.4))
+                    
+                    if state.gifts.count < 18, case .ready(true, _) = state.dataState {
+                        component.craftContext.loadMore()
+                    }
                 })
                 
                 self.upgradePreviewDisposable.add((component.context.engine.payments.getStarGiftUpgradeAttributes(giftId: initialGiftItem.gift.giftId)
@@ -1622,9 +1626,31 @@ private final class SheetContainerComponent: CombinedComponent {
                 ))
             } else {
                 var buttonAnimatedItems: [AnimatedTextComponent.Item] = []
-                buttonAnimatedItems.append(AnimatedTextComponent.Item(id: "percent", content: .number(Int(permilleValue / 10), minDigits: 1)))
-                buttonAnimatedItems.append(AnimatedTextComponent.Item(id: "suffix", content: .text(environment.strings.Gift_Craft_SuccessChanceSuffix)))
                 
+                let rawString = environment.strings.Gift_Craft_Crafting_SuccessChance("{p}").string
+                var startIndex = rawString.startIndex
+                while true {
+                    if let range = rawString.range(of: "{", range: startIndex ..< rawString.endIndex) {
+                        if range.lowerBound != startIndex {
+                            buttonAnimatedItems.append(AnimatedTextComponent.Item(id: AnyHashable(buttonAnimatedItems.count), content: .text(String(rawString[startIndex ..< range.lowerBound]))))
+                        }
+                        
+                        startIndex = range.upperBound
+                        if let endRange = rawString.range(of: "}", range: startIndex ..< rawString.endIndex) {
+                            let controlString = rawString[range.upperBound ..< endRange.lowerBound]
+                            if controlString == "p" {
+                                buttonAnimatedItems.append(AnimatedTextComponent.Item(id: AnyHashable(buttonAnimatedItems.count), content: .number(Int(permilleValue / 10), minDigits: 1)))
+                            }
+                            startIndex = endRange.upperBound
+                        }
+                    } else {
+                        break
+                    }
+                }
+                if startIndex != rawString.endIndex {
+                    buttonAnimatedItems.append(AnimatedTextComponent.Item(id: AnyHashable(buttonAnimatedItems.count), content: .text(String(rawString[startIndex ..< rawString.endIndex]))))
+                }
+
                 buttonContent = AnyComponentWithIdentity(id: "craft", component: AnyComponent(
                     VStack([
                         AnyComponentWithIdentity(

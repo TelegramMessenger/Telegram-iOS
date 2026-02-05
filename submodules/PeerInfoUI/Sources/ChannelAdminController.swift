@@ -1109,6 +1109,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                     updatedPresentationData: updatedPresentationData,
                     peer: peer,
                     member: member,
+                    onLeave: false,
                     initialError: error,
                     present: { c, a in
                         presentControllerImpl?(c, a)

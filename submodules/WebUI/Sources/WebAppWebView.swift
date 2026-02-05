@@ -134,7 +134,7 @@ final class WebAppWebView: WKWebView {
         let contentController = WKUserContentController()
                            
         var handleScriptMessageImpl: ((WKScriptMessage) -> Void)?
-        let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        let eventProxyScript = WKUserScript(source: eventProxySource, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         contentController.addUserScript(eventProxyScript)
         contentController.add(WeakGameScriptMessageHandler { message in
             handleScriptMessageImpl?(message)
