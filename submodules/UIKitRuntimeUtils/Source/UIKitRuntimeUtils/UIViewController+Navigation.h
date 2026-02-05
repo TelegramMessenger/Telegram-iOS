@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <WebKit/WebKit.h>
 
 typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
     UIResponderDisableAutomaticKeyboardHandlingForward = 1 << 0,
@@ -102,5 +103,12 @@ void snapshotViewByDrawingInContext(UIView * _Nonnull view);
 
 @property (nonatomic) double lumaMin;
 @property (nonatomic) double lumaMax;
+
+@end
+
+@interface WebHelpers : NSObject
+
++ (dispatch_block_t _Nonnull)addTrustedDomain:(NSString * _Nonnull)domain;
++ (void)forceRefreshTrustedDomains:(WKWebsiteDataStore * _Nonnull)websiteDataStore;
 
 @end

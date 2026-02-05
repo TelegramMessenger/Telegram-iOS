@@ -69,6 +69,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var allForumsHaveTabs: Bool
     public var debugRatingLayout: Bool
     public var enableUpdates: Bool
+    public var enablePWA: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -115,7 +116,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             checkSerializedData: false,
             allForumsHaveTabs: false,
             debugRatingLayout: false,
-            enableUpdates: false
+            enableUpdates: false,
+            enablePWA: false
         )
     }
     
@@ -163,7 +165,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         checkSerializedData: Bool,
         allForumsHaveTabs: Bool,
         debugRatingLayout: Bool,
-        enableUpdates: Bool
+        enableUpdates: Bool,
+        enablePWA: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -209,6 +212,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.allForumsHaveTabs = allForumsHaveTabs
         self.debugRatingLayout = debugRatingLayout
         self.enableUpdates = enableUpdates
+        self.enablePWA = enablePWA
     }
     
     public init(from decoder: Decoder) throws {
@@ -258,6 +262,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.allForumsHaveTabs = try container.decodeIfPresent(Bool.self, forKey: "allForumsHaveTabs") ?? false
         self.debugRatingLayout = try container.decodeIfPresent(Bool.self, forKey: "debugRatingLayout") ?? false
         self.enableUpdates = try container.decodeIfPresent(Bool.self, forKey: "enableUpdates") ?? false
+        self.enablePWA = try container.decodeIfPresent(Bool.self, forKey: "enablePWA") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -307,6 +312,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.allForumsHaveTabs, forKey: "allForumsHaveTabs")
         try container.encodeIfPresent(self.debugRatingLayout, forKey: "debugRatingLayout")
         try container.encodeIfPresent(self.enableUpdates, forKey: "enableUpdates")
+        try container.encodeIfPresent(self.enablePWA, forKey: "enablePWA")
     }
 }
 

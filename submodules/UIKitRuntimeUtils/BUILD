@@ -16,12 +16,13 @@ objc_library(
       "Source",
     ],
     deps = [
-      "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-      "//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
+      "//submodules/AsyncDisplayKit",
+      "//submodules/ObjCRuntimeUtils",
     ],
     sdk_frameworks = [
       "Foundation",
       "UIKit",
+      "WebKit",
     ],
     visibility = [
         "//visibility:public",

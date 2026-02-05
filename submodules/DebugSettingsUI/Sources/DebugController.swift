@@ -109,7 +109,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case playerV2(Bool)
     case devRequests(Bool)
     case enableUpdates(Bool)
-    case fakeAds(Bool)
+    case pwa(Bool)
     case enableLocalTranslation(Bool)
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
@@ -135,7 +135,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .enableUpdates, .fakeAds, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -258,7 +258,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 54
         case .devRequests:
             return 55
-        case .fakeAds:
+        case .pwa:
             return 56
         case .enableLocalTranslation:
             return 57
@@ -1200,7 +1200,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .resetWebViewCache:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Clear Web View Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
+                WKWebsiteDataStore.default().removeData(ofTypes: [
+                    WKWebsiteDataTypeDiskCache,
+                    WKWebsiteDataTypeOfflineWebApplicationCache,
+                    WKWebsiteDataTypeMemoryCache,
+                    WKWebsiteDataTypeLocalStorage,
+                    WKWebsiteDataTypeCookies,
+                    WKWebsiteDataTypeSessionStorage,
+                    WKWebsiteDataTypeIndexedDBDatabases,
+                    WKWebsiteDataTypeWebSQLDatabases,
+                    WKWebsiteDataTypeFetchCache,
+                    WKWebsiteDataTypeServiceWorkerRegistrations
+                ], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
             })
         case .optimizeDatabase:
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -1392,12 +1403,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .fakeAds(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Fake Ads", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .pwa(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Test1", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.fakeAds = value
+                        settings.enablePWA = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1488,7 +1499,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func debugControllerEntries(sharedContext: SharedAccountContext, presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool, useBetaFeatures: Bool) -> [DebugControllerEntry] {
+private func debugControllerEntries(context: AccountContext?, sharedContext: SharedAccountContext, presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool, useBetaFeatures: Bool) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
@@ -1572,7 +1583,18 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.playerV2(experimentalSettings.playerV2))
         
         entries.append(.devRequests(experimentalSettings.devRequests))
-        entries.append(.fakeAds(experimentalSettings.fakeAds))
+        
+        if let data = context?.currentAppConfiguration.with({ $0 }).data {
+            var displayPwa = false
+            if let _ = data["ios_display_pwa"] {
+                displayPwa = true
+            } else if let isDev = data["dev"] as? Double, isDev == 1.0 {
+                displayPwa = true
+            }
+            if displayPwa {
+                entries.append(.pwa(experimentalSettings.enablePWA))
+            }
+        }
         entries.append(.enableLocalTranslation(experimentalSettings.enableLocalTranslation))
         entries.append(.enableUpdates(experimentalSettings.enableUpdates))
     }
@@ -1658,7 +1680,7 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData, useBetaFeatures: useBetaFeatures), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(context: context, sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData, useBetaFeatures: useBetaFeatures), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
