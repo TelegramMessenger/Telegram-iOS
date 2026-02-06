@@ -102,6 +102,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     private var countPanelNode: PeersCountPanelNode?
     
+    weak var pushedController: ViewController?
+    
     private var readyValue = Promise<Bool>()
     var ready: Signal<Bool, NoError> {
         return self.readyValue.get()
@@ -350,6 +352,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)
                 }
+                strongSelf.pushedController = controller
                 strongSelf.controller?.push(controller)
             }
             self.addSubnode(mainContainerNode)
