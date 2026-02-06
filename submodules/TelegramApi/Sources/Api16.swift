@@ -78,6 +78,18 @@ public extension Api {
                 self.length = length
             }
         }
+        public class Cons_messageEntityFormattedDate {
+            public var flags: Int32
+            public var offset: Int32
+            public var length: Int32
+            public var date: Int32
+            public init(flags: Int32, offset: Int32, length: Int32, date: Int32) {
+                self.flags = flags
+                self.offset = offset
+                self.length = length
+                self.date = date
+            }
+        }
         public class Cons_messageEntityHashtag {
             public var offset: Int32
             public var length: Int32
@@ -189,6 +201,7 @@ public extension Api {
         case messageEntityCode(Cons_messageEntityCode)
         case messageEntityCustomEmoji(Cons_messageEntityCustomEmoji)
         case messageEntityEmail(Cons_messageEntityEmail)
+        case messageEntityFormattedDate(Cons_messageEntityFormattedDate)
         case messageEntityHashtag(Cons_messageEntityHashtag)
         case messageEntityItalic(Cons_messageEntityItalic)
         case messageEntityMention(Cons_messageEntityMention)
@@ -269,6 +282,15 @@ public extension Api {
                 }
                 serializeInt32(_data.offset, buffer: buffer, boxed: false)
                 serializeInt32(_data.length, buffer: buffer, boxed: false)
+                break
+            case .messageEntityFormattedDate(let _data):
+                if boxed {
+                    buffer.appendInt32(-1874147385)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt32(_data.offset, buffer: buffer, boxed: false)
+                serializeInt32(_data.length, buffer: buffer, boxed: false)
+                serializeInt32(_data.date, buffer: buffer, boxed: false)
                 break
             case .messageEntityHashtag(let _data):
                 if boxed {
@@ -380,6 +402,8 @@ public extension Api {
                 return ("messageEntityCustomEmoji", [("offset", _data.offset as Any), ("length", _data.length as Any), ("documentId", _data.documentId as Any)])
             case .messageEntityEmail(let _data):
                 return ("messageEntityEmail", [("offset", _data.offset as Any), ("length", _data.length as Any)])
+            case .messageEntityFormattedDate(let _data):
+                return ("messageEntityFormattedDate", [("flags", _data.flags as Any), ("offset", _data.offset as Any), ("length", _data.length as Any), ("date", _data.date as Any)])
             case .messageEntityHashtag(let _data):
                 return ("messageEntityHashtag", [("offset", _data.offset as Any), ("length", _data.length as Any)])
             case .messageEntityItalic(let _data):
@@ -539,6 +563,26 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageEntity.messageEntityEmail(Cons_messageEntityEmail(offset: _1!, length: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityFormattedDate(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageEntity.messageEntityFormattedDate(Cons_messageEntityFormattedDate(flags: _1!, offset: _2!, length: _3!, date: _4!))
             }
             else {
                 return nil

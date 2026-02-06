@@ -561,7 +561,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
                 if isSelected && value == nil {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 } else {
-                    return nil
+                    return UIImage()
                 }
             }), action: { [weak self] _, f in
                 scheduleTooltip(nil)

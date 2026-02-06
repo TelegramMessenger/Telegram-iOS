@@ -3241,7 +3241,7 @@ final class StorageUsageScreenComponent: Component {
                         if currentValue == value {
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                         } else {
-                            return nil
+                            return UIImage()
                         }
                     }, action: { _, f in
                         applyValue(value)

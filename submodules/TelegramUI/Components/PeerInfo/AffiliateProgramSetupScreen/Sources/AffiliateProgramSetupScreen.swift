@@ -476,7 +476,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
                     if isSelected {
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
                     } else {
-                        return nil
+                        return UIImage()
                     }
                 }, action: { [weak self] _, f in
                     f(.default)

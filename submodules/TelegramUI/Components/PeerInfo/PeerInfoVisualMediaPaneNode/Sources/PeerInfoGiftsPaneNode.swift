@@ -1033,7 +1033,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         let isAdded = gift.collectionIds?.contains(collection.id) ?? false
                         
                         subItems.append(.action(ContextMenuActionItem(text: title, entities: entities, entityFiles: entityFiles, enableEntityAnimations: false, icon: { theme in
-                            return entities.isEmpty ? generateTintedImage(image: UIImage(bundleImageName: "Peer Info/Gifts/Collection"), color: theme.contextMenu.primaryColor) : (isAdded ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil)
+                            return entities.isEmpty ? generateTintedImage(image: UIImage(bundleImageName: "Peer Info/Gifts/Collection"), color: theme.contextMenu.primaryColor) : (isAdded ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage())
                         }, iconPosition: collection.icon == nil ? .left : .right, action: { [weak self] _, f in
                             f(.default)
                             

@@ -488,7 +488,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     if canHideNames {
                         items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames, icon: { theme in
                             if hideNames {
-                                return nil
+                                return UIImage()
                             } else {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                             }
@@ -506,7 +506,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                             if hideNames {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                             } else {
-                                return nil
+                                return UIImage()
                             }
                         }, action: { _, f in
                             self?.interfaceInteraction?.updateForwardOptionsState({ current in
@@ -523,7 +523,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     if hasCaptions {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowCaption, icon: { theme in
                             if hideCaptions {
-                                return nil
+                                return UIImage()
                             } else {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                             }
@@ -543,7 +543,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                             if hideCaptions {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                             } else {
-                                return nil
+                                return UIImage()
                             }
                         }, action: { _, f in
                             self?.interfaceInteraction?.updateForwardOptionsState({ current in

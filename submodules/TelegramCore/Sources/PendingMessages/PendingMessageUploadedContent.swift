@@ -1169,7 +1169,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         if let _ = videoCoverPhoto {
                             flags |= 1 << 6
                         }
-                        
+                                                
                         var ttlSeconds: Int32?
                         var videoTimestamp: Int32?
                         for attribute in attributes {
@@ -1211,6 +1211,10 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         
                         if videoTimestamp != nil {
                             flags |= 1 << 7
+                        }
+                        
+                        if file.isLivePhoto {
+                            flags |= 1 << 8
                         }
                         
                         if ttlSeconds != nil {

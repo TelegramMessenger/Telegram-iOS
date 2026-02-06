@@ -398,7 +398,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaDocument(messageMediaDocumentData):
             let (flags, document, altDocuments, coverPhoto, videoTimestamp, ttlSeconds) = (messageMediaDocumentData.flags, messageMediaDocumentData.document, messageMediaDocumentData.altDocuments, messageMediaDocumentData.videoCover, messageMediaDocumentData.videoTimestamp, messageMediaDocumentData.ttlSeconds)
             if let document = document {
-                if let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments, videoCover: coverPhoto) {
+                if let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments, videoCover: coverPhoto, isLivePhoto: (flags & (1 << 11)) != 0) {
                     return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0, nil, videoTimestamp)
                 }
             } else {
@@ -785,6 +785,31 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
         case let .messageEntityCustomEmoji(messageEntityCustomEmojiData):
             let (offset, length, documentId) = (messageEntityCustomEmojiData.offset, messageEntityCustomEmojiData.length, messageEntityCustomEmojiData.documentId)
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .CustomEmoji(stickerPack: nil, fileId: documentId)))
+        case let .messageEntityFormattedDate(messageEntityFormattedDateData):
+            let (flags, offset, length, date) = (messageEntityFormattedDateData.flags, messageEntityFormattedDateData.offset, messageEntityFormattedDateData.length, messageEntityFormattedDateData.date)
+            let format: MessageTextEntityType.DateTimeFormat
+            if (flags & (1 << 0)) != 0 {
+                format = .relative
+            } else {
+                let timeFormat: MessageTextEntityType.DateTimeFormat.TimeFormat
+                if (flags & (1 << 1)) != 0 {
+                    timeFormat = .short
+                } else if (flags & (1 << 2)) != 0 {
+                    timeFormat = .long
+                } else {
+                    timeFormat = .short
+                }
+                let dateFormat: MessageTextEntityType.DateTimeFormat.DateFormat
+                if (flags & (1 << 3)) != 0 {
+                    dateFormat = .short
+                } else if (flags & (1 << 4)) != 0 {
+                    dateFormat = .long
+                } else {
+                    dateFormat = .short
+                }
+                format = .full(timeFormat: timeFormat, dateFormat: dateFormat)
+            }
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .FormattedDate(format: format, date: date)))
         }
     }
     return result
