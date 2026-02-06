@@ -37,6 +37,7 @@ arm64_specific_flags = [
 arch_specific_cflags = select({
     "@build_bazel_rules_apple//apple:ios_arm64": common_flags + arm64_specific_flags,
     "//build-system:ios_sim_arm64": common_flags + arm64_specific_flags,
+    "//conditions:default": [],
 })
 
 optimization_flags = select({

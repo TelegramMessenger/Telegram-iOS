@@ -2324,8 +2324,12 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 
                 var keyboardButtonsMessage = view.topTaggedMessages.first
-                if keyboardButtonsMessage != nil && keyboardButtonsMessage?.threadId != chatLocation.threadId {
-                    keyboardButtonsMessage = nil
+                if let keyboardButtonsMessageValue = keyboardButtonsMessage {
+                    if keyboardButtonsMessageValue.threadId != chatLocation.threadId {
+                        if chatLocation.threadId != nil {
+                            keyboardButtonsMessage = nil
+                        }
+                    }
                 }
                 if let keyboardButtonsMessageValue = keyboardButtonsMessage, keyboardButtonsMessageValue.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with({ $0 })) {
                     keyboardButtonsMessage = nil

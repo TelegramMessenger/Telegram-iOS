@@ -827,6 +827,17 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
                 self.addSubnode(item.node)
             }
             
+            if let tipSignal = tipSignal {
+                self.tipDisposable = (tipSignal
+                |> deliverOnMainQueue).start(next: { [weak self] tip in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.tip = tip
+                    requestUpdate(.immediate)
+                }).strict()
+            }
+            
             requestUpdateAction = { [weak self] id, action in
                 guard let self else {
                     return
@@ -981,16 +992,25 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
             if let tip = self.tip {
                 let tipNode: InnerTextSelectionTipContainerNode
                 var tipTransition = transition
-                if let current = self.tipNode {
+                if let current = self.tipNode, current.tip == tip {
                     tipNode = current
                 } else {
                     tipTransition = .immediate
+                    
+                    let previousTipNode = self.tipNode
                     tipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip, isInline: true)
-                    self.addSubnode(tipNode)
-                    self.tipNode = tipNode
                     let getController = self.getController
                     tipNode.requestDismiss = { completion in
                         getController()?.dismiss(completion: completion)
+                    }
+                    self.addSubnode(tipNode)
+                    self.tipNode = tipNode
+                    
+                    if let previousTipNode = previousTipNode {
+                        previousTipNode.animateTransitionInside(other: tipNode)
+                        previousTipNode.removeFromSupernode()
+                        
+                        tipNode.animateContentIn()
                     }
                 }
                 
@@ -1004,12 +1024,15 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
                 }
                 
                 let (tipSeparatorMinSize, tipSeparatorApply) = tipSeparatorNode.update(presentationData: presentationData, constrainedSize: CGSize(width: combinedSize.width, height: 10.0))
+                tipSeparatorNode.isHidden = self.itemNodes.isEmpty
                 let tipSeparatorSize = CGSize(width: combinedSize.width, height: tipSeparatorMinSize.height)
                 tipSeparatorApply(tipSeparatorSize, tipTransition)
                 let tipSeparatorFrame = CGRect(origin: nextItemOrigin, size: tipSeparatorSize)
                 tipTransition.updateFrame(node: tipSeparatorNode, frame: tipSeparatorFrame)
-                nextItemOrigin.y += tipSeparatorSize.height
-                combinedSize.height += tipSeparatorSize.height
+                if !tipSeparatorNode.isHidden {
+                    nextItemOrigin.y += tipSeparatorSize.height
+                    combinedSize.height += tipSeparatorSize.height
+                }
                 
                 let tipSize = tipNode.updateLayout(widthClass: .compact, presentation: .inline, width: combinedSize.width, transition: tipTransition)
                 let tipFrame = CGRect(origin: nextItemOrigin, size: tipSize)

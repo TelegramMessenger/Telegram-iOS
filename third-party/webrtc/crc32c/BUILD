@@ -6,6 +6,7 @@ arch_specific_crc32c_sources = select({
     "//build-system:ios_sim_arm64": [
         "third_party/crc32c/src/crc32c_arm64.cc",
     ],
+    "//conditions:default": [],
 })
 
 crc32c_sources = ["third_party/crc32c/src/" + x for x in [

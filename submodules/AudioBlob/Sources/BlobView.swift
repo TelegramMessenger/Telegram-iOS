@@ -55,6 +55,8 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     
     private(set) var isAnimating = false
     
+    public var hitTestSize: CGFloat?
+    
     public typealias BlobRange = (min: CGFloat, max: CGFloat)
     
     public init(
@@ -223,6 +225,15 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
         self.bigBlob.frame = bounds
         
         self.updateBlobsState()
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let hitTestSize = self.hitTestSize {
+            if !CGSize(width: hitTestSize, height: hitTestSize).centered(in: self.bounds).contains(point) {
+                return nil
+            }
+        }
+        return super.hitTest(point, with: event)
     }
 }
 
