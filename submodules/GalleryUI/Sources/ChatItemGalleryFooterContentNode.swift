@@ -1340,13 +1340,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         isOpen: false
                     ))),
                     action: { [weak self] in
-                        guard let self, let buttonPanelView = self.buttonPanel.view as? GlassControlPanelComponent.View, let centerItemView = buttonPanelView.centerItemView else {
+                        guard let self, let buttonPanelView = self.buttonPanel.view as? GlassControlPanelComponent.View else {
                             return
                         }
-                        guard let itemView = centerItemView.itemView(id: AnyHashable("settings")) else {
-                            return
+                        if let centerItemView = buttonPanelView.centerItemView, let itemView = centerItemView.itemView(id: AnyHashable("settings")) {
+                            self.settingsButtonPressed(sourceView: itemView)
+                        } else if let rightItemView = buttonPanelView.rightItemView, let itemView = rightItemView.itemView(id: AnyHashable("settings")) {
+                            self.settingsButtonPressed(sourceView: itemView)
                         }
-                        self.settingsButtonPressed(sourceView: itemView)
                     }
                 ))
             }
