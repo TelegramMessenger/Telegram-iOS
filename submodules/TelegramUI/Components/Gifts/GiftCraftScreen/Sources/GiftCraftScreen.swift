@@ -69,6 +69,7 @@ private final class CraftGiftPageContent: Component {
     let starsTopUpOptionsPromise: Promise<[StarsTopUpOption]?>
     let selectGift: (Int32, GiftItem) -> Void
     let removeGift: (Int32) -> Void
+    let craftAnotherGift: () -> Void
     let dismiss: () -> Void
     
     init(
@@ -86,6 +87,7 @@ private final class CraftGiftPageContent: Component {
         starsTopUpOptionsPromise: Promise<[StarsTopUpOption]?>,
         selectGift: @escaping (Int32, GiftItem) -> Void,
         removeGift: @escaping (Int32) -> Void,
+        craftAnotherGift: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
@@ -102,6 +104,7 @@ private final class CraftGiftPageContent: Component {
         self.starsTopUpOptionsPromise = starsTopUpOptionsPromise
         self.selectGift = selectGift
         self.removeGift = removeGift
+        self.craftAnotherGift = craftAnotherGift
         self.dismiss = dismiss
     }
     
@@ -1203,7 +1206,13 @@ private final class CraftGiftPageContent: Component {
                             }
                             if let _ = view {
                                 if case let .gift(gift) = component.result {
-                                    let giftController = GiftViewScreen(context: component.context, subject: .profileGift(component.context.account.peerId, gift))
+                                    let giftController = GiftViewScreen(
+                                        context: component.context,
+                                        subject: .profileGift(component.context.account.peerId, gift),
+                                        customAction: .init(title: environment.strings.Gift_Craft_CraftingFailed_CraftAnotherGift, action: {
+                                            component.craftAnotherGift()
+                                        })
+                                    )
                                     if let navigationController = controller.navigationController {
                                         navigationController.pushViewController(giftController, animated: true)
                                         
@@ -1548,6 +1557,36 @@ private final class SheetContainerComponent: CombinedComponent {
                 }
             }
             
+            let navigationController = environment.controller()?.navigationController as? NavigationController
+            let profileGiftsContext = (environment.controller() as? GiftCraftScreen)?.profileGiftsContext
+            let resaleContext = state.resaleContext
+            let starsTopUpOptionsPromise = state.starsTopUpOptionsPromise
+            let craftAnotherGift = { [weak navigationController] in
+                guard let navigationController else {
+                    return
+                }
+                if let genericGift = externalState.starGiftsMap[component.gift.giftId] {
+                    HapticFeedback().impact(.light)
+                    
+                    let selectController = SelectCraftGiftScreen(
+                        context: component.context,
+                        craftContext: component.craftContext,
+                        resaleContext: resaleContext,
+                        gift: component.gift,
+                        genericGift: genericGift,
+                        selectedGiftIds: Set(),
+                        starsTopUpOptions: starsTopUpOptionsPromise.get(),
+                        selectGift: { [weak navigationController] item in
+                            if let navigationController{
+                                let craftController = GiftCraftScreen(context: component.context, gift: item.gift, profileGiftsContext: profileGiftsContext)
+                                navigationController.pushViewController(craftController)
+                            }
+                        }
+                    )
+                    navigationController.pushViewController(selectController)
+                }
+            }
+            
             let theme = environment.theme
                         
             var colors: (UIColor, UIColor, UIColor, UIColor, UIColor) = (
@@ -1720,6 +1759,7 @@ private final class SheetContainerComponent: CombinedComponent {
                                 state.selectedGiftIds[index] = nil
                                 state.updated(transition: .spring(duration: 0.4))
                             },
+                            craftAnotherGift: craftAnotherGift,
                             dismiss: {
                                 dismiss(true)
                             }
@@ -1791,26 +1831,8 @@ private final class SheetContainerComponent: CombinedComponent {
                                 if state.displayInfo {
                                     state.displayInfo = false
                                     state.updated(transition: .spring(duration: 0.3))
-                                } else if state.displayFailure, let genericGift = externalState.starGiftsMap[component.gift.giftId] {
-                                    HapticFeedback().impact(.light)
-                                    
-                                    let selectController = SelectCraftGiftScreen(
-                                        context: component.context,
-                                        craftContext: component.craftContext,
-                                        resaleContext: state.resaleContext,
-                                        gift: component.gift,
-                                        genericGift: genericGift,
-                                        selectedGiftIds: Set(),
-                                        starsTopUpOptions: state.starsTopUpOptionsPromise.get(),
-                                        selectGift: { item in
-                                            if let controller = controller() as? GiftCraftScreen, let navigationController = controller.navigationController as? NavigationController {
-                                                let craftController = GiftCraftScreen(context: component.context, gift: item.gift, profileGiftsContext: controller.profileGiftsContext)
-                                                controller.dismissAnimated()
-                                                navigationController.pushViewController(craftController)
-                                            }
-                                        }
-                                    )
-                                    environment.controller()?.push(selectController)
+                                } else if state.displayFailure {
+                                    craftAnotherGift()
                                 } else {
                                     HapticFeedback().impact(.medium)
                                     
