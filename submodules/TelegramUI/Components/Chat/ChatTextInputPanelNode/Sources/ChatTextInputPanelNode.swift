@@ -4378,7 +4378,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     }
                 })
                 
-                blurTransitionOut.animateBlur(layer: self.sendActionButtons.sendContainerNode.layer, fromRadius: 0.0, toRadius: sendButtonBlurOut)
+                blurTransitionOut.setBlur(layer: self.sendActionButtons.sendContainerNode.layer, radius: sendButtonBlurOut)
                 
                 if let sendButtonRadialStatusNode = self.sendActionButtons.sendButtonRadialStatusNode {
                     alphaTransition.updateAlpha(node: sendButtonRadialStatusNode, alpha: 0.0)
@@ -4409,7 +4409,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             if (hasText || keepSendButtonEnabled && !mediaInputIsActive && !hasSlowModeButton) {
                 if self.sendActionButtons.sendContainerNode.alpha.isZero && self.rightSlowModeInset.isZero {
                     alphaTransition.updateAlpha(node: self.sendActionButtons.sendContainerNode, alpha: 1.0)
-                    blurTransitionIn.animateBlur(layer: self.sendActionButtons.sendContainerNode.layer, fromRadius: sendButtonBlurOut, toRadius: 0.0)
+                    blurTransitionIn.setBlur(layer: self.sendActionButtons.sendContainerNode.layer, radius: 0.0)
                     transition.animatePositionAdditive(layer: self.sendActionButtons.sendButton.imageNode.layer, offset: CGPoint(x: -22.0, y: 18.0))
                     if let sendButtonRadialStatusNode = self.sendActionButtons.sendButtonRadialStatusNode {
                         alphaTransition.updateAlpha(node: sendButtonRadialStatusNode, alpha: 1.0)
@@ -4424,7 +4424,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                             strongSelf.applyUpdateSendButtonIcon()
                         }
                     })
-                    blurTransitionOut.animateBlur(layer: self.sendActionButtons.sendContainerNode.layer, fromRadius: 0.0, toRadius: sendButtonBlurOut)
+                    blurTransitionOut.setBlur(layer: self.sendActionButtons.sendContainerNode.layer, radius: sendButtonBlurOut)
                     if let sendButtonRadialStatusNode = self.sendActionButtons.sendButtonRadialStatusNode {
                         alphaTransition.updateAlpha(node: sendButtonRadialStatusNode, alpha: 0.0)
                     }
