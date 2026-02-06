@@ -15769,3 +15769,17 @@ Error: %8$@";
 "Gift.View.Context.Craft" = "Craft";
 
 "Group.OwnershipTransfer.DescriptionShortInfo" = "This will transfer the full **owner rights** for **%1$@** to **%2$@**.";
+
+"FormattedDate.InMinutes_1" = "in %@ minute";
+"FormattedDate.InMinutes_any" = "in %@ minutes";
+"FormattedDate.InHours_1" = "in %@ hour";
+"FormattedDate.InHours_any" = "in %@ hours";
+"FormattedDate.InDays_1" = "in %@ day";
+"FormattedDate.InDays_any" = "in %@ days";
+
+"FormattedDate.MinutesAgo_1" = "%@ minute ago";
+"FormattedDate.MinutesAgo_any" = "%@ minutes ago";
+"FormattedDate.HoursAgo_1" = "%@ hour ago";
+"FormattedDate.HoursAgo_any" = "%@ hours ago";
+"FormattedDate.DaysAgo_1" = "%@ day ago";
+"FormattedDate.DaysAgo_any" = "%@ days ago";

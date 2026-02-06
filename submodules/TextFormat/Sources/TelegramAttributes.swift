@@ -44,4 +44,5 @@ public struct TelegramTextAttributes {
     public static let Spoiler = "TelegramSpoiler"
     public static let Code = "TelegramCode"
     public static let Button = "TelegramButton"
+    public static let Date = "TelegramDate"
 }

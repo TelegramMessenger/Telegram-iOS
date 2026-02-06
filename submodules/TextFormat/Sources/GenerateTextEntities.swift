@@ -15,6 +15,8 @@ private let whitelistedHosts: Set<String> = Set([
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 private let dataAndPhoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link, .phoneNumber]).rawValue)
 private let phoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.phoneNumber]).rawValue)
+private let dataAndPhoneNumberAndDateDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link, .phoneNumber, .date]).rawValue)
+
 private let validHashtagSet: CharacterSet = {
     var set = CharacterSet.alphanumerics
     set.insert("_")
@@ -100,8 +102,9 @@ public struct EnabledEntityTypes: OptionSet {
     public static let timecode = EnabledEntityTypes(rawValue: 1 << 5)
     public static let external = EnabledEntityTypes(rawValue: 1 << 6)
     public static let internalUrl = EnabledEntityTypes(rawValue: 1 << 7)
+    public static let date = EnabledEntityTypes(rawValue: 1 << 8)
     
-    public static let all: EnabledEntityTypes = [.command, .mention, .hashtag, .allUrl, .phoneNumber]
+    public static let all: EnabledEntityTypes = [.command, .mention, .hashtag, .allUrl, .phoneNumber, .date]
 }
 
 private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, _ range: Range<String.UTF16View.Index>, _ enabledTypes: EnabledEntityTypes, _ entities: inout [MessageTextEntity], mediaDuration: Double? = nil) {
@@ -254,7 +257,9 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
     let utf16 = text.utf16
     
     var detector: NSDataDetector?
-    if enabledTypes.contains(.phoneNumber) && (enabledTypes.contains(.allUrl) || enabledTypes.contains(.internalUrl)) {
+    if enabledTypes.contains(.phoneNumber) && enabledTypes.contains(.date) && (enabledTypes.contains(.allUrl) || enabledTypes.contains(.internalUrl)) {
+        detector = dataAndPhoneNumberAndDateDetector
+    } else if enabledTypes.contains(.phoneNumber) && (enabledTypes.contains(.allUrl) || enabledTypes.contains(.internalUrl)) {
         detector = dataAndPhoneNumberDetector
     } else if enabledTypes.contains(.phoneNumber) {
         detector = phoneNumberDetector
@@ -267,7 +272,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
     if let detector = detector {
         detector.enumerateMatches(in: text, options: [], range: NSMakeRange(0, utf16.count), using: { result, _, _ in
             if let result = result {
-                if result.resultType == NSTextCheckingResult.CheckingType.link || result.resultType == NSTextCheckingResult.CheckingType.phoneNumber {
+                if [NSTextCheckingResult.CheckingType.link, NSTextCheckingResult.CheckingType.phoneNumber, NSTextCheckingResult.CheckingType.date].contains(result.resultType) {
                     let lowerBound = utf16.index(utf16.startIndex, offsetBy: result.range.location).samePosition(in: text)
                     let upperBound = utf16.index(utf16.startIndex, offsetBy: result.range.location + result.range.length).samePosition(in: text)
                     if let lowerBound = lowerBound, let upperBound = upperBound {
@@ -293,6 +298,8 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                             }
                             
                             type = .Url
+                        } else if result.resultType == NSTextCheckingResult.CheckingType.date, let date = result.date?.timeIntervalSince1970 {
+                            type = .FormattedDate(format: .relative, date: Int32(date))
                         } else {
                             type = .PhoneNumber
                         }

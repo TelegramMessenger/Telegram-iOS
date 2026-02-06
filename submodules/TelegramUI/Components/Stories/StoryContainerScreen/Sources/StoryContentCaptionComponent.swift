@@ -564,7 +564,8 @@ final class StoryContentCaptionComponent: Component {
                         TelegramTextAttributes.BotCommand,
                         TelegramTextAttributes.Hashtag,
                         TelegramTextAttributes.Timecode,
-                        TelegramTextAttributes.BankCard
+                        TelegramTextAttributes.BankCard,
+                        TelegramTextAttributes.Date
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedString.Key(rawValue: name)] {

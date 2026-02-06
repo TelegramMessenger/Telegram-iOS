@@ -791,21 +791,21 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
             if (flags & (1 << 0)) != 0 {
                 format = .relative
             } else {
-                let timeFormat: MessageTextEntityType.DateTimeFormat.TimeFormat
+                let timeFormat: MessageTextEntityType.DateTimeFormat.TimeFormat?
                 if (flags & (1 << 1)) != 0 {
                     timeFormat = .short
                 } else if (flags & (1 << 2)) != 0 {
                     timeFormat = .long
                 } else {
-                    timeFormat = .short
+                    timeFormat = nil
                 }
-                let dateFormat: MessageTextEntityType.DateTimeFormat.DateFormat
+                let dateFormat: MessageTextEntityType.DateTimeFormat.DateFormat?
                 if (flags & (1 << 3)) != 0 {
                     dateFormat = .short
                 } else if (flags & (1 << 4)) != 0 {
                     dateFormat = .long
                 } else {
-                    dateFormat = .short
+                    dateFormat = nil
                 }
                 format = .full(timeFormat: timeFormat, dateFormat: dateFormat)
             }

@@ -686,7 +686,8 @@ private final class ChatMessageTodoItemNode: ASDisplayNode {
                     TelegramTextAttributes.PeerTextMention,
                     TelegramTextAttributes.BotCommand,
                     TelegramTextAttributes.Hashtag,
-                    TelegramTextAttributes.BankCard
+                    TelegramTextAttributes.BankCard,
+                    TelegramTextAttributes.Date
                 ]
                 for name in possibleNames {
                     if let _ = attributes[NSAttributedString.Key(rawValue: name)], let textRects = textNode.textNode.attributeRects(name: name, at: index) {
@@ -1584,7 +1585,8 @@ public class ChatMessageTodoBubbleContentNode: ChatMessageBubbleContentNode {
                     TelegramTextAttributes.PeerTextMention,
                     TelegramTextAttributes.BotCommand,
                     TelegramTextAttributes.Hashtag,
-                    TelegramTextAttributes.BankCard
+                    TelegramTextAttributes.BankCard,
+                    TelegramTextAttributes.Date
                 ]
                 for name in possibleNames {
                     if let _ = attributes[NSAttributedString.Key(rawValue: name)], let textRects = self.textNode.textNode.attributeRects(name: name, at: index) {

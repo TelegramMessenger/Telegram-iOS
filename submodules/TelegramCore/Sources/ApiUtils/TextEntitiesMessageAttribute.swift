@@ -65,12 +65,16 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                     flags |= 1 << 1
                 case .long:
                     flags |= 1 << 2
+                default:
+                    break
                 }
                 switch dateFormat {
                 case .short:
                     flags |= 1 << 3
                 case .long:
                     flags |= 1 << 4
+                default:
+                    break
                 }
             }
             apiEntities.append(.messageEntityFormattedDate(.init(flags: flags, offset: offset, length: length, date: date)))

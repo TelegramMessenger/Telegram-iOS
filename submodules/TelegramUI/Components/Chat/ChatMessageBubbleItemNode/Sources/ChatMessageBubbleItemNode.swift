@@ -21,6 +21,7 @@ import PersistentStringHash
 import GridMessageSelectionNode
 import AppBundle
 import Markdown
+import TelegramStringFormatting
 import WallpaperBackgroundNode
 import ChatPresentationInterfaceState
 import ChatMessageBackground
@@ -1296,7 +1297,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         break
                     case .ignore:
                         return .fail
-                    case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .conferenceCall, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji, .custom:
+                    case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .conferenceCall, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji, .date, .custom:
                         return .waitForSingleTap
                     }
                 }
@@ -5658,6 +5659,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 item.controllerInteraction.openLargeEmojiInfo(emoji, fitz, file)
                             })
                         }
+                    case let .date(date, _):
+                        if let item = self.item {
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(stringForFullDate(timestamp: date, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat), rects: rects) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.date(date), ChatControllerInteraction.LongTapParams(message: item.message, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
+                            })
+                        }
                     case let .customEmoji(file):
                         if let item = self.item {
                             return .optionalAction({
@@ -5824,6 +5834,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             break
                         case .customEmoji:
                             break
+                        case let .date(date, _):
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(stringForFullDate(timestamp: date, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat), rects: rects) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.date(date), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
+                            })
                         case .custom:
                             break
                         }

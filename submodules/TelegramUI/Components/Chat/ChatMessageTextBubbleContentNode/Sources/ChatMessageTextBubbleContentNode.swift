@@ -1149,7 +1149,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 TelegramTextAttributes.BotCommand,
                 TelegramTextAttributes.Hashtag,
                 TelegramTextAttributes.Timecode,
-                TelegramTextAttributes.BankCard
+                TelegramTextAttributes.BankCard,
+                TelegramTextAttributes.Date
             ]
             for name in possibleNames {
                 if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
@@ -1202,6 +1203,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return ChatMessageBubbleContentTapAction(content: .copy(pre))
             } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {
                 return ChatMessageBubbleContentTapAction(content: .copy(code))
+            } else if let date = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Date)] as? Int32 {
+                var string = ""
+                if let (_, text, _) = self.textNode.textNode.attributeSubstringWithRange(name: TelegramTextAttributes.Date, index: index) {
+                    string = text
+                }
+                return ChatMessageBubbleContentTapAction(content: .date(date, string), rects: rects)
             } else if let _ = attributes[NSAttributedString.Key(rawValue: "Attribute__Blockquote")] {
                 if let _ = self.textNode.textNode.collapsibleBlockAtPoint(textLocalPoint) {
                     return ChatMessageBubbleContentTapAction(content: .none)
@@ -1296,7 +1303,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         TelegramTextAttributes.BotCommand,
                         TelegramTextAttributes.Hashtag,
                         TelegramTextAttributes.Timecode,
-                        TelegramTextAttributes.BankCard
+                        TelegramTextAttributes.BankCard,
+                        TelegramTextAttributes.Date
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
