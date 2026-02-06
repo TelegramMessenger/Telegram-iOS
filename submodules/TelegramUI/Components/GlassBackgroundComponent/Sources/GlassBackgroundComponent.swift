@@ -598,6 +598,9 @@ public class GlassBackgroundView: UIView {
             }
         }
         
+        if let nativeParamsView = self.nativeParamsView {
+            transition.setFrame(view: nativeParamsView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
+        }
         transition.setFrame(view: self.maskContainerView, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width + shadowInset * 2.0, height: size.height + shadowInset * 2.0)))
         transition.setFrame(view: self.maskContentView, frame: CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: size))
         if let foregroundView = self.foregroundView {
@@ -631,7 +634,7 @@ public final class GlassBackgroundContainerView: UIView {
     }
     
     public override init(frame: CGRect) {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
             let effect = UIGlassContainerEffect()
             effect.spacing = 7.0
             let nativeView = UIVisualEffectView(effect: effect)
@@ -706,6 +709,9 @@ public final class GlassBackgroundContainerView: UIView {
             } else {
                 nativeParamsView.lumaMin = 0.8
                 nativeParamsView.lumaMax = 0.801
+            }
+            if let nativeParamsView = self.nativeParamsView {
+                transition.setFrame(view: nativeParamsView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
             }
             
             transition.animateView {

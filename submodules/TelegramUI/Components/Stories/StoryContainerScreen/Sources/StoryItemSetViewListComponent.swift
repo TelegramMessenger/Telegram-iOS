@@ -1397,7 +1397,7 @@ public final class StoryItemSetViewListComponent: Component {
                     return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/Repost"), color: theme.contextMenu.primaryColor)
                 }, additionalLeftIcon: { theme in
                     if sortMode != .repostsFirst {
-                        return nil
+                        return UIImage()
                     }
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
@@ -1416,7 +1416,7 @@ public final class StoryItemSetViewListComponent: Component {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
                 }, additionalLeftIcon: { theme in
                     if sortMode != .reactionsFirst {
-                        return nil
+                        return UIImage()
                     }
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
@@ -1435,7 +1435,7 @@ public final class StoryItemSetViewListComponent: Component {
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Time"), color: theme.contextMenu.primaryColor)
             }, additionalLeftIcon: { theme in
                 if sortMode != .recentFirst {
-                    return nil
+                    return UIImage()
                 }
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, a in

@@ -896,7 +896,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                         )
                     }
                     counterLayout = counterValue
-                    if spec.component.count != 0 {
+                    if spec.component.count != 0 || hasTitle {
                         size.width += spacing + counterValue.size.width
                     } else {
                         size.width -= 1.0

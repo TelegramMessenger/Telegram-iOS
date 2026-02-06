@@ -306,7 +306,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                         return
                     }
                     
-                    if mainChannel.hasPermission(.manageDirect) {
+                    if !mainChannel.isMonoForum || mainChannel.hasPermission(.manageDirect) {
                         let displayPeer = EnginePeer(mainChannel)
                         
                         let controller = PeerSelectionControllerImpl(

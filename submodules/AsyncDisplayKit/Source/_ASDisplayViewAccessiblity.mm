@@ -203,56 +203,87 @@ static void CollectAccessibilityElementsForContainer(ASDisplayNode *container, U
 /// Collect all accessibliity elements for a given view and view node
 static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *elements)
 {
-  ASDisplayNodeCAssertNotNil(elements, @"Should pass in a NSMutableArray");
-  
-  ASDisplayNode *node = view.asyncdisplaykit_node;
-
-  static Class displayListViewClass = nil;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    displayListViewClass = NSClassFromString(@"Display.ListView");
-  });
-  BOOL anySubNodeIsCollection = (nil != ASDisplayNodeFindFirstNode(node,
-      ^BOOL(ASDisplayNode *nodeToCheck) {
+    ASDisplayNodeCAssertNotNil(elements, @"Should pass in a NSMutableArray");
+    
+    ASDisplayNode *node = view.asyncdisplaykit_node;
+    
+    static Class displayListViewClass = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        displayListViewClass = NSClassFromString(@"Display.ListView");
+    });
+    BOOL anySubNodeIsCollection = (nil != ASDisplayNodeFindFirstNode(node,
+                                                                     ^BOOL(ASDisplayNode *nodeToCheck) {
         if (displayListViewClass != nil && [nodeToCheck isKindOfClass:displayListViewClass]) {
-          return true;
+            return true;
         }
-    return false;
-    /*return ASDynamicCast(nodeToCheck, ASCollectionNode) != nil ||
-           ASDynamicCast(nodeToCheck, ASTableNode) != nil;*/
-  }));
-
-  if (node.isAccessibilityContainer && !anySubNodeIsCollection) {
-    CollectAccessibilityElementsForContainer(node, view, elements);
-    return;
-  }
-  
-  // Handle rasterize case
-  if (node.rasterizesSubtree) {
-    CollectUIAccessibilityElementsForNode(node, node, view, elements);
-    return;
-  }
-  
-  for (ASDisplayNode *subnode in node.subnodes) {
-    if (subnode.isAccessibilityElement) {
-      
-      // An accessiblityElement can either be a UIView or a UIAccessibilityElement
-      if (subnode.isLayerBacked) {
-        // No view for layer backed nodes exist. It's necessary to create a UIAccessibilityElement that represents this node
-        UIAccessibilityElement *accessiblityElement = [ASAccessibilityElement accessibilityElementWithContainer:view node:subnode containerNode:node];
-        [elements addObject:accessiblityElement];
-      } else {
-        // Accessiblity element is not layer backed just add the view as accessibility element
-        [elements addObject:subnode.view];
-      }
-    } else if (subnode.isLayerBacked) {
-      // Go down the hierarchy of the layer backed subnode and collect all of the UIAccessibilityElement
-      CollectUIAccessibilityElementsForNode(subnode, node, view, elements);
-    } else if ([subnode accessibilityElementCount] > 0) {
-      // UIView is itself a UIAccessibilityContainer just add it
-      [elements addObject:subnode.view];
+        return false;
+        /*return ASDynamicCast(nodeToCheck, ASCollectionNode) != nil ||
+         ASDynamicCast(nodeToCheck, ASTableNode) != nil;*/
+    }));
+    
+    if (node.isAccessibilityContainer && !anySubNodeIsCollection) {
+        CollectAccessibilityElementsForContainer(node, view, elements);
+        return;
     }
-  }
+    
+    // Handle rasterize case
+    if (node.rasterizesSubtree) {
+        CollectUIAccessibilityElementsForNode(node, node, view, elements);
+        return;
+    }
+    
+    if (!node.isLayerBacked) {
+        for (UIView *subview in node.view.subviews) {
+            ASDisplayNode *subnode = subview.asyncdisplaykit_node;
+            if (subnode) {
+                if (subnode.isAccessibilityElement) {
+                    // An accessiblityElement can either be a UIView or a UIAccessibilityElement
+                    if (subnode.isLayerBacked) {
+                        // No view for layer backed nodes exist. It's necessary to create a UIAccessibilityElement that represents this node
+                        UIAccessibilityElement *accessiblityElement = [ASAccessibilityElement accessibilityElementWithContainer:view node:subnode containerNode:node];
+                        [elements addObject:accessiblityElement];
+                    } else {
+                        // Accessiblity element is not layer backed just add the view as accessibility element
+                        [elements addObject:subnode.view];
+                    }
+                } else if (subnode.isLayerBacked) {
+                    // Go down the hierarchy of the layer backed subnode and collect all of the UIAccessibilityElement
+                    CollectUIAccessibilityElementsForNode(subnode, node, view, elements);
+                } else if ([subnode accessibilityElementCount] > 0) {
+                    // UIView is itself a UIAccessibilityContainer just add it
+                    [elements addObject:subnode.view];
+                }
+            } else {
+                // Plain UIView without an associated ASDisplayNode
+                if (subview.isAccessibilityElement) {
+                    [elements addObject:subview];
+                } else if ([subview accessibilityElementCount] > 0) {
+                    [elements addObject:subview];
+                }
+            }
+        }
+    } else {
+        for (ASDisplayNode *subnode in node.subnodes) {
+            if (subnode.isAccessibilityElement) {
+                // An accessiblityElement can either be a UIView or a UIAccessibilityElement
+                if (subnode.isLayerBacked) {
+                    // No view for layer backed nodes exist. It's necessary to create a UIAccessibilityElement that represents this node
+                    UIAccessibilityElement *accessiblityElement = [ASAccessibilityElement accessibilityElementWithContainer:view node:subnode containerNode:node];
+                    [elements addObject:accessiblityElement];
+                } else {
+                    // Accessiblity element is not layer backed just add the view as accessibility element
+                    [elements addObject:subnode.view];
+                }
+            } else if (subnode.isLayerBacked) {
+                // Go down the hierarchy of the layer backed subnode and collect all of the UIAccessibilityElement
+                CollectUIAccessibilityElementsForNode(subnode, node, view, elements);
+            } else if ([subnode accessibilityElementCount] > 0) {
+                // UIView is itself a UIAccessibilityContainer just add it
+                [elements addObject:subnode.view];
+            }
+        }
+    }
 }
 
 @interface _ASDisplayView () {

@@ -7286,7 +7286,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             color: theme.contextMenu.primaryColor
                         )
                     } else {
-                        return nil
+                        return UIImage()
                     }
                 },
                 action: { [weak self] _, a in

@@ -408,7 +408,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         items.append(.action(ContextMenuActionItem(text: title, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
 
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Timer_ViewOnce, icon: { theme in
-            return currentValue == viewOnceTimeout ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            return currentValue == viewOnceTimeout ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
         }, action: { _, a in
             a(.default)
         
@@ -419,7 +419,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         
         for value in values {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Timer_Seconds(value), icon: { theme in
-                return currentValue == value ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                return currentValue == value ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
             }, action: { _, a in
                 a(.default)
                 
@@ -428,7 +428,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         }
             
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Timer_DoNotDelete, icon: { theme in
-            return currentValue == nil ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            return currentValue == nil ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
         }, action: { _, a in
             a(.default)
             

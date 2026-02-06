@@ -1488,7 +1488,6 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
                 }
             }
             
-            self.sourceExtractableContainer = nil
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: sourceSize)
             self.contentContainer.layer.cornerRadius = normalCornerRadius
             
@@ -1553,7 +1552,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             self.backgroundView.update(size: size, cornerRadius: min(30.0, size.height * 0.5), isDark: presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
             
             if let sourceExtractableContainer = self.sourceExtractableContainer {
-                transition.setFrame(view: sourceExtractableContainer.extractableContentView, frame: CGRect(origin: CGPoint(), size: size))
+                transition.setFrame(view: sourceExtractableContainer.extractableContentView, frame: CGRect(origin: CGPoint(x: self.backgroundContainerInset, y: self.backgroundContainerInset), size: size))
                 sourceExtractableContainer.updateState(state: .extracted(size: size, cornerRadius: min(30.0, size.height * 0.5), state: .animatedIn), transition: .transition(transition.containedViewLayoutTransition), completion: nil)
             }
         }

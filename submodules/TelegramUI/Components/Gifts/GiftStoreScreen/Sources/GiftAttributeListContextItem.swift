@@ -120,7 +120,7 @@ private func actionForAttribute(attribute: StarGift.UniqueGift.Attribute, presen
         return ContextMenuActionItem(text: title, entities: entities, entityFiles: entityFiles, enableEntityAnimations: false, customTextInsets: UIEdgeInsets(top: 0.0, left: 18.0 + 5.0, bottom: 0.0, right: 0.0), parseMarkdown: true, icon: { _ in
             return nil
         }, additionalLeftIcon: { theme in
-            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
         }, action: { _, f in
             getController()?.dismiss(result: .dismissWithoutContent, completion: nil)
             
@@ -181,7 +181,7 @@ private func actionForAttribute(attribute: StarGift.UniqueGift.Attribute, presen
         return ContextMenuActionItem(text: title, entities: entities, icon: { _ in
             return generateGradientFilledCircleImage(diameter: 24.0, colors: [UIColor(rgb: UInt32(bitPattern: innerColor)).cgColor, UIColor(rgb: UInt32(bitPattern: outerColor)).cgColor])
         }, additionalLeftIcon: { theme in
-            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            return isSelected ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
         }, action: { _, f in
             getController()?.dismiss(result: .dismissWithoutContent, completion: nil)
             

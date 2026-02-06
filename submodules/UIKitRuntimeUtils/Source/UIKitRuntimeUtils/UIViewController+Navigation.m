@@ -513,8 +513,10 @@ void WKWebsiteDataStoreReinitializeAppBoundDomains(CFTypeRef dataStoreRef);
 
 - (id)_65087dc8_objectForInfoDictionaryKey:(NSString *)key {
     if ([key isEqualToString:@"WKAppBoundDomains"]) {
-        //NSLog(@"Returning trusted domains: %@", [WebHelpers threadSafeTrustedDomains]);
-        return [WebHelpers threadSafeTrustedDomains];
+        NSArray *result = [WebHelpers threadSafeTrustedDomains];
+        if (result.count != 0) {
+            return result;
+        }
     }
     return [self _65087dc8_objectForInfoDictionaryKey:key];
 }

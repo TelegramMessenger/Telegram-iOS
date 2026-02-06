@@ -117,7 +117,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         items.append(.separator)
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Login_Announce_Notify, icon: { theme in
             if !announceSignUp {
-                return nil
+                return UIImage()
             }
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
         }, iconPosition: .left, action: { [weak self] _, a in
@@ -128,7 +128,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Login_Announce_DontNotify, icon: { theme in
             if announceSignUp {
-                return nil
+                return UIImage()
             }
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
         }, iconPosition: .left, action: { [weak self] _, a in
