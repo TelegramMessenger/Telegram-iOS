@@ -4,7 +4,7 @@ import Postbox
 import TelegramApi
 
 
-public enum ChannelOwnershipTransferError {
+public enum ChatOwnershipTransferError {
     case generic
     case twoStepAuthMissing
     case twoStepAuthTooFresh(Int32)
@@ -20,12 +20,12 @@ public enum ChannelOwnershipTransferError {
     case userBlocked
 }
 
-func _internal_checkOwnershipTranfserAvailability(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, memberId: PeerId) -> Signal<Never, ChannelOwnershipTransferError> {
+func _internal_checkOwnershipTranfserAvailability(postbox: Postbox, network: Network, accountStateManager: AccountStateManager, memberId: PeerId) -> Signal<Never, ChatOwnershipTransferError> {
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(memberId)
     }
-    |> castError(ChannelOwnershipTransferError.self)
-    |> mapToSignal { user -> Signal<Never, ChannelOwnershipTransferError> in
+    |> castError(ChatOwnershipTransferError.self)
+    |> mapToSignal { user -> Signal<Never, ChatOwnershipTransferError> in
         guard let user = user else {
             return .fail(.generic)
         }
@@ -33,8 +33,8 @@ func _internal_checkOwnershipTranfserAvailability(postbox: Postbox, network: Net
             return .fail(.generic)
         }
         
-        return network.request(Api.functions.channels.editCreator(channel: .inputChannelEmpty, userId: apiUser, password: .inputCheckPasswordEmpty))
-        |> mapError { error -> ChannelOwnershipTransferError in
+        return network.request(Api.functions.messages.editChatCreator(peer: .inputPeerEmpty, userId: apiUser, password: .inputCheckPasswordEmpty))
+        |> mapError { error -> ChatOwnershipTransferError in
             if error.errorDescription == "PASSWORD_HASH_INVALID" {
                 return .requestPassword
             } else if error.errorDescription == "PASSWORD_MISSING" {
@@ -64,39 +64,39 @@ func _internal_checkOwnershipTranfserAvailability(postbox: Postbox, network: Net
             }
             return .generic
         }
-        |> mapToSignal { updates -> Signal<Never, ChannelOwnershipTransferError> in
+        |> mapToSignal { updates -> Signal<Never, ChatOwnershipTransferError> in
             accountStateManager.addUpdates(updates)
             return .complete()
         }
     }
 }
 
-func _internal_updateChannelOwnership(account: Account, channelId: PeerId, memberId: PeerId, password: String) -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> {
+func _internal_updateChatOwnership(account: Account, peerId: PeerId, memberId: PeerId, password: String) -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChatOwnershipTransferError> {
     guard !password.isEmpty else {
         return .fail(.invalidPassword)
     }
     
-    return combineLatest(_internal_fetchChannelParticipant(account: account, peerId: channelId, participantId: account.peerId), _internal_fetchChannelParticipant(account: account, peerId: channelId, participantId: memberId))
-    |> mapError { _ -> ChannelOwnershipTransferError in
+    return combineLatest(_internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: account.peerId), _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId))
+    |> mapError { _ -> ChatOwnershipTransferError in
     }
-    |> mapToSignal { currentCreator, currentParticipant -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
-        return account.postbox.transaction { transaction -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
-            if let channel = transaction.getPeer(channelId) as? TelegramChannel, let inputChannel = apiInputChannel(channel), let accountUser = transaction.getPeer(account.peerId), let user = transaction.getPeer(memberId), let inputUser = apiInputUser(user) {
+    |> mapToSignal { currentCreator, currentParticipant -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChatOwnershipTransferError> in
+        return account.postbox.transaction { transaction -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChatOwnershipTransferError> in
+            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let accountUser = transaction.getPeer(account.peerId), let user = transaction.getPeer(memberId), let inputUser = apiInputUser(user) {
                 
-                let flags: TelegramChatAdminRightsFlags = TelegramChatAdminRightsFlags.peerSpecific(peer: .channel(channel))
+                let flags: TelegramChatAdminRightsFlags = TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(peer))
                     
                 let updatedParticipant = ChannelParticipant.creator(id: user.id, adminInfo: nil, rank: currentParticipant?.rank)
                 let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: flags), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil, rank: currentCreator?.rank, subscriptionUntilDate: nil)
                 
                 let checkPassword = _internal_twoStepAuthData(account.network)
-                |> mapError { error -> ChannelOwnershipTransferError in
+                |> mapError { error -> ChatOwnershipTransferError in
                     if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                         return .limitExceeded
                     } else {
                         return .generic
                     }
                 }
-                |> mapToSignal { authData -> Signal<Api.InputCheckPasswordSRP, ChannelOwnershipTransferError> in
+                |> mapToSignal { authData -> Signal<Api.InputCheckPasswordSRP, ChatOwnershipTransferError> in
                     if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
                         guard let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
                             return .fail(.generic)
@@ -108,9 +108,9 @@ func _internal_updateChannelOwnership(account: Account, channelId: PeerId, membe
                 }
                 
                 return checkPassword
-                |> mapToSignal { password -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
-                    return account.network.request(Api.functions.channels.editCreator(channel: inputChannel, userId: inputUser, password: password), automaticFloodWait: false)
-                    |> mapError { error -> ChannelOwnershipTransferError in
+                |> mapToSignal { password -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChatOwnershipTransferError> in
+                    return account.network.request(Api.functions.messages.editChatCreator(peer: inputPeer, userId: inputUser, password: password), automaticFloodWait: false)
+                    |> mapError { error -> ChatOwnershipTransferError in
                         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                             return .limitExceeded
                         } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
@@ -140,11 +140,11 @@ func _internal_updateChannelOwnership(account: Account, channelId: PeerId, membe
                         }
                         return .generic
                     }
-                    |> mapToSignal { updates -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
+                    |> mapToSignal { updates -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChatOwnershipTransferError> in
                         account.stateManager.addUpdates(updates)
                         
                         return account.postbox.transaction { transaction -> [(ChannelParticipant?, RenderedChannelParticipant)] in
-                            transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { _, cachedData -> CachedPeerData? in
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedChannelData, let adminCount = cachedData.participantsSummary.adminCount {
                                     var updatedAdminCount = adminCount
                                     var wasAdmin = false
@@ -179,14 +179,14 @@ func _internal_updateChannelOwnership(account: Account, channelId: PeerId, membe
                             }
                             return [(currentCreator, RenderedChannelParticipant(participant: updatedPreviousCreator, peer: accountUser, peers: peers, presences: presences)), (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: user, peers: peers, presences: presences))]
                         }
-                        |> mapError { _ -> ChannelOwnershipTransferError in }
+                        |> mapError { _ -> ChatOwnershipTransferError in }
                     }
                 }
             } else {
                 return .fail(.generic)
             }
         }
-        |> mapError { _ -> ChannelOwnershipTransferError in }
+        |> mapError { _ -> ChatOwnershipTransferError in }
         |> switchToLatest
     }
 }

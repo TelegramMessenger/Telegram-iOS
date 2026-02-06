@@ -627,6 +627,8 @@ public struct CachedUserFlags: OptionSet {
     public static let canViewRevenue = CachedUserFlags(rawValue: 1 << 5)
     public static let botCanManageEmojiStatus = CachedUserFlags(rawValue: 1 << 6)
     public static let displayGiftButton = CachedUserFlags(rawValue: 1 << 7)
+    public static let myCopyProtectionEnabled = CachedUserFlags(rawValue: 1 << 8)
+    public static let copyProtectionEnabled = CachedUserFlags(rawValue: 1 << 9)
 }
 
 public final class EditableBotInfo: PostboxCoding, Equatable {

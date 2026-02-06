@@ -5439,14 +5439,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         }
                         
-                        if let self, case let .channel(channel) = peer.peer, channel.flags.contains(.isCreator) {
-                            let _ = (self.context.engine.peers.getFutureCreatorAfterLeave(peerId: channel.id)
+                        let shouldCheckFutureCreator: Bool
+                        if case let .channel(channel) = peer.peer, channel.flags.contains(.isCreator) {
+                            shouldCheckFutureCreator = true
+                        } else if case let .legacyGroup(group) = peer.peer, case .creator = group.role {
+                            shouldCheckFutureCreator = true
+                        } else {
+                            shouldCheckFutureCreator = false
+                        }
+                                    
+                        if let self, shouldCheckFutureCreator {
+                            let _ = (self.context.engine.peers.getFutureCreatorAfterLeave(peerId: peer.peerId)
                             |> deliverOnMainQueue).start(next: { [weak self] nextCreator in
                                 guard let self else {
                                     return
                                 }
                                 if let nextCreator, let peer = peer.peer {
-                                    self.presentLeaveChannelConfirmation(peer: peer, nextCreator: nextCreator, completion: { commit in
+                                    self.presentLeaveChatConfirmation(peer: peer, nextCreator: nextCreator, completion: { commit in
                                         if commit {
                                             proceed()
                                         }
@@ -5913,14 +5922,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     removed()
                 })
             }
+            
+            let shouldCheckFutureCreator: Bool
             if case let .channel(channel) = peer.peer, channel.flags.contains(.isCreator) {
-                let _ = (self.context.engine.peers.getFutureCreatorAfterLeave(peerId: channel.id)
+                shouldCheckFutureCreator = true
+            } else if case let .legacyGroup(group) = peer.peer, case .creator = group.role {
+                shouldCheckFutureCreator = true
+            } else {
+                shouldCheckFutureCreator = false
+            }
+            
+            if shouldCheckFutureCreator {
+                let _ = (self.context.engine.peers.getFutureCreatorAfterLeave(peerId: peer.peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] nextCreator in
                     guard let self else {
                         return
                     }
                     if let nextCreator, let peer = peer.peer {
-                        self.presentLeaveChannelConfirmation(peer: peer, nextCreator: nextCreator, completion: { commit in
+                        self.presentLeaveChatConfirmation(peer: peer, nextCreator: nextCreator, completion: { commit in
                             if commit {
                                 proceed()
                             } else {
