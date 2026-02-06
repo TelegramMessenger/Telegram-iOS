@@ -255,6 +255,7 @@ public enum ChatControllerInteractionLongTapAction {
     case hashtag(String)
     case timecode(Double, String)
     case bankCard(String)
+    case date(Int32)
 }
 
 public enum ChatHistoryMessageSelection: Equatable {

@@ -566,6 +566,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         strongSelf.presentController(actionSheet, .window(.root), nil)
                     case .bankCard:
                         break
+                    case .date:
+                        break
                 }
             }
         }, todoItemLongTap: { _, _ in

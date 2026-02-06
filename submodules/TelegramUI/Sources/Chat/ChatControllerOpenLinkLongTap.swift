@@ -35,6 +35,8 @@ extension ChatControllerImpl {
             self.openBankCardContextMenu(number: number, params: params)
         case let .phone(number):
             self.openPhoneContextMenu(number: number, params: params)
+        case let .date(date):
+            self.openDateContextMenu(date: date, params: params)
         }
     }
 }

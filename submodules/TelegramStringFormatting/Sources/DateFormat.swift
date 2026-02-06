@@ -1,8 +1,60 @@
 import Foundation
+import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 
-public func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: PresentationDateTimeFormat, formatAsPlainText: Bool = false) -> String {
+public func stringForEntityFormattedDate(timestamp: Int32, format: MessageTextEntityType.DateTimeFormat, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    switch format {
+    case .relative:
+        let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        let value = currentTimestamp - timestamp
+        if value > 0 {
+            if value <= 1 * 60 * 60 {
+                return strings.FormattedDate_MinutesAgo(Int32(round(Float(value) / 60)))
+            } else if value <= 24 * 60 * 60 {
+                return strings.FormattedDate_HoursAgo(Int32(round(Float(value) / (60 * 60))))
+            } else {
+                return strings.FormattedDate_DaysAgo(Int32(round(Float(value) / (24 * 60 * 60))))
+            }
+        } else {
+            let value = abs(value)
+            if value <= 1 * 60 * 60 {
+                return strings.FormattedDate_InMinutes(Int32(round(Float(value) / 60)))
+            } else if value <= 24 * 60 * 60 {
+                return strings.FormattedDate_InHours(Int32(round(Float(value) / (60 * 60))))
+            } else {
+                return strings.FormattedDate_InDays(Int32(round(Float(value) / (24 * 60 * 60))))
+            }
+        }
+    case let .full(timeFormat, dateFormat):
+        var string = ""
+        if let dateFormat {
+            switch dateFormat {
+            case .short:
+                string += stringForMediumDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)
+            case .long:
+                string += stringForFullDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat)
+            }
+        }
+        if let timeFormat {
+            let timeString: String
+            switch timeFormat {
+            case .short:
+                timeString = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
+            case .long:
+                timeString = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat, withSeconds: true)
+            }
+            if !string.isEmpty {
+                string = strings.Time_AtPreciseDate(string, timeString).string
+            } else {
+                string = timeString
+            }
+        }
+        return string
+    }
+}
+
+public func stringForShortTimestamp(hours: Int32, minutes: Int32, seconds: Int32? = nil, dateTimeFormat: PresentationDateTimeFormat, formatAsPlainText: Bool = false) -> String {
     switch dateTimeFormat.timeFormat {
     case .regular:
         let hourString: String
@@ -28,17 +80,23 @@ public func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat
             spaceCharacter = "\u{00a0}"
         }
         
-        if minutes >= 10 {
-            return "\(hourString):\(minutes)\(spaceCharacter)\(periodString)"
+        let minuteString = String(format: "%02d", arguments: [Int(minutes)])
+        if let seconds {
+            let secondString = String(format: "%02d", arguments: [Int(seconds)])
+            return "\(hourString):\(minuteString):\(secondString)\(spaceCharacter)\(periodString)"
         } else {
-            return "\(hourString):0\(minutes)\(spaceCharacter)\(periodString)"
+            return "\(hourString):\(minuteString)\(spaceCharacter)\(periodString)"
         }
     case .military:
-        return String(format: "%02d:%02d", arguments: [Int(hours), Int(minutes)])
+        if let seconds {
+            return String(format: "%02d:%02d:%02d", arguments: [Int(hours), Int(minutes), Int(seconds)])
+        } else {
+            return String(format: "%02d:%02d", arguments: [Int(hours), Int(minutes)])
+        }
     }
 }
 
-public func stringForMessageTimestamp(timestamp: Int32, dateTimeFormat: PresentationDateTimeFormat, local: Bool = true) -> String {
+public func stringForMessageTimestamp(timestamp: Int32, dateTimeFormat: PresentationDateTimeFormat, withSeconds: Bool = false, local: Bool = true) -> String {
     var t = Int(timestamp)
     var timeinfo = tm()
     if local {
@@ -47,7 +105,7 @@ public func stringForMessageTimestamp(timestamp: Int32, dateTimeFormat: Presenta
         gmtime_r(&t, &timeinfo)
     }
     
-    return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)
+    return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, seconds: withSeconds ? timeinfo.tm_sec : nil, dateTimeFormat: dateTimeFormat)
 }
 
 public func getDateTimeComponents(timestamp: Int32) -> (day: Int32, month: Int32, year: Int32, hour: Int32, minutes: Int32) {

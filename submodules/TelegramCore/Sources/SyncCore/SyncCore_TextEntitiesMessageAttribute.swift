@@ -16,27 +16,27 @@ public enum MessageTextEntityType: Equatable {
         }
         
         case relative
-        case full(timeFormat: TimeFormat, dateFormat: DateFormat)
+        case full(timeFormat: TimeFormat?, dateFormat: DateFormat?)
         
         public init(rawValue: Int32) {
             if (rawValue & (1 << 0)) != 0 {
                 self = .relative
             } else {
-                let timeFormat: MessageTextEntityType.DateTimeFormat.TimeFormat
+                let timeFormat: MessageTextEntityType.DateTimeFormat.TimeFormat?
                 if (rawValue & (1 << 1)) != 0 {
                     timeFormat = .short
                 } else if (rawValue & (1 << 2)) != 0 {
                     timeFormat = .long
                 } else {
-                    timeFormat = .short
+                    timeFormat = nil
                 }
-                let dateFormat: MessageTextEntityType.DateTimeFormat.DateFormat
+                let dateFormat: MessageTextEntityType.DateTimeFormat.DateFormat?
                 if (rawValue & (1 << 3)) != 0 {
                     dateFormat = .short
                 } else if (rawValue & (1 << 4)) != 0 {
                     dateFormat = .long
                 } else {
-                    dateFormat = .short
+                    dateFormat = nil
                 }
                 self = .full(timeFormat: timeFormat, dateFormat: dateFormat)
             }
@@ -53,12 +53,16 @@ public enum MessageTextEntityType: Equatable {
                     rawValue |= 1 << 1
                 case .long:
                     rawValue |= 1 << 2
+                default:
+                    break
                 }
                 switch dateFormat {
                 case .short:
                     rawValue |= 1 << 3
                 case .long:
                     rawValue |= 1 << 4
+                default:
+                    break
                 }
             }
             return rawValue
