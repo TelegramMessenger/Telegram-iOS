@@ -88,7 +88,7 @@ private func commitChannelOwnershipTransferController(
     applyImpl = {
         doneInProgressPromise.set(true)
         
-        let signal: Signal<EnginePeer.Id?, ChannelOwnershipTransferError>
+        let signal: Signal<EnginePeer.Id?, ChatOwnershipTransferError>
         if case let .channel(peer) = peer {
             signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(engine: context.engine, peerId: peer.id, memberId: member.id, password: inputState.value) |> mapToSignal { _ in
                 return .complete()
@@ -97,7 +97,7 @@ private func commitChannelOwnershipTransferController(
         } else if case let .legacyGroup(peer) = peer {
             signal = context.engine.peers.convertGroupToSupergroup(peerId: peer.id)
             |> map(Optional.init)
-            |> mapError { error -> ChannelOwnershipTransferError in
+            |> mapError { error -> ChatOwnershipTransferError in
                 switch error {
                 case .tooManyChannels:
                     return .tooMuchJoined
@@ -106,7 +106,7 @@ private func commitChannelOwnershipTransferController(
                 }
             }
             |> deliverOnMainQueue
-            |> mapToSignal { upgradedPeerId -> Signal<EnginePeer.Id?, ChannelOwnershipTransferError> in
+            |> mapToSignal { upgradedPeerId -> Signal<EnginePeer.Id?, ChatOwnershipTransferError> in
                 guard let upgradedPeerId = upgradedPeerId else {
                     return .fail(.generic)
                 }
@@ -213,7 +213,7 @@ public func channelOwnershipTransferController(
     peer: EnginePeer,
     member: TelegramUser,
     onLeave: Bool,
-    initialError: ChannelOwnershipTransferError,
+    initialError: ChatOwnershipTransferError,
     present: @escaping (ViewController, Any?) -> Void,
     push: @escaping (ViewController) -> Void,
     completion: @escaping (EnginePeer.Id?) -> Void

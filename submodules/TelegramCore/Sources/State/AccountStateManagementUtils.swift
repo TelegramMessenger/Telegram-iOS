@@ -2010,6 +2010,26 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateStarGiftAuctionMyState(giftId: giftId, state: GiftAuctionContext.State.MyState(apiAuctionUserState: userState))
             case let .updateEmojiGameInfo(updateEmojiGameInfoData):
                 updatedState.updateEmojiGameInfo(info: EmojiGameInfo(apiEmojiGameInfo: updateEmojiGameInfoData.info))
+            case let .updatePeerHistoryNoForward(updatePeerHistoryNoForwardData):
+                let (flags, peer) = (updatePeerHistoryNoForwardData.flags, updatePeerHistoryNoForwardData.peer)
+                let peerId = peer.peerId
+                updatedState.updateCachedPeerData(peerId, { current in
+                    if let previous = current as? CachedUserData {
+                        var updatedFlags = previous.flags
+                        if (flags & (1 << 0)) != 0 {
+                            updatedFlags.insert(.myCopyProtectionEnabled)
+                        } else {
+                            updatedFlags.remove(.myCopyProtectionEnabled)
+                        }
+                        if (flags & (1 << 1)) != 0 {
+                            updatedFlags.insert(.copyProtectionEnabled)
+                        } else {
+                            updatedFlags.remove(.copyProtectionEnabled)
+                        }
+                        return previous.withUpdatedFlags(updatedFlags)
+                    }
+                    return current
+                })
             default:
                 break
         }
