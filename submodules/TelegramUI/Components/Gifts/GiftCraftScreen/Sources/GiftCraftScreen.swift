@@ -1883,6 +1883,10 @@ private final class SheetContainerComponent: CombinedComponent {
                                                 }
                                             }
                                         }
+                                        
+                                        Queue.mainQueue().after(1.0) {
+                                            craftContext.reload()
+                                        }
                                     }, error: { error in
                                         switch error {
                                         case .craftFailed:
