@@ -1833,6 +1833,7 @@ private final class SheetContainerComponent: CombinedComponent {
                                     state.updated(transition: .spring(duration: 0.3))
                                 } else if state.displayFailure {
                                     craftAnotherGift()
+                                    dismiss(true)
                                 } else {
                                     HapticFeedback().impact(.medium)
                                     
