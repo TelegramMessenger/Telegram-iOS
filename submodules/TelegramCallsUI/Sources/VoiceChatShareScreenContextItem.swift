@@ -161,7 +161,7 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
     }
     
     func canBeHighlighted() -> Bool {
-        return true
+        return false
     }
     
     func updateIsHighlighted(isHighlighted: Bool) {
