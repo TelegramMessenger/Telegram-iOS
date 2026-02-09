@@ -4677,7 +4677,26 @@ private final class GiftViewSheetContent: CombinedComponent {
             )
                         
             let buttonChild: _UpdatedChildComponent
-            if state.canSkip {
+            if let controller = controller() as? GiftViewScreen, let customAction = controller.customAction {
+                buttonChild = button.update(
+                    component: ButtonComponent(
+                        background: buttonBackground,
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable("custom"),
+                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: customAction.title, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                        ),
+                        isEnabled: true,
+                        displaysProgress: state.inProgress,
+                        action: { [weak state] in
+                            if let state {
+                                customAction.action()
+                                state.dismiss(animated: true)
+                            }
+                        }),
+                    availableSize: buttonSize,
+                    transition: context.transition
+                )
+            } else if state.canSkip {
                 buttonChild = button.update(
                     component: ButtonComponent(
                         background: buttonBackground,
@@ -5630,6 +5649,16 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         }
     }
     
+    public struct CustomAction {
+        public let title: String
+        public let action: () -> Void
+        
+        public init(title: String, action: @escaping () -> Void) {
+            self.title = title
+            self.action = action
+        }
+    }
+    
     private let context: AccountContext
     private let subject: GiftViewScreen.Subject
     
@@ -5671,6 +5700,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     fileprivate let togglePinnedToTop: ((StarGiftReference, Bool) -> Bool)?
     fileprivate let shareStory: ((StarGift.UniqueGift) -> Void)?
     fileprivate let openChatTheme: (() -> Void)?
+    fileprivate let customAction: CustomAction?
     
     public var disposed: () -> Void = {}
     
@@ -5690,7 +5720,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         updateResellStars: ((StarGiftReference, CurrencyAmount?) -> Signal<Never, UpdateStarGiftPriceError>)? = nil,
         togglePinnedToTop: ((StarGiftReference, Bool) -> Bool)? = nil,
         shareStory: ((StarGift.UniqueGift) -> Void)? = nil,
-        openChatTheme: (() -> Void)? = nil
+        openChatTheme: (() -> Void)? = nil,
+        customAction: CustomAction? = nil
     ) {
         self.context = context
         self.subject = subject
@@ -5706,6 +5737,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         self.togglePinnedToTop = togglePinnedToTop
         self.shareStory = shareStory
         self.openChatTheme = openChatTheme
+        self.customAction = customAction
         
         if case let .unique(gift) = subject.arguments?.gift, gift.resellForTonOnly {
             self.balanceCurrency = .ton
