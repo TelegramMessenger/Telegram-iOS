@@ -110,7 +110,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case playerV2(Bool)
     case devRequests(Bool)
     case enableUpdates(Bool)
-    case fakeAds(Bool)
     case enableLocalTranslation(Bool)
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
@@ -261,8 +260,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 54
         case .devRequests:
             return 55
-        case .fakeAds:
-            return 56
         case .enableLocalTranslation:
             return 57
         case .enableUpdates:
@@ -1405,16 +1402,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .fakeAds(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Fake Ads", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.fakeAds = value
-                        return PreferencesEntry(settings)
-                    })
-                }).start()
-            })
         case let .enableLocalTranslation(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Local Translation", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1586,7 +1573,6 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.playerV2(experimentalSettings.playerV2))
         
         entries.append(.devRequests(experimentalSettings.devRequests))
-        entries.append(.fakeAds(experimentalSettings.fakeAds))
         entries.append(.enableLocalTranslation(experimentalSettings.enableLocalTranslation))
         entries.append(.enableUpdates(experimentalSettings.enableUpdates))
     }
