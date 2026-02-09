@@ -1469,8 +1469,14 @@ public class GalleryController: ViewController, StandalonePresentableController,
         }
         
         self.galleryNode.controlsVisibilityChanged = { [weak self] visible in
-            self?.prefersOnScreenNavigationHidden = !visible
-            self?.galleryNode.pager.centralItemNode()?.controlsVisibilityUpdated(isVisible: visible)
+            guard let self else {
+                return
+            }
+            self.prefersOnScreenNavigationHidden = !visible
+            
+            self.galleryNode.pager.forEachItemNode { itemNode in
+                itemNode.controlsVisibilityUpdated(isVisible: visible)
+            }
         }
         
         self.galleryNode.updateOrientation = { [weak self] orientation in

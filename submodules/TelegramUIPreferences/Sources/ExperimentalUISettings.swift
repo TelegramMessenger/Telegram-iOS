@@ -70,6 +70,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var debugRatingLayout: Bool
     public var enableUpdates: Bool
     public var enablePWA: Bool
+    public var forceClearGlass: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -117,7 +118,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             allForumsHaveTabs: false,
             debugRatingLayout: false,
             enableUpdates: false,
-            enablePWA: false
+            enablePWA: false,
+            forceClearGlass: false
         )
     }
     
@@ -166,7 +168,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         allForumsHaveTabs: Bool,
         debugRatingLayout: Bool,
         enableUpdates: Bool,
-        enablePWA: Bool
+        enablePWA: Bool,
+        forceClearGlass: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -213,6 +216,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.debugRatingLayout = debugRatingLayout
         self.enableUpdates = enableUpdates
         self.enablePWA = enablePWA
+        self.forceClearGlass = forceClearGlass
     }
     
     public init(from decoder: Decoder) throws {
@@ -263,6 +267,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.debugRatingLayout = try container.decodeIfPresent(Bool.self, forKey: "debugRatingLayout") ?? false
         self.enableUpdates = try container.decodeIfPresent(Bool.self, forKey: "enableUpdates") ?? false
         self.enablePWA = try container.decodeIfPresent(Bool.self, forKey: "enablePWA") ?? false
+        self.forceClearGlass = try container.decodeIfPresent(Bool.self, forKey: "forceClearGlass") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -313,6 +318,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.debugRatingLayout, forKey: "debugRatingLayout")
         try container.encodeIfPresent(self.enableUpdates, forKey: "enableUpdates")
         try container.encodeIfPresent(self.enablePWA, forKey: "enablePWA")
+        try container.encodeIfPresent(self.forceClearGlass, forKey: "forceClearGlass")
     }
 }
 

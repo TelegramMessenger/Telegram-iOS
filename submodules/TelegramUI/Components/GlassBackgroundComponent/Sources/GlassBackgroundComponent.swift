@@ -437,7 +437,21 @@ public class GlassBackgroundView: UIView {
         if let legacyView = self.legacyView {
             switch shape {
             case let .roundedRect(cornerRadius):
-                legacyView.update(size: size, cornerRadius: cornerRadius, transition: transition)
+                let style: LegacyGlassView.Style
+                switch tintColor.kind {
+                case .panel:
+                    style = .normal
+                case .clear:
+                    style = .clear
+                case let .custom(styleValue, _):
+                    switch styleValue {
+                    case .clear:
+                        style = .clear
+                    case .default:
+                        style = .normal
+                    }
+                }
+                legacyView.update(size: size, cornerRadius: cornerRadius, style: style, transition: transition)
             }
             transition.setFrame(view: legacyView, frame: CGRect(origin: CGPoint(), size: size))
             transition.setAlpha(view: legacyView, alpha: isVisible ? 1.0 : 0.0)
@@ -512,19 +526,28 @@ public class GlassBackgroundView: UIView {
             
             if let foregroundView = self.foregroundView {
                 let fillColor: UIColor
+                let borderWidthFactor: CGFloat
                 switch tintColor.kind {
                 case .panel:
+                    borderWidthFactor = 1.0
                     if isDark {
                         fillColor = UIColor(white: 1.0, alpha: 1.0).mixedWith(.black, alpha: 1.0 - 0.11).withAlphaComponent(0.85)
                     } else {
                         fillColor = UIColor(white: 1.0, alpha: 0.7)
                     }
                 case .clear:
+                    borderWidthFactor = 2.0
                     fillColor = UIColor(white: 1.0, alpha: 0.0)
-                case let .custom(_, color):
+                case let .custom(style, color):
                     fillColor = color
+                    switch style {
+                    case .clear:
+                        borderWidthFactor = 2.0
+                    case .default:
+                        borderWidthFactor = 1.0
+                    }
                 }
-                foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(size: CGSize(width: outerCornerRadius * 2.0, height: outerCornerRadius * 2.0), inset: shadowInset, isDark: isDark, fillColor: fillColor)
+                foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(size: CGSize(width: outerCornerRadius * 2.0, height: outerCornerRadius * 2.0), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
                 transition.setAlpha(view: foregroundView, alpha: isVisible ? 1.0 : 0.0)
             } else {
                 if let nativeParamsView = self.nativeParamsView, let nativeView = self.nativeView {
@@ -565,11 +588,21 @@ public class GlassBackgroundView: UIView {
                         
                         if glassEffect == nil {
                             if nativeView.effect is UIGlassEffect {
-                                if transition.animation.isImmediate {
-                                    nativeView.effect = nil
-                                } else {
-                                    transition.animateView {
+                                if #available(iOS 26.1, *) {
+                                    if transition.animation.isImmediate {
                                         nativeView.effect = nil
+                                    } else {
+                                        transition.animateView {
+                                            nativeView.effect = nil
+                                        }
+                                    }
+                                } else {
+                                    if transition.animation.isImmediate {
+                                        nativeView.effect = UIVisualEffect()
+                                    } else {
+                                        transition.animateView {
+                                            nativeView.effect = UIVisualEffect()
+                                        }
                                     }
                                 }
                             }
@@ -774,7 +807,7 @@ private extension CGContext {
 }
 
 public extension GlassBackgroundView {
-    static func generateLegacyGlassImage(size: CGSize, inset: CGFloat, isDark: Bool, fillColor: UIColor) -> UIImage {
+    static func generateLegacyGlassImage(size: CGSize, inset: CGFloat, borderWidthFactor: CGFloat = 1.0, isDark: Bool, fillColor: UIColor) -> UIImage {
         var size = size
         if size == .zero {
             size = CGSize(width: 2.0, height: 2.0)
@@ -914,7 +947,7 @@ public extension GlassBackgroundView {
                 var ellipseRect = CGRect(origin: CGPoint(), size: size).insetBy(dx: inset, dy: inset)
                 context.fillEllipse(in: ellipseRect)
                 
-                let lineWidth: CGFloat = isDark ? 0.8 : 0.8
+                let lineWidth: CGFloat = (isDark ? 0.8 : 0.8) * borderWidthFactor
                 let strokeColor: UIColor
                 let blendMode: CGBlendMode
                 let baseAlpha: CGFloat = isDark ? 0.3 : 0.6
@@ -962,20 +995,6 @@ public extension GlassBackgroundView {
                 
                 context.resetClip()
                 context.setBlendMode(.normal)
-                
-                //let image = makeInnerShadowPillImageExact(size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), scale: UIScreenScale, glossColor: UIColor(white: 1.0, alpha: 1.0), borderWidth: 1.33)
-                /*let image = generateCircleImage(diameter: size.width - inset * 2.0, lineWidth: 0.5, color: UIColor(white: 1.0, alpha: 1.0))!
-                
-                if s == 0.0 && abs(a - 0.7) < 0.1 && !isDark {
-                    image.draw(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: inset, dy: inset), blendMode: .normal, alpha: 1.0)
-                } else if s <= 0.3 && !isDark {
-                    image.draw(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: inset, dy: inset), blendMode: .normal, alpha: 0.7)
-                } else if b >= 0.2 {
-                    let maxAlpha: CGFloat = isDark ? 0.7 : 0.8
-                    image.draw(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: inset, dy: inset), blendMode: .overlay, alpha: max(0.5, min(1.0, maxAlpha * s)))
-                } else {
-                    image.draw(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: inset, dy: inset), blendMode: .normal, alpha: 0.5)
-                }*/
             }
             innerImage.draw(in: CGRect(origin: CGPoint(), size: size))
         }.stretchableImage(withLeftCapWidth: Int(size.width * 0.5), topCapHeight: Int(size.height * 0.5))
