@@ -153,6 +153,8 @@ final class SelectGiftPageContent: Component {
             }
             transition.setFrame(view: self.loadingView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight - 170.0), size: loadingSize))
             
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            
             var itemFrame = CGRect(origin: CGPoint(x: itemSideInset, y: contentHeight), size: itemSize)
             var itemsHeight: CGFloat = 0.0
             var validIds: [AnyHashable] = []
@@ -245,6 +247,12 @@ final class SelectGiftPageContent: Component {
                             }
                         }
                         itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        
+                        var canCraft = true
+                        if let profileGift = self.giftMap[gift.gift.id], let canCraftDate = profileGift.canCraftAt, currentTime < canCraftDate {
+                            canCraft = false
+                        }
+                        transition.setAlpha(view: itemView, alpha: canCraft ? 1.0 : 0.5)
                     }
                 }
                 
@@ -414,6 +422,7 @@ final class SelectGiftPageContent: Component {
             contentHeight += 32.0
                         
             contentHeight = self.updateScrolling(interactive: false, transition: transition)
+            let originalContentHeight = contentHeight
             
             let resaleCount = component.genericGift.availability?.resale ?? 0
             let saleTitle = environment.strings.Gift_Craft_Select_SaleGiftsCount(Int32(clamping: resaleCount)).uppercased()
@@ -483,7 +492,11 @@ final class SelectGiftPageContent: Component {
                 }
                 transition.setFrame(view: storeGiftsView, frame: storeGiftsFrame)
                 
-                storeGiftsView.updateScrolling(bounds: CGRect(origin: .zero, size: availableSize), transition: .immediate)
+                var effectiveBounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: 1000.0))
+                if let bounds = self.currentBounds {
+                    effectiveBounds = bounds.offsetBy(dx: 0.0, dy: -originalContentHeight)
+                }
+                storeGiftsView.updateScrolling(bounds: effectiveBounds, transition: .immediate)
             }
             contentHeight += storeGiftsSize.height
             contentHeight += 90.0

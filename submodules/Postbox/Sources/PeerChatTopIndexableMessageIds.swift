@@ -83,12 +83,14 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
                             let currentTopMessageId = self.get(peerId: message.id.peerId, threadId: message.threadId, namespace: message.id.namespace)
                             if currentTopMessageId == nil || currentTopMessageId! < message.id {
                                 self.set(peerId: message.id.peerId, threadId: message.threadId, namespace: message.id.namespace, id: message.id)
+                                self.set(peerId: message.id.peerId, threadId: 0, namespace: message.id.namespace, id: message.id)
                             }
                         }
                     case let .Remove(indices):
                         for (index, _, threadId) in indices {
                             if let messageId = self.get(peerId: index.id.peerId, threadId: threadId, namespace: index.id.namespace), index.id == messageId {
                                 self.set(peerId: index.id.peerId, threadId: threadId, namespace: index.id.namespace, id: nil)
+                                self.set(peerId: index.id.peerId, threadId: 0, namespace: index.id.namespace, id: nil)
                             }
                         }
                     default:
@@ -110,8 +112,12 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
                     if let maybeMessageId = maybeMessageId {
                         var messageIdId: Int32 = maybeMessageId.id
                         self.valueBox.set(self.table, key: self.key(combinedId: record.peerAndThreadId, namespace: record.namespace), value: MemoryBuffer(memory: &messageIdId, capacity: 4, length: 4, freeWhenDone: false))
+                        if record.peerAndThreadId.threadId != nil {
+                            self.valueBox.set(self.table, key: self.key(combinedId: PeerAndThreadId(peerId: record.peerAndThreadId.peerId, threadId: 0), namespace: record.namespace), value: MemoryBuffer(memory: &messageIdId, capacity: 4, length: 4, freeWhenDone: false))
+                        }
                     } else {
                         self.valueBox.remove(self.table, key: self.key(combinedId: record.peerAndThreadId, namespace: record.namespace), secure: false)
+                        self.valueBox.remove(self.table, key: self.key(combinedId: PeerAndThreadId(peerId: record.peerAndThreadId.peerId, threadId: 0), namespace: record.namespace), secure: false)
                     }
                 }
             }

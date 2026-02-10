@@ -958,7 +958,7 @@ final class ShareWithPeersScreenComponent: Component {
                     let isSelected = self.shareToFolders.contains(where: { $0.id == folderPreview.folder.id })
                     items.append(.action(ContextMenuActionItem(text: folderPreview.folder.title, icon: icon, additionalLeftIcon: { theme in
                         if !isSelected {
-                            return nil
+                            return UIImage()
                         }
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                     }, iconSource: iconSource, iconPosition: .left, action: { [weak self] c, f in

@@ -167,6 +167,7 @@ public final class VideoPlaybackControlsComponent: Component {
             self.leftIconView.update(size: leftButtonFrame.size)
             transition.setAlpha(view: self.leftIconView, alpha: areSideButtonsVisible ? 1.0 : 0.0)
             transition.setBlur(layer: self.leftIconView.layer, radius: areSideButtonsVisible ? 0.0 : 10.0)
+            self.leftButtonBackgroundView.isUserInteractionEnabled = areSideButtonsVisible
             
             transition.setFrame(view: self.rightButtonBackgroundView, frame: rightButtonFrame)
             self.rightButtonBackgroundView.update(size: rightButtonFrame.size, cornerRadius: rightButtonFrame.height * 0.5, isDark: true, tintColor: buttonsTintColor, isInteractive: true, isVisible: areSideButtonsVisible, transition: transition)
@@ -174,6 +175,7 @@ public final class VideoPlaybackControlsComponent: Component {
             self.rightIconView.update(size: rightButtonFrame.size)
             transition.setAlpha(view: self.rightIconView, alpha: areSideButtonsVisible ? 1.0 : 0.0)
             transition.setBlur(layer: self.rightIconView.layer, radius: areSideButtonsVisible ? 0.0 : 10.0)
+            self.rightButtonBackgroundView.isUserInteractionEnabled = areSideButtonsVisible
             
             transition.setFrame(view: self.centerButtonBackgroundView, frame: centerButtonFrame)
             self.centerButtonBackgroundView.update(size: centerButtonFrame.size, cornerRadius: centerButtonFrame.height * 0.5, isDark: true, tintColor: buttonsTintColor, isInteractive: true, isVisible: component.isVisible, transition: transition)

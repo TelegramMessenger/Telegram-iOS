@@ -338,7 +338,7 @@ extension VideoChatScreenComponent.View {
                         if isSelected {
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
                         } else {
-                            return nil
+                            return UIImage()
                         }
                     }, action: { [weak self] _, f in
                         f(.default)
@@ -730,7 +730,7 @@ extension VideoChatScreenComponent.View {
                 if output == currentOutput {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
                 } else {
-                    return nil
+                    return UIImage()
                 }
             }, action: { [weak self] _, f in
                 f(.default)
@@ -763,7 +763,7 @@ extension VideoChatScreenComponent.View {
             items.append(.separator)
             items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
                 if isMuted {
-                    return nil
+                    return UIImage()
                 } else {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
                 }
@@ -777,7 +777,7 @@ extension VideoChatScreenComponent.View {
             })))
             items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_SpeakPermissionAdmin, icon: { theme in
                 if !isMuted {
-                    return nil
+                    return UIImage()
                 } else {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
                 }

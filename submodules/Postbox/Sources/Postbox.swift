@@ -3507,7 +3507,13 @@ final class PostboxImpl {
         }
         if let peerId = mainPeerIdForTopTaggedMessages {
             for namespace in topTaggedMessageIdNamespaces {
-                if let messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId.peerId, threadId: peerId.threadId, namespace: namespace) {
+                var messageId: MessageId?
+                messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId.peerId, threadId: peerId.threadId, namespace: namespace)
+                if messageId == nil && peerId.threadId == nil {
+                    messageId = self.peerChatTopTaggedMessageIdsTable.get(peerId: peerId.peerId, threadId: 0, namespace: namespace)
+                }
+                
+                if let messageId {
                     if let index = self.messageHistoryIndexTable.getIndex(messageId) {
                         if let message = self.messageHistoryTable.getMessage(index) {
                             topTaggedMessages[namespace] = MessageHistoryTopTaggedMessage.intermediate(message)

@@ -379,6 +379,9 @@ extension ChatControllerImpl {
         if previousState.chatTitleContent != contentData.state.chatTitleContent {
             animated = true
         }
+        if previousState.slowmodeState != contentData.state.slowmodeState || previousState.boostsToUnrestrict != contentData.state.boostsToUnrestrict {
+            animated = true
+        }
         
         var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
         if let forceAnimationTransition {

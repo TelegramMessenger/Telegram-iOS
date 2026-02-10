@@ -1980,7 +1980,15 @@ private final class NotificationServiceHandler {
                                                 }
                                                 if enableInlineEmoji, let textEntitiesAttribute = message.textEntitiesAttribute, let author = message.author {
                                                     let authorTitle = author.debugDisplayTitle
-                                                    let messagePrefix = "\(authorTitle): "
+                                                    var needsPrefix = false
+                                                    if message.id.peerId.namespace == Namespaces.Peer.CloudGroup {
+                                                        needsPrefix = true
+                                                    } else if let channel = message.peers[message.id.peerId] as? TelegramChannel {
+                                                        if case .group = channel.info {
+                                                            needsPrefix = true
+                                                        }
+                                                    }
+                                                    let messagePrefix = needsPrefix ? "\(authorTitle): " : ""
                                                     let messagePrefixLength = (messagePrefix as NSString).length
                                                     for entity in textEntitiesAttribute.entities {
                                                         if case let .CustomEmoji(_, fileId) = entity.type {

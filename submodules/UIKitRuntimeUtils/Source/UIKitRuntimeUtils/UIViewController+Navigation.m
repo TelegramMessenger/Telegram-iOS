@@ -5,6 +5,7 @@
 
 #import "NSWeakReference.h"
 #import <UIKitRuntimeUtils/UIKitUtils.h>
+#import <dlfcn.h>
 
 @interface UIViewControllerPresentingProxy : UIViewController
 
@@ -405,6 +406,131 @@ static void registerEffectViewOverrides(void) {
     }
 }
 
+static NSLock *webHelpersLock() {
+    static NSLock *value = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        value = [[NSLock alloc] init];
+    });
+    return value;
+}
+
+@interface TrustedWebRecord : NSObject
+
+@property (nonatomic) NSInteger nextReference;
+@property (nonatomic, strong, readonly) NSMutableSet<NSNumber *> *references;
+
+@end
+
+@implementation TrustedWebRecord
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _references = [[NSMutableSet alloc] init];
+    }
+    return self;
+}
+
+- (NSInteger)addReference {
+    NSInteger reference = _nextReference;
+    _nextReference += 1;
+    [_references addObject:@(reference)];
+    return reference;
+}
+
+- (void)removeReference:(NSInteger)reference {
+    [_references removeObject:@(reference)];
+}
+
+- (bool)isEmpty {
+    return _references.count == 0;
+}
+
+@end
+
+static NSMutableDictionary<NSString *, TrustedWebRecord *> *trustedWebRecords() {
+    static NSMutableDictionary *value = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        value = [[NSMutableDictionary alloc] init];
+    });
+    return value;
+}
+
+@implementation WebHelpers
+
++ (NSArray<NSString *> * _Nonnull)threadSafeTrustedDomains {
+    [webHelpersLock() lock];
+    
+    NSMutableArray<NSString *> *result = [[NSMutableArray alloc] init];
+    for (NSString *domain in trustedWebRecords()) {
+        [result addObject:domain];
+    }
+    [result sortUsingSelector:@selector(compare:)];
+    
+    [webHelpersLock() unlock];
+    
+    return result;
+}
+
++ (dispatch_block_t _Nonnull)addTrustedDomain:(NSString * _Nonnull)domain {
+    [webHelpersLock() lock];
+    
+    TrustedWebRecord *record = trustedWebRecords()[domain];
+    if (record == nil) {
+        record = [[TrustedWebRecord alloc] init];
+        trustedWebRecords()[domain] = record;
+    }
+    NSInteger reference = [record addReference];
+    __block __weak TrustedWebRecord *weakRecord = record;
+    
+    [webHelpersLock() unlock];
+    
+    return ^{
+        [webHelpersLock() lock];
+        
+        TrustedWebRecord *strongRecord = weakRecord;
+        if (strongRecord && trustedWebRecords()[domain] == strongRecord) {
+            [strongRecord removeReference:reference];
+            if ([strongRecord isEmpty]) {
+                [trustedWebRecords() removeObjectForKey:domain];
+            }
+        }
+        
+        [webHelpersLock() unlock];
+    };
+}
+
++ (void)forceRefreshTrustedDomains:(WKWebsiteDataStore * _Nonnull)websiteDataStore {
+    static void (*reinitializeFunction)(CFTypeRef dataStoreRef) = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString *nameString = [NSString stringWithFormat:@"WK%@", @"WebsiteDataStoreReinitializeAppBoundDomains"];
+        reinitializeFunction = dlsym(RTLD_DEFAULT, [nameString UTF8String]);
+    });
+    
+    if (reinitializeFunction) {
+        reinitializeFunction((__bridge CFTypeRef)(websiteDataStore));
+    }
+}
+
+@end
+
+@implementation NSBundle (Telegram)
+
+- (id)_65087dc8_objectForInfoDictionaryKey:(NSString *)key {
+    if ([key isEqualToString:@"WKAppBoundDomains"]) {
+        NSArray *result = [WebHelpers threadSafeTrustedDomains];
+        if (result.count != 0) {
+            return result;
+        }
+    }
+    return [self _65087dc8_objectForInfoDictionaryKey:key];
+}
+
+@end
+
 @implementation UIViewController (Navigation)
 
 + (void)load
@@ -431,6 +557,8 @@ static void registerEffectViewOverrides(void) {
         [RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(addAnimation:forKey:) newSelector:@selector(_65087dc8_addAnimation:forKey:)];
         
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIFocusSystem class] currentSelector:@selector(updateFocusIfNeeded) newSelector:@selector(_65087dc8_updateFocusIfNeeded)];
+        
+        [RuntimeUtils swizzleInstanceMethodOfClass:[NSBundle class] currentSelector:@selector(objectForInfoDictionaryKey:) newSelector:@selector(_65087dc8_objectForInfoDictionaryKey:)];
         
         if (@available(iOS 26.0, *)) {
             registerEffectViewOverrides();

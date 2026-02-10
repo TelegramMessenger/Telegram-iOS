@@ -1185,7 +1185,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 if currentValue == 0 {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 } else {
-                    return nil
+                    return UIImage()
                 }
             }, action: { _, f in
                 applyValue(0)
@@ -1208,7 +1208,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     if currentValue == value {
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                     } else {
-                        return nil
+                        return UIImage()
                     }
                 }, action: { _, f in
                     applyValue(value)

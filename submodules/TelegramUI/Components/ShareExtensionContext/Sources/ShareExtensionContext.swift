@@ -31,6 +31,7 @@ import TelegramUIDeclareEncodables
 import TelegramAccountAuxiliaryMethods
 import PeerSelectionController
 import ContextMenuScreen
+import NavigationBarImpl
 
 private var installedSharedLogger = false
 
@@ -194,6 +195,10 @@ public class ShareRootControllerImpl {
     public init(initializationData: ShareRootControllerInitializationData, getExtensionContext: @escaping () -> NSExtensionContext?) {
         self.initializationData = initializationData
         self.getExtensionContext = getExtensionContext
+        
+        defaultNavigationBarImpl = { presentationData in
+            return NavigationBarImpl(presentationData: presentationData)
+        }
     }
     
     deinit {

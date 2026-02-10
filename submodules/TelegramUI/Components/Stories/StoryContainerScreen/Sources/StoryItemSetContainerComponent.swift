@@ -6388,7 +6388,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if isSelected && value == nil {
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
                     } else {
-                        return nil
+                        return UIImage()
                     }
                 }), action: { [weak self] _, f in
                     f(.default)

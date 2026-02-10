@@ -183,7 +183,7 @@ public final class GiftStoreContentComponent: Component {
             if let initialCount = self.initialCount, initialCount < minimumCountToDisplayFilters {
                 topInset = component.navigationHeight
             }
-            
+                        
             let visibleBounds = bounds.insetBy(dx: 0.0, dy: -10.0)
             if let starGifts = self.effectiveGifts {
                 let sideInset: CGFloat = 16.0 + component.safeInsets.left
@@ -1269,8 +1269,10 @@ final class GiftStoreScreenComponent: Component {
                         guard let self, let component = self.component, let environment = self.environment else {
                             return
                         }
-                        let controller = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: starsContext)
-                        environment.controller()?.push(controller)
+                        Queue.mainQueue().after(0.3) {
+                            let controller = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: starsContext)
+                            environment.controller()?.push(controller)
+                        }
                     }
                 )))
                 
@@ -1283,8 +1285,10 @@ final class GiftStoreScreenComponent: Component {
                         guard let self, let component = self.component, let environment = self.environment else {
                             return
                         }
-                        let controller = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: tonContext)
-                        environment.controller()?.push(controller)
+                        Queue.mainQueue().after(0.3) {
+                            let controller = component.context.sharedContext.makeStarsTransactionsScreen(context: component.context, starsContext: tonContext)
+                            environment.controller()?.push(controller)
+                        }
                     }
                 )))
                 

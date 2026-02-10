@@ -1173,6 +1173,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1094555409] = { return Api.Update.parse_updateNotifySettings($0) }
     dict[-1955438642] = { return Api.Update.parse_updatePaidReactionPrivacy($0) }
     dict[-337610926] = { return Api.Update.parse_updatePeerBlocked($0) }
+    dict[1115654513] = { return Api.Update.parse_updatePeerHistoryNoForward($0) }
     dict[-1147422299] = { return Api.Update.parse_updatePeerHistoryTTL($0) }
     dict[-1263546448] = { return Api.Update.parse_updatePeerLocated($0) }
     dict[1786671974] = { return Api.Update.parse_updatePeerSettings($0) }

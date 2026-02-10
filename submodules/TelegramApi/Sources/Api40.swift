@@ -3192,23 +3192,6 @@ public extension Api.functions.channels {
     }
 }
 public extension Api.functions.channels {
-    static func editCreator(channel: Api.InputChannel, userId: Api.InputUser, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let buffer = Buffer()
-        buffer.appendInt32(-1892102881)
-        channel.serialize(buffer, true)
-        userId.serialize(buffer, true)
-        password.serialize(buffer, true)
-        return (FunctionDescription(name: "channels.editCreator", parameters: [("channel", String(describing: channel)), ("userId", String(describing: userId)), ("password", String(describing: password))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-            let reader = BufferReader(buffer)
-            var result: Api.Updates?
-            if let signature = reader.readInt32() {
-                result = Api.parse(reader, signature: signature) as? Api.Updates
-            }
-            return result
-        })
-    }
-}
-public extension Api.functions.channels {
     static func editLocation(channel: Api.InputChannel, geoPoint: Api.InputGeoPoint, address: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
         let buffer = Buffer()
         buffer.appendInt32(1491484525)
@@ -3366,21 +3349,6 @@ public extension Api.functions.channels {
             var result: Api.messages.ChatFull?
             if let signature = reader.readInt32() {
                 result = Api.parse(reader, signature: signature) as? Api.messages.ChatFull
-            }
-            return result
-        })
-    }
-}
-public extension Api.functions.channels {
-    static func getFutureCreatorAfterLeave(channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
-        let buffer = Buffer()
-        buffer.appendInt32(-1610016593)
-        channel.serialize(buffer, true)
-        return (FunctionDescription(name: "channels.getFutureCreatorAfterLeave", parameters: [("channel", String(describing: channel))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.User? in
-            let reader = BufferReader(buffer)
-            var result: Api.User?
-            if let signature = reader.readInt32() {
-                result = Api.parse(reader, signature: signature) as? Api.User
             }
             return result
         })
@@ -5743,6 +5711,23 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
+    static func editChatCreator(peer: Api.InputPeer, userId: Api.InputUser, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+        let buffer = Buffer()
+        buffer.appendInt32(-146556841)
+        peer.serialize(buffer, true)
+        userId.serialize(buffer, true)
+        password.serialize(buffer, true)
+        return (FunctionDescription(name: "messages.editChatCreator", parameters: [("peer", String(describing: peer)), ("userId", String(describing: userId)), ("password", String(describing: password))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+            let reader = BufferReader(buffer)
+            var result: Api.Updates?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.Updates
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
     static func editChatDefaultBannedRights(peer: Api.InputPeer, bannedRights: Api.ChatBannedRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
         buffer.appendInt32(-1517917375)
@@ -6776,6 +6761,21 @@ public extension Api.functions.messages {
             var result: Api.messages.ChatFull?
             if let signature = reader.readInt32() {
                 result = Api.parse(reader, signature: signature) as? Api.messages.ChatFull
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
+    static func getFutureChatCreatorAfterLeave(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
+        let buffer = Buffer()
+        buffer.appendInt32(998051494)
+        peer.serialize(buffer, true)
+        return (FunctionDescription(name: "messages.getFutureChatCreatorAfterLeave", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.User? in
+            let reader = BufferReader(buffer)
+            var result: Api.User?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.User
             }
             return result
         })
