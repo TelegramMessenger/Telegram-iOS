@@ -18,6 +18,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramStringFormatting",
+        "//submodules/TextFormat",
         "//submodules/SolidRoundedButtonNode",
         "//submodules/PresentationDataUtils",
         "//submodules/UIKitRuntimeUtils",

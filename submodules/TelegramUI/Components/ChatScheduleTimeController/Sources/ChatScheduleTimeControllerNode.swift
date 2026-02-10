@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
+import TextFormat
 import AccountContext
 import SolidRoundedButtonNode
 import PresentationDataUtils

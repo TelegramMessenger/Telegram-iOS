@@ -1,17 +1,17 @@
 import Postbox
 
 public enum GroupParticipant: PostboxCoding, Equatable {
-    case member(id: PeerId, invitedBy: PeerId, invitedAt: Int32)
-    case creator(id: PeerId)
-    case admin(id: PeerId, invitedBy: PeerId, invitedAt: Int32)
+    case member(id: PeerId, invitedBy: PeerId, invitedAt: Int32, rank: String?)
+    case creator(id: PeerId, rank: String?)
+    case admin(id: PeerId, invitedBy: PeerId, invitedAt: Int32, rank: String?)
     
     public var peerId: PeerId {
         switch self {
-        case let .member(id, _, _):
+        case let .member(id, _, _, _):
             return id
-        case let .creator(id):
+        case let .creator(id, _):
             return id
-        case let .admin(id, _, _):
+        case let .admin(id, _, _, _):
             return id
         }
     }
@@ -19,42 +19,68 @@ public enum GroupParticipant: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
         case 0:
-            self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
+            self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0), rank: decoder.decodeOptionalStringForKey("r"))
         case 1:
-            self = .creator(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)))
+            self = .creator(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), rank: decoder.decodeOptionalStringForKey("r"))
         case 2:
-            self = .admin(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
+            self = .admin(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0), rank: decoder.decodeOptionalStringForKey("r"))
         default:
-            self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0))
+            self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedBy: PeerId(decoder.decodeInt64ForKey("b", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0), rank: decoder.decodeOptionalStringForKey("r"))
         }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-        case let .member(id, invitedBy, invitedAt):
+        case let .member(id, invitedBy, invitedAt, rank):
             encoder.encodeInt32(0, forKey: "v")
             encoder.encodeInt64(id.toInt64(), forKey: "i")
             encoder.encodeInt64(invitedBy.toInt64(), forKey: "b")
             encoder.encodeInt32(invitedAt, forKey: "t")
-        case let .creator(id):
+            if let rank {
+                encoder.encodeString(rank, forKey: "r")
+            } else {
+                encoder.encodeNil(forKey: "r")
+            }
+        case let .creator(id, rank):
             encoder.encodeInt32(1, forKey: "v")
             encoder.encodeInt64(id.toInt64(), forKey: "i")
-        case let .admin(id, invitedBy, invitedAt):
+            if let rank {
+                encoder.encodeString(rank, forKey: "r")
+            } else {
+                encoder.encodeNil(forKey: "r")
+            }
+        case let .admin(id, invitedBy, invitedAt, rank):
             encoder.encodeInt32(2, forKey: "v")
             encoder.encodeInt64(id.toInt64(), forKey: "i")
             encoder.encodeInt64(invitedBy.toInt64(), forKey: "b")
             encoder.encodeInt32(invitedAt, forKey: "t")
+            if let rank {
+                encoder.encodeString(rank, forKey: "r")
+            } else {
+                encoder.encodeNil(forKey: "r")
+            }
         }
     }
     
     public var invitedBy: PeerId {
         switch self {
-        case let .admin(_, invitedBy, _):
+        case let .admin(_, invitedBy, _, _):
             return invitedBy
-        case let .member(_, invitedBy, _):
+        case let .member(_, invitedBy, _, _):
             return invitedBy
-        case let .creator(id):
+        case let .creator(id, _):
             return id
+        }
+    }
+    
+    func withUpdated(rank: String?) -> GroupParticipant {
+        switch self {
+        case let .member(id, invitedBy, invitedAt, _):
+            return .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
+        case let .admin(id, invitedBy, invitedAt, _):
+            return .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
+        case let .creator(id, _):
+            return .creator(id: id, rank: rank)
         }
     }
 }

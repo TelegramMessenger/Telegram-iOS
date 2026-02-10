@@ -12,6 +12,7 @@ import MultilineTextComponent
 import BalancedTextComponent
 import TelegramPresentationData
 import TelegramStringFormatting
+import TextFormat
 import Markdown
 import GlassControls
 

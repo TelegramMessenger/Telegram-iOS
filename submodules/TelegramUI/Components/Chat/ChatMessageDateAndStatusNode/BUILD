@@ -20,6 +20,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/AppBundle",
         "//submodules/TelegramStringFormatting",
+        "//submodules/TextFormat",
         "//submodules/LocalizedPeerData",
         "//submodules/Components/ReactionButtonListComponent",
         "//submodules/Components/ReactionImageComponent",

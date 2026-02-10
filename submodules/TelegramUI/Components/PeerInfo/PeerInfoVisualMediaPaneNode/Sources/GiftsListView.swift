@@ -508,12 +508,8 @@ final class GiftsListView: UIView {
                         ribbonColor = .green
                         ribbonOutline =  params.presentationData.theme.list.blocksBackgroundColor
                     } else {
-                        if product.pinnedToTop || self.canSelect || self.isCollection {
-                            ribbonFont = .monospaced
-                            ribbonText = "#\(gift.number)"
-                        } else {
-                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.issued), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
-                        }
+                        ribbonFont = .monospaced
+                        ribbonText = "#\(gift.number)"
                         for attribute in gift.attributes {
                             if case let .backdrop(_, _, innerColor, outerColor, _, _, _) = attribute {
                                 ribbonColor = .custom(outerColor, innerColor)

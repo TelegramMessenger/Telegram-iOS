@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 import TelegramStringFormatting
+import TextFormat
 import AccountContext
 import DeviceLocationManager
 import Geocoding

@@ -88,7 +88,7 @@ public enum MessageTextEntityType: Equatable {
     case BankCard
     case Spoiler
     case CustomEmoji(stickerPack: StickerPackReference?, fileId: Int64)
-    case FormattedDate(format: DateTimeFormat, date: Int32)
+    case FormattedDate(format: DateTimeFormat?, date: Int32)
     case Custom(type: CustomEntityType)
 }
 
@@ -143,7 +143,7 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
             let stickerPack = decoder.decodeObjectForKey("s", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference
             self.type = .CustomEmoji(stickerPack: stickerPack, fileId: decoder.decodeInt64ForKey("f", orElse: 0))
         case 19:
-            self.type = .FormattedDate(format: MessageTextEntityType.DateTimeFormat(rawValue: decoder.decodeInt32ForKey("format", orElse: 0)), date: decoder.decodeInt32ForKey("date", orElse: 0))
+            self.type = .FormattedDate(format: decoder.decodeOptionalInt32ForKey("format").flatMap { MessageTextEntityType.DateTimeFormat(rawValue: $0) }, date: decoder.decodeInt32ForKey("date", orElse: 0))
         case Int32.max:
             self.type = .Custom(type: decoder.decodeInt32ForKey("type", orElse: 0))
         default:
@@ -202,7 +202,7 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
         case 18:
             self.type = .CustomEmoji(stickerPack: try container.decodeIfPresent(StickerPackReference.self, forKey: "s"), fileId: try container.decode(Int64.self, forKey: "f"))
         case 19:
-            self.type = .FormattedDate(format: MessageTextEntityType.DateTimeFormat(rawValue: try container.decode(Int32.self, forKey: "format")), date: try container.decode(Int32.self, forKey: "date"))
+            self.type = .FormattedDate(format: try container.decodeIfPresent(Int32.self, forKey: "format").flatMap { MessageTextEntityType.DateTimeFormat(rawValue: $0) }, date: try container.decode(Int32.self, forKey: "date"))
         case Int32.max:
             let customType: Int32 = (try? container.decode(Int32.self, forKey: "type")) ?? 0
             self.type = .Custom(type: customType)
@@ -269,7 +269,11 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
             encoder.encodeInt64(fileId, forKey: "f")
         case let .FormattedDate(format, date):
             encoder.encodeInt32(19, forKey: "_rawValue")
-            encoder.encodeInt32(format.rawValue, forKey: "format")
+            if let format {
+                encoder.encodeInt32(format.rawValue, forKey: "format")
+            } else {
+                encoder.encodeNil(forKey: "format")
+            }
             encoder.encodeInt32(date, forKey: "date")
         case let .Custom(type):
             encoder.encodeInt32(Int32.max, forKey: "_rawValue")
@@ -329,7 +333,7 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
             try container.encode(fileId, forKey: "f")
         case let .FormattedDate(format, date):
             try container.encode(19 as Int32, forKey: "_rawValue")
-            try container.encode(format.rawValue, forKey: "format")
+            try container.encodeIfPresent(format?.rawValue, forKey: "format")
             try container.encode(date, forKey: "date")
         case let .Custom(type):
             try container.encode(Int32.max as Int32, forKey: "_rawValue")

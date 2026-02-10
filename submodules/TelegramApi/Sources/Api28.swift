@@ -517,6 +517,18 @@ public extension Api {
                 self.version = version
             }
         }
+        public class Cons_updateChatParticipantRank {
+            public var chatId: Int64
+            public var userId: Int64
+            public var rank: String
+            public var version: Int32
+            public init(chatId: Int64, userId: Int64, rank: String, version: Int32) {
+                self.chatId = chatId
+                self.userId = userId
+                self.rank = rank
+                self.version = version
+            }
+        }
         public class Cons_updateChatParticipants {
             public var participants: Api.ChatParticipants
             public init(participants: Api.ChatParticipants) {
@@ -1485,6 +1497,7 @@ public extension Api {
         case updateChatParticipantAdd(Cons_updateChatParticipantAdd)
         case updateChatParticipantAdmin(Cons_updateChatParticipantAdmin)
         case updateChatParticipantDelete(Cons_updateChatParticipantDelete)
+        case updateChatParticipantRank(Cons_updateChatParticipantRank)
         case updateChatParticipants(Cons_updateChatParticipants)
         case updateChatUserTyping(Cons_updateChatUserTyping)
         case updateConfig
@@ -2015,6 +2028,15 @@ public extension Api {
                 }
                 serializeInt64(_data.chatId, buffer: buffer, boxed: false)
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeInt32(_data.version, buffer: buffer, boxed: false)
+                break
+            case .updateChatParticipantRank(let _data):
+                if boxed {
+                    buffer.appendInt32(-1115461703)
+                }
+                serializeInt64(_data.chatId, buffer: buffer, boxed: false)
+                serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeString(_data.rank, buffer: buffer, boxed: false)
                 serializeInt32(_data.version, buffer: buffer, boxed: false)
                 break
             case .updateChatParticipants(let _data):
@@ -3100,6 +3122,8 @@ public extension Api {
                 return ("updateChatParticipantAdmin", [("chatId", _data.chatId as Any), ("userId", _data.userId as Any), ("isAdmin", _data.isAdmin as Any), ("version", _data.version as Any)])
             case .updateChatParticipantDelete(let _data):
                 return ("updateChatParticipantDelete", [("chatId", _data.chatId as Any), ("userId", _data.userId as Any), ("version", _data.version as Any)])
+            case .updateChatParticipantRank(let _data):
+                return ("updateChatParticipantRank", [("chatId", _data.chatId as Any), ("userId", _data.userId as Any), ("rank", _data.rank as Any), ("version", _data.version as Any)])
             case .updateChatParticipants(let _data):
                 return ("updateChatParticipants", [("participants", _data.participants as Any)])
             case .updateChatUserTyping(let _data):
@@ -4228,6 +4252,26 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateChatParticipantDelete(Cons_updateChatParticipantDelete(chatId: _1!, userId: _2!, version: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateChatParticipantRank(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateChatParticipantRank(Cons_updateChatParticipantRank(chatId: _1!, userId: _2!, rank: _3!, version: _4!))
             }
             else {
                 return nil

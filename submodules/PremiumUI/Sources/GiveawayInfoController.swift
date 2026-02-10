@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 import AccountContext
 import TelegramStringFormatting
+import TextFormat
 import TelegramPresentationData
 import ComponentFlow
 import AlertComponent

@@ -91,11 +91,17 @@ extension ChatControllerImpl {
                     if self.presentationInterfaceState.copyProtectionEnabled && !isAction && !isAd {
                         if case .scheduledMessages = self.subject {
                         } else {
-                            var isChannel = false
-                            if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
-                                isChannel = true
+                            if let peer = self.presentationInterfaceState.renderedPeer?.peer {
+                                if peer is TelegramUser {
+                                    
+                                } else {
+                                    var isChannel = false
+                                    if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
+                                        isChannel = true
+                                    }
+                                    tip = .messageCopyProtection(isChannel: isChannel)
+                                }
                             }
-                            tip = .messageCopyProtection(isChannel: isChannel)
                         }
                     } else {
                         let numberOfComponents = message.text.components(separatedBy: CharacterSet.whitespacesAndNewlines).count

@@ -81,18 +81,29 @@ public extension EngineChannelParticipant {
 }
 
 public enum EngineLegacyGroupParticipant: Equatable {
-    case member(id: EnginePeer.Id, invitedBy: EnginePeer.Id, invitedAt: Int32)
-    case creator(id: EnginePeer.Id)
-    case admin(id: EnginePeer.Id, invitedBy: EnginePeer.Id, invitedAt: Int32)
+    case member(id: EnginePeer.Id, invitedBy: EnginePeer.Id, invitedAt: Int32, rank: String?)
+    case creator(id: EnginePeer.Id, rank: String?)
+    case admin(id: EnginePeer.Id, invitedBy: EnginePeer.Id, invitedAt: Int32, rank: String?)
     
     public var peerId: EnginePeer.Id {
         switch self {
-        case let .member(id, _, _):
+        case let .member(id, _, _, _):
             return id
-        case let .creator(id):
+        case let .creator(id, _):
             return id
-        case let .admin(id, _, _):
+        case let .admin(id, _, _, _):
             return id
+        }
+    }
+
+    public var rank: String? {
+        switch self {
+        case let .member(_, _, _, rank):
+            return rank
+        case let .creator(_, rank):
+            return rank
+        case let .admin(_, _, _, rank):
+            return rank
         }
     }
 }
@@ -100,23 +111,23 @@ public enum EngineLegacyGroupParticipant: Equatable {
 public extension EngineLegacyGroupParticipant {
     init(_ participant: GroupParticipant) {
         switch participant {
-        case let .member(id, invitedBy, invitedAt):
-            self = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
-        case let .creator(id):
-            self = .creator(id: id)
-        case let .admin(id, invitedBy, invitedAt):
-            self = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+        case let .member(id, invitedBy, invitedAt, rank):
+            self = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
+        case let .creator(id, rank):
+            self = .creator(id: id, rank: rank)
+        case let .admin(id, invitedBy, invitedAt, rank):
+            self = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
         }
     }
     
     func _asParticipant() -> GroupParticipant {
         switch self {
-        case let .member(id, invitedBy, invitedAt):
-            return .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
-        case let .creator(id):
-            return .creator(id: id)
-        case let .admin(id, invitedBy, invitedAt):
-            return .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+        case let .member(id, invitedBy, invitedAt, rank):
+            return .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
+        case let .creator(id, rank):
+            return .creator(id: id, rank: rank)
+        case let .admin(id, invitedBy, invitedAt, rank):
+            return .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
         }
     }
 }
@@ -2278,17 +2289,19 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             var key: PostboxViewKey {
-                return .basicPeer(self.id)
+                return .peer(peerId: self.id, components: [.cachedData])
             }
 
             func extract(view: PostboxView) -> Result {
-                guard let view = view as? BasicPeerView else {
+                guard let view = view as? PeerView else {
                     preconditionFailure()
                 }
-                guard let peer = view.peer else {
+                guard let peer = peerViewMainPeer(view) else {
                     return false
                 }
-                if let group = peer as? TelegramGroup {
+                if let cachedPeerData = view.cachedData as? CachedUserData {
+                    return cachedPeerData.flags.contains(.copyProtectionEnabled)
+                } else if let group = peer as? TelegramGroup {
                     return group.flags.contains(.copyProtectionEnabled)
                 } else if let channel = peer as? TelegramChannel {
                     return channel.flags.contains(.copyProtectionEnabled)

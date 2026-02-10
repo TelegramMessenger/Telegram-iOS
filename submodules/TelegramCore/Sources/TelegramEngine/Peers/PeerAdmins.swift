@@ -24,8 +24,8 @@ func _internal_removeGroupAdmin(account: Account, peerId: PeerId, adminId: PeerI
                                         for i in 0 ..< updatedParticipants.count {
                                             if updatedParticipants[i].peerId == adminId {
                                                 switch updatedParticipants[i] {
-                                                    case let .admin(id, invitedBy, invitedAt):
-                                                        updatedParticipants[i] = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                                    case let .admin(id, invitedBy, invitedAt, rank):
+                                                        updatedParticipants[i] = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
                                                     default:
                                                         break
                                                 }
@@ -93,8 +93,8 @@ func _internal_addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) 
                                     for i in 0 ..< updatedParticipants.count {
                                         if updatedParticipants[i].peerId == adminId {
                                             switch updatedParticipants[i] {
-                                                case let .member(id, invitedBy, invitedAt):
-                                                    updatedParticipants[i] = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                                case let .member(id, invitedBy, invitedAt, rank):
+                                                    updatedParticipants[i] = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
                                                 default:
                                                     break
                                             }

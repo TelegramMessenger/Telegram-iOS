@@ -92,7 +92,7 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
                                         }
                                     }
                                     if !found {
-                                        updatedParticipants.append(.member(id: memberId, invitedBy: account.peerId, invitedAt: timestamp))
+                                        updatedParticipants.append(.member(id: memberId, invitedBy: account.peerId, invitedAt: timestamp, rank: nil))
                                     }
                                     return cachedData.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
                                 } else {

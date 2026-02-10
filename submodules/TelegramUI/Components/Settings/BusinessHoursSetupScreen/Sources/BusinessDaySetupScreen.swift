@@ -20,6 +20,7 @@ import LottieComponent
 import Markdown
 import LocationUI
 import TelegramStringFormatting
+import TextFormat
 import PlainButtonComponent
 import TimeSelectionActionSheet
 

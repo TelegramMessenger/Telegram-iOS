@@ -13,14 +13,14 @@ enum PeerInfoMemberRole {
 
 enum PeerInfoMember: Equatable {
     case channelMember(participant: RenderedChannelParticipant, storyStats: PeerStoryStats?)
-    case legacyGroupMember(peer: RenderedPeer, role: PeerInfoMemberRole, invitedBy: PeerId?, presence: TelegramUserPresence?, storyStats: PeerStoryStats?)
+    case legacyGroupMember(peer: RenderedPeer, role: PeerInfoMemberRole, invitedBy: PeerId?, presence: TelegramUserPresence?, storyStats: PeerStoryStats?, rank: String?)
     case account(peer: RenderedPeer)
     
     var id: PeerId {
         switch self {
         case let .channelMember(participant, _):
             return participant.peer.id
-        case let .legacyGroupMember(peer, _, _, _, _):
+        case let .legacyGroupMember(peer, _, _, _, _, _):
             return peer.peerId
         case let .account(peer):
             return peer.peerId
@@ -31,7 +31,7 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(participant, _):
             return participant.peer
-        case let .legacyGroupMember(peer, _, _, _, _):
+        case let .legacyGroupMember(peer, _, _, _, _, _):
             return peer.peers[peer.peerId]!
         case let .account(peer):
             return peer.peers[peer.peerId]!
@@ -42,7 +42,7 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(participant, _):
             return participant.presences[participant.peer.id] as? TelegramUserPresence
-        case let .legacyGroupMember(_, _, _, presence, _):
+        case let .legacyGroupMember(_, _, _, presence, _, _):
             return presence
         case .account:
             return nil
@@ -62,7 +62,7 @@ enum PeerInfoMember: Equatable {
                     return .member
                 }
             }
-        case let .legacyGroupMember(_, role, _, _, _):
+        case let .legacyGroupMember(_, role, _, _, _, _):
             return role
         case .account:
             return .member
@@ -78,8 +78,8 @@ enum PeerInfoMember: Equatable {
                 case let .member(_, _, _, _, rank, _):
                     return rank
                 }
-            case .legacyGroupMember:
-                return nil
+            case let .legacyGroupMember(_, _, _, _, _, rank):
+                return rank
             case .account:
                 return nil
         }
@@ -89,7 +89,7 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(_, value):
             return value
-        case let .legacyGroupMember(_, _, _, _, value):
+        case let .legacyGroupMember(_, _, _, _, value, _):
             return value
         case .account:
             return nil
@@ -232,18 +232,22 @@ private final class PeerInfoMembersContextImpl {
                     if let peer = view.peers[participant.peerId] {
                         let role: PeerInfoMemberRole
                         let invitedBy: PeerId?
+                        let rank: String?
                         switch participant {
-                        case .creator:
+                        case let .creator(_, rankValue):
                             role = .creator
                             invitedBy = nil
-                        case let .admin(_, invitedByValue, _):
+                            rank = rankValue
+                        case let .admin(_, invitedByValue, _, rankValue):
                             role = .admin
                             invitedBy = invitedByValue
-                        case let .member(_, invitedByValue, _):
+                            rank = rankValue
+                        case let .member(_, invitedByValue, _, rankValue):
                             role = .member
                             invitedBy = invitedByValue
+                            rank = rankValue
                         }
-                        unsortedMembers.append(.legacyGroupMember(peer: RenderedPeer(peer: peer), role: role, invitedBy: invitedBy, presence: view.peerPresences[participant.peerId] as? TelegramUserPresence, storyStats: view.memberStoryStats[participant.peerId]))
+                        unsortedMembers.append(.legacyGroupMember(peer: RenderedPeer(peer: peer), role: role, invitedBy: invitedBy, presence: view.peerPresences[participant.peerId] as? TelegramUserPresence, storyStats: view.memberStoryStats[participant.peerId], rank: rank))
                     }
                 }
                 
