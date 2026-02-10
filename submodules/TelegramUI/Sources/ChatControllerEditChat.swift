@@ -49,7 +49,7 @@ extension ChatControllerImpl {
                                 contentNode.setErrorText(errorText: self.presentationData.strings.QuickReply_ShortcutExistsInlineError)
                             }
                         } else {
-                            self.chatTitleView?.update(
+                            let _ = self.chatTitleView?.update(
                                 context: self.context,
                                 theme: self.presentationData.theme,
                                 preferClearGlass: self.presentationInterfaceState.preferredGlassType == .clear,
@@ -102,7 +102,7 @@ extension ChatControllerImpl {
                     } else {
                         linkUrl = link.url
                     }
-                    self.chatTitleView?.update(
+                    let _ = self.chatTitleView?.update(
                         context: self.context,
                         theme: self.presentationData.theme,
                         preferClearGlass: self.presentationInterfaceState.preferredGlassType == .clear,
