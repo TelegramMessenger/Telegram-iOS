@@ -451,7 +451,7 @@ func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationD
                     if canManageEmojiStatus || data.webAppPermissions?.emojiStatus?.isRequested == true {
                         items[.permissions]!.append(PeerInfoScreenSwitchItem(id: ItemBotPermissionsEmojiStatus, text: presentationData.strings.PeerInfo_Permissions_EmojiStatus, value: canManageEmojiStatus, icon: UIImage(bundleImageName: "Chat/Info/Status"), isLocked: false, toggled: { value in
                             let _ = (context.engine.peers.toggleBotEmojiStatusAccess(peerId: user.id, enabled: value)
-                                     |> deliverOnMainQueue).startStandalone()
+                            |> deliverOnMainQueue).startStandalone()
                             
                             let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: user.id) { current in
                                 return WebAppPermissionsState(location: current?.location, emojiStatus: WebAppPermissionsState.EmojiStatus(isRequested: true))
@@ -869,6 +869,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
         case peerNote
         case peerDataSettings
         case peerVerifySettings
+        case peerPrivacySettings
         case peerSettings
         case linkedMonoforum
         case peerAdditionalSettings
@@ -900,6 +901,10 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
             let ItemCommands = 12
             let ItemBotSettings = 13
             let ItemBotInfo = 14
+            
+            let ItemPeerCopyProtectionHeader = 15
+            let ItemPeerCopyProtection = 16
+            let ItemPeerCopyProtectionInfo = 17
             
             if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
                 items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Bot_Username, icon: PresentationResourcesSettings.bot, action: {
@@ -1018,6 +1023,21 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemInfo, text: presentationData.strings.UserInfo_CustomPhotoInfo(compactName).string))
+            }
+            
+            if "".isEmpty {
+                var copyProtectionEnabled = false
+                if let cachedData = data.cachedData as? CachedUserData, cachedData.flags.contains(.myCopyProtectionEnabled) {
+                    copyProtectionEnabled = true
+                }
+                items[.peerPrivacySettings]!.append(PeerInfoScreenHeaderItem(id: ItemPeerCopyProtectionHeader, text: "FORWARDING FROM THIS CHAT") )
+                items[.peerPrivacySettings]!.append(PeerInfoScreenSwitchItem(id: ItemPeerCopyProtection, text: "Restrict Saving Content", value: copyProtectionEnabled, icon: nil, isLocked: false, toggled: { value in
+                    let _ = context.engine.peers.toggleMessageCopyProtection(peerId: user.id, enabled: !copyProtectionEnabled).start()
+                }))
+
+                let peerName = data.peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
+                let text = copyProtectionEnabled ? "\(peerName) is not able to copy, save and forward content from the chat." : "\(peerName) is able to copy, save and forward content from the chat."
+                items[.peerPrivacySettings]!.append(PeerInfoScreenCommentItem(id: ItemPeerCopyProtectionInfo, text: text, attributedPrefix: nil, useAccentLinkColor: false))
             }
             
             if data.isContact {

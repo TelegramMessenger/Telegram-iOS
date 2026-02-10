@@ -4,6 +4,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
+import TextFormat
 import LocalizedPeerData
 import AccountContext
 

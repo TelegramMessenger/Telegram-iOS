@@ -4,6 +4,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramStringFormatting
+import TextFormat
 import SegmentedControlNode
 import DirectionalPanGesture
 

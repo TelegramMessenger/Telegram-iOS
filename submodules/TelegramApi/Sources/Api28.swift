@@ -517,6 +517,18 @@ public extension Api {
                 self.version = version
             }
         }
+        public class Cons_updateChatParticipantRank {
+            public var chatId: Int64
+            public var userId: Int64
+            public var rank: String
+            public var version: Int32
+            public init(chatId: Int64, userId: Int64, rank: String, version: Int32) {
+                self.chatId = chatId
+                self.userId = userId
+                self.rank = rank
+                self.version = version
+            }
+        }
         public class Cons_updateChatParticipants {
             public var participants: Api.ChatParticipants
             public init(participants: Api.ChatParticipants) {
@@ -969,7 +981,7 @@ public extension Api {
                 self.peerId = peerId
             }
         }
-        public class Cons_updatePeerHistoryNoForward {
+        public class Cons_updatePeerHistoryNoForwards {
             public var flags: Int32
             public var peer: Api.Peer
             public init(flags: Int32, peer: Api.Peer) {
@@ -1485,6 +1497,7 @@ public extension Api {
         case updateChatParticipantAdd(Cons_updateChatParticipantAdd)
         case updateChatParticipantAdmin(Cons_updateChatParticipantAdmin)
         case updateChatParticipantDelete(Cons_updateChatParticipantDelete)
+        case updateChatParticipantRank(Cons_updateChatParticipantRank)
         case updateChatParticipants(Cons_updateChatParticipants)
         case updateChatUserTyping(Cons_updateChatUserTyping)
         case updateConfig
@@ -1539,7 +1552,7 @@ public extension Api {
         case updateNotifySettings(Cons_updateNotifySettings)
         case updatePaidReactionPrivacy(Cons_updatePaidReactionPrivacy)
         case updatePeerBlocked(Cons_updatePeerBlocked)
-        case updatePeerHistoryNoForward(Cons_updatePeerHistoryNoForward)
+        case updatePeerHistoryNoForwards(Cons_updatePeerHistoryNoForwards)
         case updatePeerHistoryTTL(Cons_updatePeerHistoryTTL)
         case updatePeerLocated(Cons_updatePeerLocated)
         case updatePeerSettings(Cons_updatePeerSettings)
@@ -2015,6 +2028,15 @@ public extension Api {
                 }
                 serializeInt64(_data.chatId, buffer: buffer, boxed: false)
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeInt32(_data.version, buffer: buffer, boxed: false)
+                break
+            case .updateChatParticipantRank(let _data):
+                if boxed {
+                    buffer.appendInt32(-1115461703)
+                }
+                serializeInt64(_data.chatId, buffer: buffer, boxed: false)
+                serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeString(_data.rank, buffer: buffer, boxed: false)
                 serializeInt32(_data.version, buffer: buffer, boxed: false)
                 break
             case .updateChatParticipants(let _data):
@@ -2497,9 +2519,9 @@ public extension Api {
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.peerId.serialize(buffer, true)
                 break
-            case .updatePeerHistoryNoForward(let _data):
+            case .updatePeerHistoryNoForwards(let _data):
                 if boxed {
-                    buffer.appendInt32(1115654513)
+                    buffer.appendInt32(1463202714)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.peer.serialize(buffer, true)
@@ -3100,6 +3122,8 @@ public extension Api {
                 return ("updateChatParticipantAdmin", [("chatId", _data.chatId as Any), ("userId", _data.userId as Any), ("isAdmin", _data.isAdmin as Any), ("version", _data.version as Any)])
             case .updateChatParticipantDelete(let _data):
                 return ("updateChatParticipantDelete", [("chatId", _data.chatId as Any), ("userId", _data.userId as Any), ("version", _data.version as Any)])
+            case .updateChatParticipantRank(let _data):
+                return ("updateChatParticipantRank", [("chatId", _data.chatId as Any), ("userId", _data.userId as Any), ("rank", _data.rank as Any), ("version", _data.version as Any)])
             case .updateChatParticipants(let _data):
                 return ("updateChatParticipants", [("participants", _data.participants as Any)])
             case .updateChatUserTyping(let _data):
@@ -3208,8 +3232,8 @@ public extension Api {
                 return ("updatePaidReactionPrivacy", [("`private`", _data.`private` as Any)])
             case .updatePeerBlocked(let _data):
                 return ("updatePeerBlocked", [("flags", _data.flags as Any), ("peerId", _data.peerId as Any)])
-            case .updatePeerHistoryNoForward(let _data):
-                return ("updatePeerHistoryNoForward", [("flags", _data.flags as Any), ("peer", _data.peer as Any)])
+            case .updatePeerHistoryNoForwards(let _data):
+                return ("updatePeerHistoryNoForwards", [("flags", _data.flags as Any), ("peer", _data.peer as Any)])
             case .updatePeerHistoryTTL(let _data):
                 return ("updatePeerHistoryTTL", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("ttlPeriod", _data.ttlPeriod as Any)])
             case .updatePeerLocated(let _data):
@@ -4233,6 +4257,26 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updateChatParticipantRank(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateChatParticipantRank(Cons_updateChatParticipantRank(chatId: _1!, userId: _2!, rank: _3!, version: _4!))
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updateChatParticipants(_ reader: BufferReader) -> Update? {
             var _1: Api.ChatParticipants?
             if let signature = reader.readInt32() {
@@ -5176,7 +5220,7 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_updatePeerHistoryNoForward(_ reader: BufferReader) -> Update? {
+        public static func parse_updatePeerHistoryNoForwards(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.Peer?
@@ -5186,7 +5230,7 @@ public extension Api {
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.Update.updatePeerHistoryNoForward(Cons_updatePeerHistoryNoForward(flags: _1!, peer: _2!))
+                return Api.Update.updatePeerHistoryNoForwards(Cons_updatePeerHistoryNoForwards(flags: _1!, peer: _2!))
             }
             else {
                 return nil

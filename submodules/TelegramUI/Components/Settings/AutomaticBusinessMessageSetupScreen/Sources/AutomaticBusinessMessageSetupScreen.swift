@@ -27,6 +27,7 @@ import ListItemSliderSelectorComponent
 import DateSelectionUI
 import PlainButtonComponent
 import TelegramStringFormatting
+import TextFormat
 import TimeSelectionActionSheet
 
 private let checkIcon: UIImage = {

@@ -57,10 +57,18 @@ extension ChatListControllerImpl {
                     AlertTitleComponent(title: self.presentationData.strings.LeaveGroup_Title(peer.compactDisplayTitle).string)
                 )
             ))
+            
+            let text: String
+            if case .legacyGroup = peer {
+                text = self.presentationData.strings.LeaveGroup_LegacyGroupText(nextCreator.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), peer.compactDisplayTitle).string
+            } else {
+                text = self.presentationData.strings.LeaveGroup_Text(nextCreator.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), peer.compactDisplayTitle).string
+            }
+            
             content.append(AnyComponentWithIdentity(
                 id: "text",
                 component: AnyComponent(
-                    AlertTextComponent(content: .plain(self.presentationData.strings.LeaveGroup_Text(nextCreator.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), peer.compactDisplayTitle).string))
+                    AlertTextComponent(content: .plain(text))
                 )
             ))
             

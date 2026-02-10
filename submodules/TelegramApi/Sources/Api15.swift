@@ -1023,6 +1023,7 @@ public extension Api {
             public var id: Int32
             public var fromId: Api.Peer?
             public var fromBoostsApplied: Int32?
+            public var fromRank: String?
             public var peerId: Api.Peer
             public var savedPeerId: Api.Peer?
             public var fwdFrom: Api.MessageFwdHeader?
@@ -1051,12 +1052,13 @@ public extension Api {
             public var suggestedPost: Api.SuggestedPost?
             public var scheduleRepeatPeriod: Int32?
             public var summaryFromLanguage: String?
-            public init(flags: Int32, flags2: Int32, id: Int32, fromId: Api.Peer?, fromBoostsApplied: Int32?, peerId: Api.Peer, savedPeerId: Api.Peer?, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int64?, viaBusinessBotId: Int64?, replyTo: Api.MessageReplyHeader?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, reactions: Api.MessageReactions?, restrictionReason: [Api.RestrictionReason]?, ttlPeriod: Int32?, quickReplyShortcutId: Int32?, effect: Int64?, factcheck: Api.FactCheck?, reportDeliveryUntilDate: Int32?, paidMessageStars: Int64?, suggestedPost: Api.SuggestedPost?, scheduleRepeatPeriod: Int32?, summaryFromLanguage: String?) {
+            public init(flags: Int32, flags2: Int32, id: Int32, fromId: Api.Peer?, fromBoostsApplied: Int32?, fromRank: String?, peerId: Api.Peer, savedPeerId: Api.Peer?, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int64?, viaBusinessBotId: Int64?, replyTo: Api.MessageReplyHeader?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, reactions: Api.MessageReactions?, restrictionReason: [Api.RestrictionReason]?, ttlPeriod: Int32?, quickReplyShortcutId: Int32?, effect: Int64?, factcheck: Api.FactCheck?, reportDeliveryUntilDate: Int32?, paidMessageStars: Int64?, suggestedPost: Api.SuggestedPost?, scheduleRepeatPeriod: Int32?, summaryFromLanguage: String?) {
                 self.flags = flags
                 self.flags2 = flags2
                 self.id = id
                 self.fromId = fromId
                 self.fromBoostsApplied = fromBoostsApplied
+                self.fromRank = fromRank
                 self.peerId = peerId
                 self.savedPeerId = savedPeerId
                 self.fwdFrom = fwdFrom
@@ -1129,7 +1131,7 @@ public extension Api {
             switch self {
             case .message(let _data):
                 if boxed {
-                    buffer.appendInt32(-1665888023)
+                    buffer.appendInt32(988112002)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt32(_data.flags2, buffer: buffer, boxed: false)
@@ -1139,6 +1141,9 @@ public extension Api {
                 }
                 if Int(_data.flags) & Int(1 << 29) != 0 {
                     serializeInt32(_data.fromBoostsApplied!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags2) & Int(1 << 12) != 0 {
+                    serializeString(_data.fromRank!, buffer: buffer, boxed: false)
                 }
                 _data.peerId.serialize(buffer, true)
                 if Int(_data.flags) & Int(1 << 28) != 0 {
@@ -1268,7 +1273,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .message(let _data):
-                return ("message", [("flags", _data.flags as Any), ("flags2", _data.flags2 as Any), ("id", _data.id as Any), ("fromId", _data.fromId as Any), ("fromBoostsApplied", _data.fromBoostsApplied as Any), ("peerId", _data.peerId as Any), ("savedPeerId", _data.savedPeerId as Any), ("fwdFrom", _data.fwdFrom as Any), ("viaBotId", _data.viaBotId as Any), ("viaBusinessBotId", _data.viaBusinessBotId as Any), ("replyTo", _data.replyTo as Any), ("date", _data.date as Any), ("message", _data.message as Any), ("media", _data.media as Any), ("replyMarkup", _data.replyMarkup as Any), ("entities", _data.entities as Any), ("views", _data.views as Any), ("forwards", _data.forwards as Any), ("replies", _data.replies as Any), ("editDate", _data.editDate as Any), ("postAuthor", _data.postAuthor as Any), ("groupedId", _data.groupedId as Any), ("reactions", _data.reactions as Any), ("restrictionReason", _data.restrictionReason as Any), ("ttlPeriod", _data.ttlPeriod as Any), ("quickReplyShortcutId", _data.quickReplyShortcutId as Any), ("effect", _data.effect as Any), ("factcheck", _data.factcheck as Any), ("reportDeliveryUntilDate", _data.reportDeliveryUntilDate as Any), ("paidMessageStars", _data.paidMessageStars as Any), ("suggestedPost", _data.suggestedPost as Any), ("scheduleRepeatPeriod", _data.scheduleRepeatPeriod as Any), ("summaryFromLanguage", _data.summaryFromLanguage as Any)])
+                return ("message", [("flags", _data.flags as Any), ("flags2", _data.flags2 as Any), ("id", _data.id as Any), ("fromId", _data.fromId as Any), ("fromBoostsApplied", _data.fromBoostsApplied as Any), ("fromRank", _data.fromRank as Any), ("peerId", _data.peerId as Any), ("savedPeerId", _data.savedPeerId as Any), ("fwdFrom", _data.fwdFrom as Any), ("viaBotId", _data.viaBotId as Any), ("viaBusinessBotId", _data.viaBusinessBotId as Any), ("replyTo", _data.replyTo as Any), ("date", _data.date as Any), ("message", _data.message as Any), ("media", _data.media as Any), ("replyMarkup", _data.replyMarkup as Any), ("entities", _data.entities as Any), ("views", _data.views as Any), ("forwards", _data.forwards as Any), ("replies", _data.replies as Any), ("editDate", _data.editDate as Any), ("postAuthor", _data.postAuthor as Any), ("groupedId", _data.groupedId as Any), ("reactions", _data.reactions as Any), ("restrictionReason", _data.restrictionReason as Any), ("ttlPeriod", _data.ttlPeriod as Any), ("quickReplyShortcutId", _data.quickReplyShortcutId as Any), ("effect", _data.effect as Any), ("factcheck", _data.factcheck as Any), ("reportDeliveryUntilDate", _data.reportDeliveryUntilDate as Any), ("paidMessageStars", _data.paidMessageStars as Any), ("suggestedPost", _data.suggestedPost as Any), ("scheduleRepeatPeriod", _data.scheduleRepeatPeriod as Any), ("summaryFromLanguage", _data.summaryFromLanguage as Any)])
             case .messageEmpty(let _data):
                 return ("messageEmpty", [("flags", _data.flags as Any), ("id", _data.id as Any), ("peerId", _data.peerId as Any)])
             case .messageService(let _data):
@@ -1293,171 +1298,176 @@ public extension Api {
             if Int(_1!) & Int(1 << 29) != 0 {
                 _5 = reader.readInt32()
             }
-            var _6: Api.Peer?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.Peer
+            var _6: String?
+            if Int(_2!) & Int(1 << 12) != 0 {
+                _6 = parseString(reader)
             }
             var _7: Api.Peer?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _8: Api.Peer?
             if Int(_1!) & Int(1 << 28) != 0 {
                 if let signature = reader.readInt32() {
-                    _7 = Api.parse(reader, signature: signature) as? Api.Peer
+                    _8 = Api.parse(reader, signature: signature) as? Api.Peer
                 }
             }
-            var _8: Api.MessageFwdHeader?
+            var _9: Api.MessageFwdHeader?
             if Int(_1!) & Int(1 << 2) != 0 {
                 if let signature = reader.readInt32() {
-                    _8 = Api.parse(reader, signature: signature) as? Api.MessageFwdHeader
+                    _9 = Api.parse(reader, signature: signature) as? Api.MessageFwdHeader
                 }
-            }
-            var _9: Int64?
-            if Int(_1!) & Int(1 << 11) != 0 {
-                _9 = reader.readInt64()
             }
             var _10: Int64?
-            if Int(_2!) & Int(1 << 0) != 0 {
+            if Int(_1!) & Int(1 << 11) != 0 {
                 _10 = reader.readInt64()
             }
-            var _11: Api.MessageReplyHeader?
+            var _11: Int64?
+            if Int(_2!) & Int(1 << 0) != 0 {
+                _11 = reader.readInt64()
+            }
+            var _12: Api.MessageReplyHeader?
             if Int(_1!) & Int(1 << 3) != 0 {
                 if let signature = reader.readInt32() {
-                    _11 = Api.parse(reader, signature: signature) as? Api.MessageReplyHeader
+                    _12 = Api.parse(reader, signature: signature) as? Api.MessageReplyHeader
                 }
             }
-            var _12: Int32?
-            _12 = reader.readInt32()
-            var _13: String?
-            _13 = parseString(reader)
-            var _14: Api.MessageMedia?
+            var _13: Int32?
+            _13 = reader.readInt32()
+            var _14: String?
+            _14 = parseString(reader)
+            var _15: Api.MessageMedia?
             if Int(_1!) & Int(1 << 9) != 0 {
                 if let signature = reader.readInt32() {
-                    _14 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                    _15 = Api.parse(reader, signature: signature) as? Api.MessageMedia
                 }
             }
-            var _15: Api.ReplyMarkup?
+            var _16: Api.ReplyMarkup?
             if Int(_1!) & Int(1 << 6) != 0 {
                 if let signature = reader.readInt32() {
-                    _15 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
+                    _16 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
                 }
             }
-            var _16: [Api.MessageEntity]?
+            var _17: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 7) != 0 {
                 if let _ = reader.readInt32() {
-                    _16 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                    _17 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
                 }
-            }
-            var _17: Int32?
-            if Int(_1!) & Int(1 << 10) != 0 {
-                _17 = reader.readInt32()
             }
             var _18: Int32?
             if Int(_1!) & Int(1 << 10) != 0 {
                 _18 = reader.readInt32()
             }
-            var _19: Api.MessageReplies?
+            var _19: Int32?
+            if Int(_1!) & Int(1 << 10) != 0 {
+                _19 = reader.readInt32()
+            }
+            var _20: Api.MessageReplies?
             if Int(_1!) & Int(1 << 23) != 0 {
                 if let signature = reader.readInt32() {
-                    _19 = Api.parse(reader, signature: signature) as? Api.MessageReplies
+                    _20 = Api.parse(reader, signature: signature) as? Api.MessageReplies
                 }
             }
-            var _20: Int32?
+            var _21: Int32?
             if Int(_1!) & Int(1 << 15) != 0 {
-                _20 = reader.readInt32()
+                _21 = reader.readInt32()
             }
-            var _21: String?
+            var _22: String?
             if Int(_1!) & Int(1 << 16) != 0 {
-                _21 = parseString(reader)
+                _22 = parseString(reader)
             }
-            var _22: Int64?
+            var _23: Int64?
             if Int(_1!) & Int(1 << 17) != 0 {
-                _22 = reader.readInt64()
+                _23 = reader.readInt64()
             }
-            var _23: Api.MessageReactions?
+            var _24: Api.MessageReactions?
             if Int(_1!) & Int(1 << 20) != 0 {
                 if let signature = reader.readInt32() {
-                    _23 = Api.parse(reader, signature: signature) as? Api.MessageReactions
+                    _24 = Api.parse(reader, signature: signature) as? Api.MessageReactions
                 }
             }
-            var _24: [Api.RestrictionReason]?
+            var _25: [Api.RestrictionReason]?
             if Int(_1!) & Int(1 << 22) != 0 {
                 if let _ = reader.readInt32() {
-                    _24 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RestrictionReason.self)
+                    _25 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RestrictionReason.self)
                 }
-            }
-            var _25: Int32?
-            if Int(_1!) & Int(1 << 25) != 0 {
-                _25 = reader.readInt32()
             }
             var _26: Int32?
-            if Int(_1!) & Int(1 << 30) != 0 {
+            if Int(_1!) & Int(1 << 25) != 0 {
                 _26 = reader.readInt32()
             }
-            var _27: Int64?
-            if Int(_2!) & Int(1 << 2) != 0 {
-                _27 = reader.readInt64()
+            var _27: Int32?
+            if Int(_1!) & Int(1 << 30) != 0 {
+                _27 = reader.readInt32()
             }
-            var _28: Api.FactCheck?
+            var _28: Int64?
+            if Int(_2!) & Int(1 << 2) != 0 {
+                _28 = reader.readInt64()
+            }
+            var _29: Api.FactCheck?
             if Int(_2!) & Int(1 << 3) != 0 {
                 if let signature = reader.readInt32() {
-                    _28 = Api.parse(reader, signature: signature) as? Api.FactCheck
+                    _29 = Api.parse(reader, signature: signature) as? Api.FactCheck
                 }
             }
-            var _29: Int32?
+            var _30: Int32?
             if Int(_2!) & Int(1 << 5) != 0 {
-                _29 = reader.readInt32()
+                _30 = reader.readInt32()
             }
-            var _30: Int64?
+            var _31: Int64?
             if Int(_2!) & Int(1 << 6) != 0 {
-                _30 = reader.readInt64()
+                _31 = reader.readInt64()
             }
-            var _31: Api.SuggestedPost?
+            var _32: Api.SuggestedPost?
             if Int(_2!) & Int(1 << 7) != 0 {
                 if let signature = reader.readInt32() {
-                    _31 = Api.parse(reader, signature: signature) as? Api.SuggestedPost
+                    _32 = Api.parse(reader, signature: signature) as? Api.SuggestedPost
                 }
             }
-            var _32: Int32?
+            var _33: Int32?
             if Int(_2!) & Int(1 << 10) != 0 {
-                _32 = reader.readInt32()
+                _33 = reader.readInt32()
             }
-            var _33: String?
+            var _34: String?
             if Int(_2!) & Int(1 << 11) != 0 {
-                _33 = parseString(reader)
+                _34 = parseString(reader)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 8) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 29) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 28) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 11) == 0) || _9 != nil
-            let _c10 = (Int(_2!) & Int(1 << 0) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 3) == 0) || _11 != nil
-            let _c12 = _12 != nil
+            let _c6 = (Int(_2!) & Int(1 << 12) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 28) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 2) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
+            let _c11 = (Int(_2!) & Int(1 << 0) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 3) == 0) || _12 != nil
             let _c13 = _13 != nil
-            let _c14 = (Int(_1!) & Int(1 << 9) == 0) || _14 != nil
-            let _c15 = (Int(_1!) & Int(1 << 6) == 0) || _15 != nil
-            let _c16 = (Int(_1!) & Int(1 << 7) == 0) || _16 != nil
-            let _c17 = (Int(_1!) & Int(1 << 10) == 0) || _17 != nil
+            let _c14 = _14 != nil
+            let _c15 = (Int(_1!) & Int(1 << 9) == 0) || _15 != nil
+            let _c16 = (Int(_1!) & Int(1 << 6) == 0) || _16 != nil
+            let _c17 = (Int(_1!) & Int(1 << 7) == 0) || _17 != nil
             let _c18 = (Int(_1!) & Int(1 << 10) == 0) || _18 != nil
-            let _c19 = (Int(_1!) & Int(1 << 23) == 0) || _19 != nil
-            let _c20 = (Int(_1!) & Int(1 << 15) == 0) || _20 != nil
-            let _c21 = (Int(_1!) & Int(1 << 16) == 0) || _21 != nil
-            let _c22 = (Int(_1!) & Int(1 << 17) == 0) || _22 != nil
-            let _c23 = (Int(_1!) & Int(1 << 20) == 0) || _23 != nil
-            let _c24 = (Int(_1!) & Int(1 << 22) == 0) || _24 != nil
-            let _c25 = (Int(_1!) & Int(1 << 25) == 0) || _25 != nil
-            let _c26 = (Int(_1!) & Int(1 << 30) == 0) || _26 != nil
-            let _c27 = (Int(_2!) & Int(1 << 2) == 0) || _27 != nil
-            let _c28 = (Int(_2!) & Int(1 << 3) == 0) || _28 != nil
-            let _c29 = (Int(_2!) & Int(1 << 5) == 0) || _29 != nil
-            let _c30 = (Int(_2!) & Int(1 << 6) == 0) || _30 != nil
-            let _c31 = (Int(_2!) & Int(1 << 7) == 0) || _31 != nil
-            let _c32 = (Int(_2!) & Int(1 << 10) == 0) || _32 != nil
-            let _c33 = (Int(_2!) & Int(1 << 11) == 0) || _33 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 {
-                return Api.Message.message(Cons_message(flags: _1!, flags2: _2!, id: _3!, fromId: _4, fromBoostsApplied: _5, peerId: _6!, savedPeerId: _7, fwdFrom: _8, viaBotId: _9, viaBusinessBotId: _10, replyTo: _11, date: _12!, message: _13!, media: _14, replyMarkup: _15, entities: _16, views: _17, forwards: _18, replies: _19, editDate: _20, postAuthor: _21, groupedId: _22, reactions: _23, restrictionReason: _24, ttlPeriod: _25, quickReplyShortcutId: _26, effect: _27, factcheck: _28, reportDeliveryUntilDate: _29, paidMessageStars: _30, suggestedPost: _31, scheduleRepeatPeriod: _32, summaryFromLanguage: _33))
+            let _c19 = (Int(_1!) & Int(1 << 10) == 0) || _19 != nil
+            let _c20 = (Int(_1!) & Int(1 << 23) == 0) || _20 != nil
+            let _c21 = (Int(_1!) & Int(1 << 15) == 0) || _21 != nil
+            let _c22 = (Int(_1!) & Int(1 << 16) == 0) || _22 != nil
+            let _c23 = (Int(_1!) & Int(1 << 17) == 0) || _23 != nil
+            let _c24 = (Int(_1!) & Int(1 << 20) == 0) || _24 != nil
+            let _c25 = (Int(_1!) & Int(1 << 22) == 0) || _25 != nil
+            let _c26 = (Int(_1!) & Int(1 << 25) == 0) || _26 != nil
+            let _c27 = (Int(_1!) & Int(1 << 30) == 0) || _27 != nil
+            let _c28 = (Int(_2!) & Int(1 << 2) == 0) || _28 != nil
+            let _c29 = (Int(_2!) & Int(1 << 3) == 0) || _29 != nil
+            let _c30 = (Int(_2!) & Int(1 << 5) == 0) || _30 != nil
+            let _c31 = (Int(_2!) & Int(1 << 6) == 0) || _31 != nil
+            let _c32 = (Int(_2!) & Int(1 << 7) == 0) || _32 != nil
+            let _c33 = (Int(_2!) & Int(1 << 10) == 0) || _33 != nil
+            let _c34 = (Int(_2!) & Int(1 << 11) == 0) || _34 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 {
+                return Api.Message.message(Cons_message(flags: _1!, flags2: _2!, id: _3!, fromId: _4, fromBoostsApplied: _5, fromRank: _6, peerId: _7!, savedPeerId: _8, fwdFrom: _9, viaBotId: _10, viaBusinessBotId: _11, replyTo: _12, date: _13!, message: _14!, media: _15, replyMarkup: _16, entities: _17, views: _18, forwards: _19, replies: _20, editDate: _21, postAuthor: _22, groupedId: _23, reactions: _24, restrictionReason: _25, ttlPeriod: _26, quickReplyShortcutId: _27, effect: _28, factcheck: _29, reportDeliveryUntilDate: _30, paidMessageStars: _31, suggestedPost: _32, scheduleRepeatPeriod: _33, summaryFromLanguage: _34))
             }
             else {
                 return nil

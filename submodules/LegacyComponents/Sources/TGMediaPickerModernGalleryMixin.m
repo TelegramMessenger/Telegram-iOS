@@ -369,32 +369,7 @@
         count = MIN(count, _itemsLimit);
     
     for (NSUInteger i = 0; i < count; i++)
-    {
-//        TGMediaAsset *asset = [fetchResult assetAtIndex:i];
-//
-//        TGMediaPickerGalleryItem<TGModernGallerySelectableItem, TGModernGalleryEditableItem> *galleryItem = nil;
-//        switch (asset.type)
-//        {
-//            case TGMediaAssetVideoType:
-//            {
-//                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
-//            }
-//                break;
-//
-//            case TGMediaAssetGifType:
-//            {
-//                TGCameraCapturedVideo *convertedAsset = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
-//                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:convertedAsset];
-//            }
-//                break;
-//
-//            default:
-//            {
-//                galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
-//            }
-//                break;
-//        }
-        
+    {        
         TGMediaPickerGalleryFetchResultItem *galleryItem = [[TGMediaPickerGalleryFetchResultItem alloc] initWithFetchResult:fetchResult index:i];
         galleryItem.selectionContext = selectionContext;
         galleryItem.editingContext = editingContext;

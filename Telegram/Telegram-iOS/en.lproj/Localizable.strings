@@ -15762,6 +15762,7 @@ Error: %8$@";
 
 "LeaveGroup.Title" = "Leave %@";
 "LeaveGroup.Text" = "If you leave, **%1$@** will become the owner of **%2$@** in **1 week**.";
+"LeaveGroup.LegacyGroupText" = "If you leave, **%1$@** will immediately become the owner of **%2$@**.";
 "LeaveGroup.AppointAnotherOwner" = "Appoint Another Owner";
 "LeaveGroup.Proceed" = "Leave Group";
 "AppointAnotherOwner.Title" = "Choose New Owner";
@@ -15770,6 +15771,8 @@ Error: %8$@";
 
 "Group.OwnershipTransfer.DescriptionShortInfo" = "This will transfer the full **owner rights** for **%1$@** to **%2$@**.";
 
+"FormattedDate.InSeconds_1" = "in %@ second";
+"FormattedDate.InSeconds_any" = "in %@ seconds";
 "FormattedDate.InMinutes_1" = "in %@ minute";
 "FormattedDate.InMinutes_any" = "in %@ minutes";
 "FormattedDate.InHours_1" = "in %@ hour";
@@ -15777,9 +15780,24 @@ Error: %8$@";
 "FormattedDate.InDays_1" = "in %@ day";
 "FormattedDate.InDays_any" = "in %@ days";
 
+"FormattedDate.SecondsAgo_1" = "%@ second ago";
+"FormattedDate.SecondsAgo_any" = "%@ seconds ago";
 "FormattedDate.MinutesAgo_1" = "%@ minute ago";
 "FormattedDate.MinutesAgo_any" = "%@ minutes ago";
 "FormattedDate.HoursAgo_1" = "%@ hour ago";
 "FormattedDate.HoursAgo_any" = "%@ hours ago";
 "FormattedDate.DaysAgo_1" = "%@ day ago";
 "FormattedDate.DaysAgo_any" = "%@ days ago";
+
+"FormattedDate.LongDate_m1" = "January %1$@, %2$@";
+"FormattedDate.LongDate_m2" = "February %1$@, %2$@";
+"FormattedDate.LongDate_m3" = "March %1$@, %2$@";
+"FormattedDate.LongDate_m4" = "April %1$@, %2$@";
+"FormattedDate.LongDate_m5" = "May %1$@, %2$@";
+"FormattedDate.LongDate_m6" = "June %1$@, %2$@";
+"FormattedDate.LongDate_m7" = "July %1$@, %2$@";
+"FormattedDate.LongDate_m8" = "August %1$@, %2$@";
+"FormattedDate.LongDate_m9" = "September %1$@, %2$@";
+"FormattedDate.LongDate_m10" = "October %1$@, %2$@";
+"FormattedDate.LongDate_m11" = "November %1$@, %2$@";
+"FormattedDate.LongDate_m12" = "December %1$@, %2$@";

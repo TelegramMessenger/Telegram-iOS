@@ -7,6 +7,7 @@ import TelegramCore
 import ViewControllerComponent
 import TelegramPresentationData
 import TelegramStringFormatting
+import TextFormat
 import AccountContext
 import SheetComponent
 import ButtonComponent

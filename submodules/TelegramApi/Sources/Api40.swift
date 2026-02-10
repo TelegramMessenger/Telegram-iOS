@@ -5744,6 +5744,23 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
+    static func editChatParticipantRank(peer: Api.InputPeer, participant: Api.InputPeer, rank: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+        let buffer = Buffer()
+        buffer.appendInt32(-1609616720)
+        peer.serialize(buffer, true)
+        participant.serialize(buffer, true)
+        serializeString(rank, buffer: buffer, boxed: false)
+        return (FunctionDescription(name: "messages.editChatParticipantRank", parameters: [("peer", String(describing: peer)), ("participant", String(describing: participant)), ("rank", String(describing: rank))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+            let reader = BufferReader(buffer)
+            var result: Api.Updates?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.Updates
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
     static func editChatPhoto(chatId: Int64, photo: Api.InputChatPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
         buffer.appendInt32(903730804)
@@ -9438,6 +9455,22 @@ public extension Api.functions.messages {
             var result: Api.Bool?
             if let signature = reader.readInt32() {
                 result = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
+    static func toggleChatCustomRanks(peer: Api.InputPeer, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+        let buffer = Buffer()
+        buffer.appendInt32(874013158)
+        peer.serialize(buffer, true)
+        enabled.serialize(buffer, true)
+        return (FunctionDescription(name: "messages.toggleChatCustomRanks", parameters: [("peer", String(describing: peer)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+            let reader = BufferReader(buffer)
+            var result: Api.Updates?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.Updates
             }
             return result
         })

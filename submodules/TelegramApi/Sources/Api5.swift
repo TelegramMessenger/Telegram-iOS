@@ -115,29 +115,41 @@ public extension Api {
 public extension Api {
     enum ChatParticipant: TypeConstructorDescription {
         public class Cons_chatParticipant {
+            public var flags: Int32
             public var userId: Int64
             public var inviterId: Int64
             public var date: Int32
-            public init(userId: Int64, inviterId: Int64, date: Int32) {
+            public var rank: String?
+            public init(flags: Int32, userId: Int64, inviterId: Int64, date: Int32, rank: String?) {
+                self.flags = flags
                 self.userId = userId
                 self.inviterId = inviterId
                 self.date = date
+                self.rank = rank
             }
         }
         public class Cons_chatParticipantAdmin {
+            public var flags: Int32
             public var userId: Int64
             public var inviterId: Int64
             public var date: Int32
-            public init(userId: Int64, inviterId: Int64, date: Int32) {
+            public var rank: String?
+            public init(flags: Int32, userId: Int64, inviterId: Int64, date: Int32, rank: String?) {
+                self.flags = flags
                 self.userId = userId
                 self.inviterId = inviterId
                 self.date = date
+                self.rank = rank
             }
         }
         public class Cons_chatParticipantCreator {
+            public var flags: Int32
             public var userId: Int64
-            public init(userId: Int64) {
+            public var rank: String?
+            public init(flags: Int32, userId: Int64, rank: String?) {
+                self.flags = flags
                 self.userId = userId
+                self.rank = rank
             }
         }
         case chatParticipant(Cons_chatParticipant)
@@ -148,25 +160,37 @@ public extension Api {
             switch self {
             case .chatParticipant(let _data):
                 if boxed {
-                    buffer.appendInt32(-1070776313)
+                    buffer.appendInt32(954703838)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
                 serializeInt64(_data.inviterId, buffer: buffer, boxed: false)
                 serializeInt32(_data.date, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.rank!, buffer: buffer, boxed: false)
+                }
                 break
             case .chatParticipantAdmin(let _data):
                 if boxed {
-                    buffer.appendInt32(-1600962725)
+                    buffer.appendInt32(56677842)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
                 serializeInt64(_data.inviterId, buffer: buffer, boxed: false)
                 serializeInt32(_data.date, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.rank!, buffer: buffer, boxed: false)
+                }
                 break
             case .chatParticipantCreator(let _data):
                 if boxed {
-                    buffer.appendInt32(-462696732)
+                    buffer.appendInt32(-503814216)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.rank!, buffer: buffer, boxed: false)
+                }
                 break
             }
         }
@@ -174,54 +198,78 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .chatParticipant(let _data):
-                return ("chatParticipant", [("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("date", _data.date as Any)])
+                return ("chatParticipant", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("date", _data.date as Any), ("rank", _data.rank as Any)])
             case .chatParticipantAdmin(let _data):
-                return ("chatParticipantAdmin", [("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("date", _data.date as Any)])
+                return ("chatParticipantAdmin", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("date", _data.date as Any), ("rank", _data.rank as Any)])
             case .chatParticipantCreator(let _data):
-                return ("chatParticipantCreator", [("userId", _data.userId as Any)])
+                return ("chatParticipantCreator", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("rank", _data.rank as Any)])
             }
         }
 
         public static func parse_chatParticipant(_ reader: BufferReader) -> ChatParticipant? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                _5 = parseString(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChatParticipant.chatParticipant(Cons_chatParticipant(userId: _1!, inviterId: _2!, date: _3!))
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ChatParticipant.chatParticipant(Cons_chatParticipant(flags: _1!, userId: _2!, inviterId: _3!, date: _4!, rank: _5))
             }
             else {
                 return nil
             }
         }
         public static func parse_chatParticipantAdmin(_ reader: BufferReader) -> ChatParticipant? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                _5 = parseString(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChatParticipant.chatParticipantAdmin(Cons_chatParticipantAdmin(userId: _1!, inviterId: _2!, date: _3!))
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ChatParticipant.chatParticipantAdmin(Cons_chatParticipantAdmin(flags: _1!, userId: _2!, inviterId: _3!, date: _4!, rank: _5))
             }
             else {
                 return nil
             }
         }
         public static func parse_chatParticipantCreator(_ reader: BufferReader) -> ChatParticipant? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                _3 = parseString(reader)
+            }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChatParticipant.chatParticipantCreator(Cons_chatParticipantCreator(userId: _1!))
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ChatParticipant.chatParticipantCreator(Cons_chatParticipantCreator(flags: _1!, userId: _2!, rank: _3))
             }
             else {
                 return nil

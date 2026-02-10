@@ -13,6 +13,7 @@ import ChatMessageItemCommon
 import ChatControllerInteraction
 import EventKit
 import EventKitUI
+import ChatScheduleTimeController
 
 extension ChatControllerImpl: EKEventEditViewDelegate {
     func openDateContextMenu(date: Int32, params: ChatControllerInteraction.LongTapParams) -> Void {
@@ -55,7 +56,7 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
                 
                 UIPasteboard.general.string = "\(date)"
 
-                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: presentationData.strings.Conversation_CardNumberCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Date copied to clipboard."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }))
         )
         items.append(
@@ -79,6 +80,37 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
                 if let rootController = self.navigationController?.view.window?.rootViewController {
                     rootController.present(editViewController, animated: true)
                 }
+            }))
+        )
+        items.append(
+            .action(ContextMenuActionItem(text: "Set a Reminder", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                f(.default)
+
+                guard let self else {
+                    return
+                }
+                
+                let controller = ChatScheduleTimeScreen(
+                    context: self.context,
+                    mode: .reminders,
+                    currentTime: date,
+                    currentRepeatPeriod: nil,
+                    minimalTime: nil,
+                    isDark: false,
+                    completion: { [weak self] result in
+                        guard let self else {
+                            return
+                        }
+                        let attributes: [MessageAttribute] = [
+                            OutgoingScheduleInfoMessageAttribute(scheduleTime: result.time, repeatPeriod: result.repeatPeriod)
+                        ]
+                        let forwardMessage: EnqueueMessage = .forward(source: message.id, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil)
+                        let _ = forwardMessage
+                        let _ = enqueueMessages(account: self.context.account, peerId: self.context.account.peerId, messages: [forwardMessage]).start()
+                        self.present(UndoOverlayController(presentationData: self.presentationData, content: .forward(savedMessages: true, text: "You have set a reminder in [Saved Messages]()."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    }
+                )
+                self.push(controller)
             }))
         )
                  

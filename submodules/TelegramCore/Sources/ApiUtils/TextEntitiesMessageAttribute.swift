@@ -76,6 +76,8 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 default:
                     break
                 }
+            default:
+                break
             }
             apiEntities.append(.messageEntityFormattedDate(.init(flags: flags, offset: offset, length: length, date: date)))
         case .Custom:

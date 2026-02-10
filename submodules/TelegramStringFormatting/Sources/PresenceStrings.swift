@@ -1,6 +1,7 @@
 import Foundation
 import TelegramCore
 import TelegramPresentationData
+import TextFormat
 
 public func stringForTimestamp(day: Int32, month: Int32, year: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
     let separator = dateTimeFormat.dateSeparator

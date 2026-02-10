@@ -1332,7 +1332,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     if let current = current as? CachedGroupData, let participants = current.participants {
                         var updatedParticipants = participants.participants
                         if updatedParticipants.firstIndex(where: { $0.peerId == userPeerId }) == nil {
-                            updatedParticipants.append(.member(id: userPeerId, invitedBy: inviterPeerId, invitedAt: date))
+                            updatedParticipants.append(.member(id: userPeerId, invitedBy: inviterPeerId, invitedAt: date, rank: nil))
                         }
                         return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
                     } else {
@@ -1363,14 +1363,29 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         var updatedParticipants = participants.participants
                         if let index = updatedParticipants.firstIndex(where: { $0.peerId == userPeerId }) {
                             if isAdmin == .boolTrue {
-                                if case let .member(id, invitedBy, invitedAt) = updatedParticipants[index] {
-                                    updatedParticipants[index] = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                if case let .member(id, invitedBy, invitedAt, rank) = updatedParticipants[index] {
+                                    updatedParticipants[index] = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
                                 }
                             } else {
-                                if case let .admin(id, invitedBy, invitedAt) = updatedParticipants[index] {
-                                    updatedParticipants[index] = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
+                                if case let .admin(id, invitedBy, invitedAt, rank) = updatedParticipants[index] {
+                                    updatedParticipants[index] = .member(id: id, invitedBy: invitedBy, invitedAt: invitedAt, rank: rank)
                                 }
                             }
+                        }
+                        return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
+                    } else {
+                        return current
+                    }
+                })
+            case let .updateChatParticipantRank(updateChatParticipantRankData):
+                let (chatId, userId, rank) = (updateChatParticipantRankData.chatId, updateChatParticipantRankData.userId, updateChatParticipantRankData.rank)
+                let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                updatedState.updateCachedPeerData(groupPeerId, { current in
+                    if let current = current as? CachedGroupData, let participants = current.participants {
+                        var updatedParticipants = participants.participants
+                        if let index = updatedParticipants.firstIndex(where: { $0.peerId == userPeerId }) {
+                            updatedParticipants[index] = updatedParticipants[index].withUpdated(rank: rank)
                         }
                         return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
                     } else {
@@ -2010,8 +2025,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateStarGiftAuctionMyState(giftId: giftId, state: GiftAuctionContext.State.MyState(apiAuctionUserState: userState))
             case let .updateEmojiGameInfo(updateEmojiGameInfoData):
                 updatedState.updateEmojiGameInfo(info: EmojiGameInfo(apiEmojiGameInfo: updateEmojiGameInfoData.info))
-            case let .updatePeerHistoryNoForward(updatePeerHistoryNoForwardData):
-                let (flags, peer) = (updatePeerHistoryNoForwardData.flags, updatePeerHistoryNoForwardData.peer)
+            case let .updatePeerHistoryNoForwards(updatePeerHistoryNoForwardsData):
+                let (flags, peer) = (updatePeerHistoryNoForwardsData.flags, updatePeerHistoryNoForwardsData.peer)
                 let peerId = peer.peerId
                 updatedState.updateCachedPeerData(peerId, { current in
                     if let previous = current as? CachedUserData {

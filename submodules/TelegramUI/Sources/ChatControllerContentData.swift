@@ -893,7 +893,11 @@ extension ChatControllerImpl {
                                 peerVerification = cachedChannelData.verification
                             }
                         }
-                        copyProtectionEnabled = peer.isCopyProtectionEnabled
+                        if let cachedUserData = peerView.cachedData as? CachedUserData {
+                            copyProtectionEnabled = cachedUserData.flags.contains(.copyProtectionEnabled)
+                        } else {
+                            copyProtectionEnabled = peer.isCopyProtectionEnabled
+                        }
                         if let cachedGroupData = peerView.cachedData as? CachedGroupData {
                             if !cachedGroupData.botInfos.isEmpty {
                                 hasBots = true

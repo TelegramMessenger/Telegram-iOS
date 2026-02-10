@@ -147,6 +147,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var textRevealLink: SharedDisplayLinkDriver.Link?
     private var textRevealAnimationState: TextRevealAnimationState?
     
+    private var relativeDateTimer: (timer: SwiftSignalKit.Timer, period: Int32)?
+    
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
@@ -232,6 +234,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.linkPreviewOptionsDisposable?.dispose()
         self.linkProgressDisposable?.dispose()
         self.codeHighlightState?.disposable.dispose()
+        self.relativeDateTimer?.timer.invalidate()
     }
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -484,6 +487,23 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                var formattedDateUpdatePeriod: Int32?
+                if let messageEntities {
+                    for entity in messageEntities {
+                        if case let .FormattedDate(format, timestamp) = entity.type, case .relative = format {
+                            let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                            let value = abs(currentTimestamp - timestamp)
+                            if value < 120 {
+                                formattedDateUpdatePeriod = 1
+                            } else if value <= 60 * 60 {
+                                formattedDateUpdatePeriod = 60
+                            } else {
+                                formattedDateUpdatePeriod = 30 * 60
+                            }
+                        }
+                    }
+                }
+                
                 var entities: [MessageTextEntity]?
                 var updatedCachedChatMessageText: CachedChatMessageText?
                 if let cached = currentCachedChatMessageText, cached.matches(text: rawText, inputEntities: messageEntities) {
@@ -616,7 +636,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, codeBlockTitleColor: codeBlockTitleColor, codeBlockAccentColor: codeBlockAccentColor, codeBlockBackgroundColor: codeBlockBackgroundColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, codeBlockTitleColor: codeBlockTitleColor, codeBlockAccentColor: codeBlockAccentColor, codeBlockBackgroundColor: codeBlockBackgroundColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -806,6 +826,20 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textNode.textNode.displaysAsynchronously = !item.presentationData.isPreview
                             animation.animator.updateFrame(layer: strongSelf.containerNode.layer, frame: CGRect(origin: CGPoint(), size: boundingSize), completion: nil)
                             
+                            
+                            if let formattedDateUpdatePeriod {
+                                if strongSelf.relativeDateTimer?.period != formattedDateUpdatePeriod {
+                                    strongSelf.relativeDateTimer?.timer.invalidate()
+                                    strongSelf.relativeDateTimer = nil
+                                }
+                                strongSelf.relativeDateTimer = (SwiftSignalKit.Timer(timeout: Double(formattedDateUpdatePeriod), repeat: true, completion: { [weak self] in
+                                    self?.requestFullUpdate?()
+                                }, queue: Queue.mainQueue()), formattedDateUpdatePeriod)
+                                strongSelf.relativeDateTimer?.timer.start()
+                            } else if let (timer, _) = strongSelf.relativeDateTimer {
+                                strongSelf.relativeDateTimer = nil
+                                timer.invalidate()
+                            }
                             
                             if strongSelf.isSummaryApplied != isSummaryApplied {
                                 strongSelf.isSummaryApplied = isSummaryApplied

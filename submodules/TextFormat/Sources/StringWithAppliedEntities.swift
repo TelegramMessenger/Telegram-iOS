@@ -5,6 +5,7 @@ import TelegramCore
 import Display
 import libprisma
 import SwiftSignalKit
+import TelegramPresentationData
 
 public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
     var nsString: NSString?
@@ -80,7 +81,7 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
 
 private let syntaxHighlighter = Syntaxer()
 
-public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseQuoteTertiaryTintColor: UIColor? = nil, codeBlockTitleColor: UIColor? = nil, codeBlockAccentColor: UIColor? = nil, codeBlockBackgroundColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false, cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight? = nil, paragraphAlignment: NSTextAlignment? = nil) -> NSAttributedString {
+public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], strings: PresentationStrings? = nil, dateTimeFormat: PresentationDateTimeFormat? = nil, baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseQuoteTertiaryTintColor: UIColor? = nil, codeBlockTitleColor: UIColor? = nil, codeBlockAccentColor: UIColor? = nil, codeBlockBackgroundColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false, cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight? = nil, paragraphAlignment: NSTextAlignment? = nil) -> NSAttributedString {
     let baseQuoteTintColor = baseQuoteTintColor ?? baseColor
     
     var nsString: NSString?
@@ -94,7 +95,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
     
     var adjustedRanges: [NSRange?] = []
     adjustedRanges.reserveCapacity(entities.count)
-    let rangeDelta = 0
+    var rangeDelta = 0
     for entity in entities {
         let originalRange = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
         var range = NSRange(location: originalRange.location + rangeDelta, length: originalRange.length)
@@ -106,23 +107,22 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
             range.length = stringLength - range.location
         }
         
-//        switch entity.type {
-//        case let .FormattedDate(format, date):
-//            let replacement = stringForEntityFormattedDate()
-//            switch format {
-//            case .relative:
-//                replacement = relative
-//            case let .full(timeFormat, dateFormat):
-//            }
-//            
-//            let replacementString = NSAttributedString(string: replacement, attributes: baseAttributes)
-//            string.replaceCharacters(in: range, with: replacementString)
-//            let newRange = NSRange(location: range.location, length: (replacement as NSString).length)
-//            adjustedRanges.append(newRange)
-//            rangeDelta += newRange.length - range.length
-//        default:
+        switch entity.type {
+        case let .FormattedDate(format, date):
+            if let format, let strings, let dateTimeFormat {
+                let replacement = stringForEntityFormattedDate(timestamp: date, format: format, strings: strings, dateTimeFormat: dateTimeFormat)
+                
+                let replacementString = NSAttributedString(string: replacement, attributes: baseAttributes)
+                string.replaceCharacters(in: range, with: replacementString)
+                let newRange = NSRange(location: range.location, length: (replacement as NSString).length)
+                adjustedRanges.append(newRange)
+                rangeDelta += newRange.length - range.length
+            } else {
+                adjustedRanges.append(range)
+            }
+        default:
             adjustedRanges.append(range)
-//        }
+        }
     }
     
     var fontAttributeMask: [ChatTextFontAttributes] = Array(repeating: [], count: string.length)

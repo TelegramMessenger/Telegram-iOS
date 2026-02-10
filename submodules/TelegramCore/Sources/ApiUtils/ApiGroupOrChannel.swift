@@ -59,6 +59,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 25)) != 0 {
             groupFlags.insert(.copyProtectionEnabled)
         }
+        if (flags & Int32(1 << 19)) != 0 {
+            groupFlags.insert(.customRanksEnabled)
+        }
         return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id)), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:)), migrationReference: migrationReference, creationDate: date, version: Int(version))
     case let .chatEmpty(chatEmptyData):
         let id = chatEmptyData.id
@@ -149,7 +152,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags2 & Int32(1 << 19)) != 0 {
             channelFlags.insert(.displayForumAsTabs)
         }
-        
+        if (flags2 & Int32(1 << 20)) != 0 {
+            channelFlags.insert(.customRanksEnabled)
+        }
         var storiesHidden: Bool?
         if flags2 & (1 << 2) == 0 { // stories_hidden_min
             if flags2 & (1 << 1) != 0 {

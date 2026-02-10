@@ -170,11 +170,13 @@ public extension Api {
             public var userId: Int64
             public var date: Int32
             public var subscriptionUntilDate: Int32?
-            public init(flags: Int32, userId: Int64, date: Int32, subscriptionUntilDate: Int32?) {
+            public var rank: String?
+            public init(flags: Int32, userId: Int64, date: Int32, subscriptionUntilDate: Int32?, rank: String?) {
                 self.flags = flags
                 self.userId = userId
                 self.date = date
                 self.subscriptionUntilDate = subscriptionUntilDate
+                self.rank = rank
             }
         }
         public class Cons_channelParticipantAdmin {
@@ -233,12 +235,14 @@ public extension Api {
             public var inviterId: Int64
             public var date: Int32
             public var subscriptionUntilDate: Int32?
-            public init(flags: Int32, userId: Int64, inviterId: Int64, date: Int32, subscriptionUntilDate: Int32?) {
+            public var rank: String?
+            public init(flags: Int32, userId: Int64, inviterId: Int64, date: Int32, subscriptionUntilDate: Int32?, rank: String?) {
                 self.flags = flags
                 self.userId = userId
                 self.inviterId = inviterId
                 self.date = date
                 self.subscriptionUntilDate = subscriptionUntilDate
+                self.rank = rank
             }
         }
         case channelParticipant(Cons_channelParticipant)
@@ -252,13 +256,16 @@ public extension Api {
             switch self {
             case .channelParticipant(let _data):
                 if boxed {
-                    buffer.appendInt32(-885426663)
+                    buffer.appendInt32(466961494)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
                 serializeInt32(_data.date, buffer: buffer, boxed: false)
                 if Int(_data.flags) & Int(1 << 0) != 0 {
                     serializeInt32(_data.subscriptionUntilDate!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeString(_data.rank!, buffer: buffer, boxed: false)
                 }
                 break
             case .channelParticipantAdmin(let _data):
@@ -306,7 +313,7 @@ public extension Api {
                 break
             case .channelParticipantSelf(let _data):
                 if boxed {
-                    buffer.appendInt32(1331723247)
+                    buffer.appendInt32(-1454929382)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt64(_data.userId, buffer: buffer, boxed: false)
@@ -315,6 +322,9 @@ public extension Api {
                 if Int(_data.flags) & Int(1 << 1) != 0 {
                     serializeInt32(_data.subscriptionUntilDate!, buffer: buffer, boxed: false)
                 }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeString(_data.rank!, buffer: buffer, boxed: false)
+                }
                 break
             }
         }
@@ -322,7 +332,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .channelParticipant(let _data):
-                return ("channelParticipant", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("date", _data.date as Any), ("subscriptionUntilDate", _data.subscriptionUntilDate as Any)])
+                return ("channelParticipant", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("date", _data.date as Any), ("subscriptionUntilDate", _data.subscriptionUntilDate as Any), ("rank", _data.rank as Any)])
             case .channelParticipantAdmin(let _data):
                 return ("channelParticipantAdmin", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("promotedBy", _data.promotedBy as Any), ("date", _data.date as Any), ("adminRights", _data.adminRights as Any), ("rank", _data.rank as Any)])
             case .channelParticipantBanned(let _data):
@@ -332,7 +342,7 @@ public extension Api {
             case .channelParticipantLeft(let _data):
                 return ("channelParticipantLeft", [("peer", _data.peer as Any)])
             case .channelParticipantSelf(let _data):
-                return ("channelParticipantSelf", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("date", _data.date as Any), ("subscriptionUntilDate", _data.subscriptionUntilDate as Any)])
+                return ("channelParticipantSelf", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("date", _data.date as Any), ("subscriptionUntilDate", _data.subscriptionUntilDate as Any), ("rank", _data.rank as Any)])
             }
         }
 
@@ -347,12 +357,17 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {
                 _4 = reader.readInt32()
             }
+            var _5: String?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _5 = parseString(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ChannelParticipant.channelParticipant(Cons_channelParticipant(flags: _1!, userId: _2!, date: _3!, subscriptionUntilDate: _4))
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ChannelParticipant.channelParticipant(Cons_channelParticipant(flags: _1!, userId: _2!, date: _3!, subscriptionUntilDate: _4, rank: _5))
             }
             else {
                 return nil
@@ -470,13 +485,18 @@ public extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {
                 _5 = reader.readInt32()
             }
+            var _6: String?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _6 = parseString(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.ChannelParticipant.channelParticipantSelf(Cons_channelParticipantSelf(flags: _1!, userId: _2!, inviterId: _3!, date: _4!, subscriptionUntilDate: _5))
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.ChannelParticipant.channelParticipantSelf(Cons_channelParticipantSelf(flags: _1!, userId: _2!, inviterId: _3!, date: _4!, subscriptionUntilDate: _5, rank: _6))
             }
             else {
                 return nil

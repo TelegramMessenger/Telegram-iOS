@@ -299,7 +299,30 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                             
                             type = .Url
                         } else if result.resultType == NSTextCheckingResult.CheckingType.date, let date = result.date?.timeIntervalSince1970 {
-                            type = .FormattedDate(format: .relative, date: Int32(date))
+                            #if DEBUG
+                            var format: MessageTextEntityType.DateTimeFormat?
+                            if text.contains("[rel]") {
+                                format = .relative
+                            }
+                            var timeFormat: MessageTextEntityType.DateTimeFormat.TimeFormat?
+                            if text.contains("[st]") {
+                                timeFormat = .short
+                            } else if text.contains("[lt]") {
+                                timeFormat = .long
+                            }
+                            var dateFormat: MessageTextEntityType.DateTimeFormat.DateFormat?
+                            if text.contains("[sd]") {
+                                dateFormat = .short
+                            } else if text.contains("[ld]") {
+                                dateFormat = .long
+                            }
+                            if timeFormat != nil || dateFormat != nil {
+                                format = .full(timeFormat: timeFormat, dateFormat: dateFormat)
+                            }
+                            type = .FormattedDate(format: format, date: Int32(date))
+                            #else
+                            type = .FormattedDate(format: nil, date: Int32(date))
+                            #endif
                         } else {
                             type = .PhoneNumber
                         }
