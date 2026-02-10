@@ -12,7 +12,7 @@ public func stringForFullAuthorName(message: EngineMessage, strings: Presentatio
         } else if author.isDeleted {
             authorName = strings.User_DeletedAccount
         } else {
-            authorName = author.compactDisplayTitle
+            authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
         }
         if let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init), author.id != peer.id {
             authorString = [authorName, peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)]

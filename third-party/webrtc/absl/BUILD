@@ -355,9 +355,15 @@ absl_sources = [
     "absl/types/bad_variant_access.cc",
 ]
 
+absl_inc_files = [
+    f
+    for f in glob(["absl/**/*.inc"])
+    if f not in absl_headers
+]
+
 cc_library(
     name = "absl",
-    hdrs = absl_headers,
+    hdrs = absl_headers + absl_inc_files,
     srcs = absl_sources,
     cxxopts = [
         "-std=c++17",

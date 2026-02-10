@@ -322,6 +322,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             )
             let theme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
             blobView.setColor(theme.chat.inputPanel.actionControlFillColor)
+            blobView.hitTestSize = 110.0
             self.micDecorationValue = blobView
             return blobView
         }

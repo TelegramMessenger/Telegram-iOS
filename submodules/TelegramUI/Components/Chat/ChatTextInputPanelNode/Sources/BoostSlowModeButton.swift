@@ -92,6 +92,8 @@ final class BoostSlowModeButton: HighlightTrackingButtonNode {
                     self?.requestUpdate()
                 }, queue: .mainQueue())
                 self.updateTimer?.start()
+            } else {
+                text = stringForDuration(0)
             }
         } else {
             self.updateTimer?.invalidate()
@@ -115,7 +117,7 @@ final class BoostSlowModeButton: HighlightTrackingButtonNode {
         self.textNode.segments = segments
         
         let textSize = self.textNode.updateLayout(size: CGSize(width: 200.0, height: 100.0), animated: true)
-        let totalSize = CGSize(width: textSize.width > 0.0 ? textSize.width + 38.0 : 33.0, height: 33.0)
+        let totalSize = CGSize(width: textSize.width > 0.0 ? textSize.width + 38.0 : 40.0, height: 40.0)
         
         self.containerNode.bounds = CGRect(origin: .zero, size: totalSize)
         self.containerNode.position = CGPoint(x: totalSize.width / 2.0, y: totalSize.height / 2.0)

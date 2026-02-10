@@ -97,7 +97,7 @@ final class NotificationItemContainerNode: ASDisplayNode {
         if let contentNode = self.contentNode {
             let inset: CGFloat = 8.0
             
-            var contentInsets = UIEdgeInsets(top: inset, left: inset + layout.safeInsets.left, bottom: inset, right: inset + layout.safeInsets.right)
+            var contentInsets = UIEdgeInsets(top: inset + layout.safeInsets.left, left: inset, bottom: inset, right: inset + layout.safeInsets.right)
             
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight >= 39.0 {
                 if layout.deviceMetrics.hasDynamicIsland {
@@ -109,7 +109,7 @@ final class NotificationItemContainerNode: ASDisplayNode {
                 }
             }
             
-            let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+            let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
             
             let contentWidth = containerWidth - contentInsets.left - contentInsets.right
             let contentHeight = contentNode.updateLayout(width: contentWidth, transition: transition)

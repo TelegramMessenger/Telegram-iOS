@@ -81,13 +81,20 @@ private final class BackdropLayerDelegate: NSObject, CALayerDelegate {
 }
 
 final class LegacyGlassView: UIView {
+    enum Style {
+        case normal
+        case clear
+    }
+    
     private struct Params: Equatable {
         let size: CGSize
         let cornerRadius: CGFloat
+        let style: Style
         
-        init(size: CGSize, cornerRadius: CGFloat) {
+        init(size: CGSize, cornerRadius: CGFloat, style: Style) {
             self.size = size
             self.cornerRadius = cornerRadius
+            self.style = style
         }
     }
     
@@ -109,19 +116,8 @@ final class LegacyGlassView: UIView {
             self.layer.addSublayer(backdropLayer)
             backdropLayer.delegate = self.backdropLayerDelegate
             
-            let blur: CGFloat
-            let scale: CGFloat
-            
-            blur = 2.0
-            scale = 1.0
-            
-            invokeBackdropLayerSetScaleMethod(object: backdropLayer, scale: scale)
-            backdropLayer.rasterizationScale = scale
-            
-            if let blurFilter = CALayer.blur() {
-                blurFilter.setValue(blur as NSNumber, forKey: "inputRadius")
-                backdropLayer.filters = [blurFilter]
-            }
+            invokeBackdropLayerSetScaleMethod(object: backdropLayer, scale: 1.0)
+            backdropLayer.rasterizationScale = 1.0
         }
     }
     
@@ -129,8 +125,9 @@ final class LegacyGlassView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition) {
-        let params = Params(size: size, cornerRadius: cornerRadius)
+    func update(size: CGSize, cornerRadius: CGFloat, style: Style, transition: ComponentTransition) {
+        let params = Params(size: size, cornerRadius: cornerRadius, style: style)
+        let previousParams = self.params
         if self.params == params {
             return
         }
@@ -138,6 +135,18 @@ final class LegacyGlassView: UIView {
         
         guard let backdropLayer = self.backdropLayer else {
             return
+        }
+        
+        if previousParams?.style != style {
+            if let blurFilter = CALayer.blur() {
+                switch style {
+                case .clear:
+                    blurFilter.setValue(6.0 as NSNumber, forKey: "inputRadius")
+                case .normal:
+                    blurFilter.setValue(2.0 as NSNumber, forKey: "inputRadius")
+                }
+                backdropLayer.filters = [blurFilter]
+            }
         }
         
         transition.setCornerRadius(layer: self.layer, cornerRadius: cornerRadius)

@@ -5,6 +5,7 @@
 
 #import "NSWeakReference.h"
 #import <UIKitRuntimeUtils/UIKitUtils.h>
+#import <dlfcn.h>
 
 @interface UIViewControllerPresentingProxy : UIViewController
 
@@ -457,8 +458,6 @@ static NSMutableDictionary<NSString *, TrustedWebRecord *> *trustedWebRecords() 
     return value;
 }
 
-void WKWebsiteDataStoreReinitializeAppBoundDomains(CFTypeRef dataStoreRef);
-
 @implementation WebHelpers
 
 + (NSArray<NSString *> * _Nonnull)threadSafeTrustedDomains {
@@ -504,7 +503,16 @@ void WKWebsiteDataStoreReinitializeAppBoundDomains(CFTypeRef dataStoreRef);
 }
 
 + (void)forceRefreshTrustedDomains:(WKWebsiteDataStore * _Nonnull)websiteDataStore {
-    WKWebsiteDataStoreReinitializeAppBoundDomains((__bridge CFTypeRef)(websiteDataStore));
+    static void (*reinitializeFunction)(CFTypeRef dataStoreRef) = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString *nameString = [NSString stringWithFormat:@"WK%@", @"WebsiteDataStoreReinitializeAppBoundDomains"];
+        reinitializeFunction = dlsym(RTLD_DEFAULT, [nameString UTF8String]);
+    });
+    
+    if (reinitializeFunction) {
+        reinitializeFunction((__bridge CFTypeRef)(websiteDataStore));
+    }
 }
 
 @end
@@ -513,8 +521,10 @@ void WKWebsiteDataStoreReinitializeAppBoundDomains(CFTypeRef dataStoreRef);
 
 - (id)_65087dc8_objectForInfoDictionaryKey:(NSString *)key {
     if ([key isEqualToString:@"WKAppBoundDomains"]) {
-        //NSLog(@"Returning trusted domains: %@", [WebHelpers threadSafeTrustedDomains]);
-        return [WebHelpers threadSafeTrustedDomains];
+        NSArray *result = [WebHelpers threadSafeTrustedDomains];
+        if (result.count != 0) {
+            return result;
+        }
     }
     return [self _65087dc8_objectForInfoDictionaryKey:key];
 }

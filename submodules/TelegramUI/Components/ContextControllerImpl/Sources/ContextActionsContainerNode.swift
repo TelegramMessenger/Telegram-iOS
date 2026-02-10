@@ -549,18 +549,18 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.07)
         }
         
-        let textLeftInset: CGFloat
+        let textRightInset: CGFloat = 8.0
+        var textLeftInset: CGFloat = horizontalInset
+        
         if let _ = self.iconNode.image {
-            textLeftInset = iconSize.width + 18.0
-        } else {
-            textLeftInset = 0.0
+            textLeftInset = 60.0
         }
         
         let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
-        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, minimumNumberOfLines: 0, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - horizontalInset * 2.0 - textLeftInset, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.12, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, minimumNumberOfLines: 0, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - textLeftInset - textRightInset, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.12, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
         let _ = textApply(self.arguments?.withUpdatedPlaceholderColor(shimmeringForegroundColor))
         
-        let textFrame = CGRect(origin: CGPoint(x: horizontalInset + textLeftInset, y: topInset), size: textLayout.size)
+        let textFrame = CGRect(origin: CGPoint(x: textLeftInset, y: topInset), size: textLayout.size)
         transition.updateFrame(node: self.textNode.textNode, frame: textFrame)
         if textFrame.size.height.isZero {
             self.textNode.textNode.alpha = 0.0

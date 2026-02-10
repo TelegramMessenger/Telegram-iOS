@@ -1206,7 +1206,6 @@ private final class CraftGiftPageContent: Component {
                             }
                             if let _ = view {
                                 if case let .gift(gift) = component.result {
-                                    //TODO:localize
                                     let giftController = GiftViewScreen(
                                         context: component.context,
                                         subject: .profileGift(component.context.account.peerId, gift),
@@ -1834,6 +1833,7 @@ private final class SheetContainerComponent: CombinedComponent {
                                     state.updated(transition: .spring(duration: 0.3))
                                 } else if state.displayFailure {
                                     craftAnotherGift()
+                                    dismiss(true)
                                 } else {
                                     HapticFeedback().impact(.medium)
                                     
@@ -1883,6 +1883,10 @@ private final class SheetContainerComponent: CombinedComponent {
                                                     break
                                                 }
                                             }
+                                        }
+                                        
+                                        Queue.mainQueue().after(1.0) {
+                                            craftContext.reload()
                                         }
                                     }, error: { error in
                                         switch error {
