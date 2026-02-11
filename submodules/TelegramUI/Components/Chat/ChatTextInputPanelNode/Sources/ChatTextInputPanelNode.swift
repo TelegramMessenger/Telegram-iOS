@@ -231,7 +231,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     public var slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode?
     private let textInputContainerBackgroundView: GlassBackgroundView
     private let accessoryPanelContainer: UIView
-    public let textInputNodeClippingContainer: ASDisplayNode
+    public let textInputNodeClippingContainer: UIView
     public let textInputSeparator: GlassBackgroundView.ContentColorView
     public var textInputNode: ChatInputTextNode?
     private var textInputNodeLayout: (frame: CGRect, insets: UIEdgeInsets)?
@@ -634,8 +634,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.accessoryPanelContainer = UIView()
         self.accessoryPanelContainer.clipsToBounds = true
         
-        self.textInputNodeClippingContainer = ASDisplayNode()
+        self.textInputNodeClippingContainer = UIView()
         self.textInputNodeClippingContainer.clipsToBounds = true
+        self.textInputNodeClippingContainer.layer.name = "textInputNodeClippingContainer"
         
         self.textInputSeparator = GlassBackgroundView.ContentColorView()
         //self.textInputContainerBackgroundView.contentView.addSubview(self.textInputSeparator)
@@ -918,11 +919,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.searchLayoutClearButtonIcon.alpha = 0.0
         
         self.glassBackgroundContainer.contentView.addSubview(self.textInputBackgroundNode.view)
+        
         self.glassBackgroundContainer.contentView.addSubview(self.textInputContainerBackgroundView)
         
         self.textInputContainerBackgroundView.contentView.addSubview(self.accessoryPanelContainer)
         self.textInputContainerBackgroundView.contentView.addSubview(self.textPlaceholderNode.view)
-        self.textInputContainerBackgroundView.contentView.addSubview(self.textInputNodeClippingContainer.view)
+        self.textInputContainerBackgroundView.contentView.addSubview(self.textInputNodeClippingContainer)
         
         self.menuButton.view.addSubview(self.menuButtonBackgroundView)
         self.menuButton.addSubnode(self.menuButtonClippingNode)
@@ -2930,7 +2932,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         let textFieldFrame = CGRect(origin: CGPoint(x: actualTextInputViewInternalInsets.left, y: actualTextInputViewInternalInsets.top + textFieldTopContentOffset), size: CGSize(width: textInputFrame.size.width - (actualTextInputViewInternalInsets.left + actualTextInputViewInternalInsets.right), height: textInputHeight - actualTextInputViewInternalInsets.top - actualTextInputViewInternalInsets.bottom))
         let textInputNodeClippingContainerFrame = CGRect(origin: CGPoint(x: textFieldFrame.minX - actualTextInputViewInternalInsets.left, y: textFieldFrame.minY - actualTextInputViewInternalInsets.top), size: CGSize(width: textFieldFrame.width + actualTextInputViewInternalInsets.left + actualTextInputViewInternalInsets.right,  height: textFieldFrame.height + actualTextInputViewInternalInsets.top + actualTextInputViewInternalInsets.bottom))
         let shouldUpdateLayout = textInputNodeClippingContainerFrame.size != self.textInputNodeClippingContainer.frame.size
-        transition.updateFrame(node: self.textInputNodeClippingContainer, frame: textInputNodeClippingContainerFrame)
+        transition.updateFrame(view: self.textInputNodeClippingContainer, frame: textInputNodeClippingContainerFrame)
         
         transition.updateFrame(view: self.textInputSeparator, frame: CGRect(origin: CGPoint(x: 15.0, y: textFieldTopContentOffset - UIScreenPixel), size: CGSize(width: textFieldFrame.width, height: UIScreenPixel)))
         self.textInputSeparator.backgroundColor = interfaceState.theme.chat.inputPanel.inputPlaceholderColor
@@ -5273,17 +5275,6 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     
     @objc public func expandButtonPressed() {
         self.toggleExpandMediaInput?()
-        /*self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-            if case let .media(mode, expanded, focused) = state.inputMode {
-                if let _ = expanded {
-                    return (.media(mode: mode, expanded: nil, focused: focused), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
-                } else {
-                    return (.media(mode: mode, expanded: .content, focused: focused), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
-                }
-            } else {
-                return (state.inputMode, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
-            }
-        })*/
     }
     
     @objc func accessoryItemButtonPressed(_ button: UIView) {

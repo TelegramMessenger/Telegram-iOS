@@ -3014,7 +3014,10 @@ public final class ChatListNode: ListView {
             strongSelf.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
                     if item.isPinned {
-                        maxPinnedOffset = max(maxPinnedOffset, itemNode.frame.maxY)
+                        if case let .groupReference(groupReference) = item.content, groupReference.hiddenByDefault {
+                        } else {
+                            maxPinnedOffset = max(maxPinnedOffset, itemNode.frame.maxY)
+                        }
                     }
                 }
             }
@@ -3270,7 +3273,10 @@ public final class ChatListNode: ListView {
                                 }
                                 if case let .index(index) = transition.chatListView.filteredEntries[entryCount - 1 - i].sortIndex {
                                     if case let .chatList(chatListIndex) = index, chatListIndex.pinningIndex != nil {
-                                        pinnedOverscroll = true
+                                        if case let .GroupReferenceEntry(data) = transition.chatListView.filteredEntries[entryCount - 1 - i], data.hiddenByDefault {
+                                        } else {
+                                            pinnedOverscroll = true
+                                        }
                                     } else if case let .forum(pinnedIndex, _, _, _, _) = index, case .index = pinnedIndex {
                                         pinnedOverscroll = true
                                     }

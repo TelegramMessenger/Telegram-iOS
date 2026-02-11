@@ -453,7 +453,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
         let edgeEffectHeight: CGFloat = insets.bottom + 8.0
         let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - edgeEffectHeight), size: CGSize(width: size.width, height: edgeEffectHeight))
         transition.updateFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
-        self.edgeEffectView.update(content: self.presentationData.theme.list.plainBackgroundColor, rect: edgeEffectFrame, edge: .bottom, edgeSize: min(edgeEffectFrame.height, 40.0), transition: ComponentTransition(transition))
+        self.edgeEffectView.update(content: self.presentationData.theme.list.plainBackgroundColor, alpha: 0.6, rect: edgeEffectFrame, edge: .bottom, edgeSize: min(edgeEffectFrame.height, 40.0), transition: ComponentTransition(transition))
         transition.updateAlpha(layer: self.edgeEffectView.layer, alpha: edgeEffectHeight > 21.0 ? 1.0 : 0.0)
     }
     
