@@ -288,14 +288,16 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
 
 - (NSArray *)accessibilityElements
 {
-  ASDisplayNodeAssertMainThread();
+    ASDisplayNodeAssertMainThread();
+    return [super accessibilityElements];
   
-  ASDisplayNode *viewNode = self.asyncdisplaykit_node;
+  
+  /*ASDisplayNode *viewNode = self.asyncdisplaykit_node;
   if (viewNode == nil) {
     return @[];
   }
   _accessibilityElements = [viewNode accessibilityElements];
-  return _accessibilityElements;
+  return _accessibilityElements;*/
 }
 
 @end
