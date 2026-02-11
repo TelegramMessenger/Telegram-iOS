@@ -1343,10 +1343,18 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.containerLayoutAndNavigationBarHeight = (layout, navigationBarHeight)
         
         var headerPanels: [HeaderPanelContainerComponent.Panel] = []
+        
+        if let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction,  force: false) {
+            headerPanels.append(HeaderPanelContainerComponent.Panel(
+                key: "topics",
+                orderIndex: 0,
+                component: headerTopicsPanel
+            ))
+        }
         if let mediaPlayback = self.controller?.globalControlPanelsContextState?.mediaPlayback {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
                 key: "media",
-                orderIndex: 0,
+                orderIndex: 1,
                 component: AnyComponent(MediaPlaybackHeaderPanelComponent(
                     context: self.context,
                     theme: self.chatPresentationInterfaceState.theme,
@@ -1361,7 +1369,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let liveLocation = self.controller?.globalControlPanelsContextState?.liveLocation {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
                 key: "liveLocation",
-                orderIndex: 1,
+                orderIndex: 2,
                 component: AnyComponent(LiveLocationHeaderPanelComponent(
                     context: self.context,
                     theme: self.chatPresentationInterfaceState.theme,
@@ -1376,7 +1384,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let groupCall = self.controller?.globalControlPanelsContextState?.groupCall {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
                 key: "groupCall",
-                orderIndex: 2,
+                orderIndex: 3,
                 component: AnyComponent(GroupCallHeaderPanelComponent(
                     context: self.context,
                     theme: self.chatPresentationInterfaceState.theme,
@@ -2579,29 +2587,16 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
                 if immediatelyLayoutFloatingTopicsNodeAndAnimateAppearance {
                     floatingTopicsPanelView.frame = floatingTopicsPanelFrame
+                    transition.animatePositionAdditive(layer: floatingTopicsPanelView.layer, offset: CGPoint(x: -100.0 - floatingTopicsPanelFrame.minX, y: 0.0))
                 } else {
                     transition.updateFrame(view: floatingTopicsPanelView, frame: floatingTopicsPanelFrame)
                 }
             }
         }
         if let dismissedFloatingTopicsPanel, let dismissedFloatingTopicsPanelView = dismissedFloatingTopicsPanel.view.view {
-            /*let dismissedLeftPanelSize = dismissedLeftPanel.view.update(
-                transition: ComponentTransition(transition),
-                component: dismissedLeftPanel.component.component,
-                environment: {
-                    ChatSidePanelEnvironment(insets: UIEdgeInsets(
-                        top: 0.0,
-                        left: leftPanelLeftInset,
-                        bottom: 0.0,
-                        right: 0.0
-                    ))
-                },
-                containerSize: CGSize(width: defaultLeftPanelWidth, height: layout.size.height - sidePanelTopInset - (containerInsets.bottom + inputPanelsHeight))
-            )
-            transition.updateFrame(view: dismissedLeftPanelView, frame: CGRect(origin: CGPoint(x: -layout.safeInsets.left - dismissedLeftPanelSize.width - 16.0, y: sidePanelTopInset), size: dismissedLeftPanelSize), completion: { [weak dismissedLeftPanelView] _ in
-                dismissedLeftPanelView?.removeFromSuperview()
-            })*/
-            dismissedFloatingTopicsPanelView.removeFromSuperview()
+            transition.updateFrame(view: dismissedFloatingTopicsPanelView, frame: dismissedFloatingTopicsPanelView.frame.offsetBy(dx: -dismissedFloatingTopicsPanelView.frame.minX - 100.0, dy: 0.0), completion: { [weak dismissedFloatingTopicsPanelView] _ in
+                dismissedFloatingTopicsPanelView?.removeFromSuperview()
+            })
         }
         
         transition.updateFrame(node: self.contentDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: apparentInputBackgroundFrame.origin.y)))

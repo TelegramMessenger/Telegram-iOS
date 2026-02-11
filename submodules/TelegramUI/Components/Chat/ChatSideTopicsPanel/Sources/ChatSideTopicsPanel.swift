@@ -1755,22 +1755,15 @@ public final class ChatSideTopicsPanel: Component {
                         }
                     })?.stretchableImage(withLeftCapWidth: Int(cornerRadius) + 1, topCapHeight: Int(cornerRadius) + 1)
                 case .top:
-                    let cornerRadius: CGFloat = 20.0
-                    self.scrollViewMask.image = generateImage(CGSize(width: 8.0 + 1.0 + cornerRadius * 2.0, height: 1.0 + cornerRadius * 2.0), rotatedContext: { size, context in
+                    self.scrollViewMask.image = generateImage(CGSize(width: 8.0 + 1.0, height: 1.0), rotatedContext: { size, context in
                         UIGraphicsPushContext(context)
                         defer {
                             UIGraphicsPopContext()
                         }
                         
                         context.clear(CGRect(origin: CGPoint(), size: size))
-                        
-                        let spreadPath = UIBezierPath(
-                            roundedRect: CGRect(origin: CGPoint(x: -cornerRadius, y: 0.0), size: CGSize(width: size.width + cornerRadius, height: size.height)),
-                            cornerRadius: cornerRadius
-                        ).cgPath
                         context.setFillColor(UIColor.black.cgColor)
-                        context.addPath(spreadPath)
-                        context.fillPath()
+                        context.fill(CGRect(origin: CGPoint(), size: size))
                         
                         if let image = generateGradientImage(size: CGSize(width: 8.0, height: 8.0), colors: [
                             UIColor(white: 1.0, alpha: 1.0),
@@ -1778,7 +1771,7 @@ public final class ChatSideTopicsPanel: Component {
                         ], locations: [0.0, 1.0], direction: .horizontal) {
                             image.draw(in: CGRect(origin: CGPoint(), size: CGSize(width: image.size.width, height: size.height)), blendMode: .destinationOut, alpha: 1.0)
                         }
-                    })?.stretchableImage(withLeftCapWidth: Int(cornerRadius) + 1, topCapHeight: Int(cornerRadius) + 1)
+                    })?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0)
                 }
             }
             let themeUpdated = self.component?.theme !== component.theme
@@ -1885,7 +1878,7 @@ public final class ChatSideTopicsPanel: Component {
                     directionContainerInset += itemSize.height
                 case .top:
                     itemFrame = CGRect(origin: CGPoint(x: 12.0, y: 6.0), size: itemSize)
-                    directionContainerInset += itemSize.width - 8.0
+                    directionContainerInset += itemSize.width - 20.0
                 }
                 
                 itemTransition.setPosition(layer: itemView.layer, position: itemFrame.center)
@@ -1913,62 +1906,6 @@ public final class ChatSideTopicsPanel: Component {
                 scrollFrame = CGRect(origin: CGPoint(x: additionalInsets.left + directionContainerInset, y: additionalInsets.top), size: scrollSize)
                 listContentInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
             }
-            
-            /*if case .side = component.location {
-                let background: ComponentView<Empty>
-                if let current = self.background {
-                    background = current
-                } else {
-                    background = ComponentView()
-                    self.background = background
-                }
-                let backgroundFrame = CGRect(origin: CGPoint(x: scrollFrame.minX, y: environment.insets.top + additionalInsets.top), size: CGSize(width: scrollFrame.width, height: scrollFrame.height + directionContainerInset))
-                let _ = background.update(
-                    transition: transition,
-                    component: AnyComponent(GlassBackgroundComponent(
-                        size: backgroundFrame.size,
-                        cornerRadius: 20.0,
-                        isDark: component.theme.overallDarkAppearance,
-                        tintColor: .init(kind: .panel)
-                    )),
-                    environment: {},
-                    containerSize: backgroundFrame.size
-                )
-
-                if let backgroundView = background.view {
-                    if backgroundView.superview == nil {
-                        self.insertSubview(backgroundView, at: 0)
-                    }
-                    transition.setFrame(view: backgroundView, frame: backgroundFrame)
-                }
-            } else {
-                let background: ComponentView<Empty>
-                if let current = self.background {
-                    background = current
-                } else {
-                    background = ComponentView()
-                    self.background = background
-                }
-                let backgroundFrame = CGRect(origin: CGPoint(x: additionalInsets.left, y: environment.insets.top + additionalInsets.top), size: CGSize(width: scrollFrame.width + directionContainerInset, height: scrollFrame.height))
-                let _ = background.update(
-                    transition: transition,
-                    component: AnyComponent(GlassBackgroundComponent(
-                        size: backgroundFrame.size,
-                        cornerRadius: 20.0,
-                        isDark: component.theme.overallDarkAppearance,
-                        tintColor: .init(kind: .panel)
-                    )),
-                    environment: {},
-                    containerSize: backgroundFrame.size
-                )
-                
-                if let backgroundView = background.view {
-                    if backgroundView.superview == nil {
-                        self.insertSubview(backgroundView, at: 0)
-                    }
-                    transition.setFrame(view: backgroundView, frame: backgroundFrame)
-                }
-            }*/
             
             self.scrollContainerView.frame = scrollFrame
             

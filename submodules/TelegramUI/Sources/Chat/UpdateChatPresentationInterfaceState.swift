@@ -632,6 +632,5 @@ func updateChatPresentationInterfaceStateImpl(
             selfController.customNavigationPanelNode = nil
         }
     }
-    
     selfController.stateUpdated?(transition)
 }

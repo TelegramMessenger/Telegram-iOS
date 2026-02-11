@@ -142,6 +142,7 @@ extension ChatControllerImpl {
             var isGeneralThreadClosed: Bool?
             var premiumGiftOptions: [CachedPremiumGiftOption] = []
             var removePaidMessageFeeData: ChatPresentationInterfaceState.RemovePaidMessageFeeData?
+            var viewForumAsMessages: Bool = false
             
             var preloadNextChatPeerId: EnginePeer.Id?
         }
@@ -948,6 +949,12 @@ extension ChatControllerImpl {
                         }
                     }
                     
+                    if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, channel.flags.contains(.displayForumAsTabs) {
+                        strongSelf.state.viewForumAsMessages = true
+                    } else if let cachedData = peerView.cachedData as? CachedChannelData {
+                        strongSelf.state.viewForumAsMessages = cachedData.viewForumAsMessages.knownValue ?? false
+                    }
+                    
                     let isArchived: Bool = peerView.groupId == Namespaces.PeerGroup.archive
                     
                     var explicitelyCanPinMessages: Bool = false
@@ -1362,6 +1369,12 @@ extension ChatControllerImpl {
                     let previousState = strongSelf.state
                         
                     strongSelf.state.hasScheduledMessages = hasScheduledMessages
+                    
+                    if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, channel.flags.contains(.displayForumAsTabs) {
+                        strongSelf.state.viewForumAsMessages = true
+                    } else if let cachedData = peerView.cachedData as? CachedChannelData {
+                        strongSelf.state.viewForumAsMessages = cachedData.viewForumAsMessages.knownValue ?? false
+                    }
                         
                     var renderedPeer: RenderedPeer?
                     var contactStatus: ChatContactStatus?

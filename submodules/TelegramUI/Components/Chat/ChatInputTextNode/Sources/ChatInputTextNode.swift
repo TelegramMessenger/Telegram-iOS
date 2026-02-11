@@ -289,6 +289,9 @@ open class ChatInputTextNode: ASDisplayNode {
         })
     }
     
+    deinit {
+    }
+    
     public func resetInitialPrimaryLanguage() {
     }
     

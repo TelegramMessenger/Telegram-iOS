@@ -442,6 +442,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedIsGeneralThreadClosed(contentData.state.isGeneralThreadClosed)
             presentationInterfaceState = presentationInterfaceState.updatedPremiumGiftOptions(contentData.state.premiumGiftOptions)
             presentationInterfaceState = presentationInterfaceState.updatedRemovePaidMessageFeeData(contentData.state.removePaidMessageFeeData)
+            presentationInterfaceState = presentationInterfaceState.updatedViewForumAsMessages(contentData.state.viewForumAsMessages)
             
             presentationInterfaceState = presentationInterfaceState.updatedTitlePanelContext({ context in
                 if contentData.state.pinnedMessageId != nil {
