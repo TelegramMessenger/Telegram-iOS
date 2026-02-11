@@ -38,6 +38,7 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
         project_bazel_arguments += ['--//{}:disableStripping'.format(app_target)]
 
     project_bazel_arguments += ['--features=-swift.debug_prefix_map']
+    project_bazel_arguments += ['--features=swift.emit_swiftsourceinfo']
     
     xcodeproj_bazelrc = os.path.join(build_environment.base_path, 'xcodeproj.bazelrc')
     if os.path.isfile(xcodeproj_bazelrc):
