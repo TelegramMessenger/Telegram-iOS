@@ -430,7 +430,12 @@ private final class CraftGiftPageContent: Component {
                 transition.setAlpha(view: titleView, alpha: 1.0)
             }
             
-            let giftTitle = "\(component.gift.title) #\(formatCollectibleNumber(component.gift.number, dateTimeFormat: environment.dateTimeFormat))"
+            var selectedMainGift = component.gift
+            if component.selectedGiftIds[0] != selectedMainGift.id, let id = component.selectedGiftIds[0], let gift = self.giftMap[id]?.gift {
+                selectedMainGift = gift
+            }
+            
+            let giftTitle = "\(selectedMainGift.title) #\(formatCollectibleNumber(selectedMainGift.number, dateTimeFormat: environment.dateTimeFormat))"
             
             let descriptionFont = Font.regular(13.0)
             let descriptionBoldFont = Font.semibold(13.0)
@@ -1160,7 +1165,7 @@ private final class CraftGiftPageContent: Component {
                                 context: component.context,
                                 craftContext: component.craftContext,
                                 resaleContext: resaleContext,
-                                gift: component.gift,
+                                gift: selectedMainGift,
                                 genericGift: genericGift,
                                 selectedGiftIds: Set(component.selectedGiftIds.values),
                                 starsTopUpOptions: component.starsTopUpOptionsPromise.get(),
@@ -1219,7 +1224,7 @@ private final class CraftGiftPageContent: Component {
                                         navigationController.view.addSubview(ConfettiView(frame: navigationController.view.bounds))
                                     }
                                     Queue.mainQueue().after(0.5) {
-                                        controller.profileGiftsContext?.insertStarGifts(gifts: [gift])
+                                        controller.profileGiftsContext?.insertStarGifts(gifts: [gift], afterPinned: true)
                                     }
                                 }
                                 controller.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { _ in
@@ -1257,7 +1262,7 @@ private final class CraftGiftPageContent: Component {
                     GiftCompositionComponent(
                         context: component.context,
                         theme: environment.theme,
-                        subject: .unique(nil, component.gift),
+                        subject: .unique(nil, selectedMainGift),
                         animationOffset: nil,
                         animationScale: nil,
                         displayAnimationStars: false,
@@ -1621,8 +1626,13 @@ private final class SheetContainerComponent: CombinedComponent {
                 }
             }
             
+            var selectedMainGift = component.gift
+            if state.selectedGiftIds[0] != selectedMainGift.id, let id = state.selectedGiftIds[0], let gift = externalState.giftsMap[id]?.gift {
+                selectedMainGift = gift
+            }
+            
             var buttonColor = colors.3
-            if state.displayInfo, let backdropAttribute = component.gift.attributes.first(where: { attribute in
+            if state.displayInfo, let backdropAttribute = selectedMainGift.attributes.first(where: { attribute in
                 if case .backdrop = attribute {
                     return true
                 } else {
@@ -1637,7 +1647,7 @@ private final class SheetContainerComponent: CombinedComponent {
                 backgroundColor = environment.theme.list.plainBackgroundColor
             }
             
-            let giftTitle = "\(component.gift.title) #\(formatCollectibleNumber(component.gift.number, dateTimeFormat: environment.dateTimeFormat))"
+            let giftTitle = "\(selectedMainGift.title) #\(formatCollectibleNumber(selectedMainGift.number, dateTimeFormat: environment.dateTimeFormat))"
             
             let buttonContent: AnyComponentWithIdentity<Empty>
             if state.displayInfo {

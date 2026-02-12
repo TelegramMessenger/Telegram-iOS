@@ -809,7 +809,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
                 } else {
                     dateFormat = nil
                 }
-                format = .full(timeFormat: timeFormat, dateFormat: dateFormat)
+                format = .full(timeFormat: timeFormat, dateFormat: dateFormat, dayOfWeek: (flags & (1 << 5)) != 0)
             }
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .FormattedDate(format: format, date: date)))
         }

@@ -556,7 +556,8 @@ public extension Api {
             public var platform: String?
             public var ip: String?
             public var region: String?
-            public init(flags: Int32, bot: Api.User, domain: String, browser: String?, platform: String?, ip: String?, region: String?) {
+            public var matchCodes: [String]?
+            public init(flags: Int32, bot: Api.User, domain: String, browser: String?, platform: String?, ip: String?, region: String?, matchCodes: [String]?) {
                 self.flags = flags
                 self.bot = bot
                 self.domain = domain
@@ -564,6 +565,7 @@ public extension Api {
                 self.platform = platform
                 self.ip = ip
                 self.region = region
+                self.matchCodes = matchCodes
             }
         }
         case urlAuthResultAccepted(Cons_urlAuthResultAccepted)
@@ -588,7 +590,7 @@ public extension Api {
                 break
             case .urlAuthResultRequest(let _data):
                 if boxed {
-                    buffer.appendInt32(855293722)
+                    buffer.appendInt32(-948574935)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.bot.serialize(buffer, true)
@@ -605,6 +607,13 @@ public extension Api {
                 if Int(_data.flags) & Int(1 << 2) != 0 {
                     serializeString(_data.region!, buffer: buffer, boxed: false)
                 }
+                if Int(_data.flags) & Int(1 << 3) != 0 {
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(_data.matchCodes!.count))
+                    for item in _data.matchCodes! {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                }
                 break
             }
         }
@@ -616,7 +625,7 @@ public extension Api {
             case .urlAuthResultDefault:
                 return ("urlAuthResultDefault", [])
             case .urlAuthResultRequest(let _data):
-                return ("urlAuthResultRequest", [("flags", _data.flags as Any), ("bot", _data.bot as Any), ("domain", _data.domain as Any), ("browser", _data.browser as Any), ("platform", _data.platform as Any), ("ip", _data.ip as Any), ("region", _data.region as Any)])
+                return ("urlAuthResultRequest", [("flags", _data.flags as Any), ("bot", _data.bot as Any), ("domain", _data.domain as Any), ("browser", _data.browser as Any), ("platform", _data.platform as Any), ("ip", _data.ip as Any), ("region", _data.region as Any), ("matchCodes", _data.matchCodes as Any)])
             }
         }
 
@@ -664,6 +673,12 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {
                 _7 = parseString(reader)
             }
+            var _8: [String]?
+            if Int(_1!) & Int(1 << 3) != 0 {
+                if let _ = reader.readInt32() {
+                    _8 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -671,8 +686,9 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.UrlAuthResult.urlAuthResultRequest(Cons_urlAuthResultRequest(flags: _1!, bot: _2!, domain: _3!, browser: _4, platform: _5, ip: _6, region: _7))
+            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.UrlAuthResult.urlAuthResultRequest(Cons_urlAuthResultRequest(flags: _1!, bot: _2!, domain: _3!, browser: _4, platform: _5, ip: _6, region: _7, matchCodes: _8))
             }
             else {
                 return nil

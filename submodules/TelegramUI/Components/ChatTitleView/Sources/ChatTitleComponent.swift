@@ -16,7 +16,7 @@ import EmojiStatusComponent
 import GlassBackgroundComponent
 
 public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
-    private final class ContentData {
+    private final class ContentData: Equatable {
         let context: AccountContext
         let theme: PresentationTheme
         let preferClearGlass: Bool
@@ -35,6 +35,34 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
             self.dateTimeFormat = dateTimeFormat
             self.nameDisplayOrder = nameDisplayOrder
             self.content = content
+        }
+        
+        static func ==(lhs: ContentData, rhs: ContentData) -> Bool {
+            if lhs.context !== rhs.context {
+                return false
+            }
+            if lhs.theme !== rhs.theme {
+                return false
+            }
+            if lhs.preferClearGlass != rhs.preferClearGlass {
+                return false
+            }
+            if lhs.wallpaper != rhs.wallpaper {
+                return false
+            }
+            if lhs.strings !== rhs.strings {
+                return false
+            }
+            if lhs.dateTimeFormat != rhs.dateTimeFormat {
+                return false
+            }
+            if lhs.nameDisplayOrder != rhs.nameDisplayOrder {
+                return false
+            }
+            if lhs.content != rhs.content {
+                return false
+            }
+            return true
         }
     }
     
@@ -86,9 +114,9 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
         content: ChatTitleContent,
         transition: ComponentTransition,
         ignoreParentTransitionRequests: Bool = false
-    ) {
+    ) -> Bool {
         self.ignoreParentTransitionRequests = ignoreParentTransitionRequests
-        self.contentData = ContentData(
+        let contentData = ContentData(
             context: context,
             theme: theme,
             preferClearGlass: preferClearGlass,
@@ -98,8 +126,12 @@ public final class ChatNavigationBarTitleView: UIView, NavigationBarTitleView {
             nameDisplayOrder: nameDisplayOrder,
             content: content
         )
+        let isUpdated = self.contentData != contentData
+        self.contentData = contentData
         self.update(transition: transition)
         self.ignoreParentTransitionRequests = false
+        
+        return isUpdated
     }
     
     public func updateActivities(activities: ChatTitleComponent.Activities?, transition: ComponentTransition) {

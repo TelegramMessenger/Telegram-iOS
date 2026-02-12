@@ -247,10 +247,10 @@ public final class HeaderPanelContainerComponent: Component {
             
             let backgroundSize = CGSize(width: size.width, height: max(40.0, size.height))
             
-            transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: backgroundSize))
-            self.backgroundContainer.update(size: backgroundSize, isDark: component.theme.overallDarkAppearance, transition: transition)
+            transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: backgroundSize).insetBy(dx: -32.0, dy: -32.0))
+            self.backgroundContainer.update(size: CGSize(width: backgroundSize.width + 32.0 * 2.0, height: backgroundSize.height + 32.0 * 2.0), isDark: component.theme.overallDarkAppearance, transition: transition)
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: size.width - sideInset * 2.0, height: backgroundSize.height))
+            let backgroundFrame = CGRect(origin: CGPoint(x: 32.0 + sideInset, y: 32.0), size: CGSize(width: size.width - sideInset * 2.0, height: backgroundSize.height))
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, cornerRadius: 20.0, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: true, transition: transition)
             

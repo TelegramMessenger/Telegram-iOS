@@ -6,56 +6,6 @@ import ComponentFlow
 import STCMeshView
 import UIKitRuntimeUtils
 
-private final class FPSView: UIView {
-    private var lastTimestamp: Double?
-    private var counter: Int = 0
-    private var fpsValue: Int?
-    private var fpsString: NSAttributedString?
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        
-        self.layer.anchorPoint = CGPoint()
-        self.backgroundColor = .black
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    func update() {
-        self.counter += 1
-        let timestamp = CACurrentMediaTime()
-        let deltaTime: Double
-        if let lastTimestamp = self.lastTimestamp {
-            deltaTime = timestamp - lastTimestamp
-        } else {
-            deltaTime = 1.0 / 60.0
-            self.lastTimestamp = timestamp
-        }
-        if deltaTime >= 1.0 {
-            let fpsValue = Int(Double(self.counter) / deltaTime)
-            if self.fpsValue != fpsValue {
-                self.fpsValue = fpsValue
-                let fpsString = NSAttributedString(string: "\(fpsValue)", attributes: [.foregroundColor: UIColor.white])
-                self.bounds = fpsString.boundingRect(with: CGSize(width: 100.0, height: 100.0), context: nil).integral
-                self.fpsString = fpsString
-                self.setNeedsDisplay()
-            }
-            self.counter = 0
-            self.lastTimestamp = timestamp
-        }
-    }
-                
-    override func draw(_ rect: CGRect) {
-        guard let fpsString = self.fpsString else {
-            return
-        }
-        
-        fpsString.draw(at: CGPoint())
-    }
-}
-
 private extension CGPoint {
     static func -(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
         return CGPoint(x: lhs.x - rhs.x, y: lhs.y - rhs.y)
@@ -395,10 +345,6 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private var gradientLayer: SimpleGradientLayer?
     private var gradientMaskLayer: MaskGridLayer?
     
-    #if DEBUG
-    private var fpsView: FPSView?
-    #endif
-    
     private var link: SharedDisplayLinkDriver.Link?
     
     private var shockwaves: [Shockwave] = []
@@ -412,20 +358,10 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         self.backgroundView = UIView()
         self.backgroundView.backgroundColor = .black
         
-        #if DEBUG && false
-        self.fpsView = FPSView(frame: CGRect(origin: CGPoint(x: 4.0, y: 40.0), size: CGSize()))
-        #endif
-        
         super.init()
         
         self.addSubnode(self.contentNodeSource)
         self.view.addSubview(self.backgroundView)
-        
-        #if DEBUG
-        if let fpsView = self.fpsView {
-            self.view.addSubview(fpsView)
-        }
-        #endif
     }
     
     public static func supportsHierarchy(layer: CALayer) -> Bool {
@@ -559,12 +495,6 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         self.backgroundView.isHidden = false
         self.contentNodeSource.clipsToBounds = true
         self.contentNodeSource.layer.cornerRadius = cornerRadius
-        
-        #if DEBUG
-        if let fpsView = self.fpsView {
-            fpsView.update()
-        }
-        #endif
         
         let resolutionX = max(2, Int(size.width / 50.0))
         let resolutionY = max(2, Int(size.height / 50.0))
