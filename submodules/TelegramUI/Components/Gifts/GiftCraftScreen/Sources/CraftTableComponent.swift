@@ -526,9 +526,6 @@ final class GiftSlotComponent: Component {
         }
         
         @objc private func buttonPressed() {
-            guard let _ = self.component?.removeAction else {
-                return
-            }
             self.component?.action()
         }
         
@@ -630,7 +627,7 @@ final class GiftSlotComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: availableSize.height)
+                    containerSize: CGSize(width: availableSize.width - 2.0 + UIScreenPixel, height: availableSize.height - 2.0 + UIScreenPixel)
                 )
                 let iconFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: iconSize)
                 if let iconView = icon.view {
