@@ -117,17 +117,22 @@ private struct RippleParams {
     }
 }
 
+private struct RippleDisplacement {
+    var offset: CGPoint
+    var zOffset: CGFloat
+}
+
 private func rippleOffset(
     position: CGPoint,
     origin: CGPoint,
     time: CGFloat,
     params: RippleParams
-) -> CGPoint {
+) -> RippleDisplacement {
     // The distance of the current pixel position from `origin`.
     let distance: CGFloat = length(position - origin)
     
     if distance < 1.0 {
-        return position
+        return RippleDisplacement(offset: CGPoint(), zOffset: 0.0)
     }
     
     // The amount of time it takes for the ripple to arrive at the current pixel position.
@@ -161,7 +166,10 @@ private func rippleOffset(
     //
     // This new position moves toward or away from `origin` based on the
     // sign and magnitude of `rippleAmount`.
-    return n * (-rippleAmount)
+    return RippleDisplacement(
+        offset: n * (-rippleAmount),
+        zOffset: rippleAmount
+    )
 }
 
 public protocol SpaceWarpNode: ASDisplayNode {
@@ -292,6 +300,8 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         var positions = Array(repeating: CGPoint(), count: vertexCount)
+        var zOffsets = Array(repeating: CGFloat(0.0), count: vertexCount)
+        let zNormalization = max(1.0, max(size.width, size.height))
         for y in 0 ..< vertexHeight {
             let normalizedY = CGFloat(y) / CGFloat(resolution.y)
             for x in 0 ..< vertexWidth {
@@ -299,11 +309,16 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 let initialPosition = CGPoint(x: normalizedX * size.width, y: normalizedY * size.height)
                 
                 var displacedPosition = initialPosition
+                var displacedZ: CGFloat = 0.0
                 for shockwave in self.shockwaves {
-                    displacedPosition = displacedPosition + rippleOffset(position: initialPosition, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+                    let displacement = rippleOffset(position: initialPosition, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+                    displacedPosition = displacedPosition + displacement.offset
+                    displacedZ += displacement.zOffset
                 }
                 
-                positions[vertexIndex(x, y)] = displacedPosition
+                let index = vertexIndex(x, y)
+                positions[index] = displacedPosition
+                zOffsets[index] = displacedZ / zNormalization
             }
         }
         
@@ -313,11 +328,12 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             for x in 0 ..< vertexWidth {
                 let normalizedX = CGFloat(x) / CGFloat(resolution.x)
                 let source = CGPoint(x: normalizedX, y: normalizedY)
-                let displacedPosition = positions[vertexIndex(x, y)]
+                let index = vertexIndex(x, y)
+                let displacedPosition = positions[index]
                 let destination = MeshTransform.Point3D(
                     x: displacedPosition.x / size.width,
                     y: displacedPosition.y / size.height,
-                    z: 0.0
+                    z: zOffsets[index]
                 )
                 mesh.add(MeshTransform.Vertex(from: source, to: destination))
             }
@@ -374,7 +390,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        let params = RippleParams(amplitude: 15.0, frequency: 15.0, decay: 5.5, speed: 1400.0)
+        let params = RippleParams(amplitude: 10.0, frequency: 15.0, decay: 5.5, speed: 1400.0)
         
         let maxEdge = (max(size.width, size.height) * 0.5) * 2.0
         let maxDistance = sqrt(maxEdge * maxEdge + maxEdge * maxEdge)
