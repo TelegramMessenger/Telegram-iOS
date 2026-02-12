@@ -73,6 +73,17 @@ public enum GroupParticipant: PostboxCoding, Equatable {
         }
     }
     
+    public var rank: String? {
+        switch self {
+        case let .admin(_, _, _, rank):
+            return rank
+        case let .member(_, _, _, rank):
+            return rank
+        case let .creator(_, rank):
+            return rank
+        }
+    }
+    
     func withUpdated(rank: String?) -> GroupParticipant {
         switch self {
         case let .member(id, invitedBy, invitedAt, _):

@@ -16,7 +16,7 @@ public enum MessageTextEntityType: Equatable {
         }
         
         case relative
-        case full(timeFormat: TimeFormat?, dateFormat: DateFormat?)
+        case full(timeFormat: TimeFormat?, dateFormat: DateFormat?, dayOfWeek: Bool)
         
         public init(rawValue: Int32) {
             if (rawValue & (1 << 0)) != 0 {
@@ -38,7 +38,7 @@ public enum MessageTextEntityType: Equatable {
                 } else {
                     dateFormat = nil
                 }
-                self = .full(timeFormat: timeFormat, dateFormat: dateFormat)
+                self = .full(timeFormat: timeFormat, dateFormat: dateFormat, dayOfWeek: (rawValue & (1 << 5)) != 0)
             }
         }
         
@@ -47,7 +47,7 @@ public enum MessageTextEntityType: Equatable {
             switch self {
             case .relative:
                 rawValue |= 1 << 0
-            case let .full(timeFormat, dateFormat):
+            case let .full(timeFormat, dateFormat, dayOfWeek):
                 switch timeFormat {
                 case .short:
                     rawValue |= 1 << 1
@@ -63,6 +63,9 @@ public enum MessageTextEntityType: Equatable {
                     rawValue |= 1 << 4
                 default:
                     break
+                }
+                if dayOfWeek {
+                    rawValue |= 1 << 5
                 }
             }
             return rawValue
