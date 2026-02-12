@@ -3,8 +3,82 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import ComponentFlow
-import STCMeshView
-import UIKitRuntimeUtils
+import MeshTransform
+
+private let backdropLayerClass: NSObject? = {
+    let name = ("CA" as NSString).appendingFormat("BackdropLayer")
+    if let cls = NSClassFromString(name as String) as AnyObject as? NSObject {
+        return cls
+    }
+    return nil
+}()
+
+@inline(__always)
+private func getMethod<T>(object: NSObject, selector: String) -> T? {
+    guard let method = object.method(for: NSSelectorFromString(selector)) else {
+        return nil
+    }
+    return unsafeBitCast(method, to: T.self)
+}
+
+private var cachedBackdropLayerAllocMethod: (@convention(c) (AnyObject, Selector) -> NSObject?, Selector)?
+private func invokeBackdropLayerCreateMethod() -> NSObject? {
+    guard let backdropLayerClass = backdropLayerClass else {
+        return nil
+    }
+    if let cachedBackdropLayerAllocMethod {
+        return cachedBackdropLayerAllocMethod.0(backdropLayerClass, cachedBackdropLayerAllocMethod.1)
+    } else {
+        let method: (@convention(c) (AnyObject, Selector) -> NSObject?)? = getMethod(object: backdropLayerClass, selector: "alloc")
+        if let method {
+            let selector = NSSelectorFromString("alloc")
+            cachedBackdropLayerAllocMethod = (method, selector)
+            return method(backdropLayerClass, selector)
+        } else {
+            return nil
+        }
+    }
+}
+
+private var cachedBackdropLayerInitMethod: (@convention(c) (NSObject, Selector) -> NSObject?, Selector)?
+private func invokeBackdropLayerInitMethod(object: NSObject) -> NSObject? {
+    if let cachedBackdropLayerInitMethod {
+        return cachedBackdropLayerInitMethod.0(object, cachedBackdropLayerInitMethod.1)
+    } else {
+        let method: (@convention(c) (AnyObject, Selector) -> NSObject?)? = getMethod(object: object, selector: "init")
+        if let method {
+            let selector = NSSelectorFromString("init")
+            cachedBackdropLayerInitMethod = (method, selector)
+            return method(object, selector)
+        } else {
+            return nil
+        }
+    }
+}
+
+private func createBackdropLayer() -> CALayer? {
+    return invokeBackdropLayerCreateMethod().flatMap(invokeBackdropLayerInitMethod) as? CALayer
+}
+
+private var cachedBackdropLayerSetScaleMethod: (@convention(c) (NSObject, Selector, Double) -> Void, Selector)?
+private func invokeBackdropLayerSetScaleMethod(object: NSObject, scale: Double) {
+    if let cachedBackdropLayerSetScaleMethod {
+        cachedBackdropLayerSetScaleMethod.0(object, cachedBackdropLayerSetScaleMethod.1, scale)
+    } else {
+        let method: (@convention(c) (AnyObject, Selector, Double) -> Void)? = getMethod(object: object, selector: "setScale:")
+        if let method {
+            let selector = NSSelectorFromString("setScale:")
+            cachedBackdropLayerSetScaleMethod = (method, selector)
+            method(object, selector, scale)
+        }
+    }
+}
+
+private final class BackdropLayerDelegate: NSObject, CALayerDelegate {
+    func action(for layer: CALayer, forKey event: String) -> CAAction? {
+        return nullAction
+    }
+}
 
 private extension CGPoint {
     static func -(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
@@ -90,235 +164,11 @@ private func rippleOffset(
     return n * (-rippleAmount)
 }
 
-func transformToFitQuad2(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoint, bottomLeft bl: CGPoint, bottomRight br: CGPoint) -> (frame: CGRect, transform: CATransform3D) {
-    let frameTopLeft = frame.origin
-    
-    let transform = rectToQuad(
-        rect: CGRect(origin: CGPoint(), size: frame.size),
-        quadTL: CGPoint(x: tl.x - frameTopLeft.x, y: tl.y - frameTopLeft.y),
-        quadTR: CGPoint(x: tr.x - frameTopLeft.x, y: tr.y - frameTopLeft.y),
-        quadBL: CGPoint(x: bl.x - frameTopLeft.x, y: bl.y - frameTopLeft.y),
-        quadBR: CGPoint(x: br.x - frameTopLeft.x, y: br.y - frameTopLeft.y)
-    )
-    
-    let anchorPoint = frame.origin
-    let anchorOffset = CGPoint(x: anchorPoint.x - frame.origin.x, y: anchorPoint.y - frame.origin.y)
-    let transPos = CATransform3DMakeTranslation(anchorOffset.x, anchorOffset.y, 0)
-    let transNeg = CATransform3DMakeTranslation(-anchorOffset.x, -anchorOffset.y, 0)
-    let fullTransform = CATransform3DConcat(CATransform3DConcat(transPos, transform), transNeg)
-    
-    return (frame, fullTransform)
-}
-
-func transformToFitQuad(frame: CGRect, topLeft tl: CGPoint, topRight tr: CGPoint, bottomLeft bl: CGPoint, bottomRight br: CGPoint) -> (frame: CGRect, transform: CATransform3D) {
-    let boundingBox = boundingBox(forQuadWithTR: tr, tl: tl, bl: bl, br: br)
-    
-    let frameTopLeft = boundingBox.origin
-    let transform = rectToQuad(
-        rect: CGRect(origin: CGPoint(), size: frame.size),
-        quadTL: CGPoint(x: tl.x - frameTopLeft.x, y: tl.y - frameTopLeft.y),
-        quadTR: CGPoint(x: tr.x - frameTopLeft.x, y: tr.y - frameTopLeft.y),
-        quadBL: CGPoint(x: bl.x - frameTopLeft.x, y: bl.y - frameTopLeft.y),
-        quadBR: CGPoint(x: br.x - frameTopLeft.x, y: br.y - frameTopLeft.y)
-    )
-    
-    // To account for anchor point, we must translate, transform, translate
-    let anchorPoint = frame.center
-    let anchorOffset = CGPoint(x: anchorPoint.x - boundingBox.origin.x, y: anchorPoint.y - boundingBox.origin.y)
-    let transPos = CATransform3DMakeTranslation(anchorOffset.x, anchorOffset.y, 0)
-    let transNeg = CATransform3DMakeTranslation(-anchorOffset.x, -anchorOffset.y, 0)
-    let fullTransform = CATransform3DConcat(CATransform3DConcat(transPos, transform), transNeg)
-    
-    // Now we set our transform
-    return (boundingBox, fullTransform)
-}
-
-private func boundingBox(forQuadWithTR tr: CGPoint, tl: CGPoint, bl: CGPoint, br: CGPoint) -> CGRect {
-    var boundingBox = CGRect.zero
-    
-    let xmin = min(min(min(tr.x, tl.x), bl.x), br.x)
-    let ymin = min(min(min(tr.y, tl.y), bl.y), br.y)
-    let xmax = max(max(max(tr.x, tl.x), bl.x), br.x)
-    let ymax = max(max(max(tr.y, tl.y), bl.y), br.y)
-    
-    boundingBox.origin.x = xmin
-    boundingBox.origin.y = ymin
-    boundingBox.size.width = xmax - xmin
-    boundingBox.size.height = ymax - ymin
-    
-    return boundingBox
-}
-
-func rectToQuad(rect: CGRect, quadTL topLeft: CGPoint, quadTR topRight: CGPoint, quadBL bottomLeft: CGPoint, quadBR bottomRight: CGPoint) -> CATransform3D {
-    return rectToQuad(rect: rect, quadTLX: topLeft.x, quadTLY: topLeft.y, quadTRX: topRight.x, quadTRY: topRight.y, quadBLX: bottomLeft.x, quadBLY: bottomLeft.y, quadBRX: bottomRight.x, quadBRY: bottomRight.y)
-}
-
-private func rectToQuad(rect: CGRect, quadTLX x1a: CGFloat, quadTLY y1a: CGFloat, quadTRX x2a: CGFloat, quadTRY y2a: CGFloat, quadBLX x3a: CGFloat, quadBLY y3a: CGFloat, quadBRX x4a: CGFloat, quadBRY y4a: CGFloat) -> CATransform3D {
-    let X = rect.origin.x
-    let Y = rect.origin.y
-    let W = rect.size.width
-    let H = rect.size.height
-    
-    let y21 = y2a - y1a
-    let y32 = y3a - y2a
-    let y43 = y4a - y3a
-    let y14 = y1a - y4a
-    let y31 = y3a - y1a
-    let y42 = y4a - y2a
-    
-    let a = -H * (x2a * x3a * y14 + x2a * x4a * y31 - x1a * x4a * y32 + x1a * x3a * y42)
-    let b = W * (x2a * x3a * y14 + x3a * x4a * y21 + x1a * x4a * y32 + x1a * x2a * y43)
-    let c = H * X * (x2a * x3a * y14 + x2a * x4a * y31 - x1a * x4a * y32 + x1a * x3a * y42) - H * W * x1a * (x4a * y32 - x3a * y42 + x2a * y43) - W * Y * (x2a * x3a * y14 + x3a * x4a * y21 + x1a * x4a * y32 + x1a * x2a * y43)
-    
-    let d = H * (-x4a * y21 * y3a + x2a * y1a * y43 - x1a * y2a * y43 - x3a * y1a * y4a + x3a * y2a * y4a)
-    let e = W * (x4a * y2a * y31 - x3a * y1a * y42 - x2a * y31 * y4a + x1a * y3a * y42)
-    let f = -(W * (x4a * (Y * y2a * y31 + H * y1a * y32) - x3a * (H + Y) * y1a * y42 + H * x2a * y1a * y43 + x2a * Y * (y1a - y3a) * y4a + x1a * Y * y3a * (-y2a + y4a)) - H * X * (x4a * y21 * y3a - x2a * y1a * y43 + x3a * (y1a - y2a) * y4a + x1a * y2a * (-y3a + y4a)))
-    
-    let g = H * (x3a * y21 - x4a * y21 + (-x1a + x2a) * y43)
-    let h = W * (-x2a * y31 + x4a * y31 + (x1a - x3a) * y42)
-    var i = W * Y * (x2a * y31 - x4a * y31 - x1a * y42 + x3a * y42) + H * (X * (-(x3a * y21) + x4a * y21 + x1a * y43 - x2a * y43) + W * (-(x3a * y2a) + x4a * y2a + x2a * y3a - x4a * y3a - x2a * y4a + x3a * y4a))
-    
-    let kEpsilon = 0.0001
-    
-    if abs(i) < kEpsilon {
-        i = kEpsilon * (i > 0 ? 1.0 : -1.0)
-    }
-    
-    let transform = CATransform3D(
-        m11: a / i, m12: d / i, m13: 0, m14: g / i,
-        m21: b / i, m22: e / i, m23: 0, m24: h / i,
-        m31: 0, m32: 0, m33: 1, m34: 0,
-        m41: c / i, m42: f / i, m43: 0, m44: 1.0
-    )
-    
-    return transform
-}
-
 public protocol SpaceWarpNode: ASDisplayNode {
     var contentNode: ASDisplayNode { get }
     
     func triggerRipple(at point: CGPoint)
     func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition)
-}
-
-private final class MaskGridLayer: SimpleLayer {
-    private var itemLayers: [SimpleLayer] = []
-    
-    private var resolution: (x: Int, y: Int)?
-    
-    func updateGrid(size: CGSize, resolutionX: Int, resolutionY: Int, cornerRadius: CGFloat) {
-        if let resolution = self.resolution, resolution.x == resolutionX, resolution.y == resolutionY {
-            return
-        }
-        self.resolution = (resolutionX, resolutionY)
-        
-        for itemLayer in self.itemLayers {
-            itemLayer.removeFromSuperlayer()
-        }
-        self.itemLayers.removeAll()
-        
-        let itemSize = CGSize(width: size.width / CGFloat(resolutionX), height: size.height / CGFloat(resolutionY))
-        
-        let topLeftCorner = CGRect(origin: CGPoint(), size: CGSize(width: cornerRadius, height: cornerRadius))
-        let topRightCorner = CGRect(origin: CGPoint(x: size.width - cornerRadius, y: 0.0), size: CGSize(width: cornerRadius, height: cornerRadius))
-        let bottomLeftCorner = CGRect(origin: CGPoint(x: 0.0, y: size.height - cornerRadius), size: CGSize(width: cornerRadius, height: cornerRadius))
-        let bottomRightCorner = CGRect(origin: CGPoint(x: size.width - cornerRadius, y: size.height - cornerRadius), size: CGSize(width: cornerRadius, height: cornerRadius))
-        
-        var cornersImage: UIImage?
-        if cornerRadius > 0.0 {
-            cornersImage = generateImage(CGSize(width: cornerRadius * 2.0 + 200.0, height: cornerRadius * 2.0 + 200.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor.black.cgColor)
-                context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: cornerRadius).cgPath)
-                context.fillPath()
-            })
-        }
-        
-        for y in 0 ..< resolutionY {
-            for x in 0 ..< resolutionX {
-                let itemLayer = SimpleLayer()
-                itemLayer.backgroundColor = UIColor.black.cgColor
-                itemLayer.isOpaque = true
-                itemLayer.opacity = 1.0
-                itemLayer.anchorPoint = CGPoint()
-                self.addSublayer(itemLayer)
-                self.itemLayers.append(itemLayer)
-                
-                if cornerRadius > 0.0, let cornersImage {
-                    let gridPosition = CGPoint(x: CGFloat(x) / CGFloat(resolutionX), y: CGFloat(y) / CGFloat(resolutionY))
-                    let sourceRect = CGRect(origin: CGPoint(x: gridPosition.x * (size.width), y: gridPosition.y * (size.height)), size: itemSize)
-                    if sourceRect.intersects(topLeftCorner) || sourceRect.intersects(topRightCorner) || sourceRect.intersects(bottomLeftCorner) || sourceRect.intersects(bottomRightCorner) {
-                        var clippedCornersRect = sourceRect
-                        if clippedCornersRect.maxX > cornersImage.size.width {
-                            clippedCornersRect.origin.x -= size.width - cornersImage.size.width
-                        }
-                        if clippedCornersRect.maxY > cornersImage.size.height {
-                            clippedCornersRect.origin.y -= size.height - cornersImage.size.height
-                        }
-                        
-                        itemLayer.contents = cornersImage.cgImage
-                        itemLayer.contentsRect = CGRect(origin: CGPoint(x: clippedCornersRect.minX / cornersImage.size.width, y: clippedCornersRect.minY / cornersImage.size.height), size: CGSize(width: clippedCornersRect.width / cornersImage.size.width, height: clippedCornersRect.height / cornersImage.size.height))
-                        itemLayer.backgroundColor = nil
-                        itemLayer.isOpaque = false
-                    }
-                }
-            }
-        }
-    }
-    
-    func update(positions: [CGPoint], bounds: [CGRect], transforms: [CATransform3D]) {
-        for i in 0 ..< self.itemLayers.count {
-            if i < positions.count && i < bounds.count && i < transforms.count {
-                let itemLayer = self.itemLayers[i]
-                itemLayer.position = positions[i]
-                itemLayer.bounds = bounds[i]
-                itemLayer.transform = transforms[i]
-            }
-        }
-    }
-}
-
-private final class PrivateContentLayerRestoreContext {
-    final class Reference {
-        weak var layer: CALayer?
-        
-        init(layer: CALayer) {
-            self.layer = layer
-        }
-    }
-    
-    private static func collectPrivateContentLayers(layer: CALayer, into references: inout [Reference]) {
-        if getLayerDisableScreenshots(layer) {
-            references.append(Reference(layer: layer))
-        }
-        if let sublayers = layer.sublayers {
-            for sublayer in sublayers {
-                collectPrivateContentLayers(layer: sublayer, into: &references)
-            }
-        }
-    }
-    
-    private let references: [Reference]
-    
-    init(rootLayer: CALayer) {
-        var references: [Reference] = []
-        PrivateContentLayerRestoreContext.collectPrivateContentLayers(layer: rootLayer, into: &references)
-        self.references = references
-        
-        for reference in self.references {
-            if let layer = reference.layer {
-                setLayerDisableScreenshots(layer, false)
-            }
-        }
-    }
-    
-    func restore() {
-        for reference in self.references {
-            if let layer = reference.layer {
-                setLayerDisableScreenshots(layer, true)
-            }
-        }
-    }
 }
 
 open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
@@ -337,13 +187,11 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     
     private let contentNodeSource: ASDisplayNode
     private let backgroundView: UIView
-    private var currentCloneView: UIView?
-    private var meshView: STCMeshView?
-    
-    private var privateContentRestoreContext: PrivateContentLayerRestoreContext?
+    private let backdropLayer: CALayer?
+    private let cornerOverlayView: UIImageView
+    private let backdropLayerDelegate: BackdropLayerDelegate
     
     private var gradientLayer: SimpleGradientLayer?
-    private var gradientMaskLayer: MaskGridLayer?
     
     private var link: SharedDisplayLinkDriver.Link?
     
@@ -351,30 +199,43 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     
     private var resolution: (x: Int, y: Int)?
     private var layoutParams: (size: CGSize, cornerRadius: CGFloat)?
+    private var cornerOverlayImageRadius: CGFloat?
+    
+    private let cornerOverlayInset: CGFloat = 48.0
     
     override public init() {
+        self.backdropLayerDelegate = BackdropLayerDelegate()
+        self.backdropLayer = createBackdropLayer()
+        self.cornerOverlayView = UIImageView()
+        
         self.contentNodeSource = ASDisplayNode()
+        self.contentNodeSource.layer.rasterizationScale = UIScreenScale
         
         self.backgroundView = UIView()
         self.backgroundView.backgroundColor = .black
+        self.backgroundView.isHidden = true
         
         super.init()
         
         self.addSubnode(self.contentNodeSource)
-        self.view.addSubview(self.backgroundView)
+        self.view.insertSubview(self.backgroundView, belowSubview: self.contentNodeSource.view)
+        
+        if let backdropLayer = self.backdropLayer {
+            self.layer.addSublayer(backdropLayer)
+            backdropLayer.delegate = self.backdropLayerDelegate
+            backdropLayer.isHidden = true
+            
+            invokeBackdropLayerSetScaleMethod(object: backdropLayer, scale: UIScreenScale)
+            backdropLayer.rasterizationScale = UIScreenScale
+        }
+        
+        self.cornerOverlayView.isUserInteractionEnabled = false
+        self.cornerOverlayView.isHidden = true
+        self.cornerOverlayView.layer.rasterizationScale = UIScreenScale
+        self.view.addSubview(self.cornerOverlayView)
     }
     
     public static func supportsHierarchy(layer: CALayer) -> Bool {
-        if getLayerDisableScreenshots(layer) {
-            return false
-        }
-        if let sublayers = layer.sublayers {
-            for sublayer in sublayers {
-                if !supportsHierarchy(layer: sublayer) {
-                    return false
-                }
-            }
-        }
         return true
     }
     
@@ -415,17 +276,92 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             return
         }
         self.resolution = (resolutionX, resolutionY)
+    }
+    
+    private func makeRippleMeshTransform(size: CGSize, resolution: (x: Int, y: Int), params: RippleParams) -> MeshTransform.Value? {
+        let vertexWidth = resolution.x + 1
+        let vertexHeight = resolution.y + 1
+        let vertexCount = vertexWidth * vertexHeight
         
-        if let meshView = self.meshView {
-            self.meshView = nil
-            meshView.removeFromSuperview()
+        guard size.width > 0.0, size.height > 0.0, vertexCount > 0 else {
+            return nil
         }
         
-        let meshView = STCMeshView(frame: CGRect())
-        self.meshView = meshView
-        self.view.insertSubview(meshView, aboveSubview: self.backgroundView)
+        func vertexIndex(_ x: Int, _ y: Int) -> Int {
+            return y * vertexWidth + x
+        }
         
-        meshView.instanceCount = resolutionX * resolutionY
+        var positions = Array(repeating: CGPoint(), count: vertexCount)
+        for y in 0 ..< vertexHeight {
+            let normalizedY = CGFloat(y) / CGFloat(resolution.y)
+            for x in 0 ..< vertexWidth {
+                let normalizedX = CGFloat(x) / CGFloat(resolution.x)
+                let initialPosition = CGPoint(x: normalizedX * size.width, y: normalizedY * size.height)
+                
+                var displacedPosition = initialPosition
+                for shockwave in self.shockwaves {
+                    displacedPosition = displacedPosition + rippleOffset(position: initialPosition, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+                }
+                
+                positions[vertexIndex(x, y)] = displacedPosition
+            }
+        }
+        
+        let mesh = MeshTransform()
+        for y in 0 ..< vertexHeight {
+            let normalizedY = CGFloat(y) / CGFloat(resolution.y)
+            for x in 0 ..< vertexWidth {
+                let normalizedX = CGFloat(x) / CGFloat(resolution.x)
+                let source = CGPoint(x: normalizedX, y: normalizedY)
+                let displacedPosition = positions[vertexIndex(x, y)]
+                let destination = MeshTransform.Point3D(
+                    x: displacedPosition.x / size.width,
+                    y: displacedPosition.y / size.height,
+                    z: 0.0
+                )
+                mesh.add(MeshTransform.Vertex(from: source, to: destination))
+            }
+        }
+        
+        for y in 0 ..< resolution.y {
+            for x in 0 ..< resolution.x {
+                let topLeft = UInt32(vertexIndex(x, y))
+                let topRight = UInt32(vertexIndex(x + 1, y))
+                let bottomRight = UInt32(vertexIndex(x + 1, y + 1))
+                let bottomLeft = UInt32(vertexIndex(x, y + 1))
+                
+                mesh.add(MeshTransform.Face(indices: (topLeft, topRight, bottomRight, bottomLeft), w: (0.0, 0.0, 0.0, 0.0)))
+            }
+        }
+        
+        return mesh.makeValue()
+    }
+    
+    private func updateCornerOverlayImage(cornerRadius: CGFloat) {
+        let cornerRadius = max(0.0, cornerRadius)
+        if let currentRadius = self.cornerOverlayImageRadius, abs(currentRadius - cornerRadius) < 0.001 {
+            return
+        }
+        self.cornerOverlayImageRadius = cornerRadius
+        
+        let cornerExtent = max(1.0, ceil(cornerRadius + self.cornerOverlayInset))
+        let imageSize = CGSize(width: cornerExtent * 2.0 + 1.0, height: cornerExtent * 2.0 + 1.0)
+        
+        self.cornerOverlayView.image = generateImage(imageSize, opaque: false, rotatedContext: { size, context in
+            let bounds = CGRect(origin: CGPoint(), size: size)
+            context.clear(bounds)
+            context.setFillColor(UIColor.black.cgColor)
+            context.fill(bounds)
+            
+            let innerRect = bounds.insetBy(dx: self.cornerOverlayInset, dy: self.cornerOverlayInset)
+            context.setBlendMode(.clear)
+            context.addPath(UIBezierPath(roundedRect: innerRect, cornerRadius: cornerRadius).cgPath)
+            context.fillPath()
+            context.setBlendMode(.normal)
+        })?.resizableImage(
+            withCapInsets: UIEdgeInsets(top: cornerExtent, left: cornerExtent, bottom: cornerExtent, right: cornerExtent),
+            resizingMode: .stretch
+        )
     }
     
     public func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition) {
@@ -438,12 +374,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        let params = RippleParams(amplitude: 10.0, frequency: 15.0, decay: 5.5, speed: 1400.0)
-        
-        if let currentCloneView = self.currentCloneView {
-            currentCloneView.removeFromSuperview()
-            self.currentCloneView = nil
-        }
+        let params = RippleParams(amplitude: 15.0, frequency: 15.0, decay: 5.5, speed: 1400.0)
         
         let maxEdge = (max(size.width, size.height) * 0.5) * 2.0
         let maxDistance = sqrt(maxEdge * maxEdge + maxEdge * maxEdge)
@@ -461,10 +392,14 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 link.invalidate()
             }
             
-            if let meshView = self.meshView {
-                self.meshView = nil
-                meshView.removeFromSuperview()
+            if let backdropLayer = self.backdropLayer {
+                backdropLayer.removeAnimation(forKey: "meshTransform")
+                backdropLayer.setValue(nil, forKey: "meshTransform")
+                backdropLayer.isHidden = true
             }
+            self.cornerOverlayView.layer.removeAnimation(forKey: "meshTransform")
+            self.cornerOverlayView.layer.setValue(nil, forKey: "meshTransform")
+            self.cornerOverlayView.isHidden = true
             
             self.resolution = nil
             self.backgroundView.isHidden = true
@@ -475,50 +410,42 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 self.gradientLayer = nil
                 gradientLayer.removeFromSuperlayer()
             }
-            if let gradientMaskLayer = self.gradientMaskLayer {
-                self.gradientMaskLayer = nil
-                gradientMaskLayer.removeFromSuperlayer()
-            }
-            
-            if let privateContentRestoreContext = self.privateContentRestoreContext {
-                self.privateContentRestoreContext = nil
-                privateContentRestoreContext.restore()
-            }
             
             return
-        }
-        
-        if self.privateContentRestoreContext == nil {
-            self.privateContentRestoreContext = PrivateContentLayerRestoreContext(rootLayer: self.contentNodeSource.view.layer)
         }
         
         self.backgroundView.isHidden = false
         self.contentNodeSource.clipsToBounds = true
         self.contentNodeSource.layer.cornerRadius = cornerRadius
         
-        let resolutionX = max(2, Int(size.width / 50.0))
-        let resolutionY = max(2, Int(size.height / 50.0))
+        if let backdropLayer = self.backdropLayer {
+            backdropLayer.isHidden = false
+            transition.setFrame(layer: backdropLayer, frame: CGRect(origin: CGPoint(), size: size))
+            transition.setCornerRadius(layer: backdropLayer, cornerRadius: cornerRadius)
+            
+            self.cornerOverlayView.isHidden = false
+            self.updateCornerOverlayImage(cornerRadius: cornerRadius)
+            transition.setFrame(
+                view: self.cornerOverlayView,
+                frame: CGRect(
+                    x: -self.cornerOverlayInset,
+                    y: -self.cornerOverlayInset,
+                    width: size.width + self.cornerOverlayInset * 2.0,
+                    height: size.height + self.cornerOverlayInset * 2.0
+                )
+            )
+        } else {
+            self.cornerOverlayView.isHidden = true
+        }
+        
+        let resolutionX = max(2, Int(size.width / 48.0))
+        let resolutionY = max(2, Int(size.height / 48.0))
         self.updateGrid(resolutionX: resolutionX, resolutionY: resolutionY)
-        guard let resolution = self.resolution, let meshView = self.meshView else {
+        guard let resolution = self.resolution else {
             return
         }
         
-        if let cloneView = self.contentNodeSource.view.resizableSnapshotView(from: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: false, withCapInsets: UIEdgeInsets()) {
-            self.currentCloneView = cloneView
-            meshView.contentView.addSubview(cloneView)
-        }
-        
-        meshView.frame = CGRect(origin: CGPoint(), size: size)
-        
         if let shockwave = self.shockwaves.first {
-            let gradientMaskLayer: MaskGridLayer
-            if let current = self.gradientMaskLayer {
-                gradientMaskLayer = current
-            } else {
-                gradientMaskLayer = MaskGridLayer()
-                self.gradientMaskLayer = gradientMaskLayer
-            }
-            
             let gradientLayer: SimpleGradientLayer
             if let current = self.gradientLayer {
                 gradientLayer = current
@@ -529,12 +456,9 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                 
                 gradientLayer.type = .radial
                 gradientLayer.colors = [UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor, UIColor(white: 1.0, alpha: 0.2).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor]
-                
-                gradientLayer.mask = gradientMaskLayer
             }
             
             gradientLayer.frame = CGRect(origin: CGPoint(), size: size)
-            gradientMaskLayer.frame = CGRect(origin: CGPoint(), size: size)
             
             gradientLayer.startPoint = CGPoint(x: shockwave.startPoint.x / size.width, y: shockwave.startPoint.y / size.height)
             
@@ -564,73 +488,20 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             }
         }
         
-        let itemSize = CGSize(width: size.width / CGFloat(resolution.x), height: size.height / CGFloat(resolution.y))
-        
-        var instanceBounds: [CGRect] = []
-        var instancePositions: [CGPoint] = []
-        var instanceTransforms: [CATransform3D] = []
-        
-        for y in 0 ..< resolution.y {
-            for x in 0 ..< resolution.x {
-                let gridPosition = CGPoint(x: CGFloat(x) / CGFloat(resolution.x), y: CGFloat(y) / CGFloat(resolution.y))
-                
-                let sourceRect = CGRect(origin: CGPoint(x: gridPosition.x * (size.width), y: gridPosition.y * (size.height)), size: itemSize)
-                
-                let initialTopLeft = CGPoint(x: sourceRect.minX, y: sourceRect.minY)
-                let initialTopRight = CGPoint(x: sourceRect.maxX, y: sourceRect.minY)
-                let initialBottomLeft = CGPoint(x: sourceRect.minX, y: sourceRect.maxY)
-                let initialBottomRight = CGPoint(x: sourceRect.maxX, y: sourceRect.maxY)
-                
-                var topLeft = initialTopLeft
-                var topRight = initialTopRight
-                var bottomLeft = initialBottomLeft
-                var bottomRight = initialBottomRight
-                
-                for shockwave in self.shockwaves {
-                    topLeft = topLeft + rippleOffset(position: initialTopLeft, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
-                    topRight = topRight + rippleOffset(position: initialTopRight, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
-                    bottomLeft = bottomLeft + rippleOffset(position: initialBottomLeft, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
-                    bottomRight = bottomRight + rippleOffset(position: initialBottomRight, origin: shockwave.startPoint, time: shockwave.timeValue, params: params)
+        if let backdropLayer = self.backdropLayer {
+            if let meshTransform = self.makeRippleMeshTransform(size: size, resolution: resolution, params: params) {
+                if !transition.animation.isImmediate {
+                    backdropLayer.removeAnimation(forKey: "meshTransform")
+                    self.cornerOverlayView.layer.removeAnimation(forKey: "meshTransform")
                 }
-                /*topLeft = transformCoordinate(position: topLeft, origin: startPoint, time: self.timeValue, params: params)
-                topRight = transformCoordinate(position: topRight, origin: startPoint, time: self.timeValue, params: params)
-                bottomLeft = transformCoordinate(position: bottomLeft, origin: startPoint, time: self.timeValue, params: params)
-                bottomRight = transformCoordinate(position: bottomRight, origin: startPoint, time: self.timeValue, params: params)*/
-                
-                let distanceTopLeft = length(topLeft - initialTopLeft)
-                let distanceTopRight = length(topRight - initialTopRight)
-                let distanceBottomLeft = length(bottomLeft - initialBottomLeft)
-                let distanceBottomRight = length(bottomRight - initialBottomRight)
-                var maxDistance = max(distanceTopLeft, distanceTopRight)
-                maxDistance = max(maxDistance, distanceBottomLeft)
-                maxDistance = max(maxDistance, distanceBottomRight)
-                
-                var (frame, transform) = transformToFitQuad2(frame: sourceRect, topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight)
-                
-                if maxDistance <= 0.005 {
-                    transform = CATransform3DIdentity
-                }
-                
-                instanceBounds.append(frame)
-                instancePositions.append(frame.origin)
-                
-                instanceTransforms.append(transform)
+                backdropLayer.setValue(meshTransform, forKey: "meshTransform")
+                self.cornerOverlayView.layer.setValue(meshTransform, forKey: "meshTransform")
+            } else {
+                backdropLayer.setValue(nil, forKey: "meshTransform")
+                self.cornerOverlayView.layer.setValue(nil, forKey: "meshTransform")
             }
-        }
-        
-        instanceBounds.withUnsafeMutableBufferPointer { buffer in
-            meshView.instanceBounds = buffer.baseAddress!
-        }
-        instancePositions.withUnsafeMutableBufferPointer { buffer in
-            meshView.instancePositions = buffer.baseAddress!
-        }
-        instanceTransforms.withUnsafeMutableBufferPointer { buffer in
-            meshView.instanceTransforms = buffer.baseAddress!
-        }
-        
-        if let gradientMaskLayer = self.gradientMaskLayer {
-            gradientMaskLayer.updateGrid(size: size, resolutionX: resolutionX, resolutionY: resolutionY, cornerRadius: cornerRadius)
-            gradientMaskLayer.update(positions: instancePositions, bounds: instanceBounds, transforms: instanceTransforms)
+        } else {
+            self.cornerOverlayView.layer.setValue(nil, forKey: "meshTransform")
         }
     }
     

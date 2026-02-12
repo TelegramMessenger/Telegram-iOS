@@ -14,12 +14,10 @@ class UITests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testLogin() throws {
         let app = XCUIApplication()
+        app.launchArguments.append("--ui-test")
         app.launch()
-
-        // Use recording to get started writing UI tests.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssert(app.buttons["Continue"].waitForExistence(timeout: 5.0))
     }
 }
