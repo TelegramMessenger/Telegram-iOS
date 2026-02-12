@@ -2372,8 +2372,22 @@ private final class ProfileGiftsContextImpl {
         self.pushState()
     }
     
-    func insertStarGifts(gifts: [ProfileGiftsContext.State.StarGift]) {
-        self.gifts.insert(contentsOf: gifts, at: 0)
+    func insertStarGifts(gifts: [ProfileGiftsContext.State.StarGift], afterPinned: Bool = false) {
+        if afterPinned {
+            var added = false
+            for index in 0 ..< self.gifts.count {
+                if !self.gifts[index].pinnedToTop {
+                    added = true
+                    self.gifts.insert(contentsOf: gifts, at: index)
+                    break
+                }
+            }
+            if !added {
+                self.gifts.append(contentsOf: gifts)
+            }
+        } else {
+            self.gifts.insert(contentsOf: gifts, at: 0)
+        }
         self.pushState()
         
         let peerId = self.peerId
@@ -2387,7 +2401,21 @@ private final class ProfileGiftsContextImpl {
             } else {
                 updatedGifts = []
             }
-            updatedGifts.insert(contentsOf: gifts, at: 0)
+            if afterPinned {
+                var added = false
+                for index in 0 ..< updatedGifts.count {
+                    if !updatedGifts[index].pinnedToTop {
+                        added = true
+                        updatedGifts.insert(contentsOf: gifts, at: index)
+                        break
+                    }
+                }
+                if !added {
+                    updatedGifts.append(contentsOf: gifts)
+                }
+            } else {
+                updatedGifts.insert(contentsOf: gifts, at: 0)
+            }
             updatedCount += Int32(gifts.count)
             if let entry = CodableEntry(CachedProfileGifts(gifts: updatedGifts, count: updatedCount, notificationsEnabled: nil)) {
                 transaction.putItemCacheEntry(id: giftsEntryId(peerId: peerId, collectionId: collectionId), entry: entry)
@@ -3087,9 +3115,9 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func insertStarGifts(gifts: [ProfileGiftsContext.State.StarGift]) {
+    public func insertStarGifts(gifts: [ProfileGiftsContext.State.StarGift], afterPinned: Bool = false) {
         self.impl.with { impl in
-            impl.insertStarGifts(gifts: gifts)
+            impl.insertStarGifts(gifts: gifts, afterPinned: afterPinned)
         }
     }
     

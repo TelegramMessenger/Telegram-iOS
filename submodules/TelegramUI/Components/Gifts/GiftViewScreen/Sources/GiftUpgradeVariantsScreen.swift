@@ -692,7 +692,10 @@ private final class GiftUpgradeVariantsScreenComponent: Component {
                     self.isPlaying = false
                     for attribute in selectedAttributes {
                         switch attribute {
-                        case .model:
+                        case let .model(_, _, _, crafted):
+                            if crafted {
+                                self.displayCraftableModels = true
+                            }
                             self.selectedModel = attribute
                         case .pattern:
                             self.selectedSymbol = attribute

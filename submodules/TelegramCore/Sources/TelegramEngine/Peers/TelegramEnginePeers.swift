@@ -616,12 +616,8 @@ public extension TelegramEngine {
         public func getFutureCreatorAfterLeave(peerId: EnginePeer.Id) -> Signal<EnginePeer?, NoError> {
             return _internal_getFutureCreatorAfterLeave(account: self.account, peerId: peerId)
         }
-        
-        public func toggleChatCustomRanks(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
-            return _internal_toggleChatCustomRanks(account: self.account, peerId: peerId, enabled: enabled)
-        }
-        
-        public func updateChatRank(account: Account, peerId: PeerId, userId: PeerId, rank: String?) -> Signal<Never, UpdateChatRankError> {
+                
+        public func updateChatRank(peerId: PeerId, userId: PeerId, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, UpdateChatRankError> {
             return _internal_updateChatRank(account: account, peerId: peerId, userId: userId, rank: rank)
         }
 

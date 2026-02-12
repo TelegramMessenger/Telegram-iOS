@@ -59,7 +59,7 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
             switch format {
             case .relative:
                 flags |= 1 << 0
-            case let .full(timeFormat, dateFormat):
+            case let .full(timeFormat, dateFormat, dayOfWeek):
                 switch timeFormat {
                 case .short:
                     flags |= 1 << 1
@@ -75,6 +75,9 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                     flags |= 1 << 4
                 default:
                     break
+                }
+                if dayOfWeek {
+                    flags |= 1 << 5
                 }
             default:
                 break

@@ -5192,9 +5192,9 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+    static func acceptUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?, matchCode: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1322487515)
+        buffer.appendInt32(1738797278)
         serializeInt32(flags, buffer: buffer, boxed: false)
         if Int(flags) & Int(1 << 1) != 0 {
             peer!.serialize(buffer, true)
@@ -5208,7 +5208,10 @@ public extension Api.functions.messages {
         if Int(flags) & Int(1 << 2) != 0 {
             serializeString(url!, buffer: buffer, boxed: false)
         }
-        return (FunctionDescription(name: "messages.acceptUrlAuth", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("buttonId", String(describing: buttonId)), ("url", String(describing: url))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+        if Int(flags) & Int(1 << 4) != 0 {
+            serializeString(matchCode!, buffer: buffer, boxed: false)
+        }
+        return (FunctionDescription(name: "messages.acceptUrlAuth", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("buttonId", String(describing: buttonId)), ("url", String(describing: url)), ("matchCode", String(describing: matchCode))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
             let reader = BufferReader(buffer)
             var result: Api.UrlAuthResult?
             if let signature = reader.readInt32() {
@@ -9455,22 +9458,6 @@ public extension Api.functions.messages {
             var result: Api.Bool?
             if let signature = reader.readInt32() {
                 result = Api.parse(reader, signature: signature) as? Api.Bool
-            }
-            return result
-        })
-    }
-}
-public extension Api.functions.messages {
-    static func toggleChatCustomRanks(peer: Api.InputPeer, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-        let buffer = Buffer()
-        buffer.appendInt32(874013158)
-        peer.serialize(buffer, true)
-        enabled.serialize(buffer, true)
-        return (FunctionDescription(name: "messages.toggleChatCustomRanks", parameters: [("peer", String(describing: peer)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-            let reader = BufferReader(buffer)
-            var result: Api.Updates?
-            if let signature = reader.readInt32() {
-                result = Api.parse(reader, signature: signature) as? Api.Updates
             }
             return result
         })

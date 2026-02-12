@@ -300,6 +300,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                             type = .Url
                         } else if result.resultType == NSTextCheckingResult.CheckingType.date, let date = result.date?.timeIntervalSince1970 {
                             #if DEBUG
+                            var dayOfWeek = false
                             var format: MessageTextEntityType.DateTimeFormat?
                             if text.contains("[rel]") {
                                 format = .relative
@@ -316,8 +317,11 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                             } else if text.contains("[ld]") {
                                 dateFormat = .long
                             }
+                            if text.contains("[d]") {
+                                dayOfWeek = true
+                            }
                             if timeFormat != nil || dateFormat != nil {
-                                format = .full(timeFormat: timeFormat, dateFormat: dateFormat)
+                                format = .full(timeFormat: timeFormat, dateFormat: dateFormat, dayOfWeek: dayOfWeek)
                             }
                             type = .FormattedDate(format: format, date: Int32(date))
                             #else

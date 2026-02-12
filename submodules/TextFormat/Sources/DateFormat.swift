@@ -30,7 +30,8 @@ public func stringForEntityFormattedDate(timestamp: Int32, format: MessageTextEn
                 return strings.FormattedDate_InDays(Int32(round(Float(value) / (24 * 60 * 60))))
             }
         }
-    case let .full(timeFormat, dateFormat):
+    case let .full(timeFormat, dateFormat, dayOfWeek):
+        let _ = dayOfWeek
         var string = ""
         if let dateFormat {
             switch dateFormat {
