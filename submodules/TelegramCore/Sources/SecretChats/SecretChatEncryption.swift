@@ -231,7 +231,7 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
                 return nil
             }
             
-            if localMessageKey != msgKeyData {
+            if !constTimeIsEqual(data1: localMessageKey, data2: msgKeyData) {
                 Logger.shared.log("SecretChatEncryption", "message key doesn't match")
                 return nil
             }
