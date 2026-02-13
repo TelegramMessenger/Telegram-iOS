@@ -5430,6 +5430,21 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
+    static func declineUrlAuth(url: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let buffer = Buffer()
+        buffer.appendInt32(893610940)
+        serializeString(url, buffer: buffer, boxed: false)
+        return (FunctionDescription(name: "messages.declineUrlAuth", parameters: [("url", String(describing: url))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+            let reader = BufferReader(buffer)
+            var result: Api.Bool?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
     static func deleteChat(chatId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
         let buffer = Buffer()
         buffer.appendInt32(1540419152)
