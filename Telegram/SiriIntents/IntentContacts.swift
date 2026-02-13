@@ -117,6 +117,33 @@ func matchingCloudContacts(postbox: Postbox, contacts: [MatchingDeviceContact]) 
     }
 }
 
+func matchingOpenChatWithDeviceContacts(postbox: Postbox, contacts: [MatchingDeviceContact]) -> Signal<[(String, TelegramUser)], NoError> {
+    return postbox.transaction { transaction -> [(String, TelegramUser)] in
+        var result: [(String, TelegramUser)] = []
+        let contactPeerIds = transaction.getContactPeerIds()
+        
+        outer: for peerId in transaction.chatListGetAllPeerIds(groupId: .root) {
+            if contactPeerIds.contains(peerId) {
+                continue
+            }
+            if peerId.namespace != Namespaces.Peer.CloudUser {
+                continue
+            }
+            guard let user = transaction.getPeer(peerId) as? TelegramUser, !user.isDeleted else {
+                continue
+            }
+            for contact in contacts {
+                if let contactPeerId = contact.peerId, contactPeerId == peerId {
+                    result.append((contact.stableId, user))
+                    continue outer
+                }
+            }
+        }
+        
+        return result
+    }
+}
+
 func matchingCloudContact(postbox: Postbox, peerId: PeerId) -> Signal<TelegramUser?, NoError> {
     return postbox.transaction { transaction -> TelegramUser? in
         if let user = transaction.getPeer(peerId) as? TelegramUser {

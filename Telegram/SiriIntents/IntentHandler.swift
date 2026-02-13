@@ -335,7 +335,15 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             |> castError(IntentContactsError.self)
             |> mapToSignal { account -> Signal<[(String, TelegramUser)], IntentContactsError> in
                 if let account = account {
-                    return matchingCloudContacts(postbox: account.postbox, contacts: matchedContacts)
+                    return combineLatest(
+                        matchingCloudContacts(postbox: account.postbox, contacts: matchedContacts),
+                        matchingOpenChatWithDeviceContacts(postbox: account.postbox, contacts: matchedContacts)
+                    )
+                    |> map { cloudContacts, openChatContacts in
+                        var result = cloudContacts
+                        result.append(contentsOf: openChatContacts)
+                        return result
+                    }
                     |> castError(IntentContactsError.self)
                 } else {
                     return .fail(.generic)
