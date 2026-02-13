@@ -3689,6 +3689,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     func dismissInput(view: UIView? = nil, location: CGPoint? = nil) {
+        if self.context.sharedContext.immediateExperimentalUISettings.debugRipple {
+            if let view, let location {
+                self.wrappingNode.triggerRipple(at: view.convert(location, to: self.view))
+            }
+        }
+        
         if let _ = self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
             return
         }

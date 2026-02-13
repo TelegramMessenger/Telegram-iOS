@@ -97,6 +97,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableDebugDataDisplay(Bool)
     case fakeGlass(Bool)
     case forceClearGlass(Bool)
+    case debugRipple(Bool)
     case browserExperiment(Bool)
     case allForumsHaveTabs(Bool)
     case enableReactionOverrides(Bool)
@@ -136,7 +137,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -231,44 +232,46 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 39
         case .forceClearGlass:
             return 40
-        case .browserExperiment:
+        case .debugRipple:
             return 41
-        case .allForumsHaveTabs:
+        case .browserExperiment:
             return 42
-        case .enableReactionOverrides:
+        case .allForumsHaveTabs:
             return 43
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 44
-        case .logTranslationRecognition:
+        case .restorePurchases:
             return 45
-        case .resetTranslationStates:
+        case .logTranslationRecognition:
             return 46
-        case .compressedEmojiCache:
+        case .resetTranslationStates:
             return 47
-        case .storiesJpegExperiment:
+        case .compressedEmojiCache:
             return 48
-        case .disableReloginTokens:
+        case .storiesJpegExperiment:
             return 49
-        case .checkSerializedData:
+        case .disableReloginTokens:
             return 50
-        case .enableQuickReactionSwitch:
+        case .checkSerializedData:
             return 51
-        case .liveStreamV2:
+        case .enableQuickReactionSwitch:
             return 52
-        case .experimentalCallMute:
+        case .liveStreamV2:
             return 53
-        case .playerV2:
+        case .experimentalCallMute:
             return 54
-        case .devRequests:
+        case .playerV2:
             return 55
-        case .pwa:
+        case .devRequests:
             return 56
-        case .enableLocalTranslation:
+        case .pwa:
             return 57
-        case .enableUpdates:
+        case .enableLocalTranslation:
             return 58
+        case .enableUpdates:
+            return 59
         case let .preferredVideoCodec(index, _, _, _):
-            return 59 + index
+            return 60 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -1292,6 +1295,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .debugRipple(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Debug Ripple", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.debugRipple = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .browserExperiment(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Inline UI", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1569,6 +1582,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
         entries.append(.fakeGlass(experimentalSettings.fakeGlass))
         entries.append(.forceClearGlass(experimentalSettings.forceClearGlass))
+        entries.append(.debugRipple(experimentalSettings.debugRipple))
         #if DEBUG
         entries.append(.browserExperiment(experimentalSettings.browserExperiment))
         #else

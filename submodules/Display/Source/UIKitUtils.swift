@@ -907,6 +907,10 @@ public extension CALayer {
     static func monochrome() -> NSObject? {
         return makeMonochromeFilter()
     }
+    
+    static func displacementMap() -> NSObject? {
+        return makeDisplacementMapFilter()
+    }
 }
 
 public extension CALayer {

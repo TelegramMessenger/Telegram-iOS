@@ -282,6 +282,14 @@ NSObject * _Nullable makeMonochromeFilter() {
     return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"colorMonochrome"];
 }
 
+NSObject * _Nullable makeDisplacementMapFilter() {
+    if (@available(iOS 26.0, *)) {
+        return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"displacementMap"];
+    } else {
+        return nil;
+    }
+}
+
 static const void *layerDisableScreenshotsKey = &layerDisableScreenshotsKey;
 
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {

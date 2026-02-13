@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import ComponentFlow
 import MeshTransform
+import simd
 
 private let backdropLayerClass: NSObject? = {
     let name = ("CA" as NSString).appendingFormat("BackdropLayer")
@@ -12,6 +13,9 @@ private let backdropLayerClass: NSObject? = {
     }
     return nil
 }()
+
+private let displacementMapColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+private let displacementMapBitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue).union(.byteOrder32Little)
 
 @inline(__always)
 private func getMethod<T>(object: NSObject, selector: String) -> T? {
@@ -153,8 +157,13 @@ private func rippleOffset(
         rippleAmount = absRippleAmount
     }
     
-    if distance <= 60.0 {
-        rippleAmount = 0.3 * rippleAmount
+    let nearRadius: CGFloat = 60.0
+    let minScale: CGFloat = 0.3
+    if distance < nearRadius {
+        let t = max(0.0, min(1.0, distance / nearRadius))
+        let smooth = t * t * (3.0 - 2.0 * t)
+        let scale = minScale + (1.0 - minScale) * smooth
+        rippleAmount *= scale
     }
 
     // A vector of length `amplitude` that points away from position.
@@ -195,8 +204,10 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     
     private let contentNodeSource: ASDisplayNode
     private let backgroundView: UIView
+    private let transformContainerLayer: SimpleLayer
+    private let displacementMapLayer: SimpleLayer?
     private let backdropLayer: CALayer?
-    private let cornerOverlayView: UIImageView
+    private let cornerOverlayLayer: SimpleLayer
     private let backdropLayerDelegate: BackdropLayerDelegate
     
     private var gradientLayer: SimpleGradientLayer?
@@ -210,11 +221,28 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private var cornerOverlayImageRadius: CGFloat?
     
     private let cornerOverlayInset: CGFloat = 48.0
+    private let displacementMapAmount: CGFloat = 32.0
+    
+    private var displacementMapPixelData: [UInt8] = []
+    private var displacementMapOffsetBuffer: [Float] = []
+    private var displacementMapCachedSize: CGSize?
+    private var displacementMapCachedDimensions: (width: Int, height: Int)?
+    private var displacementMapSampleX8: [SIMD8<Float>] = []
+    private var displacementMapSampleY: [Float] = []
     
     override public init() {
         self.backdropLayerDelegate = BackdropLayerDelegate()
+        self.transformContainerLayer = SimpleLayer()
+        if #available(iOS 26.0, *) {
+            let displacementMapLayer = SimpleLayer()
+            displacementMapLayer.magnificationFilter = .trilinear
+            self.displacementMapLayer = displacementMapLayer
+        } else {
+            self.displacementMapLayer = nil
+        }
         self.backdropLayer = createBackdropLayer()
-        self.cornerOverlayView = UIImageView()
+        
+        self.cornerOverlayLayer = SimpleLayer()
         
         self.contentNodeSource = ASDisplayNode()
         self.contentNodeSource.layer.rasterizationScale = UIScreenScale
@@ -228,19 +256,24 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         self.addSubnode(self.contentNodeSource)
         self.view.insertSubview(self.backgroundView, belowSubview: self.contentNodeSource.view)
         
+        self.transformContainerLayer.masksToBounds = false
+        self.transformContainerLayer.rasterizationScale = UIScreenScale
+        self.layer.addSublayer(self.transformContainerLayer)
+        
         if let backdropLayer = self.backdropLayer {
-            self.layer.addSublayer(backdropLayer)
+            self.transformContainerLayer.addSublayer(backdropLayer)
             backdropLayer.delegate = self.backdropLayerDelegate
             backdropLayer.isHidden = true
             
             invokeBackdropLayerSetScaleMethod(object: backdropLayer, scale: UIScreenScale)
             backdropLayer.rasterizationScale = UIScreenScale
+            
+            self.cornerOverlayLayer.isHidden = true
+            self.cornerOverlayLayer.contentsScale = UIScreenScale
+            self.cornerOverlayLayer.rasterizationScale = UIScreenScale
+            self.cornerOverlayLayer.zPosition = 1.0
+            self.transformContainerLayer.addSublayer(self.cornerOverlayLayer)
         }
-        
-        self.cornerOverlayView.isUserInteractionEnabled = false
-        self.cornerOverlayView.isHidden = true
-        self.cornerOverlayView.layer.rasterizationScale = UIScreenScale
-        self.view.addSubview(self.cornerOverlayView)
     }
     
     public static func supportsHierarchy(layer: CALayer) -> Bool {
@@ -284,6 +317,85 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             return
         }
         self.resolution = (resolutionX, resolutionY)
+    }
+    
+    private func adaptiveDisplacementMapResolution(from baseResolution: (x: Int, y: Int)) -> (x: Int, y: Int) {
+        let qualityScale: CGFloat
+        switch self.shockwaves.count {
+        case 0 ... 1:
+            qualityScale = 1.0
+        case 2 ... 3:
+            qualityScale = 0.85
+        case 4 ... 5:
+            qualityScale = 0.75
+        default:
+            qualityScale = 0.65
+        }
+        
+        return (
+            x: max(2, Int((CGFloat(baseResolution.x) * qualityScale).rounded())),
+            y: max(2, Int((CGFloat(baseResolution.y) * qualityScale).rounded()))
+        )
+    }
+    
+    private func ensureDisplacementMapStorage(width: Int, height: Int) {
+        let pixelByteCount = width * height * 4
+        if self.displacementMapPixelData.count != pixelByteCount {
+            self.displacementMapPixelData = [UInt8](repeating: 0, count: pixelByteCount)
+        }
+        
+        let offsetCount = width * height * 2
+        if self.displacementMapOffsetBuffer.count != offsetCount {
+            self.displacementMapOffsetBuffer = [Float](repeating: 0.0, count: offsetCount)
+        } else {
+            self.displacementMapOffsetBuffer.withUnsafeMutableBytes { rawBuffer in
+                guard let baseAddress = rawBuffer.baseAddress else {
+                    return
+                }
+                memset(baseAddress, 0, rawBuffer.count)
+            }
+        }
+    }
+    
+    private func updateDisplacementMapCoordinateCache(size: CGSize, width: Int, height: Int) {
+        if let cachedDimensions = self.displacementMapCachedDimensions,
+           let cachedSize = self.displacementMapCachedSize,
+           cachedDimensions.width == width, cachedDimensions.height == height,
+           cachedSize == size {
+            return
+        }
+        
+        self.displacementMapCachedDimensions = (width: width, height: height)
+        self.displacementMapCachedSize = size
+        
+        let widthScale = Float(size.width) / Float(width)
+        let heightScale = Float(size.height) / Float(height)
+        let halfPixel: Float = 0.5
+        
+        self.displacementMapSampleY = [Float](repeating: 0.0, count: height)
+        for py in 0 ..< height {
+            self.displacementMapSampleY[py] = (Float(py) + halfPixel) * heightScale
+        }
+        
+        let xBlockCount = width / 8
+        self.displacementMapSampleX8 = []
+        self.displacementMapSampleX8.reserveCapacity(xBlockCount)
+        for block in 0 ..< xBlockCount {
+            let px = block * 8
+            let baseX = (Float(px) + halfPixel) * widthScale
+            self.displacementMapSampleX8.append(
+                SIMD8<Float>(
+                    baseX + widthScale * 0.0,
+                    baseX + widthScale * 1.0,
+                    baseX + widthScale * 2.0,
+                    baseX + widthScale * 3.0,
+                    baseX + widthScale * 4.0,
+                    baseX + widthScale * 5.0,
+                    baseX + widthScale * 6.0,
+                    baseX + widthScale * 7.0
+                )
+            )
+        }
     }
     
     private func makeRippleMeshTransform(size: CGSize, resolution: (x: Int, y: Int), params: RippleParams) -> MeshTransform.Value? {
@@ -353,6 +465,247 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         return mesh.makeValue()
     }
     
+    private func makeDisplacementMapImage(size: CGSize, resolution: (x: Int, y: Int), params: RippleParams) -> CGImage? {
+        let resolutionXY = CGSize(width: CGFloat(resolution.x), height: CGFloat(resolution.y)).aspectFitted(CGSize(width: 128.0, height: 128.0))
+        var width = max(2, Int(resolutionXY.width))
+        let widthRemainder = width % 8
+        if widthRemainder != 0 {
+            width += 8 - widthRemainder
+        }
+        let height = max(2, Int(resolutionXY.height))
+        
+        self.ensureDisplacementMapStorage(width: width, height: height)
+        self.updateDisplacementMapCoordinateCache(size: size, width: width, height: height)
+        
+        // Keep map values mostly in [-1, 1] using the filter amount as the primary scale.
+        let normalization = Float(max(1.0, abs(self.displacementMapAmount)))
+        
+        let amplitude = Float(params.amplitude)
+        let frequency = Float(params.frequency)
+        let decay = Float(params.decay)
+        let speed = max(1.0, Float(params.speed))
+        
+        let nearRadius: Float = 60.0
+        let minScale: Float = 0.3
+        
+        let minClamp = SIMD8<Float>(repeating: -1.0)
+        let maxClamp = SIMD8<Float>(repeating: 1.0)
+        let zeroToOneMin = SIMD8<Float>(repeating: 0.0)
+        let zeroToOneMax = SIMD8<Float>(repeating: 1.0)
+        let half = SIMD8<Float>(repeating: 0.5)
+        
+        let xBlockCount = width / 8
+        let sampleX8 = self.displacementMapSampleX8
+        let sampleY = self.displacementMapSampleY
+        guard sampleX8.count == xBlockCount, sampleY.count == height else {
+            return nil
+        }
+        
+        struct ActiveShockwave {
+            let origin: SIMD2<Float>
+            let waveTime: Float
+        }
+        
+        let corners = [
+            SIMD2<Float>(0.0, 0.0),
+            SIMD2<Float>(Float(size.width), 0.0),
+            SIMD2<Float>(0.0, Float(size.height)),
+            SIMD2<Float>(Float(size.width), Float(size.height))
+        ]
+        let negligibleContributionThreshold: Float = 0.0005
+        var activeShockwaves: [ActiveShockwave] = []
+        activeShockwaves.reserveCapacity(self.shockwaves.count)
+        for shockwave in self.shockwaves {
+            let origin = SIMD2<Float>(Float(shockwave.startPoint.x), Float(shockwave.startPoint.y))
+            let waveTime = Float(shockwave.timeValue)
+            
+            var maxDistance: Float = 0.0
+            for corner in corners {
+                maxDistance = max(maxDistance, simd_length(corner - origin))
+            }
+            
+            let minLocalTime = max(0.0, waveTime - (maxDistance / speed))
+            let upperBound = amplitude * exp(-decay * minLocalTime)
+            if upperBound < negligibleContributionThreshold {
+                continue
+            }
+            
+            activeShockwaves.append(ActiveShockwave(origin: origin, waveTime: waveTime))
+        }
+        
+        if activeShockwaves.isEmpty {
+            return nil
+        }
+        
+        @inline(__always)
+        func linearIndex(_ x: Int, _ y: Int) -> Int {
+            return y * width + x
+        }
+        
+        @inline(__always)
+        func bufferBaseIndex(_ x: Int, _ y: Int) -> Int {
+            return linearIndex(x, y) * 2
+        }
+        
+        // Pass 1: accumulate displacement contribution for each shockwave.
+        self.displacementMapOffsetBuffer.withUnsafeMutableBytes { rawBuffer in
+            guard let rawBase = rawBuffer.baseAddress else {
+                return
+            }
+            
+            let floatStride = MemoryLayout<Float>.stride
+            for shockwave in activeShockwaves {
+                let origin = shockwave.origin
+                let waveTime = shockwave.waveTime
+                
+                for py in 0 ..< height {
+                    let y = sampleY[py]
+                    let dyScalar = y - origin.y
+                    let dyVec = SIMD8<Float>(repeating: dyScalar)
+                    
+                    for block in 0 ..< xBlockCount {
+                        let xVec = sampleX8[block]
+                        let dxVec = xVec - SIMD8<Float>(repeating: origin.x)
+                        let distanceSquaredVec = dxVec * dxVec + dyVec * dyVec
+                        
+                        var invDistanceVec = SIMD8<Float>(repeating: 0.0)
+                        var rippleAmountVec = SIMD8<Float>(repeating: 0.0)
+                        
+                        for lane in 0 ..< 8 {
+                            let distanceSquared = distanceSquaredVec[lane]
+                            if distanceSquared < 1.0 {
+                                continue
+                            }
+                            
+                            let distance = sqrt(distanceSquared)
+                            let delay = distance / speed
+                            let localTime = max(0.0, waveTime - delay)
+                            
+                            var rippleAmount = amplitude * sin(frequency * localTime) * exp(-decay * localTime)
+                            if distance < nearRadius {
+                                let t = max(0.0, min(1.0, distance / nearRadius))
+                                let smooth = t * t * (3.0 - 2.0 * t)
+                                let scale = minScale + (1.0 - minScale) * smooth
+                                rippleAmount *= scale
+                            }
+                            
+                            invDistanceVec[lane] = 1.0 / distance
+                            rippleAmountVec[lane] = rippleAmount
+                        }
+                        
+                        let offsetXVec = (dxVec * invDistanceVec) * (-rippleAmountVec)
+                        let offsetYVec = (dyVec * invDistanceVec) * (-rippleAmountVec)
+                        let delta = SIMD16<Float>(
+                            offsetXVec[0], offsetYVec[0],
+                            offsetXVec[1], offsetYVec[1],
+                            offsetXVec[2], offsetYVec[2],
+                            offsetXVec[3], offsetYVec[3],
+                            offsetXVec[4], offsetYVec[4],
+                            offsetXVec[5], offsetYVec[5],
+                            offsetXVec[6], offsetYVec[6],
+                            offsetXVec[7], offsetYVec[7]
+                        )
+                        
+                        let baseIndex = bufferBaseIndex(block * 8, py)
+                        let byteOffset = baseIndex * floatStride
+                        let dst = rawBase.advanced(by: byteOffset)
+                        let current = dst.loadUnaligned(as: SIMD16<Float>.self)
+                        dst.storeBytes(of: current + delta, as: SIMD16<Float>.self)
+                    }
+                }
+            }
+        }
+        
+        // Pass 2: map accumulated offsets into displacement-map pixels.
+        let invNormalization: Float = 1.0 / normalization
+        var image: CGImage?
+        self.displacementMapPixelData.withUnsafeMutableBytes { pixelRawBuffer in
+            guard let pixelBase = pixelRawBuffer.baseAddress else {
+                return
+            }
+            
+            self.displacementMapOffsetBuffer.withUnsafeBytes { offsetRawBuffer in
+                guard let offsetBase = offsetRawBuffer.baseAddress else {
+                    return
+                }
+                
+                for py in 0 ..< height {
+                    for block in 0 ..< xBlockCount {
+                        let px = block * 8
+                        let baseIndex = bufferBaseIndex(px, py)
+                        let offsetByteIndex = baseIndex * MemoryLayout<Float>.stride
+                        let interleaved = offsetBase.advanced(by: offsetByteIndex).loadUnaligned(as: SIMD16<Float>.self)
+                        
+                        let offsetXVec = SIMD8<Float>(
+                            interleaved[0], interleaved[2], interleaved[4], interleaved[6],
+                            interleaved[8], interleaved[10], interleaved[12], interleaved[14]
+                        )
+                        let offsetYVec = SIMD8<Float>(
+                            interleaved[1], interleaved[3], interleaved[5], interleaved[7],
+                            interleaved[9], interleaved[11], interleaved[13], interleaved[15]
+                        )
+                        
+                        let normalizedX = simd_clamp(offsetXVec * invNormalization, minClamp, maxClamp)
+                        let normalizedY = simd_clamp(offsetYVec * invNormalization, minClamp, maxClamp)
+                        
+                        // 0.5 is neutral, map -1...1 to 0...1.
+                        let encodedX = simd_clamp(half + normalizedX * 0.5, zeroToOneMin, zeroToOneMax)
+                        let encodedY = simd_clamp(half + normalizedY * 0.5, zeroToOneMin, zeroToOneMax)
+                        let roundedX = (encodedX * 255.0).rounded(.toNearestOrAwayFromZero)
+                        let roundedY = (encodedY * 255.0).rounded(.toNearestOrAwayFromZero)
+                        
+                        let r = SIMD8<UInt32>(
+                            UInt32(clamping: Int(roundedX[0])),
+                            UInt32(clamping: Int(roundedX[1])),
+                            UInt32(clamping: Int(roundedX[2])),
+                            UInt32(clamping: Int(roundedX[3])),
+                            UInt32(clamping: Int(roundedX[4])),
+                            UInt32(clamping: Int(roundedX[5])),
+                            UInt32(clamping: Int(roundedX[6])),
+                            UInt32(clamping: Int(roundedX[7]))
+                        )
+                        let g = SIMD8<UInt32>(
+                            UInt32(clamping: Int(roundedY[0])),
+                            UInt32(clamping: Int(roundedY[1])),
+                            UInt32(clamping: Int(roundedY[2])),
+                            UInt32(clamping: Int(roundedY[3])),
+                            UInt32(clamping: Int(roundedY[4])),
+                            UInt32(clamping: Int(roundedY[5])),
+                            UInt32(clamping: Int(roundedY[6])),
+                            UInt32(clamping: Int(roundedY[7]))
+                        )
+                        
+                        // BGRA in memory (premultipliedFirst, byteOrder32Little):
+                        // B = 0xFF, G = g, R = r, A = 0xFF
+                        let packedPixels =
+                            SIMD8<UInt32>(repeating: 0xFF0000FF) |
+                            (r &* SIMD8<UInt32>(repeating: 0x00010000)) |
+                            (g &* SIMD8<UInt32>(repeating: 0x00000100))
+                        
+                        let pixelByteIndex = linearIndex(px, py) * 4
+                        pixelBase.advanced(by: pixelByteIndex).storeBytes(of: packedPixels, as: SIMD8<UInt32>.self)
+                    }
+                }
+            }
+            
+            guard let context = CGContext(
+                data: pixelBase,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: width * 4,
+                space: displacementMapColorSpace,
+                bitmapInfo: displacementMapBitmapInfo.rawValue
+            ) else {
+                return
+            }
+            
+            image = context.makeImage()
+        }
+        
+        return image
+    }
+    
     private func updateCornerOverlayImage(cornerRadius: CGFloat) {
         let cornerRadius = max(0.0, cornerRadius)
         if let currentRadius = self.cornerOverlayImageRadius, abs(currentRadius - cornerRadius) < 0.001 {
@@ -363,7 +716,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         let cornerExtent = max(1.0, ceil(cornerRadius + self.cornerOverlayInset))
         let imageSize = CGSize(width: cornerExtent * 2.0 + 1.0, height: cornerExtent * 2.0 + 1.0)
         
-        self.cornerOverlayView.image = generateImage(imageSize, opaque: false, rotatedContext: { size, context in
+        let overlayImage = generateImage(imageSize, opaque: false, rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
             context.setFillColor(UIColor.black.cgColor)
@@ -378,6 +731,7 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             withCapInsets: UIEdgeInsets(top: cornerExtent, left: cornerExtent, bottom: cornerExtent, right: cornerExtent),
             resizingMode: .stretch
         )
+        ASDisplayNodeSetResizableContents(self.cornerOverlayLayer, overlayImage)
     }
     
     public func update(size: CGSize, cornerRadius: CGFloat, transition: ComponentTransition) {
@@ -387,10 +741,22 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         }
         
         self.contentNodeSource.frame = CGRect(origin: CGPoint(), size: size)
+        transition.setFrame(layer: self.transformContainerLayer, frame: CGRect(origin: CGPoint(), size: size))
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        let params = RippleParams(amplitude: 10.0, frequency: 15.0, decay: 5.5, speed: 1400.0)
+        if let displacementMapLayer = self.displacementMapLayer {
+            transition.setFrame(layer: displacementMapLayer, frame: CGRect(origin: CGPoint(), size: size))
+        }
+        
+        let amplitude: CGFloat
+        if #available(iOS 26.0, *) {
+            amplitude = 30.0
+        } else {
+            amplitude = 10.0
+        }
+        
+        let params = RippleParams(amplitude: amplitude, frequency: 15.0, decay: 5.5, speed: 1400.0)
         
         let maxEdge = (max(size.width, size.height) * 0.5) * 2.0
         let maxDistance = sqrt(maxEdge * maxEdge + maxEdge * maxEdge)
@@ -409,18 +775,21 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             }
             
             if let backdropLayer = self.backdropLayer {
-                backdropLayer.removeAnimation(forKey: "meshTransform")
-                backdropLayer.setValue(nil, forKey: "meshTransform")
                 backdropLayer.isHidden = true
+                
+                if let displacementMapLayer = self.displacementMapLayer {
+                    displacementMapLayer.contents = nil
+                    displacementMapLayer.removeFromSuperlayer()
+                }
             }
-            self.cornerOverlayView.layer.removeAnimation(forKey: "meshTransform")
-            self.cornerOverlayView.layer.setValue(nil, forKey: "meshTransform")
-            self.cornerOverlayView.isHidden = true
+            self.transformContainerLayer.filters = nil
+            self.transformContainerLayer.removeAnimation(forKey: "meshTransform")
+            self.transformContainerLayer.setValue(nil, forKey: "meshTransform")
+            self.cornerOverlayLayer.isHidden = true
             
             self.resolution = nil
             self.backgroundView.isHidden = true
             self.contentNodeSource.clipsToBounds = false
-            self.contentNodeSource.layer.cornerRadius = 0.0
             
             if let gradientLayer = self.gradientLayer {
                 self.gradientLayer = nil
@@ -432,17 +801,15 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         
         self.backgroundView.isHidden = false
         self.contentNodeSource.clipsToBounds = true
-        self.contentNodeSource.layer.cornerRadius = cornerRadius
         
         if let backdropLayer = self.backdropLayer {
             backdropLayer.isHidden = false
             transition.setFrame(layer: backdropLayer, frame: CGRect(origin: CGPoint(), size: size))
-            transition.setCornerRadius(layer: backdropLayer, cornerRadius: cornerRadius)
             
-            self.cornerOverlayView.isHidden = false
+            self.cornerOverlayLayer.isHidden = false
             self.updateCornerOverlayImage(cornerRadius: cornerRadius)
             transition.setFrame(
-                view: self.cornerOverlayView,
+                layer: self.cornerOverlayLayer,
                 frame: CGRect(
                     x: -self.cornerOverlayInset,
                     y: -self.cornerOverlayInset,
@@ -450,8 +817,22 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
                     height: size.height + self.cornerOverlayInset * 2.0
                 )
             )
+            
+            if let displacementMapLayer = self.displacementMapLayer, displacementMapLayer.superlayer == nil {
+                if let displacementMapFilter = CALayer.displacementMap() {
+                    displacementMapLayer.name = "displacementMapLayer"
+                    displacementMapLayer.zPosition = -1.0
+                    self.transformContainerLayer.addSublayer(displacementMapLayer)
+                    displacementMapFilter.setValue("displacementMapLayer", forKey: "inputSourceSublayerName")
+                    displacementMapFilter.setValue((-self.displacementMapAmount) as NSNumber, forKey: "inputAmount")
+                    displacementMapFilter.setValue(NSValue(cgPoint: CGPoint(x: 0.5, y: 0.5)), forKey: "inputOffset")
+                    self.transformContainerLayer.filters = [displacementMapFilter]
+                }
+            }
         } else {
-            self.cornerOverlayView.isHidden = true
+            self.cornerOverlayLayer.isHidden = true
+            self.transformContainerLayer.filters = nil
+            self.transformContainerLayer.setValue(nil, forKey: "meshTransform")
         }
         
         let resolutionX = max(2, Int(size.width / 48.0))
@@ -504,20 +885,30 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
             }
         }
         
-        if let backdropLayer = self.backdropLayer {
-            if let meshTransform = self.makeRippleMeshTransform(size: size, resolution: resolution, params: params) {
-                if !transition.animation.isImmediate {
-                    backdropLayer.removeAnimation(forKey: "meshTransform")
-                    self.cornerOverlayView.layer.removeAnimation(forKey: "meshTransform")
-                }
-                backdropLayer.setValue(meshTransform, forKey: "meshTransform")
-                self.cornerOverlayView.layer.setValue(meshTransform, forKey: "meshTransform")
+        if self.backdropLayer != nil {
+            if let displacementMapLayer = self.displacementMapLayer {
+                let baseMapResolution = (
+                    x: max(2, resolution.x / 2),
+                    y: max(2, resolution.y / 2)
+                )
+                let mapResolution = self.adaptiveDisplacementMapResolution(from: baseMapResolution)
+                displacementMapLayer.contents = self.makeDisplacementMapImage(size: size, resolution: mapResolution, params: params)
+                
+                self.transformContainerLayer.setValue(nil, forKey: "meshTransform")
             } else {
-                backdropLayer.setValue(nil, forKey: "meshTransform")
-                self.cornerOverlayView.layer.setValue(nil, forKey: "meshTransform")
+                if let meshTransform = self.makeRippleMeshTransform(size: size, resolution: resolution, params: params) {
+                    if !transition.animation.isImmediate {
+                        self.transformContainerLayer.removeAnimation(forKey: "meshTransform")
+                    }
+                    self.transformContainerLayer.setValue(meshTransform, forKey: "meshTransform")
+                } else {
+                    self.transformContainerLayer.setValue(nil, forKey: "meshTransform")
+                }
             }
         } else {
-            self.cornerOverlayView.layer.setValue(nil, forKey: "meshTransform")
+            self.cornerOverlayLayer.isHidden = true
+            self.transformContainerLayer.filters = nil
+            self.transformContainerLayer.setValue(nil, forKey: "meshTransform")
         }
     }
     
