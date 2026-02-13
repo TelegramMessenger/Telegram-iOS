@@ -406,6 +406,14 @@ public final class ChatTopicsHeaderPanelComponent: Component {
             
             return size
         }
+        
+        public func topicIndex(threadId: Int64?) -> Int? {
+            if let panelView = self.panel.view as? ChatSideTopicsPanel.View {
+                return panelView.topicIndex(threadId: threadId)
+            } else {
+                return nil
+            }
+        }
     }
     
     public func makeView() -> View {

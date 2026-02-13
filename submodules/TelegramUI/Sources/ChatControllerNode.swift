@@ -5058,6 +5058,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             leftIndex = floatingTopicsPanelView.topicIndex(threadId: fromLocation)
             rightIndex = floatingTopicsPanelView.topicIndex(threadId: toLocation)
         }
+        if leftIndex == nil || rightIndex == nil {
+            if let headerPanelsComponentView = self.headerPanelsView?.view as? HeaderPanelContainerComponent.View, let topicsPanelView = headerPanelsComponentView.panel(forKey: AnyHashable("topics")) as? ChatTopicsHeaderPanelComponent.View {
+                leftIndex = topicsPanelView.topicIndex(threadId: fromLocation)
+                rightIndex = topicsPanelView.topicIndex(threadId: toLocation)
+            }
+        }
         guard let leftIndex, let rightIndex else {
             return nil
         }
