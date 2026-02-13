@@ -33,7 +33,16 @@ public func stringForEntityFormattedDate(timestamp: Int32, format: MessageTextEn
     case let .full(timeFormat, dateFormat, dayOfWeek):
         let _ = dayOfWeek
         var string = ""
+        if dayOfWeek {
+            var t: time_t = Int(timestamp)
+            var timeinfo = tm()
+            localtime_r(&t, &timeinfo);
+            string = stringForDayOfWeek(strings: strings, day: timeinfo.tm_wday, short: dateFormat == .short)
+        }
         if let dateFormat {
+            if !string.isEmpty {
+                string += " "
+            }
             switch dateFormat {
             case .short:
                 string += stringForShortDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat)
@@ -56,6 +65,27 @@ public func stringForEntityFormattedDate(timestamp: Int32, format: MessageTextEn
             }
         }
         return string
+    }
+}
+
+private func stringForDayOfWeek(strings: PresentationStrings, day: Int32, short: Bool) -> String {
+    switch day {
+    case 0:
+        return short ? strings.Weekday_ShortSunday : strings.Weekday_Sunday
+    case 1:
+        return short ? strings.Weekday_ShortMonday : strings.Weekday_Monday
+    case 2:
+        return short ? strings.Weekday_ShortTuesday : strings.Weekday_Tuesday
+    case 3:
+        return short ? strings.Weekday_ShortWednesday : strings.Weekday_Wednesday
+    case 4:
+        return short ? strings.Weekday_ShortThursday : strings.Weekday_Thursday
+    case 5:
+        return short ? strings.Weekday_ShortFriday : strings.Weekday_Friday
+    case 6:
+        return short ? strings.Weekday_ShortSaturday : strings.Weekday_Saturday
+    default:
+        return ""
     }
 }
 

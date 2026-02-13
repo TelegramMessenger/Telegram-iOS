@@ -196,7 +196,7 @@ public enum MessageActionUrlAuthResult {
     
     case `default`
     case accepted(url: String?)
-    case request(domain: String, bot: Peer, clientData: ClientData?, flags: Flags)
+    case request(domain: String, bot: Peer, clientData: ClientData?, flags: Flags, matchCodes: [String]?, userIdHint: EnginePeer.Id?)
 }
 
 public enum MessageActionUrlAuthError {
@@ -259,9 +259,17 @@ func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageAct
                 if (apiFlags & (1 << 1)) != 0 {
                     flags.insert(.requestPhoneNumber)
                 }
-                return .request(domain: domain, bot: TelegramUser(user: bot), clientData: clientData, flags: flags)
+                return .request(domain: domain, bot: TelegramUser(user: bot), clientData: clientData, flags: flags, matchCodes: urlAuthResultRequestData.matchCodes, userIdHint: urlAuthResultRequestData.userIdHint.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) })
         }
     }
+}
+
+func _internal_declineUrlAuth(account: Account, url: String) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.messages.declineUrlAuth(url: url))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> ignoreValues
 }
 
 func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject, allowWriteAccess: Bool, sharePhoneNumber: Bool) -> Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError> {
