@@ -48,7 +48,7 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 let configuration = WKWebViewConfiguration()
                 let userController = WKUserContentController()
                 
-                let userScript = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+                let userScript = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true)
                 userController.addUserScript(userScript)
                 
                 userController.add(WeakPaymentScriptMessageHandler { [weak self] message in
