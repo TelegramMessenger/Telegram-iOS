@@ -652,6 +652,7 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
             let node = self.makeNodeForItem(at: self.centralItemIndex ?? 0, synchronous: synchronous)
             node.frame = CGRect(origin: CGPoint(), size: self.scrollView.bounds.size)
             if let containerLayout = self.containerLayout {
+                node.controlsVisibilityUpdated(isVisible: self.controlsVisibility(), animated: false)
                 node.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
             }
             self.addVisibleItemNode(node)

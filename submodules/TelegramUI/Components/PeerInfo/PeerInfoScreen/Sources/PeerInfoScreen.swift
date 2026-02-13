@@ -6974,6 +6974,20 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         self.controllerNode.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition)
     }
     
+    override public func tabBarItemHasDoubleTapAction() -> Bool {
+        return true
+    }
+    
+    override public func tabBarItemPerformDoubleTapAction() {
+        guard let (maybePrimary, other) = self.accountsAndPeersValue, let _ = maybePrimary else {
+            return
+        }
+        for account in other {
+            self.controllerNode.switchToAccount(id: account.0.account.id)
+            break
+        }
+    }
+    
     override public func tabBarItemContextAction(sourceView: ContextExtractedContentContainingView, gesture: ContextGesture) {
         guard let (maybePrimary, other) = self.accountsAndPeersValue, let primary = maybePrimary else {
             return

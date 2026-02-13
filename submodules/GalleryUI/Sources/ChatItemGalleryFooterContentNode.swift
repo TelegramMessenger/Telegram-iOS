@@ -1506,7 +1506,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 transition.animatePositionAdditive(layer: scrubberView.layer, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
             }
             scrubberView.alpha = 1.0
-            scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            if transition.isAnimated {
+                scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            }
         }
         transition.animatePositionAdditive(node: self.scrollWrapperNode, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
         self.scrollNode.alpha = 0.0

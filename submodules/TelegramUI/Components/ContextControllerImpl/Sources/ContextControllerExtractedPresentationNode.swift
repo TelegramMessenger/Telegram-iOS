@@ -1352,7 +1352,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             if let contextExtractableContainer {
                 let positionTransition = ComponentTransition(animation: .curve(duration: 0.4, curve: .bounce(stiffness: 900.0, damping: 95.0)))
-                let transition = ComponentTransition(animation: .curve(duration: 0.5, curve: .bounce(stiffness: 900.0, damping: 95.0)))
+                let transition = ComponentTransition(animation: .curve(duration: 0.9, curve: .bounce(stiffness: 900.0, damping: 95.0)))
                 
                 positionTransition.animatePosition(layer: self.actionsContainerNode.layer, from: CGPoint(
                     x: contextExtractableContainer.sourceRect.midX - self.actionsContainerNode.frame.midX,

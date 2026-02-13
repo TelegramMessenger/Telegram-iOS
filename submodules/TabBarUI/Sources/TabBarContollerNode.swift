@@ -51,6 +51,8 @@ final class TabBarControllerNode: ASDisplayNode {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private let itemSelected: (Int, Bool, [ASDisplayNode]) -> Void
+    private let itemHasDoubleTapAction: (Int) -> Bool
+    private let itemDoubleTapped: (Int) -> Void
     private let contextAction: (Int, ContextExtractedContentContainingView, ContextGesture) -> Void
     
     private let tabBarView = ComponentView<Empty>()
@@ -103,10 +105,12 @@ final class TabBarControllerNode: ASDisplayNode {
         return nil
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingView, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void, activateSearch: @escaping () -> Void, deactivateSearch: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, itemHasDoubleTapAction: @escaping (Int) -> Bool, itemDoubleTapped: @escaping (Int) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingView, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, toolbarActionSelected: @escaping (ToolbarActionOption) -> Void, disabledPressed: @escaping () -> Void, activateSearch: @escaping () -> Void, deactivateSearch: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.itemSelected = itemSelected
+        self.itemHasDoubleTapAction = itemHasDoubleTapAction
+        self.itemDoubleTapped = itemDoubleTapped
         self.contextAction = contextAction
         self.disabledOverlayNode = ASDisplayNode()
         self.disabledOverlayNode.backgroundColor = theme.rootController.tabBar.backgroundColor.withAlphaComponent(0.5)
@@ -230,6 +234,9 @@ final class TabBarControllerNode: ASDisplayNode {
                 strings: self.strings,
                 items: self.tabBarItems.map { item in
                     let itemId = AnyHashable(ObjectIdentifier(item.item))
+                    
+                    let index = self.tabBarItems.firstIndex(where: { AnyHashable(ObjectIdentifier($0.item)) == itemId }) ?? 0
+                    
                     return TabBarComponent.Item(
                         item: item.item,
                         action: { [weak self] isLongTap in
@@ -240,6 +247,14 @@ final class TabBarControllerNode: ASDisplayNode {
                                 self.itemSelected(index, isLongTap, [])
                             }
                         },
+                        doubleTapAction: self.itemHasDoubleTapAction(index) ? { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            if let index = self.tabBarItems.firstIndex(where: { AnyHashable(ObjectIdentifier($0.item)) == itemId }) {
+                                self.itemDoubleTapped(index)
+                            }
+                        } : nil,
                         contextAction: { [weak self] gesture, sourceView in
                             guard let self else {
                                 return

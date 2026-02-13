@@ -738,6 +738,13 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open func tabBarItemContextAction(sourceView: ContextExtractedContentContainingView, gesture: ContextGesture) {
     }
     
+    open func tabBarItemHasDoubleTapAction() -> Bool {
+        return false
+    }
+    
+    open func tabBarItemPerformDoubleTapAction() {
+    }
+    
     open func tabBarDisabledAction() {
     }
 

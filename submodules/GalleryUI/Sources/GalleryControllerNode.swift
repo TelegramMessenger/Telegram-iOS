@@ -45,7 +45,8 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
     
     private var isDismissed = false
     
-    public var areControlsHidden = false
+    private var didAnimateIn: Bool = false
+    public var areControlsHidden = true
     public var controlsVisibilityChanged: ((Bool) -> Void)?
     
     public var animateAlpha = true
@@ -418,13 +419,14 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
     }
     
     open func animateIn(animateContent: Bool, useSimpleAnimation: Bool) {
+        self.didAnimateIn = true
+        
         let duration: Double = animateContent ? 0.2 : 0.3
         
         let backgroundColor = self.backgroundNode.backgroundColor ?? .black
         
         self.statusBar?.alpha = 0.0
         self.navigationBar?.alpha = 0.0
-        self.footerNode.alpha = 0.0
         self.headerEdgeEffectView.alpha = 0.0
         self.titleView?.alpha = 0.0
         self.currentThumbnailContainerNode?.alpha = 0.0
@@ -440,13 +442,15 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         })
         
         if !self.areControlsHidden {
-            self.footerNode.alpha = 1.0
             self.footerNode.animateIn(transition: .animated(duration: 0.15, curve: .linear))
             
             ComponentTransition.easeInOut(duration: 0.15).animateView {
                 self.headerEdgeEffectView.alpha = 0.5
                 self.titleView?.alpha = 1.0
             }
+        } else {
+            self.footerNode.animateIn(transition: .immediate)
+            self.footerNode.setVisibilityAlpha(0.0, animated: false)
         }
         
         if animateContent {
@@ -627,6 +631,10 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
     }
     
     open func updatePresentationState(_ f: (GalleryControllerPresentationState) -> GalleryControllerPresentationState, transition: ContainedViewLayoutTransition) {
+        var transition = transition
+        if !self.didAnimateIn {
+            transition = .immediate
+        }
         self.presentationState = f(self.presentationState)
         if let (navigationBarHeight, layout) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)

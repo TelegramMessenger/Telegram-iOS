@@ -1493,6 +1493,25 @@ public struct ComponentTransition {
             })
         }
     }
+    
+    public func animateScalarFloat(layer: CALayer, keyPath: String, from fromValue: CGFloat, to toValue: CGFloat, delay: Double = 0.0, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            completion?(true)
+        case let .curve(duration, curve):
+            layer.animate(
+                from: fromValue as NSNumber,
+                to: toValue as NSNumber,
+                keyPath: keyPath,
+                duration: duration,
+                delay: delay,
+                curve: curve,
+                removeOnCompletion: removeOnCompletion,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
 }
 
 private func generateParabolicMotionKeyframes(

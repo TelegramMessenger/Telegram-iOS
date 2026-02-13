@@ -134,6 +134,16 @@ public final class VideoPlaybackControlsComponent: Component {
             }
         }
         
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            if result === self {
+                return nil
+            }
+            return result
+        }
+        
         func update(component: VideoPlaybackControlsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let isVisibleChanged = self.component?.isVisible != component.isVisible
             
