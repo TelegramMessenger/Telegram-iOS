@@ -79,7 +79,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         }
         
         func displayPhoneNumberConfirmation(commit: @escaping (Bool) -> Void) {
-            guard case let .request(domain, _, _, _) = self.subject else {
+            guard case let .request(domain, _, _, _, _, _) = self.subject else {
                 return
             }
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
@@ -182,7 +182,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             let presentationData = context.component.context.sharedContext.currentPresentationData.with { $0 }
             let _ = strings
             
-            guard case let .request(domain, bot, clientData, flags) = component.subject else {
+            guard case let .request(domain, bot, clientData, flags, _, _) = component.subject else {
                 fatalError()
             }
 

@@ -1841,7 +1841,7 @@ func openResolvedUrlImpl(
                             
                             Queue.mainQueue().after(0.3) {
                                 let text: String
-                                if case let .request(domain, _, _, flags) = result {
+                                if case let .request(domain, _, _, flags, _, _) = result {
                                     if flags.contains(.requestPhoneNumber) && !sharePhoneNumber {
                                         text = presentationData.strings.AuthConfirmation_LoginSuccess_TextNoNumber(domain).string
                                     } else {
@@ -1852,7 +1852,7 @@ func openResolvedUrlImpl(
                                 }
                             }
                         }, error: { _ in
-                            if case let .request(domain, _, _, _) = result {
+                            if case let .request(domain, _, _, _, _, _) = result {
                                 let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, cancel: nil, destructive: false), action: { _ in return true })
                                 (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
                             }

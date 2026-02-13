@@ -2676,7 +2676,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                        
                         var entities = entities.filter { entity in
                             switch entity.type {
-                            case .Spoiler, .CustomEmoji:
+                            case .Spoiler, .CustomEmoji, .FormattedDate:
                                 return true
                             case .Strikethrough, .Underline, .Italic, .Bold:
                                 return true
@@ -2709,7 +2709,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         let messageString: NSAttributedString
                         if !messageText.isEmpty && entities.count > 0 {
-                            messageString = foldLineBreaks(stringWithAppliedEntities(messageText, entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage()))
+                            messageString = foldLineBreaks(stringWithAppliedEntities(messageText, entities: entities, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage()))
                         } else if spoilers != nil || customEmojiRanges != nil {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                             if let spoilers = spoilers {
