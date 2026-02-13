@@ -1085,15 +1085,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             guard let strongSelf = self else {
                 return
             }
-            if let result = result, strongSelf.scrubbingFrames {
+            if let result = result, strongSelf.scrubbingFrames, let item = strongSelf.item {
                 switch result {
                 case .waitingForData:
                     strongSelf.footerContentNode.setFramePreviewImageIsLoading()
                 case let .image(image):
-                    strongSelf.footerContentNode.setFramePreviewImage(image: image)
+                    strongSelf.footerContentNode.setFramePreviewImage(image: image, isSecret: item.isSecret)
                 }
             } else {
-                strongSelf.footerContentNode.setFramePreviewImage(image: nil)
+                strongSelf.footerContentNode.setFramePreviewImage(image: nil, isSecret: false)
             }
         }).strict()
         

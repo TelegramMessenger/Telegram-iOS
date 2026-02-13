@@ -37,6 +37,7 @@ import ComponentDisplayAdapters
 import EdgeEffect
 import RasterizedCompositionComponent
 import BadgeComponent
+import UIKitRuntimeUtils
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -2217,7 +2218,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         }
     }
     
-    func setFramePreviewImage(image: UIImage?) {
+    func setFramePreviewImage(image: UIImage?, isSecret: Bool) {
         if let image = image {
             let videoFramePreviewNode: ASImageNode
             let videoFrameTextNode: ImmediateTextNode
@@ -2254,6 +2255,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             videoFramePreviewNode.subnodes?.first?.alpha = 0.0
             let updateLayout = videoFramePreviewNode.image?.size != image.size
             videoFramePreviewNode.image = image
+            setLayerDisableScreenshots(videoFramePreviewNode.layer, isSecret)
             if updateLayout, let validLayout = self.validLayout {
                 let _ = self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, contentInset: validLayout.5, transition: .immediate)
             }
