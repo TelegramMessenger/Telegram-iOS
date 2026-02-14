@@ -131,7 +131,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.titleActivateAreaNode = AccessibilityAreaNode()
         self.titleActivateAreaNode.accessibilityTraits = .staticText
-        
+        self.titleActivateAreaNode.accessibilityIdentifier = "Auth.CodeEntry.Title"
+
         self.titleIconNode = ASImageNode()
         self.titleIconNode.isLayerBacked = true
         self.titleIconNode.displayWithoutProcessing = true
