@@ -646,7 +646,16 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
         }
         
-        let rootPath = rootPathForBasePath(appGroupUrl.path)
+        let isUITest = CommandLine.arguments.contains("--ui-test")
+
+        let rootPath: String
+        if isUITest {
+            let testDataPath = appGroupUrl.path + "/telegram-ui-tests-data"
+            let _ = try? FileManager.default.removeItem(atPath: testDataPath)
+            rootPath = rootPathForBasePath(testDataPath)
+        } else {
+            rootPath = rootPathForBasePath(appGroupUrl.path)
+        }
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
@@ -1045,7 +1054,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         self.mainWindow.coveringView = nil
                     }
                 }
-            }, appDelegate: self)
+            }, appDelegate: self, testingEnvironment: isUITest)
             
             presentationDataPromise.set(sharedContext.presentationData)
             
