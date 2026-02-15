@@ -121,6 +121,20 @@ Test accounts do not receive real SMS. The confirmation code is **the DC number 
 
 Test numbers are still subject to flood limits. If a number gets rate-limited, pick a different `YYYY` suffix.
 
+### Deleting Test Accounts
+
+Tests that exercise the sign-up flow create an account on the test servers. Re-running the same test with the same phone number will skip sign-up because the account already exists. To get a fresh sign-up screen, delete the account first with the `test-helper` CLI:
+
+```bash
+cd build-system/test-helper
+swift run test-helper delete-account \
+  --api-id <id> --api-hash <hash> --phone 9996625678
+```
+
+The tool connects to the test datacenters, authenticates with the given number, and deletes the account. If no account exists, it exits successfully. Run it before any test that needs a clean sign-up flow.
+
+The `--api-id` and `--api-hash` are your Telegram API credentials from [my.telegram.org](https://my.telegram.org).
+
 ### Security
 
 Do not store any important or private information in test accounts. Anyone can use the simplified authorization mechanism to access them.
