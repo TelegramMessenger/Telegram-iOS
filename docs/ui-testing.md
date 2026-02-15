@@ -96,20 +96,26 @@ field.typeText("9996621234")
 
 The test environment uses 3 separate Telegram datacenters, completely independent from production.
 
+### OS Environment
+
+Test logins are guarded behind a specialized OS environment. The simulator or device must be configured for the test environment before test accounts can authenticate.
+
 ### Test Phone Numbers
 
 Test phone numbers follow the format `99966XYYYY`:
 - `X` is the DC number (1, 2, or 3)
-- `YYYY` is any random digits
+- `YYYY` are random digits
 
-Examples: `9996621234`, `9996710000`, `9996300001`.
+The country code for test numbers is `999`, and the remaining digits are `66XYYYY`.
+
+Examples: `+999 66 2 1234`, `+999 66 1 0000`, `+999 66 3 0001`.
 
 ### Verification Codes
 
 Test accounts do not receive real SMS. The confirmation code is **the DC number repeated 5 times**:
-- DC 1 (`999661YYYY`) -> code `11111`
-- DC 2 (`999662YYYY`) -> code `22222`
-- DC 3 (`999663YYYY`) -> code `33333`
+- DC 1 (`+999 661 YYYY`) -> code `11111`
+- DC 2 (`+999 662 YYYY`) -> code `22222`
+- DC 3 (`+999 663 YYYY`) -> code `33333`
 
 ### Flood Limits
 
