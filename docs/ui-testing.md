@@ -123,17 +123,23 @@ Test numbers are still subject to flood limits. If a number gets rate-limited, p
 
 ### Deleting Test Accounts
 
-Tests that exercise the sign-up flow create an account on the test servers. Re-running the same test with the same phone number will skip sign-up because the account already exists. To get a fresh sign-up screen, delete the account first with the `test-helper` CLI:
+Tests that exercise the sign-up flow create an account on the test servers. Re-running the same test with the same phone number will skip sign-up because the account already exists. To get a fresh sign-up screen, delete the account before running the test.
 
-```bash
-cd build-system/test-helper
-swift run test-helper delete-account \
-  --api-id <id> --api-hash <hash> --phone 9996625678
+The app supports a `--delete-test-account <phone>` launch argument. When combined with `--ui-test`, the app logs into the test account, deletes it, and exits — no UI is shown. The verification code is derived automatically from the phone number (DC digit repeated 5 times).
+
+In UI tests, use this by launching a separate app instance:
+
+```swift
+private func deleteTestAccount(phone: String) {
+    let cleanupApp = XCUIApplication()
+    cleanupApp.launchArguments += ["--ui-test", "--delete-test-account", phone]
+    cleanupApp.launch()
+    let terminated = cleanupApp.wait(for: .notRunning, timeout: 30)
+    XCTAssert(terminated, "test account cleanup did not complete in 30s")
+}
 ```
 
-The tool connects to the test datacenters, authenticates with the given number, and deletes the account. If no account exists, it exits successfully. Run it before any test that needs a clean sign-up flow.
-
-The `--api-id` and `--api-hash` are your Telegram API credentials from [my.telegram.org](https://my.telegram.org).
+Call `deleteTestAccount(phone:)` at the start of any test that needs a clean sign-up flow. The phone number format is `99966XYYYY` (no `+` prefix needed).
 
 ### Security
 

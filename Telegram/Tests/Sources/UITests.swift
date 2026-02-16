@@ -1,4 +1,5 @@
 import XCTest
+import Foundation
 
 class UITests: XCTestCase {
     private var app: XCUIApplication!
@@ -13,12 +14,24 @@ class UITests: XCTestCase {
         app = nil
     }
 
+    /// Deletes a test account so the sign-up flow can be exercised again.
+    /// Launches the app with `--delete-test-account` which logs in and deletes the account.
+    private func deleteTestAccount(phone: String) {
+        let cleanupApp = XCUIApplication()
+        cleanupApp.launchArguments += ["--ui-test", "--delete-test-account", phone]
+        cleanupApp.launch()
+        let success = cleanupApp.windows["DeleteAccount.Success"]
+        XCTAssert(success.waitForExistence(timeout: 30), "test account cleanup did not complete in 30s")
+        cleanupApp.terminate()
+    }
+
     func testLaunch() throws {
         app.launch()
         XCTAssert(app.wait(for: .runningForeground, timeout: 10.0))
     }
 
     func testLoginToSetName() throws {
+        deleteTestAccount(phone: "9996625678")
         app.launch()
 
         // Welcome screen — tap Start Messaging
