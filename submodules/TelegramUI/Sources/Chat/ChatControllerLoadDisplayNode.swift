@@ -443,6 +443,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedPremiumGiftOptions(contentData.state.premiumGiftOptions)
             presentationInterfaceState = presentationInterfaceState.updatedRemovePaidMessageFeeData(contentData.state.removePaidMessageFeeData)
             presentationInterfaceState = presentationInterfaceState.updatedViewForumAsMessages(contentData.state.viewForumAsMessages)
+            presentationInterfaceState = presentationInterfaceState.updatedHasTopics(contentData.state.hasTopics)
             
             presentationInterfaceState = presentationInterfaceState.updatedTitlePanelContext({ context in
                 if contentData.state.pinnedMessageId != nil {

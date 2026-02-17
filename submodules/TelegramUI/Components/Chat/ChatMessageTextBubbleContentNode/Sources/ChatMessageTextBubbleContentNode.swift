@@ -714,6 +714,24 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     customTruncationToken: customTruncationToken,
                     expandedBlocks: expandedBlockIds
                 ))
+                
+                var hasDraft = false
+                if item.message.attributes.contains(where: { $0 is TypingDraftMessageAttribute }) {
+                    hasDraft = true
+                }
+                var hadDraft = false
+                if let previousItem, previousItem.message.attributes.contains(where: { $0 is TypingDraftMessageAttribute }) {
+                    hadDraft = true
+                }
+                
+                var maxGlyphCount = currentMaxGlyphCount
+                if maxGlyphCount == nil && (hasDraft || hadDraft) {
+                    maxGlyphCount = previousGlyphCount
+                }
+                var clippedGlyphCountLayout: TextNodeLayout.LayoutInfo?
+                if let maxGlyphCount {
+                    clippedGlyphCountLayout = textLayout.layoutForGlyphCount(glyphCount: maxGlyphCount)
+                }
             
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode))?
                 if let statusType = statusType {
@@ -728,7 +746,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if let lastSegment = textLayout.segments.last, lastSegment.hasBlockQuote {
                         trailingWidthToMeasure = textLayout.size.width
                     } else {
-                        trailingWidthToMeasure = textLayout.trailingLineWidth
+                        if let clippedGlyphCountLayout {
+                            trailingWidthToMeasure = clippedGlyphCountLayout.trailingLineWidth
+                        } else {
+                            trailingWidthToMeasure = textLayout.trailingLineWidth
+                        }
                     }
                     
                     let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
@@ -768,22 +790,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: topInset)
                 let realTextFrame = textFrame
                 
-                var hasDraft = false
-                if item.message.attributes.contains(where: { $0 is TypingDraftMessageAttribute }) {
-                    hasDraft = true
-                }
-                var hadDraft = false
-                if let previousItem, previousItem.message.attributes.contains(where: { $0 is TypingDraftMessageAttribute }) {
-                    hadDraft = true
-                }
-                
-                var maxGlyphCount = currentMaxGlyphCount
-                if maxGlyphCount == nil && (hasDraft || hadDraft) {
-                    maxGlyphCount = previousGlyphCount
-                }
-                
-                if let maxGlyphCount {
-                    textFrame.size = textLayout.sizeForGlyphCount(glyphCount: maxGlyphCount)
+                if let clippedGlyphCountLayout {
+                    textFrame.size = clippedGlyphCountLayout.size
                     //print("currentMaxGlyphCount: \(currentMaxGlyphCount), size: \(textFrame.size.height)")
                     textFrameWithoutInsets.size = CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom)
                 }
@@ -1103,7 +1111,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     let glyphCount = textRevealAnimationState.glyphCount(timestamp: timestamp)
                     if let revealGlyphCount = self.textNode.textNode.revealGlyphCount, let cachedLayout = self.textNode.textNode.cachedLayout {
                         if cachedLayout.sizeForGlyphCount(glyphCount: revealGlyphCount).height != cachedLayout.sizeForGlyphCount(glyphCount: glyphCount).height {
-                            if lineUpdateTimeout >= 0.1 {
+                            if lineUpdateTimeout >= 0.0 {
                                 lastLineUpdateTimestamp = timestamp
                                 requestUpdate = true
                             }

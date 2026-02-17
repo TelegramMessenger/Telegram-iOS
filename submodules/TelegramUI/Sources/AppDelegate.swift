@@ -646,8 +646,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
         }
         
-        let rootPath = rootPathForBasePath(appGroupUrl.path)
-        performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
+        let isUITest = CommandLine.arguments.contains("--ui-test")
+
+        let rootPath: String
+        if isUITest {
+            let testDataPath = appGroupUrl.path + "/telegram-ui-tests-data"
+            let _ = try? FileManager.default.removeItem(atPath: testDataPath)
+            rootPath = rootPathForBasePath(testDataPath)
+        } else {
+            rootPath = rootPathForBasePath(appGroupUrl.path)
+        }
+        if !isUITest {
+            performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
+        }
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
@@ -988,7 +999,35 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
         telegramUIDeclareEncodables()
         initializeAccountManagement()
-        
+
+        if isUITest,
+           let deleteIdx = CommandLine.arguments.firstIndex(of: "--delete-test-account"),
+           deleteIdx + 1 < CommandLine.arguments.count
+        {
+            let phone = CommandLine.arguments[deleteIdx + 1]
+            let digits = phone.hasPrefix("+") ? String(phone.dropFirst()) : phone
+            guard digits.count == 10, digits.hasPrefix("99966") else {
+                preconditionFailure("--delete-test-account phone must match 99966XYYYY")
+            }
+            let dcDigit = digits[digits.index(digits.startIndex, offsetBy: 5)]
+            let phoneCode = String(repeating: dcDigit, count: 5)
+
+            let _ = test_loginAndDeleteAccount(
+                rootPath: rootPath,
+                accountManager: accountManager,
+                networkArguments: networkArguments,
+                encryptionParameters: encryptionParameters,
+                phoneNumber: "+\(digits)",
+                phoneCode: phoneCode
+            ).start(error: { _ in
+                preconditionFailure("test_loginAndDeleteAccount failed")
+            }, completed: { [weak self] in
+                self?.window?.accessibilityIdentifier = "DeleteAccount.Success"
+            })
+
+            return true
+        }
+
         let pushRegistry = PKPushRegistry(queue: .main)
         if #available(iOS 9.0, *) {
             pushRegistry.desiredPushTypes = Set([.voIP])
@@ -1045,7 +1084,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         self.mainWindow.coveringView = nil
                     }
                 }
-            }, appDelegate: self)
+            }, appDelegate: self, testingEnvironment: isUITest)
             
             presentationDataPromise.set(sharedContext.presentationData)
             

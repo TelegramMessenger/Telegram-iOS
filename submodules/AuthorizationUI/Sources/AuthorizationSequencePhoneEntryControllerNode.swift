@@ -118,7 +118,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
         self.phoneInputNode.countryCodeField.accessibilityHint = strings.Login_VoiceOver_PhoneCountryCode
         self.phoneInputNode.numberField.accessibilityHint = strings.Login_VoiceOver_PhoneNumber
-        
+        self.phoneInputNode.countryCodeField.textField.accessibilityIdentifier = "Auth.PhoneEntry.CountryCodeField"
+        self.phoneInputNode.numberField.textField.accessibilityIdentifier = "Auth.PhoneEntry.PhoneNumberField"
+
         self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
         self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
         
@@ -426,7 +428,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), glass: false, height: 50.0, cornerRadius: 50 * 0.5)
         self.proceedNode.progressType = .embedded
         self.proceedNode.isEnabled = false
-        
+        self.proceedNode.accessibilityIdentifier = "Auth.PhoneEntry.ContinueButton"
+
         super.init()
         
         self.setViewBlock({
@@ -859,7 +862,8 @@ final class PhoneConfirmationController: ViewController {
             
             self.proceedNode = SolidRoundedButtonNode(title: strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: theme), glass: false, height: 50.0, cornerRadius: 50.0 * 0.5)
             self.proceedNode.progressType = .embedded
-            
+            self.proceedNode.accessibilityIdentifier = "Auth.PhoneConfirm.ContinueButton"
+
             let font = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
             let largeFont = Font.with(size: 34.0, design: .regular, weight: .bold, traits: [.monospacedNumbers])
             

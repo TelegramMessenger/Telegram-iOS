@@ -6024,6 +6024,7 @@ func replayFinalState(
             case let .update(update):
                 return (
                     update.id,
+                    Namespaces.Message.Cloud,
                     update.threadId,
                     update.authorId,
                     update.timestamp,

@@ -1623,3 +1623,146 @@ func _internal_reportMissingCode(network: Network, phoneNumber: String, phoneCod
     }
 }
 
+public enum TestLoginAndDeleteAccountError {
+    case generic
+}
+
+public func test_loginAndDeleteAccount(
+    rootPath: String,
+    accountManager: AccountManager<TelegramAccountManagerTypes>,
+    networkArguments: NetworkInitializationArguments,
+    encryptionParameters: ValueBoxEncryptionParameters,
+    phoneNumber: String,
+    phoneCode: String
+) -> Signal<Never, TestLoginAndDeleteAccountError> {
+    Logger.shared.logToConsole = true
+    
+    return accountManager.transaction{ transaction -> AccountRecordId? in
+        let record = transaction.createAuth([.environment(AccountEnvironmentAttribute(environment: .test))])
+        return record?.id
+    }
+    |> castError(TestLoginAndDeleteAccountError.self)
+    |> mapToSignal { accountId -> Signal<UnauthorizedAccount, TestLoginAndDeleteAccountError> in
+        guard let accountId else {
+            preconditionFailure("Account not found")
+        }
+        return accountWithId(
+            accountManager: accountManager,
+            networkArguments: networkArguments,
+            id: accountId,
+            encryptionParameters: encryptionParameters,
+            supplementary: true,
+            isSupportUser: false,
+            rootPath: rootPath,
+            beginWithTestingEnvironment: true,
+            backupData: nil,
+            auxiliaryMethods: AccountAuxiliaryMethods(fetchResource: { _, _, _, _ in
+                return nil
+            }, fetchResourceMediaReferenceHash: { resource in
+                return .single(nil)
+            }, prepareSecretThumbnailData: { data in
+                return nil
+            }, backgroundUpload: { postbox, _, resource in
+                return .single(nil)
+            })
+        )
+        |> castError(TestLoginAndDeleteAccountError.self)
+        |> mapToSignal { account -> Signal<UnauthorizedAccount, TestLoginAndDeleteAccountError> in
+            switch account {
+            case .upgrading:
+                preconditionFailure("Unexpected account state: upgrading")
+            case let .unauthorized(account):
+                return .single(account)
+            case .authorized:
+                preconditionFailure("Unexpected account state: authorized")
+            }
+        }
+    }
+    |> mapToSignal { account -> Signal<(UnauthorizedAccount, UnauthorizedAccountStateContents), TestLoginAndDeleteAccountError> in
+        account.network.shouldKeepConnection.set(.single(true))
+        
+        return sendAuthorizationCode(
+            accountManager: accountManager,
+            account: account,
+            phoneNumber: phoneNumber,
+            apiId: networkArguments.apiId,
+            apiHash: networkArguments.apiHash,
+            pushNotificationConfiguration: nil,
+            firebaseSecretStream: .never(),
+            syncContacts: false,
+            forcedPasswordSetupNotice: { _ in nil }
+        )
+        |> mapError { _ -> TestLoginAndDeleteAccountError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<(UnauthorizedAccount, UnauthorizedAccountStateContents), TestLoginAndDeleteAccountError> in
+            switch result {
+            case .loggedIn:
+                preconditionFailure("Unexpected send code state: logged in")
+            case let .sentCode(account):
+                return account.postbox.transaction { transaction -> UnauthorizedAccountStateContents? in
+                    guard let state = transaction.getState() as? UnauthorizedAccountState else {
+                        return nil
+                    }
+                    return state.contents
+                }
+                |> castError(TestLoginAndDeleteAccountError.self)
+                |> mapToSignal { state -> Signal<(UnauthorizedAccount, UnauthorizedAccountStateContents), TestLoginAndDeleteAccountError> in
+                    guard let state else {
+                        preconditionFailure("Unexpected account state: nil")
+                    }
+                    return .single((account, state))
+                }
+            }
+        }
+    }
+    |> mapToSignal { account, state -> Signal<(UnauthorizedAccount, AuthorizeWithCodeResult), TestLoginAndDeleteAccountError> in
+        account.network.shouldKeepConnection.set(.single(true))
+        
+        switch state {
+        case let .confirmationCodeEntry(_, type, _, _, _, _, _, _):
+            switch type {
+            case let .call(length), let .sms(length), let .otherSession(length):
+                if phoneCode.count != length {
+                    preconditionFailure("Unexpected sent code length: \(length) != \(phoneCode.count)")
+                }
+                
+                return authorizeWithCode(
+                    accountManager: accountManager,
+                    account: account,
+                    code: .phoneCode(phoneCode),
+                    termsOfService: nil,
+                    forcedPasswordSetupNotice: { _ in nil }
+                )
+                |> mapError { _ -> TestLoginAndDeleteAccountError in
+                    return .generic
+                }
+                |> mapToSignal { result -> Signal<(UnauthorizedAccount, AuthorizeWithCodeResult), TestLoginAndDeleteAccountError> in
+                    return .single((account, result))
+                }
+            default:
+                preconditionFailure("Unexpected sent code type: \(type)")
+            }
+        default:
+            preconditionFailure("Unexpected account state: \(state)")
+        }
+    }
+    |> mapToSignal { account, checkCodeResult -> Signal<Never, TestLoginAndDeleteAccountError> in
+        switch checkCodeResult {
+        case .signUp:
+            return .complete()
+        case .loggedIn:
+            return account.network.request(Api.functions.account.deleteAccount(
+                flags: 0,
+                reason: "",
+                password: nil
+            ))
+            |> mapError { _ -> TestLoginAndDeleteAccountError in
+                return .generic
+            }
+            |> mapToSignal { _ -> Signal<Never, TestLoginAndDeleteAccountError> in
+                return .complete()
+            }
+        }
+    }
+}

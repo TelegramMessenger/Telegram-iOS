@@ -153,8 +153,10 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         super.init()
         
         self.addSubnode(self.prefixLabel)
+        self.textField.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+        self.textField.alpha = 0.01
         self.view.addSubview(self.textField)
-        
+
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         self.textField.delegate = self
         self.textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)

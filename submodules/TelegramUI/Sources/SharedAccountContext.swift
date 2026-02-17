@@ -181,7 +181,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let locationManager: DeviceLocationManager?
     public var callManager: PresentationCallManager?
     let hasInAppPurchases: Bool
-    
+    let testingEnvironment: Bool
+
     private var callStateDisposable: Disposable?
     
     private(set) var currentCallStatusBarNode: CallStatusBarNodeImpl?
@@ -283,7 +284,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private let energyUsageAutomaticDisposable = MetaDisposable()
     
-    init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, notificationController: NotificationContainerController?, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?, Bool) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?) {
+    init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, notificationController: NotificationContainerController?, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?, Bool) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?, testingEnvironment: Bool = false) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -301,7 +302,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.appLockContext = appLockContext
         self.notificationController = notificationController
         self.hasInAppPurchases = hasInAppPurchases
-        
+        self.testingEnvironment = testingEnvironment
+
         self.accountManager.mediaBox.fetchCachedResourceRepresentation = { (resource, representation) -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return fetchCachedSharedResourceRepresentation(accountManager: accountManager, resource: resource, representation: representation)
         }
@@ -784,7 +786,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 
                 if self.activeAccountsValue!.primary == nil && self.activeAccountsValue!.currentAuth == nil {
-                    self.beginNewAuth(testingEnvironment: false)
+                    self.beginNewAuth(testingEnvironment: self.testingEnvironment)
                 }
             }))
         })
