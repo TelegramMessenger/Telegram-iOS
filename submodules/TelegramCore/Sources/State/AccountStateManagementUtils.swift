@@ -2025,26 +2025,6 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateStarGiftAuctionMyState(giftId: giftId, state: GiftAuctionContext.State.MyState(apiAuctionUserState: userState))
             case let .updateEmojiGameInfo(updateEmojiGameInfoData):
                 updatedState.updateEmojiGameInfo(info: EmojiGameInfo(apiEmojiGameInfo: updateEmojiGameInfoData.info))
-            case let .updatePeerHistoryNoForwards(updatePeerHistoryNoForwardsData):
-                let (flags, peer) = (updatePeerHistoryNoForwardsData.flags, updatePeerHistoryNoForwardsData.peer)
-                let peerId = peer.peerId
-                updatedState.updateCachedPeerData(peerId, { current in
-                    if let previous = current as? CachedUserData {
-                        var updatedFlags = previous.flags
-                        if (flags & (1 << 0)) != 0 {
-                            updatedFlags.insert(.myCopyProtectionEnabled)
-                        } else {
-                            updatedFlags.remove(.myCopyProtectionEnabled)
-                        }
-                        if (flags & (1 << 1)) != 0 {
-                            updatedFlags.insert(.copyProtectionEnabled)
-                        } else {
-                            updatedFlags.remove(.copyProtectionEnabled)
-                        }
-                        return previous.withUpdatedFlags(updatedFlags)
-                    }
-                    return current
-                })
             default:
                 break
         }
@@ -4321,6 +4301,19 @@ func replayFinalState(
                                                 }
                                             })
                                         }
+                                    case let .copyProtectionToggle(_, newValue):
+                                        transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
+                                            if let previous = current as? CachedUserData {
+                                                var updatedFlags = previous.flags
+                                                if newValue {
+                                                    updatedFlags.insert(.copyProtectionEnabled)
+                                                } else {
+                                                    updatedFlags.remove(.copyProtectionEnabled)
+                                                }
+                                                return previous.withUpdatedFlags(updatedFlags)
+                                            }
+                                            return current
+                                        })
                                     default:
                                         break
                                     }

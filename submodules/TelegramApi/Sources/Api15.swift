@@ -1798,6 +1798,24 @@ public extension Api {
                 self.newCreatorId = newCreatorId
             }
         }
+        public class Cons_messageActionNoForwardsRequest {
+            public var flags: Int32
+            public var prevValue: Api.Bool
+            public var newValue: Api.Bool
+            public init(flags: Int32, prevValue: Api.Bool, newValue: Api.Bool) {
+                self.flags = flags
+                self.prevValue = prevValue
+                self.newValue = newValue
+            }
+        }
+        public class Cons_messageActionNoForwardsToggle {
+            public var prevValue: Api.Bool
+            public var newValue: Api.Bool
+            public init(prevValue: Api.Bool, newValue: Api.Bool) {
+                self.prevValue = prevValue
+                self.newValue = newValue
+            }
+        }
         public class Cons_messageActionPaidMessagesPrice {
             public var flags: Int32
             public var stars: Int64
@@ -2145,6 +2163,8 @@ public extension Api {
         case messageActionHistoryClear
         case messageActionInviteToGroupCall(Cons_messageActionInviteToGroupCall)
         case messageActionNewCreatorPending(Cons_messageActionNewCreatorPending)
+        case messageActionNoForwardsRequest(Cons_messageActionNoForwardsRequest)
+        case messageActionNoForwardsToggle(Cons_messageActionNoForwardsToggle)
         case messageActionPaidMessagesPrice(Cons_messageActionPaidMessagesPrice)
         case messageActionPaidMessagesRefunded(Cons_messageActionPaidMessagesRefunded)
         case messageActionPaymentRefunded(Cons_messageActionPaymentRefunded)
@@ -2455,6 +2475,21 @@ public extension Api {
                     buffer.appendInt32(-1333866363)
                 }
                 serializeInt64(_data.newCreatorId, buffer: buffer, boxed: false)
+                break
+            case .messageActionNoForwardsRequest(let _data):
+                if boxed {
+                    buffer.appendInt32(1042781114)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                _data.prevValue.serialize(buffer, true)
+                _data.newValue.serialize(buffer, true)
+                break
+            case .messageActionNoForwardsToggle(let _data):
+                if boxed {
+                    buffer.appendInt32(-1082301070)
+                }
+                _data.prevValue.serialize(buffer, true)
+                _data.newValue.serialize(buffer, true)
                 break
             case .messageActionPaidMessagesPrice(let _data):
                 if boxed {
@@ -2882,6 +2917,10 @@ public extension Api {
                 return ("messageActionInviteToGroupCall", [("call", _data.call as Any), ("users", _data.users as Any)])
             case .messageActionNewCreatorPending(let _data):
                 return ("messageActionNewCreatorPending", [("newCreatorId", _data.newCreatorId as Any)])
+            case .messageActionNoForwardsRequest(let _data):
+                return ("messageActionNoForwardsRequest", [("flags", _data.flags as Any), ("prevValue", _data.prevValue as Any), ("newValue", _data.newValue as Any)])
+            case .messageActionNoForwardsToggle(let _data):
+                return ("messageActionNoForwardsToggle", [("prevValue", _data.prevValue as Any), ("newValue", _data.newValue as Any)])
             case .messageActionPaidMessagesPrice(let _data):
                 return ("messageActionPaidMessagesPrice", [("flags", _data.flags as Any), ("stars", _data.stars as Any)])
             case .messageActionPaidMessagesRefunded(let _data):
@@ -3435,6 +3474,45 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.MessageAction.messageActionNewCreatorPending(Cons_messageActionNewCreatorPending(newCreatorId: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionNoForwardsRequest(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Bool?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            var _3: Api.Bool?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageAction.messageActionNoForwardsRequest(Cons_messageActionNoForwardsRequest(flags: _1!, prevValue: _2!, newValue: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionNoForwardsToggle(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            var _2: Api.Bool?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionNoForwardsToggle(Cons_messageActionNoForwardsToggle(prevValue: _1!, newValue: _2!))
             }
             else {
                 return nil
