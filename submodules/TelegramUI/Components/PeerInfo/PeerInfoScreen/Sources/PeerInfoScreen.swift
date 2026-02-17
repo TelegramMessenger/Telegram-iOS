@@ -6975,7 +6975,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     }
     
     override public func tabBarItemHasDoubleTapAction() -> Bool {
-        return true
+        return false
     }
     
     override public func tabBarItemPerformDoubleTapAction() {

@@ -82,7 +82,7 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     
-    let inputTextPanelState = inputTextPanelStateForChatPresentationInterfaceState(temporaryChatPresentationInterfaceState, context: selfController.context)
+    let inputTextPanelState = inputTextPanelStateForChatPresentationInterfaceState(temporaryChatPresentationInterfaceState, context: selfController.context, controller: selfController)
     var updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputTextPanelState({ _ in return inputTextPanelState })
     
     let contextQueryUpdates = contextQueryResultStateForChatInterfacePresentationState(updatedChatPresentationInterfaceState, context: selfController.context, currentQueryStates: &selfController.contextQueryStates, requestBotLocationStatus: { [weak selfController] peerId in

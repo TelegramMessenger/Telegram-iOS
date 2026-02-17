@@ -3261,7 +3261,7 @@ public final class ChatListNode: ListView {
                     if case .chatList = strongSelf.mode {
                         let entryCount = transition.chatListView.filteredEntries.count
                         if entryCount >= 1 {
-                            for i in 0 ..< 2 {
+                            for i in 0 ..< 3 {
                                 if entryCount - 1 - i < 0 {
                                     continue
                                 }

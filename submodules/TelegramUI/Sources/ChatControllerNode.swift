@@ -4654,6 +4654,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
                 
                 var targetThreadId: Int64?
+                var clearMainThreadForward = false
                 if self.chatLocation.threadId == nil, let user = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum), botInfo.flags.contains(.forumManagedByUser) {
                     if let message = messages.first {
                         switch message {
@@ -4666,7 +4667,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 targetThreadId = EngineMessage.newTopicThreadId
                             }
                         case let .forward(_, threadId, _, _, _):
-                            targetThreadId = threadId
+                            if let threadId {
+                                targetThreadId = threadId
+                            } else {
+                                targetThreadId = EngineMessage.newTopicThreadId
+                                clearMainThreadForward = true
+                            }
                         }
                     }
                 }
@@ -4677,8 +4683,12 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         guard let self else {
                             return
                         }
-                        let _ = self
                         doSend(targetThreadId)
+                        if clearMainThreadForward, let peerId {
+                            let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: nil, { current in
+                                return current.withUpdatedForwardMessageIds(nil)
+                            }).startStandalone()
+                        }
                     })
                 } else {
                     doSend(nil)

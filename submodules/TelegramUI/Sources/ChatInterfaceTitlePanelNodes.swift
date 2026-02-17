@@ -309,6 +309,11 @@ func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterf
             ))
         }
     } else if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum), chatPresentationInterfaceState.search == nil {
+        if !botInfo.flags.contains(.forumManagedByUser) {
+            if !chatPresentationInterfaceState.hasTopics {
+                return nil
+            }
+        }
         let topicListDisplayModeOnTheSide = chatPresentationInterfaceState.persistentData.topicListPanelLocation
         if !topicListDisplayModeOnTheSide {
             return AnyComponent(ChatTopicsHeaderPanelComponent(
@@ -423,6 +428,11 @@ func floatingTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInte
             )
         }
     } else if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.hasForum), chatPresentationInterfaceState.search == nil {
+        if !botInfo.flags.contains(.forumManagedByUser) {
+            if !chatPresentationInterfaceState.hasTopics {
+                return nil
+            }
+        }
         let topicListDisplayModeOnTheSide = chatPresentationInterfaceState.persistentData.topicListPanelLocation
         if topicListDisplayModeOnTheSide {
             return ChatFloatingTopicsPanel(

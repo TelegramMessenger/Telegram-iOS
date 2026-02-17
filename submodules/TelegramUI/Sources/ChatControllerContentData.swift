@@ -143,6 +143,7 @@ extension ChatControllerImpl {
             var premiumGiftOptions: [CachedPremiumGiftOption] = []
             var removePaidMessageFeeData: ChatPresentationInterfaceState.RemovePaidMessageFeeData?
             var viewForumAsMessages: Bool = false
+            var hasTopics: Bool = false
             
             var preloadNextChatPeerId: EnginePeer.Id?
         }
@@ -289,6 +290,7 @@ extension ChatControllerImpl {
                 peerView.set(context.account.viewTracker.peerView(peerId))
                 var onlineMemberCount: Signal<(total: Int32?, recent: Int32?), NoError> = .single((nil, nil))
                 var hasScheduledMessages: Signal<Bool, NoError> = .single(false)
+                var hasTopics: Signal<Bool, NoError> = .single(false)
                 
                 if peerId.namespace == Namespaces.Peer.CloudChannel {
                     let recentOnlineSignal: Signal<(total: Int32?, recent: Int32?), NoError> = peerView.get()
@@ -346,6 +348,11 @@ extension ChatControllerImpl {
                                 return !view.entries.isEmpty
                             }
                         }
+                    }
+                    
+                    hasTopics = context.sharedContext.subscribeChatListData(context: context, location: .forum(peerId: peerId))
+                    |> map { value -> Bool in
+                        return !value.items.isEmpty
                     }
                 }
                 
@@ -679,6 +686,7 @@ extension ChatControllerImpl {
                     context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                     onlineMemberCount,
                     hasScheduledMessages,
+                    hasTopics,
                     displayedCountSignal,
                     threadInfo,
                     hasSearchTags,
@@ -688,7 +696,7 @@ extension ChatControllerImpl {
                     adMessage,
                     displayedPeerVerification,
                     globalPrivacySettings
-                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage, displayedPeerVerification, globalPrivacySettings in
+                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, hasTopics, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage, displayedPeerVerification, globalPrivacySettings in
                     guard let strongSelf = self else {
                         return
                     }
@@ -697,6 +705,7 @@ extension ChatControllerImpl {
                     
                     if strongSelf.state.peerView === peerView
                         && strongSelf.state.hasScheduledMessages == hasScheduledMessages
+                        && strongSelf.state.hasTopics == hasTopics
                         && strongSelf.state.threadInfo == threadInfo
                         && strongSelf.state.hasSearchTags == hasSearchTags
                         && strongSelf.state.hasSavedChats == hasSavedChats
@@ -707,6 +716,7 @@ extension ChatControllerImpl {
                     }
                     
                     strongSelf.state.hasScheduledMessages = hasScheduledMessages
+                    strongSelf.state.hasTopics = hasTopics
                     
                     var upgradedToPeerId: PeerId?
                     var movedToForumTopics = false
@@ -1009,6 +1019,7 @@ extension ChatControllerImpl {
                     strongSelf.state.peerGeoLocation = peerGeoLocation
                     strongSelf.state.explicitelyCanPinMessages = explicitelyCanPinMessages
                     strongSelf.state.hasScheduledMessages = hasScheduledMessages
+                    strongSelf.state.hasTopics = hasTopics
                     strongSelf.state.autoremoveTimeout = autoremoveTimeout
                     strongSelf.state.currentSendAsPeerId = currentSendAsPeerId
                     strongSelf.state.copyProtectionEnabled = copyProtectionEnabled
