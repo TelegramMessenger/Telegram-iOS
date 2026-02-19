@@ -1048,7 +1048,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
         case let .single(peerId, threadId):
             let location = PeerAndThreadId(peerId: peerId, threadId: threadId)
             if let typingDraftUpdate = transaction.updatedTypingDrafts[location] {
-                if let typingDraft = typingDraftUpdate.value {
+                if let typingDraft = typingDraftUpdate.value, self.namespaces.contains(typingDraft.namespace) {
                     self.typingDraft = self.renderTypingDraft(postbox: postbox, typingDraft: typingDraft)
                 } else {
                     self.typingDraft = nil
@@ -1069,7 +1069,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
             self.typingDraft = nil
             return
         }
-        if let typingDraft = postbox.currentTypingDrafts[PeerAndThreadId(peerId: peerId, threadId: threadId)] {
+        if let typingDraft = postbox.currentTypingDrafts[PeerAndThreadId(peerId: peerId, threadId: threadId)], self.namespaces.contains(typingDraft.namespace) {
             self.typingDraft = self.renderTypingDraft(postbox: postbox, typingDraft: typingDraft)
         } else {
             self.typingDraft = nil

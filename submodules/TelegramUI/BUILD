@@ -320,7 +320,6 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatTextInputMediaRecordingButton",
         "//submodules/TelegramUI/Components/ChatSendButtonRadialStatusNode",
         "//submodules/TelegramUI/Components/LegacyInstantVideoController",
-        "//submodules/TelegramUI/Components/FullScreenEffectView",
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoStoryGridScreen",

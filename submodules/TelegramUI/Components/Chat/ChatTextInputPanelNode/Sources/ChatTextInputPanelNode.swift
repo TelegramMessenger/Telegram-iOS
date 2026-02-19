@@ -1665,7 +1665,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                         } else {
                             delay = 0.35
                         }
-                        Queue.mainQueue().after(delay, {
+                        Queue.mainQueue().after(delay, { [weak self, weak tooltipController] in
+                            guard let self, let tooltipController, self.tooltipController === tooltipController else {
+                                return
+                            }
                             let parentFrame = self.view.convert(self.bounds, to: nil)
                             let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
                             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
@@ -1687,6 +1690,11 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     self.startButton.isHidden = true
                     self.startButton.layer.removeAllAnimations()
                 })
+            }
+            
+            if let tooltipController = self.tooltipController {
+                self.tooltipController = nil
+                tooltipController.dismiss()
             }
         }
         
@@ -3091,7 +3099,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             
             textPlaceholderSize = placeholderSize
         } else {
-            textPlaceholderSize = self.textPlaceholderNode.bounds.size
+            textPlaceholderSize = self.textPlaceholderNode.updateLayout(CGSize(width: textPlaceholderMaxWidth, height: CGFloat.greatestFiniteMagnitude))
         }
         
         let textPlaceholderFrame: CGRect

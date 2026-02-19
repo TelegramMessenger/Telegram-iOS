@@ -94,7 +94,7 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
     return result
 }
 
-func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext) -> ChatTextInputPanelState {
+func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, controller: ChatControllerImpl) -> ChatTextInputPanelState {
     var contextPlaceholder: NSAttributedString?
     loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
         if case let .contextRequestResult(peer, _) = result, case let .user(botUser) = peer, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {
@@ -172,7 +172,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
-                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
+                var isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
+                if controller.isUpdatingChatLocationThread {
+                    isTextEmpty = true
+                }
                 let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
                   
                 var extendedSearchLayout = false

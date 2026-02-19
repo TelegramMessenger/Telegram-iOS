@@ -13,9 +13,9 @@ func _internal_applyMaxReadIndexInteractively(postbox: Postbox, stateManager: Ac
 func _internal_applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex) {
     let messageIds = transaction.applyInteractiveReadMaxIndex(index)
     
-    if let channel = transaction.getPeer(index.id.peerId) as? TelegramChannel, channel.isForumOrMonoForum {
-        if let combinedPeerReadState = transaction.getCombinedPeerReadState(channel.id), combinedPeerReadState.count == 0 {
-            for item in transaction.getMessageHistoryThreadIndex(peerId: channel.id, limit: 100) {
+    if let peer = transaction.getPeer(index.id.peerId), peer.isForumOrMonoForum {
+        if let combinedPeerReadState = transaction.getCombinedPeerReadState(peer.id), combinedPeerReadState.count == 0 {
+            for item in transaction.getMessageHistoryThreadIndex(peerId: peer.id, limit: 100) {
                 guard var data = transaction.getMessageHistoryThreadInfo(peerId: index.id.peerId, threadId: item.threadId)?.data.get(MessageHistoryThreadData.self) else {
                     continue
                 }

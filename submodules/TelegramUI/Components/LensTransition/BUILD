@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "SpaceWarpView",
-    module_name = "SpaceWarpView",
+    name = "LensTransition",
+    module_name = "LensTransition",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,10 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/Display",
-        "//submodules/AsyncDisplayKit",
         "//submodules/ComponentFlow",
-        "//submodules/TelegramUI/Components/MeshTransform",
-        "//submodules/UIKitRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

@@ -4877,8 +4877,21 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if actionButtonsNode !== strongSelf.actionButtonsNode {
                 strongSelf.actionButtonsNode = actionButtonsNode
                 actionButtonsNode.buttonPressed = { [weak strongSelf] button, progress in
-                    if let strongSelf = strongSelf {
-                        strongSelf.performMessageButtonAction(button: button, progress: progress)
+                    if let strongSelf, let item = strongSelf.item {
+                        if item.content.firstMessageAttributes.displayContinueThreadFooter {
+                            var hasMarkup = false
+                            for attribute in item.message.attributes {
+                                if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+                                    hasMarkup = true
+                                }
+                            }
+                            
+                            if !hasMarkup {
+                                item.controllerInteraction.updateChatLocationThread(item.message.threadId, nil)
+                                return
+                            }
+                            strongSelf.performMessageButtonAction(button: button, progress: progress)
+                        }
                     }
                 }
                 actionButtonsNode.buttonLongTapped = { [weak strongSelf] button in

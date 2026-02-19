@@ -46,7 +46,6 @@ import ChatListTitleView
 import InviteLinksUI
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
-import FullScreenEffectView
 import PeerInfoStoryGridScreen
 import ArchiveInfoScreen
 import BirthdayPickerScreen
@@ -219,8 +218,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var sharedOpenStoryProgressDisposable = MetaDisposable()
     
     var currentTooltipUpdateTimer: Foundation.Timer?
-    
-    private var fullScreenEffectView: RippleEffectView?
     
     let globalControlPanelsContext: GlobalControlPanelsContext
     private(set) var globalControlPanelsContextState: GlobalControlPanelsContext.State?
@@ -2807,11 +2804,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.clearHighlightAnimated(true)
         
-        if let fullScreenEffectView = self.fullScreenEffectView {
-            self.fullScreenEffectView = nil
-            fullScreenEffectView.removeFromSuperview()
-        }
-        
         self.sharedOpenStoryProgressDisposable.set(nil)
         
         if let storyPeerListView = self.chatListHeaderView()?.storyPeerListView() {
@@ -3439,37 +3431,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         return nil
-    }
-    
-    public func animateStoryUploadRipple() {
-        if let componentView = self.chatListHeaderView() {
-            if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                let localRect = transitionView.convert(transitionView.bounds, to: self.view)
-                self.animateRipple(centerLocation: localRect.center)
-            }
-        }
-    }
-    
-    public func animateRipple(centerLocation: CGPoint) {
-        if let fullScreenEffectView = self.fullScreenEffectView {
-            self.fullScreenEffectView = nil
-            fullScreenEffectView.removeFromSuperview()
-        }
-
-        if let value = RippleEffectView(centerLocation: centerLocation, completion: { [weak self] in
-            guard let self else {
-                return
-            }
-            if let fullScreenEffectView = self.fullScreenEffectView {
-                self.fullScreenEffectView = nil
-                fullScreenEffectView.removeFromSuperview()
-            }
-        }) {
-            self.fullScreenEffectView = value
-            value.sourceView = self.view
-            self.view.addSubview(value)
-            value.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
-        }
     }
     
     private(set) var storyUploadProgress: [PeerId: Float] = [:]

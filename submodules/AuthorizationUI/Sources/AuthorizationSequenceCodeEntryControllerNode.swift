@@ -131,7 +131,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.titleActivateAreaNode = AccessibilityAreaNode()
         self.titleActivateAreaNode.accessibilityTraits = .staticText
-        
+        self.titleActivateAreaNode.accessibilityIdentifier = "Auth.CodeEntry.Title"
+
         self.titleIconNode = ASImageNode()
         self.titleIconNode.isLayerBacked = true
         self.titleIconNode.displayWithoutProcessing = true
@@ -178,6 +179,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeInputView.textField.returnKeyType = .done
         self.codeInputView.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
+        self.codeInputView.textField.accessibilityIdentifier = "Auth.CodeEntry.CodeField"
         if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
             self.codeInputView.textField.textContentType = .oneTimeCode
         }

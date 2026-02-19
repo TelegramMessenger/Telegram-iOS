@@ -1,25 +1,87 @@
 import XCTest
+import Foundation
 
 class UITests: XCTestCase {
+    private var app: XCUIApplication!
+
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+        app = XCUIApplication()
+        app.launchArguments.append("--ui-test")
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        app = nil
     }
 
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
+    /// Deletes a test account so the sign-up flow can be exercised again.
+    /// Launches the app with `--delete-test-account` which logs in and deletes the account.
+    private func deleteTestAccount(phone: String) {
+        let cleanupApp = XCUIApplication()
+        cleanupApp.launchArguments += ["--ui-test", "--delete-test-account", phone]
+        cleanupApp.launch()
+        let success = cleanupApp.windows["DeleteAccount.Success"]
+        XCTAssert(success.waitForExistence(timeout: 30), "test account cleanup did not complete in 30s")
+        cleanupApp.terminate()
+    }
+
+    func testLaunch() throws {
+        app.launch()
+        XCTAssert(app.wait(for: .runningForeground, timeout: 10.0))
+    }
+
+    func testLoginToSetName() throws {
+        deleteTestAccount(phone: "9996625678")
         app.launch()
 
-        // Use recording to get started writing UI tests.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        // Welcome screen — tap Start Messaging
+        let startButton = app.buttons["Auth.Welcome.StartButton"]
+        XCTAssert(startButton.waitForExistence(timeout: 5.0))
+        startButton.tap()
+
+        // Phone entry screen — enter test phone number
+        let countryCodeField = app.textFields["Auth.PhoneEntry.CountryCodeField"]
+        XCTAssert(countryCodeField.waitForExistence(timeout: 10.0))
+        countryCodeField.tap()
+        for _ in 0..<10 {
+            countryCodeField.typeText(XCUIKeyboardKey.delete.rawValue)
+        }
+        countryCodeField.typeText("999")
+
+        let phoneNumberField = app.textFields["Auth.PhoneEntry.PhoneNumberField"]
+        phoneNumberField.tap()
+        phoneNumberField.typeText("6625678")
+
+        let continueButton = app.buttons["Auth.PhoneEntry.ContinueButton"]
+        XCTAssert(continueButton.waitForExistence(timeout: 3.0))
+        XCTAssert(continueButton.isEnabled)
+        continueButton.tap()
+
+        // Confirmation dialog — tap Continue
+        let confirmButton = app.buttons["Auth.PhoneConfirm.ContinueButton"]
+        XCTAssert(confirmButton.waitForExistence(timeout: 5.0))
+        confirmButton.tap()
+
+        // Code entry screen — enter verification code
+        let codeEntryTitle = app.staticTexts["Auth.CodeEntry.Title"]
+        XCTAssert(codeEntryTitle.waitForExistence(timeout: 15.0))
+
+        let codeField = app.textFields["Auth.CodeEntry.CodeField"]
+        XCTAssert(codeField.waitForExistence(timeout: 3.0))
+        codeField.typeText("22222")
+
+        // Set name screen — enter name and submit
+        let firstNameField = app.textFields["Auth.SetName.FirstNameField"]
+        XCTAssert(firstNameField.waitForExistence(timeout: 15.0))
+        firstNameField.tap()
+        firstNameField.typeText("Test")
+
+        let lastNameField = app.textFields["Auth.SetName.LastNameField"]
+        lastNameField.tap()
+        lastNameField.typeText("User")
+
+        let signUpButton = app.buttons["Auth.SetName.ContinueButton"]
+        XCTAssert(signUpButton.waitForExistence(timeout: 3.0))
+        signUpButton.tap()
     }
 }

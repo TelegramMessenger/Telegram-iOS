@@ -219,6 +219,21 @@ open class TabBarControllerImpl: ViewController, TabBarController {
                     }
                 }))
             }
+        }, itemHasDoubleTapAction: { [weak self] index in
+            guard let self else {
+                return false
+            }
+            if index >= 0 && index < self.tabBarControllerNode.tabBarItems.count {
+                return self.controllers[index].tabBarItemHasDoubleTapAction()
+            }
+            return false
+        }, itemDoubleTapped: { [weak self] index in
+            guard let self else {
+                return
+            }
+            if index >= 0 && index < self.tabBarControllerNode.tabBarItems.count {
+                self.controllers[index].tabBarItemPerformDoubleTapAction()
+            }
         }, contextAction: { [weak self] index, view, gesture in
             guard let strongSelf = self else {
                 return

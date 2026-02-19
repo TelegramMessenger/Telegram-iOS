@@ -203,12 +203,14 @@ public extension Api {
             public var kickedBy: Int64
             public var date: Int32
             public var bannedRights: Api.ChatBannedRights
-            public init(flags: Int32, peer: Api.Peer, kickedBy: Int64, date: Int32, bannedRights: Api.ChatBannedRights) {
+            public var rank: String?
+            public init(flags: Int32, peer: Api.Peer, kickedBy: Int64, date: Int32, bannedRights: Api.ChatBannedRights, rank: String?) {
                 self.flags = flags
                 self.peer = peer
                 self.kickedBy = kickedBy
                 self.date = date
                 self.bannedRights = bannedRights
+                self.rank = rank
             }
         }
         public class Cons_channelParticipantCreator {
@@ -286,13 +288,16 @@ public extension Api {
                 break
             case .channelParticipantBanned(let _data):
                 if boxed {
-                    buffer.appendInt32(1844969806)
+                    buffer.appendInt32(-705647215)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.peer.serialize(buffer, true)
                 serializeInt64(_data.kickedBy, buffer: buffer, boxed: false)
                 serializeInt32(_data.date, buffer: buffer, boxed: false)
                 _data.bannedRights.serialize(buffer, true)
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeString(_data.rank!, buffer: buffer, boxed: false)
+                }
                 break
             case .channelParticipantCreator(let _data):
                 if boxed {
@@ -336,7 +341,7 @@ public extension Api {
             case .channelParticipantAdmin(let _data):
                 return ("channelParticipantAdmin", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("promotedBy", _data.promotedBy as Any), ("date", _data.date as Any), ("adminRights", _data.adminRights as Any), ("rank", _data.rank as Any)])
             case .channelParticipantBanned(let _data):
-                return ("channelParticipantBanned", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("kickedBy", _data.kickedBy as Any), ("date", _data.date as Any), ("bannedRights", _data.bannedRights as Any)])
+                return ("channelParticipantBanned", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("kickedBy", _data.kickedBy as Any), ("date", _data.date as Any), ("bannedRights", _data.bannedRights as Any), ("rank", _data.rank as Any)])
             case .channelParticipantCreator(let _data):
                 return ("channelParticipantCreator", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("adminRights", _data.adminRights as Any), ("rank", _data.rank as Any)])
             case .channelParticipantLeft(let _data):
@@ -423,13 +428,18 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
             }
+            var _6: String?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _6 = parseString(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.ChannelParticipant.channelParticipantBanned(Cons_channelParticipantBanned(flags: _1!, peer: _2!, kickedBy: _3!, date: _4!, bannedRights: _5!))
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.ChannelParticipant.channelParticipantBanned(Cons_channelParticipantBanned(flags: _1!, peer: _2!, kickedBy: _3!, date: _4!, bannedRights: _5!, rank: _6))
             }
             else {
                 return nil

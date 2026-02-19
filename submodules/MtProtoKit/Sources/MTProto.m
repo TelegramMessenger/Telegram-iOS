@@ -1807,7 +1807,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSData *messageKey = [is readData:16];
 
             MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyV2ForAuthKey:effectiveAuthKey.authKey messageKey:messageKey toClient:true];
-            
+            if (data.length <= 24) {
+                return;
+            }
             NSMutableData *encryptedMessageData = [is readMutableData:(data.length - 24)];
             while (encryptedMessageData.length % 16 != 0) {
                    [encryptedMessageData setLength:encryptedMessageData.length - 1];

@@ -35,7 +35,7 @@ public final class GalleryFooterNode: ASDisplayNode {
         self.visibilityAlpha = alpha
         let transition: ComponentTransition = animated ? .easeInOut(duration: 0.2) : .immediate
         transition.setAlpha(view: self.edgeEffectView, alpha: alpha * self.defaultEdgeEffectAlpha)
-        self.currentFooterContentNode?.setVisibilityAlpha(alpha, animated: true)
+        self.currentFooterContentNode?.setVisibilityAlpha(alpha, animated: animated)
         self.currentOverlayContentNode?.setVisibilityAlpha(alpha)
     }
     

@@ -953,6 +953,7 @@ public func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, thr
                                     })
                                 ])
                             ])
+                            chatListController.view.endEditing(true)
                             chatListController.present(actionSheet, in: .window(.root))
                         }
                     })

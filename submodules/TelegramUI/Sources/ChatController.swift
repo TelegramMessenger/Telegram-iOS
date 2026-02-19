@@ -10192,7 +10192,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private var updateChatLocationThreadDisposable: Disposable?
-    private var isUpdatingChatLocationThread: Bool = false
+    private(set) var isUpdatingChatLocationThread: Bool = false
     var currentChatSwitchDirection: ChatControllerAnimateInnerChatSwitchDirection?
     
     func updateChatLocationToOther(chatLocation: ChatLocation) {

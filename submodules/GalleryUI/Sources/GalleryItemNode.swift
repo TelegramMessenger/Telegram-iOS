@@ -94,7 +94,7 @@ open class GalleryItemNode: ASDisplayNode {
     open func visibilityUpdated(isVisible: Bool) {
     }
     
-    open func controlsVisibilityUpdated(isVisible: Bool) {
+    open func controlsVisibilityUpdated(isVisible: Bool, animated: Bool) {
     }
     
     open func adjustForPreviewing() {

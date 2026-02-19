@@ -981,14 +981,6 @@ public extension Api {
                 self.peerId = peerId
             }
         }
-        public class Cons_updatePeerHistoryNoForwards {
-            public var flags: Int32
-            public var peer: Api.Peer
-            public init(flags: Int32, peer: Api.Peer) {
-                self.flags = flags
-                self.peer = peer
-            }
-        }
         public class Cons_updatePeerHistoryTTL {
             public var flags: Int32
             public var peer: Api.Peer
@@ -1552,7 +1544,6 @@ public extension Api {
         case updateNotifySettings(Cons_updateNotifySettings)
         case updatePaidReactionPrivacy(Cons_updatePaidReactionPrivacy)
         case updatePeerBlocked(Cons_updatePeerBlocked)
-        case updatePeerHistoryNoForwards(Cons_updatePeerHistoryNoForwards)
         case updatePeerHistoryTTL(Cons_updatePeerHistoryTTL)
         case updatePeerLocated(Cons_updatePeerLocated)
         case updatePeerSettings(Cons_updatePeerSettings)
@@ -2519,13 +2510,6 @@ public extension Api {
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.peerId.serialize(buffer, true)
                 break
-            case .updatePeerHistoryNoForwards(let _data):
-                if boxed {
-                    buffer.appendInt32(1463202714)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                _data.peer.serialize(buffer, true)
-                break
             case .updatePeerHistoryTTL(let _data):
                 if boxed {
                     buffer.appendInt32(-1147422299)
@@ -3232,8 +3216,6 @@ public extension Api {
                 return ("updatePaidReactionPrivacy", [("`private`", _data.`private` as Any)])
             case .updatePeerBlocked(let _data):
                 return ("updatePeerBlocked", [("flags", _data.flags as Any), ("peerId", _data.peerId as Any)])
-            case .updatePeerHistoryNoForwards(let _data):
-                return ("updatePeerHistoryNoForwards", [("flags", _data.flags as Any), ("peer", _data.peer as Any)])
             case .updatePeerHistoryTTL(let _data):
                 return ("updatePeerHistoryTTL", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("ttlPeriod", _data.ttlPeriod as Any)])
             case .updatePeerLocated(let _data):
@@ -5215,22 +5197,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updatePeerBlocked(Cons_updatePeerBlocked(flags: _1!, peerId: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updatePeerHistoryNoForwards(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updatePeerHistoryNoForwards(Cons_updatePeerHistoryNoForwards(flags: _1!, peer: _2!))
             }
             else {
                 return nil

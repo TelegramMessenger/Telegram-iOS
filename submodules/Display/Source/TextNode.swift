@@ -358,6 +358,16 @@ public final class TextNodeLayout: NSObject {
         }
     }
     
+    public struct LayoutInfo: Equatable {
+        public let size: CGSize
+        public let trailingLineWidth: CGFloat
+        
+        public init(size: CGSize, trailingLineWidth: CGFloat) {
+            self.size = size
+            self.trailingLineWidth = trailingLineWidth
+        }
+    }
+    
     public let attributedString: NSAttributedString?
     fileprivate let maximumNumberOfLines: Int
     fileprivate let truncationType: CTLineTruncationType

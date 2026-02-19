@@ -119,6 +119,19 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
     }
 }
 
+private func constTimeIsEqual(data1: Data, data2: Data) -> Bool {
+    if data1.count != data2.count {
+        return false
+    }
+    var isEqual = true
+    for i in 0 ..< data1.count {
+        if data1[i] != data2[i] {
+            isEqual = false
+        }
+    }
+    return isEqual
+}
+
 func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, data: MemoryBuffer) -> MemoryBuffer? {
     assert(parameters.key.key.length == 256)
     
@@ -211,14 +224,14 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
             
             if Int(payloadLength) <= 0 || Int(payloadLength) > decryptedData.count - 4 || paddingLength < 12 || paddingLength > 1024 {
                 
-                if localMessageKey != msgKeyData {
+                if !constTimeIsEqual(data1: localMessageKey, data2: msgKeyData) {
                     Logger.shared.log("SecretChatEncryption", "message key doesn't match (length check)")
                 }
                 
                 return nil
             }
             
-            if localMessageKey != msgKeyData {
+            if !constTimeIsEqual(data1: localMessageKey, data2: msgKeyData) {
                 Logger.shared.log("SecretChatEncryption", "message key doesn't match")
                 return nil
             }

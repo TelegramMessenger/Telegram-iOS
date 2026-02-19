@@ -1475,7 +1475,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
             self.prefersOnScreenNavigationHidden = !visible
             
             self.galleryNode.pager.forEachItemNode { itemNode in
-                itemNode.controlsVisibilityUpdated(isVisible: visible)
+                itemNode.controlsVisibilityUpdated(isVisible: visible, animated: true)
             }
         }
         
@@ -1767,7 +1767,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
         }
         
         if !self.isPresentedInPreviewingContext() {
-            self.galleryNode.setControlsHidden(self.landscape, animated: false)
+            //self.galleryNode.setControlsHidden(self.landscape, animated: false)
             if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
                 if presentationArguments.animated {
                     self.galleryNode.animateIn(animateContent: !nodeAnimatesItself && !self.useSimpleAnimation, useSimpleAnimation: self.useSimpleAnimation)

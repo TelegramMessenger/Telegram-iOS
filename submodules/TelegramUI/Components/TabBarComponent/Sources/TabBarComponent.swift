@@ -250,15 +250,17 @@ public final class TabBarComponent: Component {
     public final class Item: Equatable {
         public let item: UITabBarItem
         public let action: (Bool) -> Void
+        public let doubleTapAction: (() -> Void)?
         public let contextAction: ((ContextGesture, ContextExtractedContentContainingView) -> Void)?
         
         fileprivate var id: AnyHashable {
             return AnyHashable(ObjectIdentifier(self.item))
         }
         
-        public init(item: UITabBarItem, action: @escaping (Bool) -> Void, contextAction: ((ContextGesture, ContextExtractedContentContainingView) -> Void)?) {
+        public init(item: UITabBarItem, action: @escaping (Bool) -> Void, doubleTapAction: (() -> Void)?, contextAction: ((ContextGesture, ContextExtractedContentContainingView) -> Void)?) {
             self.item = item
             self.action = action
+            self.doubleTapAction = doubleTapAction
             self.contextAction = contextAction
         }
         
@@ -267,6 +269,9 @@ public final class TabBarComponent: Component {
                 return true
             }
             if lhs.item !== rhs.item {
+                return false
+            }
+            if (lhs.doubleTapAction == nil) != (rhs.doubleTapAction == nil) {
                 return false
             }
             if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
@@ -340,7 +345,7 @@ public final class TabBarComponent: Component {
         return true
     }
     
-    public final class View: UIView, UITabBarDelegate, UIGestureRecognizerDelegate {
+    public final class View: UIView, UIGestureRecognizerDelegate {
         private let backgroundContainer: GlassBackgroundContainerView
         private let liquidLensView: LiquidLensView
         private let contextGestureContainerView: ContextControllerSourceView
@@ -359,6 +364,7 @@ public final class TabBarComponent: Component {
 
         private var selectionGestureState: (startX: CGFloat, currentX: CGFloat, itemWidth: CGFloat, itemId: AnyHashable)?
         private var overrideSelectedItemId: AnyHashable?
+        private var pendingDoubleTapItem: (id: AnyHashable, previouslySelectedId: AnyHashable?, timer: Foundation.Timer)?
 
         public var currentSearchNode: ASDisplayNode? {
             return self.searchView?.searchBarNode
@@ -450,15 +456,8 @@ public final class TabBarComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        public func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
-            guard let component = self.component else {
-                return
-            }
-            if let index = tabBar.items?.firstIndex(where: { $0 === item }) {
-                if index < component.items.count {
-                    component.items[index].action(false)
-                }
-            }
+        deinit {
+            self.pendingDoubleTapItem?.timer.invalidate()
         }
         
         public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -473,6 +472,11 @@ public final class TabBarComponent: Component {
             case .began:
                 if let search = component.search, search.isActive {
                 } else if let itemId = self.item(at: recognizer.location(in: self)), let itemView = self.itemViews[itemId]?.view {
+                    if let pendingDoubleTapItemValue = self.pendingDoubleTapItem, pendingDoubleTapItemValue.id != itemId {
+                        self.pendingDoubleTapItem = nil
+                        pendingDoubleTapItemValue.timer.invalidate()
+                    }
+                    
                     let startX = itemView.frame.minX - 4.0
                     self.selectionGestureState = (startX, startX, itemView.bounds.width, itemId)
                     self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
@@ -496,8 +500,43 @@ public final class TabBarComponent: Component {
                         guard let item = component.items.first(where: { $0.id == selectionGestureState.itemId }) else {
                             return
                         }
-                        self.overrideSelectedItemId = selectionGestureState.itemId
-                        item.action(false)
+                        
+                        var handledDoubleTap = false
+                        if let pendingDoubleTapItemValue = self.pendingDoubleTapItem {
+                            self.pendingDoubleTapItem = nil
+                            pendingDoubleTapItemValue.timer.invalidate()
+                            
+                            if pendingDoubleTapItemValue.id == selectionGestureState.itemId {
+                                handledDoubleTap = true
+                                item.doubleTapAction?()
+                            }
+                        }
+                        
+                        if !handledDoubleTap {
+                            if item.doubleTapAction != nil {
+                                let timer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.18, repeats: false, block: { [weak self] timer in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if let pendingDoubleTapItemValue = self.pendingDoubleTapItem, pendingDoubleTapItemValue.timer === timer {
+                                        self.pendingDoubleTapItem = nil
+                                        
+                                        self.overrideSelectedItemId = pendingDoubleTapItemValue.id
+                                        if let item = component.items.first(where: { $0.id == pendingDoubleTapItemValue.id }) {
+                                            item.action(false)
+                                        }
+                                        
+                                        self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
+                                    }
+                                })
+                                self.overrideSelectedItemId = selectionGestureState.itemId
+                                item.action(false)
+                                self.pendingDoubleTapItem = (selectionGestureState.itemId, self.overrideSelectedItemId, timer)
+                            } else {
+                                self.overrideSelectedItemId = selectionGestureState.itemId
+                                item.action(false)
+                            }
+                        }
                     }
                     self.state?.updated(transition: .spring(duration: 0.4), isLocal: true)
                 }

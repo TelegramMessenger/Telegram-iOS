@@ -2126,20 +2126,24 @@ public final class ChatSideTopicsPanel: Component {
                                 self.dismissContextControllerOnNextUpdate = contextController
                                 
                                 let _ = (component.context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: topicId)
-                                         |> deliverOnMainQueue).startStandalone(error: { [weak self, weak contextController] error in
-                                    guard let self, let component = self.component else {
+                                |> deliverOnMainQueue).startStandalone(error: { [weak self, weak contextController] error in
+                                    guard let self else {
                                         contextController?.dismiss(completion: {})
                                         return
                                     }
                                     
                                     switch error {
                                     case let .limitReached(count):
-                                        contextController?.dismiss(completion: {})
-                                        if let controller = component.controller() {
-                                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                            let text = presentationData.strings.ChatList_MaxThreadPinsFinalText(Int32(count))
-                                            controller.present(textAlertController(context: component.context, title: presentationData.strings.Premium_LimitReached, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true), in: .window(.root))
-                                        }
+                                        contextController?.dismiss(completion: { [weak self] in
+                                            guard let self, let component = self.component else {
+                                                return
+                                            }
+                                            if let controller = component.controller() {
+                                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                                let text = presentationData.strings.ChatList_MaxThreadPinsFinalText(Int32(count))
+                                                controller.present(textAlertController(context: component.context, title: presentationData.strings.Premium_LimitReached, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true), in: .window(.root))
+                                            }
+                                        })
                                     default:
                                         break
                                     }

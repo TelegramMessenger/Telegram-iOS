@@ -302,6 +302,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case starGiftPurchaseOffer(gift: StarGift, amount: CurrencyAmount, expireDate: Int32, isAccepted: Bool, isDeclined: Bool)
     case starGiftPurchaseOfferDeclined(gift: StarGift, amount: CurrencyAmount, hasExpired: Bool)
     case groupCreatorChange(GroupCreatorChange)
+    case copyProtectionToggle(previousValue: Bool, newValue: Bool)
+    case copyProtectionRequest(hasExpired: Bool, previousValue: Bool, newValue: Bool)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -475,6 +477,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .starGiftPurchaseOfferDeclined(gift: decoder.decodeObjectForKey("gift", decoder: { StarGift(decoder: $0) }) as! StarGift, amount: decoder.decodeCodable(CurrencyAmount.self, forKey: "amount")!, hasExpired: decoder.decodeBoolForKey("hasExpired", orElse: false))
         case 59:
             self = .groupCreatorChange(decoder.decodeCodable(GroupCreatorChange.self, forKey: "d") ?? GroupCreatorChange(kind: .pending, targetPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0))))
+        case 60:
+            self = .copyProtectionToggle(previousValue: decoder.decodeBoolForKey("previousValue", orElse: false), newValue: decoder.decodeBoolForKey("newValue", orElse: false))
+        case 61:
+            self = .copyProtectionRequest(hasExpired: decoder.decodeBoolForKey("hasExpired", orElse: false), previousValue: decoder.decodeBoolForKey("previousValue", orElse: false), newValue: decoder.decodeBoolForKey("newValue", orElse: false))
         default:
             self = .unknown
         }
@@ -969,6 +975,15 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .groupCreatorChange(groupCreatorChange):
             encoder.encodeInt32(59, forKey: "_rawValue")
             encoder.encodeCodable(groupCreatorChange, forKey: "d")
+        case let .copyProtectionToggle(previousValue, newValue):
+            encoder.encodeInt32(60, forKey: "_rawValue")
+            encoder.encodeBool(previousValue, forKey: "previousValue")
+            encoder.encodeBool(newValue, forKey: "newValue")
+        case let .copyProtectionRequest(hasExpired, previousValue, newValue):
+            encoder.encodeInt32(61, forKey: "_rawValue")
+            encoder.encodeBool(hasExpired, forKey: "hasExpired")
+            encoder.encodeBool(previousValue, forKey: "previousValue")
+            encoder.encodeBool(newValue, forKey: "newValue")
         }
     }
     

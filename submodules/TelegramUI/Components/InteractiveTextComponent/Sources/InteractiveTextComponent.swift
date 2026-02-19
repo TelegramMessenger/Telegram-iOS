@@ -1019,28 +1019,73 @@ public final class InteractiveTextNodeLayout: NSObject {
         return nil
     }
     
-    public func sizeForGlyphCount(glyphCount: Int) -> CGSize {
+    public func layoutForGlyphCount(glyphCount: Int) -> TextNodeLayout.LayoutInfo {
         var height: CGFloat = 0.0
         if !self.segments.isEmpty, let line = self.segments[0].lines.first {
             height = line.frame.maxY
         }
+        var width: CGFloat = 0.0
         var count = 0
+        var trailingLineWidth: CGFloat = 0.0
         for segment in self.segments {
             for line in segment.lines {
                 if count >= glyphCount {
                     break
                 }
+                let lineWidth: CGFloat
                 let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                var maxGlyphUpperIndex: CFIndex = 0
                 for run in glyphRuns {
                     let run = run as! CTRun
-                    let glyphCount = CTRunGetGlyphCount(run)
-                    count += Int(glyphCount)
+                    let rangeGlyphCount = CTRunGetGlyphCount(run)
+                    let stringRange = CTRunGetStringRange(run)
+                    if count + Int(rangeGlyphCount) > glyphCount {
+                        if count < glyphCount {
+                            let remainingGlyphCount = stringRange.location + glyphCount - count
+                            if remainingGlyphCount > 0 {
+                                var indices: [CFIndex] = Array(repeating: 0, count: remainingGlyphCount)
+                                CTRunGetStringIndices(run, CFRangeMake(stringRange.location, stringRange.location + glyphCount - count), &indices)
+                                if let maxIndex = indices.max() {
+                                    maxGlyphUpperIndex = max(maxIndex, maxGlyphUpperIndex)
+                                }
+                            } else {
+                                assertionFailure()
+                            }
+                        }
+                    } else {
+                        if stringRange.length != 0 {
+                            maxGlyphUpperIndex = max(stringRange.location + stringRange.length, maxGlyphUpperIndex)
+                        }
+                    }
+                    count += Int(rangeGlyphCount)
                 }
                 height = max(height, line.frame.maxY)
+                if maxGlyphUpperIndex != 0 {
+                    let lineRange = CTLineGetStringRange(line.line)
+                    if maxGlyphUpperIndex < lineRange.location + lineRange.length {
+                        let rightOffset = CTLineGetOffsetForStringIndex(line.line, maxGlyphUpperIndex + 1, nil)
+                        lineWidth = rightOffset
+                    } else {
+                        lineWidth = line.frame.width
+                    }
+                } else {
+                    lineWidth = line.frame.width
+                }
+                
+                width = max(width, lineWidth)
+                trailingLineWidth = lineWidth
             }
         }
+        let _ = width
         height += self.insets.top + self.insets.bottom + 2.0
-        return CGSize(width: self.size.width, height: ceil(height))
+        return TextNodeLayout.LayoutInfo(
+            size: CGSize(width: self.size.width, height: ceil(height)),
+            trailingLineWidth: trailingLineWidth
+        )
+    }
+    
+    public func sizeForGlyphCount(glyphCount: Int) -> CGSize {
+        return self.layoutForGlyphCount(glyphCount: glyphCount).size
     }
 }
 

@@ -9510,12 +9510,16 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func toggleNoForwards(peer: Api.InputPeer, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func toggleNoForwards(flags: Int32, peer: Api.InputPeer, enabled: Api.Bool, requestMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1323389022)
+        buffer.appendInt32(-1308091851)
+        serializeInt32(flags, buffer: buffer, boxed: false)
         peer.serialize(buffer, true)
         enabled.serialize(buffer, true)
-        return (FunctionDescription(name: "messages.toggleNoForwards", parameters: [("peer", String(describing: peer)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        if Int(flags) & Int(1 << 0) != 0 {
+            serializeInt32(requestMsgId!, buffer: buffer, boxed: false)
+        }
+        return (FunctionDescription(name: "messages.toggleNoForwards", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("enabled", String(describing: enabled)), ("requestMsgId", String(describing: requestMsgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {

@@ -19,6 +19,7 @@ import GlassBackgroundComponent
 import LottieComponent
 import TextNodeWithEntities
 import ContextUI
+import LensTransition
 
 public protocol ContextControllerActionsListItemNode: ASDisplayNode {
     func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)
@@ -1411,7 +1412,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         let backgroundContainerInset: CGFloat
         let backgroundView: GlassBackgroundView
         var sourceExtractableContainer: ContextExtractableContainer?
-        let contentContainer: UIView
+        let contentContainer: LensTransitionContainer
         
         var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
         var requestPop: (() -> Void)?
@@ -1430,7 +1431,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             self.backgroundView = GlassBackgroundView()
             self.backgroundContainer.contentView.addSubview(self.backgroundView)
             
-            self.contentContainer = UIView()
+            self.contentContainer = LensTransitionContainer()
             self.contentContainer.clipsToBounds = true
             self.backgroundView.contentView.addSubview(self.contentContainer)
             
@@ -1512,11 +1513,13 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             }
             
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: sourceSize)
+            self.contentContainer.update(size: sourceSize, cornerRadius: min(sourceSize.width, sourceSize.height) * 0.5, state: .animatedOut, transition: .immediate)
             self.contentContainer.layer.cornerRadius = normalCornerRadius
             
             extractableContainer.extractableContentView.frame = CGRect(origin: CGPoint(x: (currentSize.width - sourceSize.width) * 0.5, y: (currentSize.height - sourceSize.height) * 0.5), size: sourceSize).offsetBy(dx: self.backgroundContainerInset, dy: self.backgroundContainerInset)
             transition.setFrame(view: extractableContainer.extractableContentView, frame: CGRect(origin: CGPoint(x: self.backgroundContainerInset, y: self.backgroundContainerInset), size: currentSize))
             transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: currentSize))
+            self.contentContainer.update(size: currentSize, cornerRadius: 30.0, state: .animatedIn, transition: transition)
             transition.setCornerRadius(layer: self.contentContainer.layer, cornerRadius: 30.0)
             self.contentContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
             
@@ -1540,6 +1543,8 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             transition.setFrame(view: extractableContainer.extractableContentView, frame: CGRect(origin: CGPoint(x: self.backgroundContainerInset, y: self.backgroundContainerInset), size: normalSize).offsetBy(dx: (currentSize.width - normalSize.width) * 0.5, dy: (currentSize.height - normalSize.height) * 0.5))
             
             transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: normalSize))
+            self.contentContainer.update(size: normalSize, cornerRadius: normalCornerRadius, state: .animatedOut, transition: transition)
+            
             transition.setCornerRadius(layer: self.contentContainer.layer, cornerRadius: normalCornerRadius)
             transition.setAlpha(view: self.contentContainer, alpha: 0.0)
             
@@ -1561,6 +1566,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             let transition = ComponentTransition(transition)
             
             transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: size))
+            transition.setCornerRadius(layer: self.contentContainer.layer, cornerRadius: min(30.0, size.height * 0.5))
             
             let backgroundContainerFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -self.backgroundContainerInset, dy: -self.backgroundContainerInset)
             
@@ -1568,8 +1574,6 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
                 self.backgroundContainer.update(size: backgroundContainerFrame.size, isDark: presentationData.theme.overallDarkAppearance, transition: transition)
                 transition.setFrame(view: self.backgroundContainer, frame: backgroundContainerFrame)
             }
-            
-            transition.setCornerRadius(layer: self.contentContainer.layer, cornerRadius: min(30.0, size.height * 0.5))
             
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: self.backgroundContainerInset, y: self.backgroundContainerInset), size: size))
             self.backgroundView.update(size: size, cornerRadius: min(30.0, size.height * 0.5), isDark: presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
