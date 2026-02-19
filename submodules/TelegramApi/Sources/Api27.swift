@@ -1,14 +1,17 @@
 public extension Api {
     enum StickerSetCovered: TypeConstructorDescription {
-        public class Cons_stickerSetCovered {
+        public class Cons_stickerSetCovered: TypeConstructorDescription {
             public var set: Api.StickerSet
             public var cover: Api.Document
             public init(set: Api.StickerSet, cover: Api.Document) {
                 self.set = set
                 self.cover = cover
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("stickerSetCovered", [("set", self.set as Any), ("cover", self.cover as Any)])
+            }
         }
-        public class Cons_stickerSetFullCovered {
+        public class Cons_stickerSetFullCovered: TypeConstructorDescription {
             public var set: Api.StickerSet
             public var packs: [Api.StickerPack]
             public var keywords: [Api.StickerKeyword]
@@ -19,19 +22,28 @@ public extension Api {
                 self.keywords = keywords
                 self.documents = documents
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("stickerSetFullCovered", [("set", self.set as Any), ("packs", self.packs as Any), ("keywords", self.keywords as Any), ("documents", self.documents as Any)])
+            }
         }
-        public class Cons_stickerSetMultiCovered {
+        public class Cons_stickerSetMultiCovered: TypeConstructorDescription {
             public var set: Api.StickerSet
             public var covers: [Api.Document]
             public init(set: Api.StickerSet, covers: [Api.Document]) {
                 self.set = set
                 self.covers = covers
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("stickerSetMultiCovered", [("set", self.set as Any), ("covers", self.covers as Any)])
+            }
         }
-        public class Cons_stickerSetNoCovered {
+        public class Cons_stickerSetNoCovered: TypeConstructorDescription {
             public var set: Api.StickerSet
             public init(set: Api.StickerSet) {
                 self.set = set
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("stickerSetNoCovered", [("set", self.set as Any)])
             }
         }
         case stickerSetCovered(Cons_stickerSetCovered)
@@ -183,7 +195,7 @@ public extension Api {
 }
 public extension Api {
     enum StoriesStealthMode: TypeConstructorDescription {
-        public class Cons_storiesStealthMode {
+        public class Cons_storiesStealthMode: TypeConstructorDescription {
             public var flags: Int32
             public var activeUntilDate: Int32?
             public var cooldownUntilDate: Int32?
@@ -191,6 +203,9 @@ public extension Api {
                 self.flags = flags
                 self.activeUntilDate = activeUntilDate
                 self.cooldownUntilDate = cooldownUntilDate
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storiesStealthMode", [("flags", self.flags as Any), ("activeUntilDate", self.activeUntilDate as Any), ("cooldownUntilDate", self.cooldownUntilDate as Any)])
             }
         }
         case storiesStealthMode(Cons_storiesStealthMode)
@@ -244,7 +259,7 @@ public extension Api {
 }
 public extension Api {
     enum StoryAlbum: TypeConstructorDescription {
-        public class Cons_storyAlbum {
+        public class Cons_storyAlbum: TypeConstructorDescription {
             public var flags: Int32
             public var albumId: Int32
             public var title: String
@@ -256,6 +271,9 @@ public extension Api {
                 self.title = title
                 self.iconPhoto = iconPhoto
                 self.iconVideo = iconVideo
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyAlbum", [("flags", self.flags as Any), ("albumId", self.albumId as Any), ("title", self.title as Any), ("iconPhoto", self.iconPhoto as Any), ("iconVideo", self.iconVideo as Any)])
             }
         }
         case storyAlbum(Cons_storyAlbum)
@@ -321,7 +339,7 @@ public extension Api {
 }
 public extension Api {
     enum StoryFwdHeader: TypeConstructorDescription {
-        public class Cons_storyFwdHeader {
+        public class Cons_storyFwdHeader: TypeConstructorDescription {
             public var flags: Int32
             public var from: Api.Peer?
             public var fromName: String?
@@ -331,6 +349,9 @@ public extension Api {
                 self.from = from
                 self.fromName = fromName
                 self.storyId = storyId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyFwdHeader", [("flags", self.flags as Any), ("from", self.from as Any), ("fromName", self.fromName as Any), ("storyId", self.storyId as Any)])
             }
         }
         case storyFwdHeader(Cons_storyFwdHeader)
@@ -394,7 +415,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
-        public class Cons_storyItem {
+        public class Cons_storyItem: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int32
             public var date: Int32
@@ -425,14 +446,20 @@ public extension Api {
                 self.sentReaction = sentReaction
                 self.albums = albums
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyItem", [("flags", self.flags as Any), ("id", self.id as Any), ("date", self.date as Any), ("fromId", self.fromId as Any), ("fwdFrom", self.fwdFrom as Any), ("expireDate", self.expireDate as Any), ("caption", self.caption as Any), ("entities", self.entities as Any), ("media", self.media as Any), ("mediaAreas", self.mediaAreas as Any), ("privacy", self.privacy as Any), ("views", self.views as Any), ("sentReaction", self.sentReaction as Any), ("albums", self.albums as Any)])
+            }
         }
-        public class Cons_storyItemDeleted {
+        public class Cons_storyItemDeleted: TypeConstructorDescription {
             public var id: Int32
             public init(id: Int32) {
                 self.id = id
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyItemDeleted", [("id", self.id as Any)])
+            }
         }
-        public class Cons_storyItemSkipped {
+        public class Cons_storyItemSkipped: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int32
             public var date: Int32
@@ -442,6 +469,9 @@ public extension Api {
                 self.id = id
                 self.date = date
                 self.expireDate = expireDate
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyItemSkipped", [("flags", self.flags as Any), ("id", self.id as Any), ("date", self.date as Any), ("expireDate", self.expireDate as Any)])
             }
         }
         case storyItem(Cons_storyItem)
@@ -653,7 +683,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryReaction: TypeConstructorDescription {
-        public class Cons_storyReaction {
+        public class Cons_storyReaction: TypeConstructorDescription {
             public var peerId: Api.Peer
             public var date: Int32
             public var reaction: Api.Reaction
@@ -662,19 +692,28 @@ public extension Api {
                 self.date = date
                 self.reaction = reaction
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyReaction", [("peerId", self.peerId as Any), ("date", self.date as Any), ("reaction", self.reaction as Any)])
+            }
         }
-        public class Cons_storyReactionPublicForward {
+        public class Cons_storyReactionPublicForward: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyReactionPublicForward", [("message", self.message as Any)])
+            }
         }
-        public class Cons_storyReactionPublicRepost {
+        public class Cons_storyReactionPublicRepost: TypeConstructorDescription {
             public var peerId: Api.Peer
             public var story: Api.StoryItem
             public init(peerId: Api.Peer, story: Api.StoryItem) {
                 self.peerId = peerId
                 self.story = story
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyReactionPublicRepost", [("peerId", self.peerId as Any), ("story", self.story as Any)])
             }
         }
         case storyReaction(Cons_storyReaction)
@@ -774,7 +813,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryView: TypeConstructorDescription {
-        public class Cons_storyView {
+        public class Cons_storyView: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var date: Int32
@@ -785,16 +824,22 @@ public extension Api {
                 self.date = date
                 self.reaction = reaction
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyView", [("flags", self.flags as Any), ("userId", self.userId as Any), ("date", self.date as Any), ("reaction", self.reaction as Any)])
+            }
         }
-        public class Cons_storyViewPublicForward {
+        public class Cons_storyViewPublicForward: TypeConstructorDescription {
             public var flags: Int32
             public var message: Api.Message
             public init(flags: Int32, message: Api.Message) {
                 self.flags = flags
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyViewPublicForward", [("flags", self.flags as Any), ("message", self.message as Any)])
+            }
         }
-        public class Cons_storyViewPublicRepost {
+        public class Cons_storyViewPublicRepost: TypeConstructorDescription {
             public var flags: Int32
             public var peerId: Api.Peer
             public var story: Api.StoryItem
@@ -802,6 +847,9 @@ public extension Api {
                 self.flags = flags
                 self.peerId = peerId
                 self.story = story
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyViewPublicRepost", [("flags", self.flags as Any), ("peerId", self.peerId as Any), ("story", self.story as Any)])
             }
         }
         case storyView(Cons_storyView)
@@ -915,7 +963,7 @@ public extension Api {
 }
 public extension Api {
     enum StoryViews: TypeConstructorDescription {
-        public class Cons_storyViews {
+        public class Cons_storyViews: TypeConstructorDescription {
             public var flags: Int32
             public var viewsCount: Int32
             public var forwardsCount: Int32?
@@ -929,6 +977,9 @@ public extension Api {
                 self.reactions = reactions
                 self.reactionsCount = reactionsCount
                 self.recentViewers = recentViewers
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyViews", [("flags", self.flags as Any), ("viewsCount", self.viewsCount as Any), ("forwardsCount", self.forwardsCount as Any), ("reactions", self.reactions as Any), ("reactionsCount", self.reactionsCount as Any), ("recentViewers", self.recentViewers as Any)])
             }
         }
         case storyViews(Cons_storyViews)
@@ -1014,7 +1065,7 @@ public extension Api {
 }
 public extension Api {
     enum SuggestedPost: TypeConstructorDescription {
-        public class Cons_suggestedPost {
+        public class Cons_suggestedPost: TypeConstructorDescription {
             public var flags: Int32
             public var price: Api.StarsAmount?
             public var scheduleDate: Int32?
@@ -1022,6 +1073,9 @@ public extension Api {
                 self.flags = flags
                 self.price = price
                 self.scheduleDate = scheduleDate
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("suggestedPost", [("flags", self.flags as Any), ("price", self.price as Any), ("scheduleDate", self.scheduleDate as Any)])
             }
         }
         case suggestedPost(Cons_suggestedPost)
@@ -1077,12 +1131,15 @@ public extension Api {
 }
 public extension Api {
     enum TextWithEntities: TypeConstructorDescription {
-        public class Cons_textWithEntities {
+        public class Cons_textWithEntities: TypeConstructorDescription {
             public var text: String
             public var entities: [Api.MessageEntity]
             public init(text: String, entities: [Api.MessageEntity]) {
                 self.text = text
                 self.entities = entities
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("textWithEntities", [("text", self.text as Any), ("entities", self.entities as Any)])
             }
         }
         case textWithEntities(Cons_textWithEntities)
@@ -1130,7 +1187,7 @@ public extension Api {
 }
 public extension Api {
     enum Theme: TypeConstructorDescription {
-        public class Cons_theme {
+        public class Cons_theme: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var accessHash: Int64
@@ -1150,6 +1207,9 @@ public extension Api {
                 self.settings = settings
                 self.emoticon = emoticon
                 self.installsCount = installsCount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("theme", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("slug", self.slug as Any), ("title", self.title as Any), ("document", self.document as Any), ("settings", self.settings as Any), ("emoticon", self.emoticon as Any), ("installsCount", self.installsCount as Any)])
             }
         }
         case theme(Cons_theme)
@@ -1243,7 +1303,7 @@ public extension Api {
 }
 public extension Api {
     enum ThemeSettings: TypeConstructorDescription {
-        public class Cons_themeSettings {
+        public class Cons_themeSettings: TypeConstructorDescription {
             public var flags: Int32
             public var baseTheme: Api.BaseTheme
             public var accentColor: Int32
@@ -1257,6 +1317,9 @@ public extension Api {
                 self.outboxAccentColor = outboxAccentColor
                 self.messageColors = messageColors
                 self.wallpaper = wallpaper
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("themeSettings", [("flags", self.flags as Any), ("baseTheme", self.baseTheme as Any), ("accentColor", self.accentColor as Any), ("outboxAccentColor", self.outboxAccentColor as Any), ("messageColors", self.messageColors as Any), ("wallpaper", self.wallpaper as Any)])
             }
         }
         case themeSettings(Cons_themeSettings)
@@ -1336,7 +1399,7 @@ public extension Api {
 }
 public extension Api {
     enum Timezone: TypeConstructorDescription {
-        public class Cons_timezone {
+        public class Cons_timezone: TypeConstructorDescription {
             public var id: String
             public var name: String
             public var utcOffset: Int32
@@ -1344,6 +1407,9 @@ public extension Api {
                 self.id = id
                 self.name = name
                 self.utcOffset = utcOffset
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("timezone", [("id", self.id as Any), ("name", self.name as Any), ("utcOffset", self.utcOffset as Any)])
             }
         }
         case timezone(Cons_timezone)
@@ -1389,7 +1455,7 @@ public extension Api {
 }
 public extension Api {
     enum TodoCompletion: TypeConstructorDescription {
-        public class Cons_todoCompletion {
+        public class Cons_todoCompletion: TypeConstructorDescription {
             public var id: Int32
             public var completedBy: Api.Peer
             public var date: Int32
@@ -1397,6 +1463,9 @@ public extension Api {
                 self.id = id
                 self.completedBy = completedBy
                 self.date = date
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("todoCompletion", [("id", self.id as Any), ("completedBy", self.completedBy as Any), ("date", self.date as Any)])
             }
         }
         case todoCompletion(Cons_todoCompletion)
@@ -1444,12 +1513,15 @@ public extension Api {
 }
 public extension Api {
     enum TodoItem: TypeConstructorDescription {
-        public class Cons_todoItem {
+        public class Cons_todoItem: TypeConstructorDescription {
             public var id: Int32
             public var title: Api.TextWithEntities
             public init(id: Int32, title: Api.TextWithEntities) {
                 self.id = id
                 self.title = title
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("todoItem", [("id", self.id as Any), ("title", self.title as Any)])
             }
         }
         case todoItem(Cons_todoItem)
@@ -1493,7 +1565,7 @@ public extension Api {
 }
 public extension Api {
     enum TodoList: TypeConstructorDescription {
-        public class Cons_todoList {
+        public class Cons_todoList: TypeConstructorDescription {
             public var flags: Int32
             public var title: Api.TextWithEntities
             public var list: [Api.TodoItem]
@@ -1501,6 +1573,9 @@ public extension Api {
                 self.flags = flags
                 self.title = title
                 self.list = list
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("todoList", [("flags", self.flags as Any), ("title", self.title as Any), ("list", self.list as Any)])
             }
         }
         case todoList(Cons_todoList)
@@ -1554,12 +1629,15 @@ public extension Api {
 }
 public extension Api {
     enum TopPeer: TypeConstructorDescription {
-        public class Cons_topPeer {
+        public class Cons_topPeer: TypeConstructorDescription {
             public var peer: Api.Peer
             public var rating: Double
             public init(peer: Api.Peer, rating: Double) {
                 self.peer = peer
                 self.rating = rating
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("topPeer", [("peer", self.peer as Any), ("rating", self.rating as Any)])
             }
         }
         case topPeer(Cons_topPeer)

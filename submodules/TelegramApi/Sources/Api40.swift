@@ -8379,9 +8379,9 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func requestUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
+    static func requestUrlAuth(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, buttonId: Int32?, url: String?, inAppOrigin: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UrlAuthResult>) {
         let buffer = Buffer()
-        buffer.appendInt32(428848198)
+        buffer.appendInt32(-1991456356)
         serializeInt32(flags, buffer: buffer, boxed: false)
         if Int(flags) & Int(1 << 1) != 0 {
             peer!.serialize(buffer, true)
@@ -8395,7 +8395,10 @@ public extension Api.functions.messages {
         if Int(flags) & Int(1 << 2) != 0 {
             serializeString(url!, buffer: buffer, boxed: false)
         }
-        return (FunctionDescription(name: "messages.requestUrlAuth", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("buttonId", String(describing: buttonId)), ("url", String(describing: url))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
+        if Int(flags) & Int(1 << 3) != 0 {
+            serializeString(inAppOrigin!, buffer: buffer, boxed: false)
+        }
+        return (FunctionDescription(name: "messages.requestUrlAuth", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("buttonId", String(describing: buttonId)), ("url", String(describing: url)), ("inAppOrigin", String(describing: inAppOrigin))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UrlAuthResult? in
             let reader = BufferReader(buffer)
             var result: Api.UrlAuthResult?
             if let signature = reader.readInt32() {
@@ -9510,12 +9513,16 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func toggleNoForwards(peer: Api.InputPeer, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func toggleNoForwards(flags: Int32, peer: Api.InputPeer, enabled: Api.Bool, requestMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1323389022)
+        buffer.appendInt32(-1308091851)
+        serializeInt32(flags, buffer: buffer, boxed: false)
         peer.serialize(buffer, true)
         enabled.serialize(buffer, true)
-        return (FunctionDescription(name: "messages.toggleNoForwards", parameters: [("peer", String(describing: peer)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        if Int(flags) & Int(1 << 0) != 0 {
+            serializeInt32(requestMsgId!, buffer: buffer, boxed: false)
+        }
+        return (FunctionDescription(name: "messages.toggleNoForwards", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("enabled", String(describing: enabled)), ("requestMsgId", String(describing: requestMsgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {

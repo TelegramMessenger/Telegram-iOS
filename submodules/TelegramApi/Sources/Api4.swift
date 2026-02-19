@@ -1,9 +1,12 @@
 public extension Api {
     enum ChannelAdminLogEventsFilter: TypeConstructorDescription {
-        public class Cons_channelAdminLogEventsFilter {
+        public class Cons_channelAdminLogEventsFilter: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventsFilter", [("flags", self.flags as Any)])
             }
         }
         case channelAdminLogEventsFilter(Cons_channelAdminLogEventsFilter)
@@ -41,12 +44,15 @@ public extension Api {
 }
 public extension Api {
     enum ChannelLocation: TypeConstructorDescription {
-        public class Cons_channelLocation {
+        public class Cons_channelLocation: TypeConstructorDescription {
             public var geoPoint: Api.GeoPoint
             public var address: String
             public init(geoPoint: Api.GeoPoint, address: String) {
                 self.geoPoint = geoPoint
                 self.address = address
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelLocation", [("geoPoint", self.geoPoint as Any), ("address", self.address as Any)])
             }
         }
         case channelLocation(Cons_channelLocation)
@@ -101,12 +107,15 @@ public extension Api {
 }
 public extension Api {
     enum ChannelMessagesFilter: TypeConstructorDescription {
-        public class Cons_channelMessagesFilter {
+        public class Cons_channelMessagesFilter: TypeConstructorDescription {
             public var flags: Int32
             public var ranges: [Api.MessageRange]
             public init(flags: Int32, ranges: [Api.MessageRange]) {
                 self.flags = flags
                 self.ranges = ranges
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelMessagesFilter", [("flags", self.flags as Any), ("ranges", self.ranges as Any)])
             }
         }
         case channelMessagesFilter(Cons_channelMessagesFilter)
@@ -165,7 +174,7 @@ public extension Api {
 }
 public extension Api {
     enum ChannelParticipant: TypeConstructorDescription {
-        public class Cons_channelParticipant {
+        public class Cons_channelParticipant: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var date: Int32
@@ -178,8 +187,11 @@ public extension Api {
                 self.subscriptionUntilDate = subscriptionUntilDate
                 self.rank = rank
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipant", [("flags", self.flags as Any), ("userId", self.userId as Any), ("date", self.date as Any), ("subscriptionUntilDate", self.subscriptionUntilDate as Any), ("rank", self.rank as Any)])
+            }
         }
-        public class Cons_channelParticipantAdmin {
+        public class Cons_channelParticipantAdmin: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var inviterId: Int64?
@@ -196,22 +208,30 @@ public extension Api {
                 self.adminRights = adminRights
                 self.rank = rank
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantAdmin", [("flags", self.flags as Any), ("userId", self.userId as Any), ("inviterId", self.inviterId as Any), ("promotedBy", self.promotedBy as Any), ("date", self.date as Any), ("adminRights", self.adminRights as Any), ("rank", self.rank as Any)])
+            }
         }
-        public class Cons_channelParticipantBanned {
+        public class Cons_channelParticipantBanned: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var kickedBy: Int64
             public var date: Int32
             public var bannedRights: Api.ChatBannedRights
-            public init(flags: Int32, peer: Api.Peer, kickedBy: Int64, date: Int32, bannedRights: Api.ChatBannedRights) {
+            public var rank: String?
+            public init(flags: Int32, peer: Api.Peer, kickedBy: Int64, date: Int32, bannedRights: Api.ChatBannedRights, rank: String?) {
                 self.flags = flags
                 self.peer = peer
                 self.kickedBy = kickedBy
                 self.date = date
                 self.bannedRights = bannedRights
+                self.rank = rank
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantBanned", [("flags", self.flags as Any), ("peer", self.peer as Any), ("kickedBy", self.kickedBy as Any), ("date", self.date as Any), ("bannedRights", self.bannedRights as Any), ("rank", self.rank as Any)])
             }
         }
-        public class Cons_channelParticipantCreator {
+        public class Cons_channelParticipantCreator: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var adminRights: Api.ChatAdminRights
@@ -222,14 +242,20 @@ public extension Api {
                 self.adminRights = adminRights
                 self.rank = rank
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantCreator", [("flags", self.flags as Any), ("userId", self.userId as Any), ("adminRights", self.adminRights as Any), ("rank", self.rank as Any)])
+            }
         }
-        public class Cons_channelParticipantLeft {
+        public class Cons_channelParticipantLeft: TypeConstructorDescription {
             public var peer: Api.Peer
             public init(peer: Api.Peer) {
                 self.peer = peer
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantLeft", [("peer", self.peer as Any)])
+            }
         }
-        public class Cons_channelParticipantSelf {
+        public class Cons_channelParticipantSelf: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var inviterId: Int64
@@ -243,6 +269,9 @@ public extension Api {
                 self.date = date
                 self.subscriptionUntilDate = subscriptionUntilDate
                 self.rank = rank
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantSelf", [("flags", self.flags as Any), ("userId", self.userId as Any), ("inviterId", self.inviterId as Any), ("date", self.date as Any), ("subscriptionUntilDate", self.subscriptionUntilDate as Any), ("rank", self.rank as Any)])
             }
         }
         case channelParticipant(Cons_channelParticipant)
@@ -286,13 +315,16 @@ public extension Api {
                 break
             case .channelParticipantBanned(let _data):
                 if boxed {
-                    buffer.appendInt32(1844969806)
+                    buffer.appendInt32(-705647215)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.peer.serialize(buffer, true)
                 serializeInt64(_data.kickedBy, buffer: buffer, boxed: false)
                 serializeInt32(_data.date, buffer: buffer, boxed: false)
                 _data.bannedRights.serialize(buffer, true)
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeString(_data.rank!, buffer: buffer, boxed: false)
+                }
                 break
             case .channelParticipantCreator(let _data):
                 if boxed {
@@ -336,7 +368,7 @@ public extension Api {
             case .channelParticipantAdmin(let _data):
                 return ("channelParticipantAdmin", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("inviterId", _data.inviterId as Any), ("promotedBy", _data.promotedBy as Any), ("date", _data.date as Any), ("adminRights", _data.adminRights as Any), ("rank", _data.rank as Any)])
             case .channelParticipantBanned(let _data):
-                return ("channelParticipantBanned", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("kickedBy", _data.kickedBy as Any), ("date", _data.date as Any), ("bannedRights", _data.bannedRights as Any)])
+                return ("channelParticipantBanned", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("kickedBy", _data.kickedBy as Any), ("date", _data.date as Any), ("bannedRights", _data.bannedRights as Any), ("rank", _data.rank as Any)])
             case .channelParticipantCreator(let _data):
                 return ("channelParticipantCreator", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("adminRights", _data.adminRights as Any), ("rank", _data.rank as Any)])
             case .channelParticipantLeft(let _data):
@@ -423,13 +455,18 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.ChatBannedRights
             }
+            var _6: String?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _6 = parseString(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.ChannelParticipant.channelParticipantBanned(Cons_channelParticipantBanned(flags: _1!, peer: _2!, kickedBy: _3!, date: _4!, bannedRights: _5!))
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.ChannelParticipant.channelParticipantBanned(Cons_channelParticipantBanned(flags: _1!, peer: _2!, kickedBy: _3!, date: _4!, bannedRights: _5!, rank: _6))
             }
             else {
                 return nil
@@ -506,25 +543,34 @@ public extension Api {
 }
 public extension Api {
     enum ChannelParticipantsFilter: TypeConstructorDescription {
-        public class Cons_channelParticipantsBanned {
+        public class Cons_channelParticipantsBanned: TypeConstructorDescription {
             public var q: String
             public init(q: String) {
                 self.q = q
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantsBanned", [("q", self.q as Any)])
+            }
         }
-        public class Cons_channelParticipantsContacts {
+        public class Cons_channelParticipantsContacts: TypeConstructorDescription {
             public var q: String
             public init(q: String) {
                 self.q = q
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantsContacts", [("q", self.q as Any)])
+            }
         }
-        public class Cons_channelParticipantsKicked {
+        public class Cons_channelParticipantsKicked: TypeConstructorDescription {
             public var q: String
             public init(q: String) {
                 self.q = q
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantsKicked", [("q", self.q as Any)])
+            }
         }
-        public class Cons_channelParticipantsMentions {
+        public class Cons_channelParticipantsMentions: TypeConstructorDescription {
             public var flags: Int32
             public var q: String?
             public var topMsgId: Int32?
@@ -533,11 +579,17 @@ public extension Api {
                 self.q = q
                 self.topMsgId = topMsgId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantsMentions", [("flags", self.flags as Any), ("q", self.q as Any), ("topMsgId", self.topMsgId as Any)])
+            }
         }
-        public class Cons_channelParticipantsSearch {
+        public class Cons_channelParticipantsSearch: TypeConstructorDescription {
             public var q: String
             public init(q: String) {
                 self.q = q
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipantsSearch", [("q", self.q as Any)])
             }
         }
         case channelParticipantsAdmins
@@ -704,7 +756,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum Chat: TypeConstructorDescription {
-        public class Cons_channel {
+        public class Cons_channel: TypeConstructorDescription {
             public var flags: Int32
             public var flags2: Int32
             public var id: Int64
@@ -753,8 +805,11 @@ public extension Api {
                 self.sendPaidMessagesStars = sendPaidMessagesStars
                 self.linkedMonoforumId = linkedMonoforumId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channel", [("flags", self.flags as Any), ("flags2", self.flags2 as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("title", self.title as Any), ("username", self.username as Any), ("photo", self.photo as Any), ("date", self.date as Any), ("restrictionReason", self.restrictionReason as Any), ("adminRights", self.adminRights as Any), ("bannedRights", self.bannedRights as Any), ("defaultBannedRights", self.defaultBannedRights as Any), ("participantsCount", self.participantsCount as Any), ("usernames", self.usernames as Any), ("storiesMaxId", self.storiesMaxId as Any), ("color", self.color as Any), ("profileColor", self.profileColor as Any), ("emojiStatus", self.emojiStatus as Any), ("level", self.level as Any), ("subscriptionUntilDate", self.subscriptionUntilDate as Any), ("botVerificationIcon", self.botVerificationIcon as Any), ("sendPaidMessagesStars", self.sendPaidMessagesStars as Any), ("linkedMonoforumId", self.linkedMonoforumId as Any)])
+            }
         }
-        public class Cons_channelForbidden {
+        public class Cons_channelForbidden: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var accessHash: Int64
@@ -767,8 +822,11 @@ public extension Api {
                 self.title = title
                 self.untilDate = untilDate
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelForbidden", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("title", self.title as Any), ("untilDate", self.untilDate as Any)])
+            }
         }
-        public class Cons_chat {
+        public class Cons_chat: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var title: String
@@ -791,19 +849,28 @@ public extension Api {
                 self.adminRights = adminRights
                 self.defaultBannedRights = defaultBannedRights
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chat", [("flags", self.flags as Any), ("id", self.id as Any), ("title", self.title as Any), ("photo", self.photo as Any), ("participantsCount", self.participantsCount as Any), ("date", self.date as Any), ("version", self.version as Any), ("migratedTo", self.migratedTo as Any), ("adminRights", self.adminRights as Any), ("defaultBannedRights", self.defaultBannedRights as Any)])
+            }
         }
-        public class Cons_chatEmpty {
+        public class Cons_chatEmpty: TypeConstructorDescription {
             public var id: Int64
             public init(id: Int64) {
                 self.id = id
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatEmpty", [("id", self.id as Any)])
+            }
         }
-        public class Cons_chatForbidden {
+        public class Cons_chatForbidden: TypeConstructorDescription {
             public var id: Int64
             public var title: String
             public init(id: Int64, title: String) {
                 self.id = id
                 self.title = title
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatForbidden", [("id", self.id as Any), ("title", self.title as Any)])
             }
         }
         case channel(Cons_channel)
@@ -1185,10 +1252,13 @@ public extension Api {
 }
 public extension Api {
     enum ChatAdminRights: TypeConstructorDescription {
-        public class Cons_chatAdminRights {
+        public class Cons_chatAdminRights: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatAdminRights", [("flags", self.flags as Any)])
             }
         }
         case chatAdminRights(Cons_chatAdminRights)
@@ -1226,7 +1296,7 @@ public extension Api {
 }
 public extension Api {
     enum ChatAdminWithInvites: TypeConstructorDescription {
-        public class Cons_chatAdminWithInvites {
+        public class Cons_chatAdminWithInvites: TypeConstructorDescription {
             public var adminId: Int64
             public var invitesCount: Int32
             public var revokedInvitesCount: Int32
@@ -1234,6 +1304,9 @@ public extension Api {
                 self.adminId = adminId
                 self.invitesCount = invitesCount
                 self.revokedInvitesCount = revokedInvitesCount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatAdminWithInvites", [("adminId", self.adminId as Any), ("invitesCount", self.invitesCount as Any), ("revokedInvitesCount", self.revokedInvitesCount as Any)])
             }
         }
         case chatAdminWithInvites(Cons_chatAdminWithInvites)
@@ -1279,12 +1352,15 @@ public extension Api {
 }
 public extension Api {
     enum ChatBannedRights: TypeConstructorDescription {
-        public class Cons_chatBannedRights {
+        public class Cons_chatBannedRights: TypeConstructorDescription {
             public var flags: Int32
             public var untilDate: Int32
             public init(flags: Int32, untilDate: Int32) {
                 self.flags = flags
                 self.untilDate = untilDate
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatBannedRights", [("flags", self.flags as Any), ("untilDate", self.untilDate as Any)])
             }
         }
         case chatBannedRights(Cons_chatBannedRights)
@@ -1326,7 +1402,7 @@ public extension Api {
 }
 public extension Api {
     enum ChatFull: TypeConstructorDescription {
-        public class Cons_channelFull {
+        public class Cons_channelFull: TypeConstructorDescription {
             public var flags: Int32
             public var flags2: Int32
             public var id: Int64
@@ -1423,8 +1499,11 @@ public extension Api {
                 self.sendPaidMessagesStars = sendPaidMessagesStars
                 self.mainTab = mainTab
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelFull", [("flags", self.flags as Any), ("flags2", self.flags2 as Any), ("id", self.id as Any), ("about", self.about as Any), ("participantsCount", self.participantsCount as Any), ("adminsCount", self.adminsCount as Any), ("kickedCount", self.kickedCount as Any), ("bannedCount", self.bannedCount as Any), ("onlineCount", self.onlineCount as Any), ("readInboxMaxId", self.readInboxMaxId as Any), ("readOutboxMaxId", self.readOutboxMaxId as Any), ("unreadCount", self.unreadCount as Any), ("chatPhoto", self.chatPhoto as Any), ("notifySettings", self.notifySettings as Any), ("exportedInvite", self.exportedInvite as Any), ("botInfo", self.botInfo as Any), ("migratedFromChatId", self.migratedFromChatId as Any), ("migratedFromMaxId", self.migratedFromMaxId as Any), ("pinnedMsgId", self.pinnedMsgId as Any), ("stickerset", self.stickerset as Any), ("availableMinId", self.availableMinId as Any), ("folderId", self.folderId as Any), ("linkedChatId", self.linkedChatId as Any), ("location", self.location as Any), ("slowmodeSeconds", self.slowmodeSeconds as Any), ("slowmodeNextSendDate", self.slowmodeNextSendDate as Any), ("statsDc", self.statsDc as Any), ("pts", self.pts as Any), ("call", self.call as Any), ("ttlPeriod", self.ttlPeriod as Any), ("pendingSuggestions", self.pendingSuggestions as Any), ("groupcallDefaultJoinAs", self.groupcallDefaultJoinAs as Any), ("themeEmoticon", self.themeEmoticon as Any), ("requestsPending", self.requestsPending as Any), ("recentRequesters", self.recentRequesters as Any), ("defaultSendAs", self.defaultSendAs as Any), ("availableReactions", self.availableReactions as Any), ("reactionsLimit", self.reactionsLimit as Any), ("stories", self.stories as Any), ("wallpaper", self.wallpaper as Any), ("boostsApplied", self.boostsApplied as Any), ("boostsUnrestrict", self.boostsUnrestrict as Any), ("emojiset", self.emojiset as Any), ("botVerification", self.botVerification as Any), ("stargiftsCount", self.stargiftsCount as Any), ("sendPaidMessagesStars", self.sendPaidMessagesStars as Any), ("mainTab", self.mainTab as Any)])
+            }
         }
-        public class Cons_chatFull {
+        public class Cons_chatFull: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var about: String
@@ -1462,6 +1541,9 @@ public extension Api {
                 self.recentRequesters = recentRequesters
                 self.availableReactions = availableReactions
                 self.reactionsLimit = reactionsLimit
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatFull", [("flags", self.flags as Any), ("id", self.id as Any), ("about", self.about as Any), ("participants", self.participants as Any), ("chatPhoto", self.chatPhoto as Any), ("notifySettings", self.notifySettings as Any), ("exportedInvite", self.exportedInvite as Any), ("botInfo", self.botInfo as Any), ("pinnedMsgId", self.pinnedMsgId as Any), ("folderId", self.folderId as Any), ("call", self.call as Any), ("ttlPeriod", self.ttlPeriod as Any), ("groupcallDefaultJoinAs", self.groupcallDefaultJoinAs as Any), ("themeEmoticon", self.themeEmoticon as Any), ("requestsPending", self.requestsPending as Any), ("recentRequesters", self.recentRequesters as Any), ("availableReactions", self.availableReactions as Any), ("reactionsLimit", self.reactionsLimit as Any)])
             }
         }
         case channelFull(Cons_channelFull)
@@ -2039,7 +2121,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum ChatInvite: TypeConstructorDescription {
-        public class Cons_chatInvite {
+        public class Cons_chatInvite: TypeConstructorDescription {
             public var flags: Int32
             public var title: String
             public var about: String?
@@ -2062,19 +2144,28 @@ public extension Api {
                 self.subscriptionFormId = subscriptionFormId
                 self.botVerification = botVerification
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatInvite", [("flags", self.flags as Any), ("title", self.title as Any), ("about", self.about as Any), ("photo", self.photo as Any), ("participantsCount", self.participantsCount as Any), ("participants", self.participants as Any), ("color", self.color as Any), ("subscriptionPricing", self.subscriptionPricing as Any), ("subscriptionFormId", self.subscriptionFormId as Any), ("botVerification", self.botVerification as Any)])
+            }
         }
-        public class Cons_chatInviteAlready {
+        public class Cons_chatInviteAlready: TypeConstructorDescription {
             public var chat: Api.Chat
             public init(chat: Api.Chat) {
                 self.chat = chat
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatInviteAlready", [("chat", self.chat as Any)])
+            }
         }
-        public class Cons_chatInvitePeek {
+        public class Cons_chatInvitePeek: TypeConstructorDescription {
             public var chat: Api.Chat
             public var expires: Int32
             public init(chat: Api.Chat, expires: Int32) {
                 self.chat = chat
                 self.expires = expires
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatInvitePeek", [("chat", self.chat as Any), ("expires", self.expires as Any)])
             }
         }
         case chatInvite(Cons_chatInvite)

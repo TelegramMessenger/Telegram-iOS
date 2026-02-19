@@ -1,6 +1,6 @@
 public extension Api {
     indirect enum MessageEntity: TypeConstructorDescription {
-        public class Cons_inputMessageEntityMentionName {
+        public class Cons_inputMessageEntityMentionName: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public var userId: Api.InputUser
@@ -9,16 +9,22 @@ public extension Api {
                 self.length = length
                 self.userId = userId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputMessageEntityMentionName", [("offset", self.offset as Any), ("length", self.length as Any), ("userId", self.userId as Any)])
+            }
         }
-        public class Cons_messageEntityBankCard {
+        public class Cons_messageEntityBankCard: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityBankCard", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityBlockquote {
+        public class Cons_messageEntityBlockquote: TypeConstructorDescription {
             public var flags: Int32
             public var offset: Int32
             public var length: Int32
@@ -27,40 +33,55 @@ public extension Api {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityBlockquote", [("flags", self.flags as Any), ("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityBold {
+        public class Cons_messageEntityBold: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityBold", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityBotCommand {
+        public class Cons_messageEntityBotCommand: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityBotCommand", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityCashtag {
+        public class Cons_messageEntityCashtag: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityCashtag", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityCode {
+        public class Cons_messageEntityCode: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityCode", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityCustomEmoji {
+        public class Cons_messageEntityCustomEmoji: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public var documentId: Int64
@@ -69,16 +90,22 @@ public extension Api {
                 self.length = length
                 self.documentId = documentId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityCustomEmoji", [("offset", self.offset as Any), ("length", self.length as Any), ("documentId", self.documentId as Any)])
+            }
         }
-        public class Cons_messageEntityEmail {
+        public class Cons_messageEntityEmail: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityEmail", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityFormattedDate {
+        public class Cons_messageEntityFormattedDate: TypeConstructorDescription {
             public var flags: Int32
             public var offset: Int32
             public var length: Int32
@@ -89,32 +116,44 @@ public extension Api {
                 self.length = length
                 self.date = date
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityFormattedDate", [("flags", self.flags as Any), ("offset", self.offset as Any), ("length", self.length as Any), ("date", self.date as Any)])
+            }
         }
-        public class Cons_messageEntityHashtag {
+        public class Cons_messageEntityHashtag: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityHashtag", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityItalic {
+        public class Cons_messageEntityItalic: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityItalic", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityMention {
+        public class Cons_messageEntityMention: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityMention", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityMentionName {
+        public class Cons_messageEntityMentionName: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public var userId: Int64
@@ -123,16 +162,22 @@ public extension Api {
                 self.length = length
                 self.userId = userId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityMentionName", [("offset", self.offset as Any), ("length", self.length as Any), ("userId", self.userId as Any)])
+            }
         }
-        public class Cons_messageEntityPhone {
+        public class Cons_messageEntityPhone: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityPhone", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityPre {
+        public class Cons_messageEntityPre: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public var language: String
@@ -141,24 +186,33 @@ public extension Api {
                 self.length = length
                 self.language = language
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityPre", [("offset", self.offset as Any), ("length", self.length as Any), ("language", self.language as Any)])
+            }
         }
-        public class Cons_messageEntitySpoiler {
+        public class Cons_messageEntitySpoiler: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntitySpoiler", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityStrike {
+        public class Cons_messageEntityStrike: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityStrike", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityTextUrl {
+        public class Cons_messageEntityTextUrl: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public var url: String
@@ -167,29 +221,41 @@ public extension Api {
                 self.length = length
                 self.url = url
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityTextUrl", [("offset", self.offset as Any), ("length", self.length as Any), ("url", self.url as Any)])
+            }
         }
-        public class Cons_messageEntityUnderline {
+        public class Cons_messageEntityUnderline: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityUnderline", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityUnknown {
+        public class Cons_messageEntityUnknown: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityUnknown", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_messageEntityUrl {
+        public class Cons_messageEntityUrl: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
             public init(offset: Int32, length: Int32) {
                 self.offset = offset
                 self.length = length
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityUrl", [("offset", self.offset as Any), ("length", self.length as Any)])
             }
         }
         case inputMessageEntityMentionName(Cons_inputMessageEntityMentionName)
@@ -769,13 +835,16 @@ public extension Api {
 }
 public extension Api {
     indirect enum MessageExtendedMedia: TypeConstructorDescription {
-        public class Cons_messageExtendedMedia {
+        public class Cons_messageExtendedMedia: TypeConstructorDescription {
             public var media: Api.MessageMedia
             public init(media: Api.MessageMedia) {
                 self.media = media
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageExtendedMedia", [("media", self.media as Any)])
+            }
         }
-        public class Cons_messageExtendedMediaPreview {
+        public class Cons_messageExtendedMediaPreview: TypeConstructorDescription {
             public var flags: Int32
             public var w: Int32?
             public var h: Int32?
@@ -787,6 +856,9 @@ public extension Api {
                 self.h = h
                 self.thumb = thumb
                 self.videoDuration = videoDuration
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageExtendedMediaPreview", [("flags", self.flags as Any), ("w", self.w as Any), ("h", self.h as Any), ("thumb", self.thumb as Any), ("videoDuration", self.videoDuration as Any)])
             }
         }
         case messageExtendedMedia(Cons_messageExtendedMedia)
@@ -880,7 +952,7 @@ public extension Api {
 }
 public extension Api {
     enum MessageFwdHeader: TypeConstructorDescription {
-        public class Cons_messageFwdHeader {
+        public class Cons_messageFwdHeader: TypeConstructorDescription {
             public var flags: Int32
             public var fromId: Api.Peer?
             public var fromName: String?
@@ -906,6 +978,9 @@ public extension Api {
                 self.savedFromName = savedFromName
                 self.savedDate = savedDate
                 self.psaType = psaType
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageFwdHeader", [("flags", self.flags as Any), ("fromId", self.fromId as Any), ("fromName", self.fromName as Any), ("date", self.date as Any), ("channelPost", self.channelPost as Any), ("postAuthor", self.postAuthor as Any), ("savedFromPeer", self.savedFromPeer as Any), ("savedFromMsgId", self.savedFromMsgId as Any), ("savedFromId", self.savedFromId as Any), ("savedFromName", self.savedFromName as Any), ("savedDate", self.savedDate as Any), ("psaType", self.psaType as Any)])
             }
         }
         case messageFwdHeader(Cons_messageFwdHeader)
@@ -1033,7 +1108,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum MessageMedia: TypeConstructorDescription {
-        public class Cons_messageMediaContact {
+        public class Cons_messageMediaContact: TypeConstructorDescription {
             public var phoneNumber: String
             public var firstName: String
             public var lastName: String
@@ -1046,8 +1121,11 @@ public extension Api {
                 self.vcard = vcard
                 self.userId = userId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaContact", [("phoneNumber", self.phoneNumber as Any), ("firstName", self.firstName as Any), ("lastName", self.lastName as Any), ("vcard", self.vcard as Any), ("userId", self.userId as Any)])
+            }
         }
-        public class Cons_messageMediaDice {
+        public class Cons_messageMediaDice: TypeConstructorDescription {
             public var flags: Int32
             public var value: Int32
             public var emoticon: String
@@ -1058,8 +1136,11 @@ public extension Api {
                 self.emoticon = emoticon
                 self.gameOutcome = gameOutcome
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaDice", [("flags", self.flags as Any), ("value", self.value as Any), ("emoticon", self.emoticon as Any), ("gameOutcome", self.gameOutcome as Any)])
+            }
         }
-        public class Cons_messageMediaDocument {
+        public class Cons_messageMediaDocument: TypeConstructorDescription {
             public var flags: Int32
             public var document: Api.Document?
             public var altDocuments: [Api.Document]?
@@ -1074,20 +1155,29 @@ public extension Api {
                 self.videoTimestamp = videoTimestamp
                 self.ttlSeconds = ttlSeconds
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaDocument", [("flags", self.flags as Any), ("document", self.document as Any), ("altDocuments", self.altDocuments as Any), ("videoCover", self.videoCover as Any), ("videoTimestamp", self.videoTimestamp as Any), ("ttlSeconds", self.ttlSeconds as Any)])
+            }
         }
-        public class Cons_messageMediaGame {
+        public class Cons_messageMediaGame: TypeConstructorDescription {
             public var game: Api.Game
             public init(game: Api.Game) {
                 self.game = game
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaGame", [("game", self.game as Any)])
+            }
         }
-        public class Cons_messageMediaGeo {
+        public class Cons_messageMediaGeo: TypeConstructorDescription {
             public var geo: Api.GeoPoint
             public init(geo: Api.GeoPoint) {
                 self.geo = geo
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaGeo", [("geo", self.geo as Any)])
+            }
         }
-        public class Cons_messageMediaGeoLive {
+        public class Cons_messageMediaGeoLive: TypeConstructorDescription {
             public var flags: Int32
             public var geo: Api.GeoPoint
             public var heading: Int32?
@@ -1100,8 +1190,11 @@ public extension Api {
                 self.period = period
                 self.proximityNotificationRadius = proximityNotificationRadius
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaGeoLive", [("flags", self.flags as Any), ("geo", self.geo as Any), ("heading", self.heading as Any), ("period", self.period as Any), ("proximityNotificationRadius", self.proximityNotificationRadius as Any)])
+            }
         }
-        public class Cons_messageMediaGiveaway {
+        public class Cons_messageMediaGiveaway: TypeConstructorDescription {
             public var flags: Int32
             public var channels: [Int64]
             public var countriesIso2: [String]?
@@ -1120,8 +1213,11 @@ public extension Api {
                 self.stars = stars
                 self.untilDate = untilDate
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaGiveaway", [("flags", self.flags as Any), ("channels", self.channels as Any), ("countriesIso2", self.countriesIso2 as Any), ("prizeDescription", self.prizeDescription as Any), ("quantity", self.quantity as Any), ("months", self.months as Any), ("stars", self.stars as Any), ("untilDate", self.untilDate as Any)])
+            }
         }
-        public class Cons_messageMediaGiveawayResults {
+        public class Cons_messageMediaGiveawayResults: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var additionalPeersCount: Int32?
@@ -1146,8 +1242,11 @@ public extension Api {
                 self.prizeDescription = prizeDescription
                 self.untilDate = untilDate
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaGiveawayResults", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("additionalPeersCount", self.additionalPeersCount as Any), ("launchMsgId", self.launchMsgId as Any), ("winnersCount", self.winnersCount as Any), ("unclaimedCount", self.unclaimedCount as Any), ("winners", self.winners as Any), ("months", self.months as Any), ("stars", self.stars as Any), ("prizeDescription", self.prizeDescription as Any), ("untilDate", self.untilDate as Any)])
+            }
         }
-        public class Cons_messageMediaInvoice {
+        public class Cons_messageMediaInvoice: TypeConstructorDescription {
             public var flags: Int32
             public var title: String
             public var description: String
@@ -1168,16 +1267,22 @@ public extension Api {
                 self.startParam = startParam
                 self.extendedMedia = extendedMedia
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaInvoice", [("flags", self.flags as Any), ("title", self.title as Any), ("description", self.description as Any), ("photo", self.photo as Any), ("receiptMsgId", self.receiptMsgId as Any), ("currency", self.currency as Any), ("totalAmount", self.totalAmount as Any), ("startParam", self.startParam as Any), ("extendedMedia", self.extendedMedia as Any)])
+            }
         }
-        public class Cons_messageMediaPaidMedia {
+        public class Cons_messageMediaPaidMedia: TypeConstructorDescription {
             public var starsAmount: Int64
             public var extendedMedia: [Api.MessageExtendedMedia]
             public init(starsAmount: Int64, extendedMedia: [Api.MessageExtendedMedia]) {
                 self.starsAmount = starsAmount
                 self.extendedMedia = extendedMedia
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaPaidMedia", [("starsAmount", self.starsAmount as Any), ("extendedMedia", self.extendedMedia as Any)])
+            }
         }
-        public class Cons_messageMediaPhoto {
+        public class Cons_messageMediaPhoto: TypeConstructorDescription {
             public var flags: Int32
             public var photo: Api.Photo?
             public var ttlSeconds: Int32?
@@ -1186,16 +1291,22 @@ public extension Api {
                 self.photo = photo
                 self.ttlSeconds = ttlSeconds
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaPhoto", [("flags", self.flags as Any), ("photo", self.photo as Any), ("ttlSeconds", self.ttlSeconds as Any)])
+            }
         }
-        public class Cons_messageMediaPoll {
+        public class Cons_messageMediaPoll: TypeConstructorDescription {
             public var poll: Api.Poll
             public var results: Api.PollResults
             public init(poll: Api.Poll, results: Api.PollResults) {
                 self.poll = poll
                 self.results = results
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaPoll", [("poll", self.poll as Any), ("results", self.results as Any)])
+            }
         }
-        public class Cons_messageMediaStory {
+        public class Cons_messageMediaStory: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var id: Int32
@@ -1206,8 +1317,11 @@ public extension Api {
                 self.id = id
                 self.story = story
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaStory", [("flags", self.flags as Any), ("peer", self.peer as Any), ("id", self.id as Any), ("story", self.story as Any)])
+            }
         }
-        public class Cons_messageMediaToDo {
+        public class Cons_messageMediaToDo: TypeConstructorDescription {
             public var flags: Int32
             public var todo: Api.TodoList
             public var completions: [Api.TodoCompletion]?
@@ -1216,8 +1330,11 @@ public extension Api {
                 self.todo = todo
                 self.completions = completions
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaToDo", [("flags", self.flags as Any), ("todo", self.todo as Any), ("completions", self.completions as Any)])
+            }
         }
-        public class Cons_messageMediaVenue {
+        public class Cons_messageMediaVenue: TypeConstructorDescription {
             public var geo: Api.GeoPoint
             public var title: String
             public var address: String
@@ -1232,21 +1349,30 @@ public extension Api {
                 self.venueId = venueId
                 self.venueType = venueType
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaVenue", [("geo", self.geo as Any), ("title", self.title as Any), ("address", self.address as Any), ("provider", self.provider as Any), ("venueId", self.venueId as Any), ("venueType", self.venueType as Any)])
+            }
         }
-        public class Cons_messageMediaVideoStream {
+        public class Cons_messageMediaVideoStream: TypeConstructorDescription {
             public var flags: Int32
             public var call: Api.InputGroupCall
             public init(flags: Int32, call: Api.InputGroupCall) {
                 self.flags = flags
                 self.call = call
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaVideoStream", [("flags", self.flags as Any), ("call", self.call as Any)])
+            }
         }
-        public class Cons_messageMediaWebPage {
+        public class Cons_messageMediaWebPage: TypeConstructorDescription {
             public var flags: Int32
             public var webpage: Api.WebPage
             public init(flags: Int32, webpage: Api.WebPage) {
                 self.flags = flags
                 self.webpage = webpage
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageMediaWebPage", [("flags", self.flags as Any), ("webpage", self.webpage as Any)])
             }
         }
         case messageMediaContact(Cons_messageMediaContact)

@@ -1,6 +1,6 @@
 public extension Api {
     enum GroupCallParticipant: TypeConstructorDescription {
-        public class Cons_groupCallParticipant {
+        public class Cons_groupCallParticipant: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var date: Int32
@@ -24,6 +24,9 @@ public extension Api {
                 self.video = video
                 self.presentation = presentation
                 self.paidStarsTotal = paidStarsTotal
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("groupCallParticipant", [("flags", self.flags as Any), ("peer", self.peer as Any), ("date", self.date as Any), ("activeDate", self.activeDate as Any), ("source", self.source as Any), ("volume", self.volume as Any), ("about", self.about as Any), ("raiseHandRating", self.raiseHandRating as Any), ("video", self.video as Any), ("presentation", self.presentation as Any), ("paidStarsTotal", self.paidStarsTotal as Any)])
             }
         }
         case groupCallParticipant(Cons_groupCallParticipant)
@@ -135,7 +138,7 @@ public extension Api {
 }
 public extension Api {
     enum GroupCallParticipantVideo: TypeConstructorDescription {
-        public class Cons_groupCallParticipantVideo {
+        public class Cons_groupCallParticipantVideo: TypeConstructorDescription {
             public var flags: Int32
             public var endpoint: String
             public var sourceGroups: [Api.GroupCallParticipantVideoSourceGroup]
@@ -145,6 +148,9 @@ public extension Api {
                 self.endpoint = endpoint
                 self.sourceGroups = sourceGroups
                 self.audioSource = audioSource
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("groupCallParticipantVideo", [("flags", self.flags as Any), ("endpoint", self.endpoint as Any), ("sourceGroups", self.sourceGroups as Any), ("audioSource", self.audioSource as Any)])
             }
         }
         case groupCallParticipantVideo(Cons_groupCallParticipantVideo)
@@ -204,12 +210,15 @@ public extension Api {
 }
 public extension Api {
     enum GroupCallParticipantVideoSourceGroup: TypeConstructorDescription {
-        public class Cons_groupCallParticipantVideoSourceGroup {
+        public class Cons_groupCallParticipantVideoSourceGroup: TypeConstructorDescription {
             public var semantics: String
             public var sources: [Int32]
             public init(semantics: String, sources: [Int32]) {
                 self.semantics = semantics
                 self.sources = sources
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("groupCallParticipantVideoSourceGroup", [("semantics", self.semantics as Any), ("sources", self.sources as Any)])
             }
         }
         case groupCallParticipantVideoSourceGroup(Cons_groupCallParticipantVideoSourceGroup)
@@ -257,7 +266,7 @@ public extension Api {
 }
 public extension Api {
     enum GroupCallStreamChannel: TypeConstructorDescription {
-        public class Cons_groupCallStreamChannel {
+        public class Cons_groupCallStreamChannel: TypeConstructorDescription {
             public var channel: Int32
             public var scale: Int32
             public var lastTimestampMs: Int64
@@ -265,6 +274,9 @@ public extension Api {
                 self.channel = channel
                 self.scale = scale
                 self.lastTimestampMs = lastTimestampMs
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("groupCallStreamChannel", [("channel", self.channel as Any), ("scale", self.scale as Any), ("lastTimestampMs", self.lastTimestampMs as Any)])
             }
         }
         case groupCallStreamChannel(Cons_groupCallStreamChannel)
@@ -310,7 +322,7 @@ public extension Api {
 }
 public extension Api {
     enum HighScore: TypeConstructorDescription {
-        public class Cons_highScore {
+        public class Cons_highScore: TypeConstructorDescription {
             public var pos: Int32
             public var userId: Int64
             public var score: Int32
@@ -318,6 +330,9 @@ public extension Api {
                 self.pos = pos
                 self.userId = userId
                 self.score = score
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("highScore", [("pos", self.pos as Any), ("userId", self.userId as Any), ("score", self.score as Any)])
             }
         }
         case highScore(Cons_highScore)
@@ -363,12 +378,15 @@ public extension Api {
 }
 public extension Api {
     enum ImportedContact: TypeConstructorDescription {
-        public class Cons_importedContact {
+        public class Cons_importedContact: TypeConstructorDescription {
             public var userId: Int64
             public var clientId: Int64
             public init(userId: Int64, clientId: Int64) {
                 self.userId = userId
                 self.clientId = clientId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("importedContact", [("userId", self.userId as Any), ("clientId", self.clientId as Any)])
             }
         }
         case importedContact(Cons_importedContact)
@@ -410,12 +428,15 @@ public extension Api {
 }
 public extension Api {
     enum InlineBotSwitchPM: TypeConstructorDescription {
-        public class Cons_inlineBotSwitchPM {
+        public class Cons_inlineBotSwitchPM: TypeConstructorDescription {
             public var text: String
             public var startParam: String
             public init(text: String, startParam: String) {
                 self.text = text
                 self.startParam = startParam
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inlineBotSwitchPM", [("text", self.text as Any), ("startParam", self.startParam as Any)])
             }
         }
         case inlineBotSwitchPM(Cons_inlineBotSwitchPM)
@@ -457,12 +478,15 @@ public extension Api {
 }
 public extension Api {
     enum InlineBotWebView: TypeConstructorDescription {
-        public class Cons_inlineBotWebView {
+        public class Cons_inlineBotWebView: TypeConstructorDescription {
             public var text: String
             public var url: String
             public init(text: String, url: String) {
                 self.text = text
                 self.url = url
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inlineBotWebView", [("text", self.text as Any), ("url", self.url as Any)])
             }
         }
         case inlineBotWebView(Cons_inlineBotWebView)
@@ -585,7 +609,7 @@ public extension Api {
 }
 public extension Api {
     enum InputAppEvent: TypeConstructorDescription {
-        public class Cons_inputAppEvent {
+        public class Cons_inputAppEvent: TypeConstructorDescription {
             public var time: Double
             public var type: String
             public var peer: Int64
@@ -595,6 +619,9 @@ public extension Api {
                 self.type = type
                 self.peer = peer
                 self.data = data
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputAppEvent", [("time", self.time as Any), ("type", self.type as Any), ("peer", self.peer as Any), ("data", self.data as Any)])
             }
         }
         case inputAppEvent(Cons_inputAppEvent)
@@ -646,20 +673,26 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputBotApp: TypeConstructorDescription {
-        public class Cons_inputBotAppID {
+        public class Cons_inputBotAppID: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotAppID", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputBotAppShortName {
+        public class Cons_inputBotAppShortName: TypeConstructorDescription {
             public var botId: Api.InputUser
             public var shortName: String
             public init(botId: Api.InputUser, shortName: String) {
                 self.botId = botId
                 self.shortName = shortName
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotAppShortName", [("botId", self.botId as Any), ("shortName", self.shortName as Any)])
             }
         }
         case inputBotAppID(Cons_inputBotAppID)
@@ -727,15 +760,18 @@ public extension Api {
 }
 public extension Api {
     enum InputBotInlineMessage: TypeConstructorDescription {
-        public class Cons_inputBotInlineMessageGame {
+        public class Cons_inputBotInlineMessageGame: TypeConstructorDescription {
             public var flags: Int32
             public var replyMarkup: Api.ReplyMarkup?
             public init(flags: Int32, replyMarkup: Api.ReplyMarkup?) {
                 self.flags = flags
                 self.replyMarkup = replyMarkup
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageGame", [("flags", self.flags as Any), ("replyMarkup", self.replyMarkup as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageMediaAuto {
+        public class Cons_inputBotInlineMessageMediaAuto: TypeConstructorDescription {
             public var flags: Int32
             public var message: String
             public var entities: [Api.MessageEntity]?
@@ -746,8 +782,11 @@ public extension Api {
                 self.entities = entities
                 self.replyMarkup = replyMarkup
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageMediaAuto", [("flags", self.flags as Any), ("message", self.message as Any), ("entities", self.entities as Any), ("replyMarkup", self.replyMarkup as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageMediaContact {
+        public class Cons_inputBotInlineMessageMediaContact: TypeConstructorDescription {
             public var flags: Int32
             public var phoneNumber: String
             public var firstName: String
@@ -762,8 +801,11 @@ public extension Api {
                 self.vcard = vcard
                 self.replyMarkup = replyMarkup
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageMediaContact", [("flags", self.flags as Any), ("phoneNumber", self.phoneNumber as Any), ("firstName", self.firstName as Any), ("lastName", self.lastName as Any), ("vcard", self.vcard as Any), ("replyMarkup", self.replyMarkup as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageMediaGeo {
+        public class Cons_inputBotInlineMessageMediaGeo: TypeConstructorDescription {
             public var flags: Int32
             public var geoPoint: Api.InputGeoPoint
             public var heading: Int32?
@@ -778,8 +820,11 @@ public extension Api {
                 self.proximityNotificationRadius = proximityNotificationRadius
                 self.replyMarkup = replyMarkup
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageMediaGeo", [("flags", self.flags as Any), ("geoPoint", self.geoPoint as Any), ("heading", self.heading as Any), ("period", self.period as Any), ("proximityNotificationRadius", self.proximityNotificationRadius as Any), ("replyMarkup", self.replyMarkup as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageMediaInvoice {
+        public class Cons_inputBotInlineMessageMediaInvoice: TypeConstructorDescription {
             public var flags: Int32
             public var title: String
             public var description: String
@@ -800,8 +845,11 @@ public extension Api {
                 self.providerData = providerData
                 self.replyMarkup = replyMarkup
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageMediaInvoice", [("flags", self.flags as Any), ("title", self.title as Any), ("description", self.description as Any), ("photo", self.photo as Any), ("invoice", self.invoice as Any), ("payload", self.payload as Any), ("provider", self.provider as Any), ("providerData", self.providerData as Any), ("replyMarkup", self.replyMarkup as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageMediaVenue {
+        public class Cons_inputBotInlineMessageMediaVenue: TypeConstructorDescription {
             public var flags: Int32
             public var geoPoint: Api.InputGeoPoint
             public var title: String
@@ -820,8 +868,11 @@ public extension Api {
                 self.venueType = venueType
                 self.replyMarkup = replyMarkup
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageMediaVenue", [("flags", self.flags as Any), ("geoPoint", self.geoPoint as Any), ("title", self.title as Any), ("address", self.address as Any), ("provider", self.provider as Any), ("venueId", self.venueId as Any), ("venueType", self.venueType as Any), ("replyMarkup", self.replyMarkup as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageMediaWebPage {
+        public class Cons_inputBotInlineMessageMediaWebPage: TypeConstructorDescription {
             public var flags: Int32
             public var message: String
             public var entities: [Api.MessageEntity]?
@@ -834,8 +885,11 @@ public extension Api {
                 self.url = url
                 self.replyMarkup = replyMarkup
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageMediaWebPage", [("flags", self.flags as Any), ("message", self.message as Any), ("entities", self.entities as Any), ("url", self.url as Any), ("replyMarkup", self.replyMarkup as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageText {
+        public class Cons_inputBotInlineMessageText: TypeConstructorDescription {
             public var flags: Int32
             public var message: String
             public var entities: [Api.MessageEntity]?
@@ -845,6 +899,9 @@ public extension Api {
                 self.message = message
                 self.entities = entities
                 self.replyMarkup = replyMarkup
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageText", [("flags", self.flags as Any), ("message", self.message as Any), ("entities", self.entities as Any), ("replyMarkup", self.replyMarkup as Any)])
             }
         }
         case inputBotInlineMessageGame(Cons_inputBotInlineMessageGame)
@@ -1270,7 +1327,7 @@ public extension Api {
 }
 public extension Api {
     enum InputBotInlineMessageID: TypeConstructorDescription {
-        public class Cons_inputBotInlineMessageID {
+        public class Cons_inputBotInlineMessageID: TypeConstructorDescription {
             public var dcId: Int32
             public var id: Int64
             public var accessHash: Int64
@@ -1279,8 +1336,11 @@ public extension Api {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageID", [("dcId", self.dcId as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputBotInlineMessageID64 {
+        public class Cons_inputBotInlineMessageID64: TypeConstructorDescription {
             public var dcId: Int32
             public var ownerId: Int64
             public var id: Int32
@@ -1290,6 +1350,9 @@ public extension Api {
                 self.ownerId = ownerId
                 self.id = id
                 self.accessHash = accessHash
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineMessageID64", [("dcId", self.dcId as Any), ("ownerId", self.ownerId as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any)])
             }
         }
         case inputBotInlineMessageID(Cons_inputBotInlineMessageID)
@@ -1367,7 +1430,7 @@ public extension Api {
 }
 public extension Api {
     enum InputBotInlineResult: TypeConstructorDescription {
-        public class Cons_inputBotInlineResult {
+        public class Cons_inputBotInlineResult: TypeConstructorDescription {
             public var flags: Int32
             public var id: String
             public var type: String
@@ -1388,8 +1451,11 @@ public extension Api {
                 self.content = content
                 self.sendMessage = sendMessage
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineResult", [("flags", self.flags as Any), ("id", self.id as Any), ("type", self.type as Any), ("title", self.title as Any), ("description", self.description as Any), ("url", self.url as Any), ("thumb", self.thumb as Any), ("content", self.content as Any), ("sendMessage", self.sendMessage as Any)])
+            }
         }
-        public class Cons_inputBotInlineResultDocument {
+        public class Cons_inputBotInlineResultDocument: TypeConstructorDescription {
             public var flags: Int32
             public var id: String
             public var type: String
@@ -1406,8 +1472,11 @@ public extension Api {
                 self.document = document
                 self.sendMessage = sendMessage
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineResultDocument", [("flags", self.flags as Any), ("id", self.id as Any), ("type", self.type as Any), ("title", self.title as Any), ("description", self.description as Any), ("document", self.document as Any), ("sendMessage", self.sendMessage as Any)])
+            }
         }
-        public class Cons_inputBotInlineResultGame {
+        public class Cons_inputBotInlineResultGame: TypeConstructorDescription {
             public var id: String
             public var shortName: String
             public var sendMessage: Api.InputBotInlineMessage
@@ -1416,8 +1485,11 @@ public extension Api {
                 self.shortName = shortName
                 self.sendMessage = sendMessage
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineResultGame", [("id", self.id as Any), ("shortName", self.shortName as Any), ("sendMessage", self.sendMessage as Any)])
+            }
         }
-        public class Cons_inputBotInlineResultPhoto {
+        public class Cons_inputBotInlineResultPhoto: TypeConstructorDescription {
             public var id: String
             public var type: String
             public var photo: Api.InputPhoto
@@ -1427,6 +1499,9 @@ public extension Api {
                 self.type = type
                 self.photo = photo
                 self.sendMessage = sendMessage
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBotInlineResultPhoto", [("id", self.id as Any), ("type", self.type as Any), ("photo", self.photo as Any), ("sendMessage", self.sendMessage as Any)])
             }
         }
         case inputBotInlineResult(Cons_inputBotInlineResult)
@@ -1644,7 +1719,7 @@ public extension Api {
 }
 public extension Api {
     enum InputBusinessAwayMessage: TypeConstructorDescription {
-        public class Cons_inputBusinessAwayMessage {
+        public class Cons_inputBusinessAwayMessage: TypeConstructorDescription {
             public var flags: Int32
             public var shortcutId: Int32
             public var schedule: Api.BusinessAwayMessageSchedule
@@ -1654,6 +1729,9 @@ public extension Api {
                 self.shortcutId = shortcutId
                 self.schedule = schedule
                 self.recipients = recipients
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputBusinessAwayMessage", [("flags", self.flags as Any), ("shortcutId", self.shortcutId as Any), ("schedule", self.schedule as Any), ("recipients", self.recipients as Any)])
             }
         }
         case inputBusinessAwayMessage(Cons_inputBusinessAwayMessage)

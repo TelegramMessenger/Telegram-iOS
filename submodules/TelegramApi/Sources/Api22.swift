@@ -1,11 +1,14 @@
 public extension Api {
     enum ReceivedNotifyMessage: TypeConstructorDescription {
-        public class Cons_receivedNotifyMessage {
+        public class Cons_receivedNotifyMessage: TypeConstructorDescription {
             public var id: Int32
             public var flags: Int32
             public init(id: Int32, flags: Int32) {
                 self.id = id
                 self.flags = flags
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("receivedNotifyMessage", [("id", self.id as Any), ("flags", self.flags as Any)])
             }
         }
         case receivedNotifyMessage(Cons_receivedNotifyMessage)
@@ -47,42 +50,57 @@ public extension Api {
 }
 public extension Api {
     indirect enum RecentMeUrl: TypeConstructorDescription {
-        public class Cons_recentMeUrlChat {
+        public class Cons_recentMeUrlChat: TypeConstructorDescription {
             public var url: String
             public var chatId: Int64
             public init(url: String, chatId: Int64) {
                 self.url = url
                 self.chatId = chatId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("recentMeUrlChat", [("url", self.url as Any), ("chatId", self.chatId as Any)])
+            }
         }
-        public class Cons_recentMeUrlChatInvite {
+        public class Cons_recentMeUrlChatInvite: TypeConstructorDescription {
             public var url: String
             public var chatInvite: Api.ChatInvite
             public init(url: String, chatInvite: Api.ChatInvite) {
                 self.url = url
                 self.chatInvite = chatInvite
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("recentMeUrlChatInvite", [("url", self.url as Any), ("chatInvite", self.chatInvite as Any)])
+            }
         }
-        public class Cons_recentMeUrlStickerSet {
+        public class Cons_recentMeUrlStickerSet: TypeConstructorDescription {
             public var url: String
             public var set: Api.StickerSetCovered
             public init(url: String, set: Api.StickerSetCovered) {
                 self.url = url
                 self.set = set
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("recentMeUrlStickerSet", [("url", self.url as Any), ("set", self.set as Any)])
+            }
         }
-        public class Cons_recentMeUrlUnknown {
+        public class Cons_recentMeUrlUnknown: TypeConstructorDescription {
             public var url: String
             public init(url: String) {
                 self.url = url
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("recentMeUrlUnknown", [("url", self.url as Any)])
+            }
         }
-        public class Cons_recentMeUrlUser {
+        public class Cons_recentMeUrlUser: TypeConstructorDescription {
             public var url: String
             public var userId: Int64
             public init(url: String, userId: Int64) {
                 self.url = url
                 self.userId = userId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("recentMeUrlUser", [("url", self.url as Any), ("userId", self.userId as Any)])
             }
         }
         case recentMeUrlChat(Cons_recentMeUrlChat)
@@ -220,12 +238,15 @@ public extension Api {
 }
 public extension Api {
     enum RecentStory: TypeConstructorDescription {
-        public class Cons_recentStory {
+        public class Cons_recentStory: TypeConstructorDescription {
             public var flags: Int32
             public var maxId: Int32?
             public init(flags: Int32, maxId: Int32?) {
                 self.flags = flags
                 self.maxId = maxId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("recentStory", [("flags", self.flags as Any), ("maxId", self.maxId as Any)])
             }
         }
         case recentStory(Cons_recentStory)
@@ -271,27 +292,36 @@ public extension Api {
 }
 public extension Api {
     enum ReplyMarkup: TypeConstructorDescription {
-        public class Cons_replyInlineMarkup {
+        public class Cons_replyInlineMarkup: TypeConstructorDescription {
             public var rows: [Api.KeyboardButtonRow]
             public init(rows: [Api.KeyboardButtonRow]) {
                 self.rows = rows
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("replyInlineMarkup", [("rows", self.rows as Any)])
+            }
         }
-        public class Cons_replyKeyboardForceReply {
+        public class Cons_replyKeyboardForceReply: TypeConstructorDescription {
             public var flags: Int32
             public var placeholder: String?
             public init(flags: Int32, placeholder: String?) {
                 self.flags = flags
                 self.placeholder = placeholder
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("replyKeyboardForceReply", [("flags", self.flags as Any), ("placeholder", self.placeholder as Any)])
+            }
         }
-        public class Cons_replyKeyboardHide {
+        public class Cons_replyKeyboardHide: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("replyKeyboardHide", [("flags", self.flags as Any)])
+            }
         }
-        public class Cons_replyKeyboardMarkup {
+        public class Cons_replyKeyboardMarkup: TypeConstructorDescription {
             public var flags: Int32
             public var rows: [Api.KeyboardButtonRow]
             public var placeholder: String?
@@ -299,6 +329,9 @@ public extension Api {
                 self.flags = flags
                 self.rows = rows
                 self.placeholder = placeholder
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("replyKeyboardMarkup", [("flags", self.flags as Any), ("rows", self.rows as Any), ("placeholder", self.placeholder as Any)])
             }
         }
         case replyInlineMarkup(Cons_replyInlineMarkup)
@@ -553,20 +586,26 @@ public extension Api {
 }
 public extension Api {
     enum ReportResult: TypeConstructorDescription {
-        public class Cons_reportResultAddComment {
+        public class Cons_reportResultAddComment: TypeConstructorDescription {
             public var flags: Int32
             public var option: Buffer
             public init(flags: Int32, option: Buffer) {
                 self.flags = flags
                 self.option = option
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("reportResultAddComment", [("flags", self.flags as Any), ("option", self.option as Any)])
+            }
         }
-        public class Cons_reportResultChooseOption {
+        public class Cons_reportResultChooseOption: TypeConstructorDescription {
             public var title: String
             public var options: [Api.MessageReportOption]
             public init(title: String, options: [Api.MessageReportOption]) {
                 self.title = title
                 self.options = options
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("reportResultChooseOption", [("title", self.title as Any), ("options", self.options as Any)])
             }
         }
         case reportResultAddComment(Cons_reportResultAddComment)
@@ -649,7 +688,7 @@ public extension Api {
 }
 public extension Api {
     enum RequestPeerType: TypeConstructorDescription {
-        public class Cons_requestPeerTypeBroadcast {
+        public class Cons_requestPeerTypeBroadcast: TypeConstructorDescription {
             public var flags: Int32
             public var hasUsername: Api.Bool?
             public var userAdminRights: Api.ChatAdminRights?
@@ -660,8 +699,11 @@ public extension Api {
                 self.userAdminRights = userAdminRights
                 self.botAdminRights = botAdminRights
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestPeerTypeBroadcast", [("flags", self.flags as Any), ("hasUsername", self.hasUsername as Any), ("userAdminRights", self.userAdminRights as Any), ("botAdminRights", self.botAdminRights as Any)])
+            }
         }
-        public class Cons_requestPeerTypeChat {
+        public class Cons_requestPeerTypeChat: TypeConstructorDescription {
             public var flags: Int32
             public var hasUsername: Api.Bool?
             public var forum: Api.Bool?
@@ -674,8 +716,11 @@ public extension Api {
                 self.userAdminRights = userAdminRights
                 self.botAdminRights = botAdminRights
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestPeerTypeChat", [("flags", self.flags as Any), ("hasUsername", self.hasUsername as Any), ("forum", self.forum as Any), ("userAdminRights", self.userAdminRights as Any), ("botAdminRights", self.botAdminRights as Any)])
+            }
         }
-        public class Cons_requestPeerTypeUser {
+        public class Cons_requestPeerTypeUser: TypeConstructorDescription {
             public var flags: Int32
             public var bot: Api.Bool?
             public var premium: Api.Bool?
@@ -683,6 +728,9 @@ public extension Api {
                 self.flags = flags
                 self.bot = bot
                 self.premium = premium
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestPeerTypeUser", [("flags", self.flags as Any), ("bot", self.bot as Any), ("premium", self.premium as Any)])
             }
         }
         case requestPeerTypeBroadcast(Cons_requestPeerTypeBroadcast)
@@ -850,7 +898,7 @@ public extension Api {
 }
 public extension Api {
     enum RequestedPeer: TypeConstructorDescription {
-        public class Cons_requestedPeerChannel {
+        public class Cons_requestedPeerChannel: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var title: String?
@@ -863,8 +911,11 @@ public extension Api {
                 self.username = username
                 self.photo = photo
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestedPeerChannel", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("title", self.title as Any), ("username", self.username as Any), ("photo", self.photo as Any)])
+            }
         }
-        public class Cons_requestedPeerChat {
+        public class Cons_requestedPeerChat: TypeConstructorDescription {
             public var flags: Int32
             public var chatId: Int64
             public var title: String?
@@ -875,8 +926,11 @@ public extension Api {
                 self.title = title
                 self.photo = photo
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestedPeerChat", [("flags", self.flags as Any), ("chatId", self.chatId as Any), ("title", self.title as Any), ("photo", self.photo as Any)])
+            }
         }
-        public class Cons_requestedPeerUser {
+        public class Cons_requestedPeerUser: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var firstName: String?
@@ -890,6 +944,9 @@ public extension Api {
                 self.lastName = lastName
                 self.username = username
                 self.photo = photo
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestedPeerUser", [("flags", self.flags as Any), ("userId", self.userId as Any), ("firstName", self.firstName as Any), ("lastName", self.lastName as Any), ("username", self.username as Any), ("photo", self.photo as Any)])
             }
         }
         case requestedPeerChannel(Cons_requestedPeerChannel)
@@ -1057,10 +1114,13 @@ public extension Api {
 }
 public extension Api {
     enum RequirementToContact: TypeConstructorDescription {
-        public class Cons_requirementToContactPaidMessages {
+        public class Cons_requirementToContactPaidMessages: TypeConstructorDescription {
             public var starsAmount: Int64
             public init(starsAmount: Int64) {
                 self.starsAmount = starsAmount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requirementToContactPaidMessages", [("starsAmount", self.starsAmount as Any)])
             }
         }
         case requirementToContactEmpty

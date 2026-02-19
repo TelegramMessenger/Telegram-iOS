@@ -1,9 +1,12 @@
 public extension Api.account {
     enum SavedMusicIds: TypeConstructorDescription {
-        public class Cons_savedMusicIds {
+        public class Cons_savedMusicIds: TypeConstructorDescription {
             public var ids: [Int64]
             public init(ids: [Int64]) {
                 self.ids = ids
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedMusicIds", [("ids", self.ids as Any)])
             }
         }
         case savedMusicIds(Cons_savedMusicIds)
@@ -58,10 +61,13 @@ public extension Api.account {
 }
 public extension Api.account {
     enum SavedRingtone: TypeConstructorDescription {
-        public class Cons_savedRingtoneConverted {
+        public class Cons_savedRingtoneConverted: TypeConstructorDescription {
             public var document: Api.Document
             public init(document: Api.Document) {
                 self.document = document
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedRingtoneConverted", [("document", self.document as Any)])
             }
         }
         case savedRingtone
@@ -112,12 +118,15 @@ public extension Api.account {
 }
 public extension Api.account {
     enum SavedRingtones: TypeConstructorDescription {
-        public class Cons_savedRingtones {
+        public class Cons_savedRingtones: TypeConstructorDescription {
             public var hash: Int64
             public var ringtones: [Api.Document]
             public init(hash: Int64, ringtones: [Api.Document]) {
                 self.hash = hash
                 self.ringtones = ringtones
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedRingtones", [("hash", self.hash as Any), ("ringtones", self.ringtones as Any)])
             }
         }
         case savedRingtones(Cons_savedRingtones)
@@ -176,12 +185,15 @@ public extension Api.account {
 }
 public extension Api.account {
     enum SentEmailCode: TypeConstructorDescription {
-        public class Cons_sentEmailCode {
+        public class Cons_sentEmailCode: TypeConstructorDescription {
             public var emailPattern: String
             public var length: Int32
             public init(emailPattern: String, length: Int32) {
                 self.emailPattern = emailPattern
                 self.length = length
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentEmailCode", [("emailPattern", self.emailPattern as Any), ("length", self.length as Any)])
             }
         }
         case sentEmailCode(Cons_sentEmailCode)
@@ -223,10 +235,13 @@ public extension Api.account {
 }
 public extension Api.account {
     enum Takeout: TypeConstructorDescription {
-        public class Cons_takeout {
+        public class Cons_takeout: TypeConstructorDescription {
             public var id: Int64
             public init(id: Int64) {
                 self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("takeout", [("id", self.id as Any)])
             }
         }
         case takeout(Cons_takeout)
@@ -264,12 +279,15 @@ public extension Api.account {
 }
 public extension Api.account {
     enum Themes: TypeConstructorDescription {
-        public class Cons_themes {
+        public class Cons_themes: TypeConstructorDescription {
             public var hash: Int64
             public var themes: [Api.Theme]
             public init(hash: Int64, themes: [Api.Theme]) {
                 self.hash = hash
                 self.themes = themes
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("themes", [("hash", self.hash as Any), ("themes", self.themes as Any)])
             }
         }
         case themes(Cons_themes)
@@ -328,12 +346,15 @@ public extension Api.account {
 }
 public extension Api.account {
     enum TmpPassword: TypeConstructorDescription {
-        public class Cons_tmpPassword {
+        public class Cons_tmpPassword: TypeConstructorDescription {
             public var tmpPassword: Buffer
             public var validUntil: Int32
             public init(tmpPassword: Buffer, validUntil: Int32) {
                 self.tmpPassword = tmpPassword
                 self.validUntil = validUntil
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("tmpPassword", [("tmpPassword", self.tmpPassword as Any), ("validUntil", self.validUntil as Any)])
             }
         }
         case tmpPassword(Cons_tmpPassword)
@@ -375,12 +396,15 @@ public extension Api.account {
 }
 public extension Api.account {
     enum WallPapers: TypeConstructorDescription {
-        public class Cons_wallPapers {
+        public class Cons_wallPapers: TypeConstructorDescription {
             public var hash: Int64
             public var wallpapers: [Api.WallPaper]
             public init(hash: Int64, wallpapers: [Api.WallPaper]) {
                 self.hash = hash
                 self.wallpapers = wallpapers
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("wallPapers", [("hash", self.hash as Any), ("wallpapers", self.wallpapers as Any)])
             }
         }
         case wallPapers(Cons_wallPapers)
@@ -439,12 +463,15 @@ public extension Api.account {
 }
 public extension Api.account {
     enum WebAuthorizations: TypeConstructorDescription {
-        public class Cons_webAuthorizations {
+        public class Cons_webAuthorizations: TypeConstructorDescription {
             public var authorizations: [Api.WebAuthorization]
             public var users: [Api.User]
             public init(authorizations: [Api.WebAuthorization], users: [Api.User]) {
                 self.authorizations = authorizations
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("webAuthorizations", [("authorizations", self.authorizations as Any), ("users", self.users as Any)])
             }
         }
         case webAuthorizations(Cons_webAuthorizations)
@@ -498,7 +525,7 @@ public extension Api.account {
 }
 public extension Api.auth {
     enum Authorization: TypeConstructorDescription {
-        public class Cons_authorization {
+        public class Cons_authorization: TypeConstructorDescription {
             public var flags: Int32
             public var otherwiseReloginDays: Int32?
             public var tmpSessions: Int32?
@@ -511,13 +538,19 @@ public extension Api.auth {
                 self.futureAuthToken = futureAuthToken
                 self.user = user
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("authorization", [("flags", self.flags as Any), ("otherwiseReloginDays", self.otherwiseReloginDays as Any), ("tmpSessions", self.tmpSessions as Any), ("futureAuthToken", self.futureAuthToken as Any), ("user", self.user as Any)])
+            }
         }
-        public class Cons_authorizationSignUpRequired {
+        public class Cons_authorizationSignUpRequired: TypeConstructorDescription {
             public var flags: Int32
             public var termsOfService: Api.help.TermsOfService?
             public init(flags: Int32, termsOfService: Api.help.TermsOfService?) {
                 self.flags = flags
                 self.termsOfService = termsOfService
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("authorizationSignUpRequired", [("flags", self.flags as Any), ("termsOfService", self.termsOfService as Any)])
             }
         }
         case authorization(Cons_authorization)
@@ -685,12 +718,15 @@ public extension Api.auth {
 }
 public extension Api.auth {
     enum ExportedAuthorization: TypeConstructorDescription {
-        public class Cons_exportedAuthorization {
+        public class Cons_exportedAuthorization: TypeConstructorDescription {
             public var id: Int64
             public var bytes: Buffer
             public init(id: Int64, bytes: Buffer) {
                 self.id = id
                 self.bytes = bytes
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedAuthorization", [("id", self.id as Any), ("bytes", self.bytes as Any)])
             }
         }
         case exportedAuthorization(Cons_exportedAuthorization)
@@ -732,12 +768,15 @@ public extension Api.auth {
 }
 public extension Api.auth {
     enum LoggedOut: TypeConstructorDescription {
-        public class Cons_loggedOut {
+        public class Cons_loggedOut: TypeConstructorDescription {
             public var flags: Int32
             public var futureAuthToken: Buffer?
             public init(flags: Int32, futureAuthToken: Buffer?) {
                 self.flags = flags
                 self.futureAuthToken = futureAuthToken
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("loggedOut", [("flags", self.flags as Any), ("futureAuthToken", self.futureAuthToken as Any)])
             }
         }
         case loggedOut(Cons_loggedOut)
@@ -783,26 +822,35 @@ public extension Api.auth {
 }
 public extension Api.auth {
     enum LoginToken: TypeConstructorDescription {
-        public class Cons_loginToken {
+        public class Cons_loginToken: TypeConstructorDescription {
             public var expires: Int32
             public var token: Buffer
             public init(expires: Int32, token: Buffer) {
                 self.expires = expires
                 self.token = token
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("loginToken", [("expires", self.expires as Any), ("token", self.token as Any)])
+            }
         }
-        public class Cons_loginTokenMigrateTo {
+        public class Cons_loginTokenMigrateTo: TypeConstructorDescription {
             public var dcId: Int32
             public var token: Buffer
             public init(dcId: Int32, token: Buffer) {
                 self.dcId = dcId
                 self.token = token
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("loginTokenMigrateTo", [("dcId", self.dcId as Any), ("token", self.token as Any)])
+            }
         }
-        public class Cons_loginTokenSuccess {
+        public class Cons_loginTokenSuccess: TypeConstructorDescription {
             public var authorization: Api.auth.Authorization
             public init(authorization: Api.auth.Authorization) {
                 self.authorization = authorization
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("loginTokenSuccess", [("authorization", self.authorization as Any)])
             }
         }
         case loginToken(Cons_loginToken)
@@ -890,10 +938,13 @@ public extension Api.auth {
 }
 public extension Api.auth {
     enum PasskeyLoginOptions: TypeConstructorDescription {
-        public class Cons_passkeyLoginOptions {
+        public class Cons_passkeyLoginOptions: TypeConstructorDescription {
             public var options: Api.DataJSON
             public init(options: Api.DataJSON) {
                 self.options = options
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("passkeyLoginOptions", [("options", self.options as Any)])
             }
         }
         case passkeyLoginOptions(Cons_passkeyLoginOptions)
@@ -933,10 +984,13 @@ public extension Api.auth {
 }
 public extension Api.auth {
     enum PasswordRecovery: TypeConstructorDescription {
-        public class Cons_passwordRecovery {
+        public class Cons_passwordRecovery: TypeConstructorDescription {
             public var emailPattern: String
             public init(emailPattern: String) {
                 self.emailPattern = emailPattern
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("passwordRecovery", [("emailPattern", self.emailPattern as Any)])
             }
         }
         case passwordRecovery(Cons_passwordRecovery)
@@ -974,7 +1028,7 @@ public extension Api.auth {
 }
 public extension Api.auth {
     enum SentCode: TypeConstructorDescription {
-        public class Cons_sentCode {
+        public class Cons_sentCode: TypeConstructorDescription {
             public var flags: Int32
             public var type: Api.auth.SentCodeType
             public var phoneCodeHash: String
@@ -987,8 +1041,11 @@ public extension Api.auth {
                 self.nextType = nextType
                 self.timeout = timeout
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCode", [("flags", self.flags as Any), ("type", self.type as Any), ("phoneCodeHash", self.phoneCodeHash as Any), ("nextType", self.nextType as Any), ("timeout", self.timeout as Any)])
+            }
         }
-        public class Cons_sentCodePaymentRequired {
+        public class Cons_sentCodePaymentRequired: TypeConstructorDescription {
             public var storeProduct: String
             public var phoneCodeHash: String
             public var supportEmailAddress: String
@@ -1003,11 +1060,17 @@ public extension Api.auth {
                 self.currency = currency
                 self.amount = amount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodePaymentRequired", [("storeProduct", self.storeProduct as Any), ("phoneCodeHash", self.phoneCodeHash as Any), ("supportEmailAddress", self.supportEmailAddress as Any), ("supportEmailSubject", self.supportEmailSubject as Any), ("currency", self.currency as Any), ("amount", self.amount as Any)])
+            }
         }
-        public class Cons_sentCodeSuccess {
+        public class Cons_sentCodeSuccess: TypeConstructorDescription {
             public var authorization: Api.auth.Authorization
             public init(authorization: Api.auth.Authorization) {
                 self.authorization = authorization
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeSuccess", [("authorization", self.authorization as Any)])
             }
         }
         case sentCode(Cons_sentCode)
@@ -1135,19 +1198,25 @@ public extension Api.auth {
 }
 public extension Api.auth {
     enum SentCodeType: TypeConstructorDescription {
-        public class Cons_sentCodeTypeApp {
+        public class Cons_sentCodeTypeApp: TypeConstructorDescription {
             public var length: Int32
             public init(length: Int32) {
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeApp", [("length", self.length as Any)])
+            }
         }
-        public class Cons_sentCodeTypeCall {
+        public class Cons_sentCodeTypeCall: TypeConstructorDescription {
             public var length: Int32
             public init(length: Int32) {
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeCall", [("length", self.length as Any)])
+            }
         }
-        public class Cons_sentCodeTypeEmailCode {
+        public class Cons_sentCodeTypeEmailCode: TypeConstructorDescription {
             public var flags: Int32
             public var emailPattern: String
             public var length: Int32
@@ -1160,8 +1229,11 @@ public extension Api.auth {
                 self.resetAvailablePeriod = resetAvailablePeriod
                 self.resetPendingDate = resetPendingDate
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeEmailCode", [("flags", self.flags as Any), ("emailPattern", self.emailPattern as Any), ("length", self.length as Any), ("resetAvailablePeriod", self.resetAvailablePeriod as Any), ("resetPendingDate", self.resetPendingDate as Any)])
+            }
         }
-        public class Cons_sentCodeTypeFirebaseSms {
+        public class Cons_sentCodeTypeFirebaseSms: TypeConstructorDescription {
             public var flags: Int32
             public var nonce: Buffer?
             public var playIntegrityProjectId: Int64?
@@ -1178,55 +1250,79 @@ public extension Api.auth {
                 self.pushTimeout = pushTimeout
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeFirebaseSms", [("flags", self.flags as Any), ("nonce", self.nonce as Any), ("playIntegrityProjectId", self.playIntegrityProjectId as Any), ("playIntegrityNonce", self.playIntegrityNonce as Any), ("receipt", self.receipt as Any), ("pushTimeout", self.pushTimeout as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_sentCodeTypeFlashCall {
+        public class Cons_sentCodeTypeFlashCall: TypeConstructorDescription {
             public var pattern: String
             public init(pattern: String) {
                 self.pattern = pattern
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeFlashCall", [("pattern", self.pattern as Any)])
+            }
         }
-        public class Cons_sentCodeTypeFragmentSms {
+        public class Cons_sentCodeTypeFragmentSms: TypeConstructorDescription {
             public var url: String
             public var length: Int32
             public init(url: String, length: Int32) {
                 self.url = url
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeFragmentSms", [("url", self.url as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_sentCodeTypeMissedCall {
+        public class Cons_sentCodeTypeMissedCall: TypeConstructorDescription {
             public var prefix: String
             public var length: Int32
             public init(prefix: String, length: Int32) {
                 self.prefix = prefix
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeMissedCall", [("prefix", self.prefix as Any), ("length", self.length as Any)])
+            }
         }
-        public class Cons_sentCodeTypeSetUpEmailRequired {
+        public class Cons_sentCodeTypeSetUpEmailRequired: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeSetUpEmailRequired", [("flags", self.flags as Any)])
+            }
         }
-        public class Cons_sentCodeTypeSms {
+        public class Cons_sentCodeTypeSms: TypeConstructorDescription {
             public var length: Int32
             public init(length: Int32) {
                 self.length = length
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeSms", [("length", self.length as Any)])
+            }
         }
-        public class Cons_sentCodeTypeSmsPhrase {
+        public class Cons_sentCodeTypeSmsPhrase: TypeConstructorDescription {
             public var flags: Int32
             public var beginning: String?
             public init(flags: Int32, beginning: String?) {
                 self.flags = flags
                 self.beginning = beginning
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeSmsPhrase", [("flags", self.flags as Any), ("beginning", self.beginning as Any)])
+            }
         }
-        public class Cons_sentCodeTypeSmsWord {
+        public class Cons_sentCodeTypeSmsWord: TypeConstructorDescription {
             public var flags: Int32
             public var beginning: String?
             public init(flags: Int32, beginning: String?) {
                 self.flags = flags
                 self.beginning = beginning
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sentCodeTypeSmsWord", [("flags", self.flags as Any), ("beginning", self.beginning as Any)])
             }
         }
         case sentCodeTypeApp(Cons_sentCodeTypeApp)

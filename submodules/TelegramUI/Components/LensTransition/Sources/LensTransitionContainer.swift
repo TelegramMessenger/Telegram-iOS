@@ -93,9 +93,15 @@ public final class LensTransitionContainer: UIView {
     private(set) var state: State = .animatedOut
     
     override public init(frame: CGRect) {
-        self.sdfElementLayer = createObject(className: ("CAS" as NSString).appending("DFElementLayer") as String) as? CALayer
-        self.sdfLayer = createObject(className: ("CAS" as NSString).appending("DFLayer")) as? CALayer
-        self.displacementEffect = createObject(className: ("CAS" as NSString).appending("DFGlassDisplacementEffect"))
+        if #available(iOS 26.0, *) {
+            self.sdfElementLayer = createObject(className: ("CAS" as NSString).appending("DFElementLayer") as String) as? CALayer
+            self.sdfLayer = createObject(className: ("CAS" as NSString).appending("DFLayer")) as? CALayer
+            self.displacementEffect = createObject(className: ("CAS" as NSString).appending("DFGlassDisplacementEffect"))
+        } else {
+            self.sdfElementLayer = nil
+            self.sdfLayer = nil
+            self.displacementEffect = nil
+        }
         
         super.init(frame: frame)
         

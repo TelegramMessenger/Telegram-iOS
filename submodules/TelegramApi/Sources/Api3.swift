@@ -1,6 +1,6 @@
 public extension Api {
     enum BusinessGreetingMessage: TypeConstructorDescription {
-        public class Cons_businessGreetingMessage {
+        public class Cons_businessGreetingMessage: TypeConstructorDescription {
             public var shortcutId: Int32
             public var recipients: Api.BusinessRecipients
             public var noActivityDays: Int32
@@ -8,6 +8,9 @@ public extension Api {
                 self.shortcutId = shortcutId
                 self.recipients = recipients
                 self.noActivityDays = noActivityDays
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("businessGreetingMessage", [("shortcutId", self.shortcutId as Any), ("recipients", self.recipients as Any), ("noActivityDays", self.noActivityDays as Any)])
             }
         }
         case businessGreetingMessage(Cons_businessGreetingMessage)
@@ -55,7 +58,7 @@ public extension Api {
 }
 public extension Api {
     enum BusinessIntro: TypeConstructorDescription {
-        public class Cons_businessIntro {
+        public class Cons_businessIntro: TypeConstructorDescription {
             public var flags: Int32
             public var title: String
             public var description: String
@@ -65,6 +68,9 @@ public extension Api {
                 self.title = title
                 self.description = description
                 self.sticker = sticker
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("businessIntro", [("flags", self.flags as Any), ("title", self.title as Any), ("description", self.description as Any), ("sticker", self.sticker as Any)])
             }
         }
         case businessIntro(Cons_businessIntro)
@@ -120,7 +126,7 @@ public extension Api {
 }
 public extension Api {
     enum BusinessLocation: TypeConstructorDescription {
-        public class Cons_businessLocation {
+        public class Cons_businessLocation: TypeConstructorDescription {
             public var flags: Int32
             public var geoPoint: Api.GeoPoint?
             public var address: String
@@ -128,6 +134,9 @@ public extension Api {
                 self.flags = flags
                 self.geoPoint = geoPoint
                 self.address = address
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("businessLocation", [("flags", self.flags as Any), ("geoPoint", self.geoPoint as Any), ("address", self.address as Any)])
             }
         }
         case businessLocation(Cons_businessLocation)
@@ -179,12 +188,15 @@ public extension Api {
 }
 public extension Api {
     enum BusinessRecipients: TypeConstructorDescription {
-        public class Cons_businessRecipients {
+        public class Cons_businessRecipients: TypeConstructorDescription {
             public var flags: Int32
             public var users: [Int64]?
             public init(flags: Int32, users: [Int64]?) {
                 self.flags = flags
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("businessRecipients", [("flags", self.flags as Any), ("users", self.users as Any)])
             }
         }
         case businessRecipients(Cons_businessRecipients)
@@ -236,12 +248,15 @@ public extension Api {
 }
 public extension Api {
     enum BusinessWeeklyOpen: TypeConstructorDescription {
-        public class Cons_businessWeeklyOpen {
+        public class Cons_businessWeeklyOpen: TypeConstructorDescription {
             public var startMinute: Int32
             public var endMinute: Int32
             public init(startMinute: Int32, endMinute: Int32) {
                 self.startMinute = startMinute
                 self.endMinute = endMinute
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("businessWeeklyOpen", [("startMinute", self.startMinute as Any), ("endMinute", self.endMinute as Any)])
             }
         }
         case businessWeeklyOpen(Cons_businessWeeklyOpen)
@@ -283,7 +298,7 @@ public extension Api {
 }
 public extension Api {
     enum BusinessWorkHours: TypeConstructorDescription {
-        public class Cons_businessWorkHours {
+        public class Cons_businessWorkHours: TypeConstructorDescription {
             public var flags: Int32
             public var timezoneId: String
             public var weeklyOpen: [Api.BusinessWeeklyOpen]
@@ -291,6 +306,9 @@ public extension Api {
                 self.flags = flags
                 self.timezoneId = timezoneId
                 self.weeklyOpen = weeklyOpen
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("businessWorkHours", [("flags", self.flags as Any), ("timezoneId", self.timezoneId as Any), ("weeklyOpen", self.weeklyOpen as Any)])
             }
         }
         case businessWorkHours(Cons_businessWorkHours)
@@ -342,10 +360,13 @@ public extension Api {
 }
 public extension Api {
     enum CdnConfig: TypeConstructorDescription {
-        public class Cons_cdnConfig {
+        public class Cons_cdnConfig: TypeConstructorDescription {
             public var publicKeys: [Api.CdnPublicKey]
             public init(publicKeys: [Api.CdnPublicKey]) {
                 self.publicKeys = publicKeys
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("cdnConfig", [("publicKeys", self.publicKeys as Any)])
             }
         }
         case cdnConfig(Cons_cdnConfig)
@@ -389,12 +410,15 @@ public extension Api {
 }
 public extension Api {
     enum CdnPublicKey: TypeConstructorDescription {
-        public class Cons_cdnPublicKey {
+        public class Cons_cdnPublicKey: TypeConstructorDescription {
             public var dcId: Int32
             public var publicKey: String
             public init(dcId: Int32, publicKey: String) {
                 self.dcId = dcId
                 self.publicKey = publicKey
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("cdnPublicKey", [("dcId", self.dcId as Any), ("publicKey", self.publicKey as Any)])
             }
         }
         case cdnPublicKey(Cons_cdnPublicKey)
@@ -436,7 +460,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum ChannelAdminLogEvent: TypeConstructorDescription {
-        public class Cons_channelAdminLogEvent {
+        public class Cons_channelAdminLogEvent: TypeConstructorDescription {
             public var id: Int64
             public var date: Int32
             public var userId: Int64
@@ -446,6 +470,9 @@ public extension Api {
                 self.date = date
                 self.userId = userId
                 self.action = action
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEvent", [("id", self.id as Any), ("date", self.date as Any), ("userId", self.userId as Any), ("action", self.action as Any)])
             }
         }
         case channelAdminLogEvent(Cons_channelAdminLogEvent)
@@ -497,259 +524,361 @@ public extension Api {
 }
 public extension Api {
     indirect enum ChannelAdminLogEventAction: TypeConstructorDescription {
-        public class Cons_channelAdminLogEventActionChangeAbout {
+        public class Cons_channelAdminLogEventActionChangeAbout: TypeConstructorDescription {
             public var prevValue: String
             public var newValue: String
             public init(prevValue: String, newValue: String) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeAbout", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeAvailableReactions {
+        public class Cons_channelAdminLogEventActionChangeAvailableReactions: TypeConstructorDescription {
             public var prevValue: Api.ChatReactions
             public var newValue: Api.ChatReactions
             public init(prevValue: Api.ChatReactions, newValue: Api.ChatReactions) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeAvailableReactions", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeEmojiStatus {
+        public class Cons_channelAdminLogEventActionChangeEmojiStatus: TypeConstructorDescription {
             public var prevValue: Api.EmojiStatus
             public var newValue: Api.EmojiStatus
             public init(prevValue: Api.EmojiStatus, newValue: Api.EmojiStatus) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeEmojiStatus", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeEmojiStickerSet {
+        public class Cons_channelAdminLogEventActionChangeEmojiStickerSet: TypeConstructorDescription {
             public var prevStickerset: Api.InputStickerSet
             public var newStickerset: Api.InputStickerSet
             public init(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet) {
                 self.prevStickerset = prevStickerset
                 self.newStickerset = newStickerset
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeEmojiStickerSet", [("prevStickerset", self.prevStickerset as Any), ("newStickerset", self.newStickerset as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeHistoryTTL {
+        public class Cons_channelAdminLogEventActionChangeHistoryTTL: TypeConstructorDescription {
             public var prevValue: Int32
             public var newValue: Int32
             public init(prevValue: Int32, newValue: Int32) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeLinkedChat {
+        public class Cons_channelAdminLogEventActionChangeLinkedChat: TypeConstructorDescription {
             public var prevValue: Int64
             public var newValue: Int64
             public init(prevValue: Int64, newValue: Int64) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeLinkedChat", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeLocation {
+        public class Cons_channelAdminLogEventActionChangeLocation: TypeConstructorDescription {
             public var prevValue: Api.ChannelLocation
             public var newValue: Api.ChannelLocation
             public init(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeLocation", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangePeerColor {
+        public class Cons_channelAdminLogEventActionChangePeerColor: TypeConstructorDescription {
             public var prevValue: Api.PeerColor
             public var newValue: Api.PeerColor
             public init(prevValue: Api.PeerColor, newValue: Api.PeerColor) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangePeerColor", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangePhoto {
+        public class Cons_channelAdminLogEventActionChangePhoto: TypeConstructorDescription {
             public var prevPhoto: Api.Photo
             public var newPhoto: Api.Photo
             public init(prevPhoto: Api.Photo, newPhoto: Api.Photo) {
                 self.prevPhoto = prevPhoto
                 self.newPhoto = newPhoto
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangePhoto", [("prevPhoto", self.prevPhoto as Any), ("newPhoto", self.newPhoto as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeProfilePeerColor {
+        public class Cons_channelAdminLogEventActionChangeProfilePeerColor: TypeConstructorDescription {
             public var prevValue: Api.PeerColor
             public var newValue: Api.PeerColor
             public init(prevValue: Api.PeerColor, newValue: Api.PeerColor) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeProfilePeerColor", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeStickerSet {
+        public class Cons_channelAdminLogEventActionChangeStickerSet: TypeConstructorDescription {
             public var prevStickerset: Api.InputStickerSet
             public var newStickerset: Api.InputStickerSet
             public init(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet) {
                 self.prevStickerset = prevStickerset
                 self.newStickerset = newStickerset
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeStickerSet", [("prevStickerset", self.prevStickerset as Any), ("newStickerset", self.newStickerset as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeTitle {
+        public class Cons_channelAdminLogEventActionChangeTitle: TypeConstructorDescription {
             public var prevValue: String
             public var newValue: String
             public init(prevValue: String, newValue: String) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeTitle", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeUsername {
+        public class Cons_channelAdminLogEventActionChangeUsername: TypeConstructorDescription {
             public var prevValue: String
             public var newValue: String
             public init(prevValue: String, newValue: String) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeUsername", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeUsernames {
+        public class Cons_channelAdminLogEventActionChangeUsernames: TypeConstructorDescription {
             public var prevValue: [String]
             public var newValue: [String]
             public init(prevValue: [String], newValue: [String]) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeUsernames", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionChangeWallpaper {
+        public class Cons_channelAdminLogEventActionChangeWallpaper: TypeConstructorDescription {
             public var prevValue: Api.WallPaper
             public var newValue: Api.WallPaper
             public init(prevValue: Api.WallPaper, newValue: Api.WallPaper) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionChangeWallpaper", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionCreateTopic {
+        public class Cons_channelAdminLogEventActionCreateTopic: TypeConstructorDescription {
             public var topic: Api.ForumTopic
             public init(topic: Api.ForumTopic) {
                 self.topic = topic
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionCreateTopic", [("topic", self.topic as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionDefaultBannedRights {
+        public class Cons_channelAdminLogEventActionDefaultBannedRights: TypeConstructorDescription {
             public var prevBannedRights: Api.ChatBannedRights
             public var newBannedRights: Api.ChatBannedRights
             public init(prevBannedRights: Api.ChatBannedRights, newBannedRights: Api.ChatBannedRights) {
                 self.prevBannedRights = prevBannedRights
                 self.newBannedRights = newBannedRights
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionDefaultBannedRights", [("prevBannedRights", self.prevBannedRights as Any), ("newBannedRights", self.newBannedRights as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionDeleteMessage {
+        public class Cons_channelAdminLogEventActionDeleteMessage: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionDeleteMessage", [("message", self.message as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionDeleteTopic {
+        public class Cons_channelAdminLogEventActionDeleteTopic: TypeConstructorDescription {
             public var topic: Api.ForumTopic
             public init(topic: Api.ForumTopic) {
                 self.topic = topic
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionDeleteTopic", [("topic", self.topic as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionDiscardGroupCall {
+        public class Cons_channelAdminLogEventActionDiscardGroupCall: TypeConstructorDescription {
             public var call: Api.InputGroupCall
             public init(call: Api.InputGroupCall) {
                 self.call = call
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionDiscardGroupCall", [("call", self.call as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionEditMessage {
+        public class Cons_channelAdminLogEventActionEditMessage: TypeConstructorDescription {
             public var prevMessage: Api.Message
             public var newMessage: Api.Message
             public init(prevMessage: Api.Message, newMessage: Api.Message) {
                 self.prevMessage = prevMessage
                 self.newMessage = newMessage
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionEditMessage", [("prevMessage", self.prevMessage as Any), ("newMessage", self.newMessage as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionEditTopic {
+        public class Cons_channelAdminLogEventActionEditTopic: TypeConstructorDescription {
             public var prevTopic: Api.ForumTopic
             public var newTopic: Api.ForumTopic
             public init(prevTopic: Api.ForumTopic, newTopic: Api.ForumTopic) {
                 self.prevTopic = prevTopic
                 self.newTopic = newTopic
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionEditTopic", [("prevTopic", self.prevTopic as Any), ("newTopic", self.newTopic as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionExportedInviteDelete {
+        public class Cons_channelAdminLogEventActionExportedInviteDelete: TypeConstructorDescription {
             public var invite: Api.ExportedChatInvite
             public init(invite: Api.ExportedChatInvite) {
                 self.invite = invite
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionExportedInviteDelete", [("invite", self.invite as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionExportedInviteEdit {
+        public class Cons_channelAdminLogEventActionExportedInviteEdit: TypeConstructorDescription {
             public var prevInvite: Api.ExportedChatInvite
             public var newInvite: Api.ExportedChatInvite
             public init(prevInvite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite) {
                 self.prevInvite = prevInvite
                 self.newInvite = newInvite
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionExportedInviteEdit", [("prevInvite", self.prevInvite as Any), ("newInvite", self.newInvite as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionExportedInviteRevoke {
+        public class Cons_channelAdminLogEventActionExportedInviteRevoke: TypeConstructorDescription {
             public var invite: Api.ExportedChatInvite
             public init(invite: Api.ExportedChatInvite) {
                 self.invite = invite
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionExportedInviteRevoke", [("invite", self.invite as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantInvite {
+        public class Cons_channelAdminLogEventActionParticipantInvite: TypeConstructorDescription {
             public var participant: Api.ChannelParticipant
             public init(participant: Api.ChannelParticipant) {
                 self.participant = participant
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantInvite", [("participant", self.participant as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantJoinByInvite {
+        public class Cons_channelAdminLogEventActionParticipantJoinByInvite: TypeConstructorDescription {
             public var flags: Int32
             public var invite: Api.ExportedChatInvite
             public init(flags: Int32, invite: Api.ExportedChatInvite) {
                 self.flags = flags
                 self.invite = invite
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantJoinByInvite", [("flags", self.flags as Any), ("invite", self.invite as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantJoinByRequest {
+        public class Cons_channelAdminLogEventActionParticipantJoinByRequest: TypeConstructorDescription {
             public var invite: Api.ExportedChatInvite
             public var approvedBy: Int64
             public init(invite: Api.ExportedChatInvite, approvedBy: Int64) {
                 self.invite = invite
                 self.approvedBy = approvedBy
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantJoinByRequest", [("invite", self.invite as Any), ("approvedBy", self.approvedBy as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantMute {
+        public class Cons_channelAdminLogEventActionParticipantMute: TypeConstructorDescription {
             public var participant: Api.GroupCallParticipant
             public init(participant: Api.GroupCallParticipant) {
                 self.participant = participant
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantMute", [("participant", self.participant as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantSubExtend {
+        public class Cons_channelAdminLogEventActionParticipantSubExtend: TypeConstructorDescription {
             public var prevParticipant: Api.ChannelParticipant
             public var newParticipant: Api.ChannelParticipant
             public init(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant) {
                 self.prevParticipant = prevParticipant
                 self.newParticipant = newParticipant
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantSubExtend", [("prevParticipant", self.prevParticipant as Any), ("newParticipant", self.newParticipant as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantToggleAdmin {
+        public class Cons_channelAdminLogEventActionParticipantToggleAdmin: TypeConstructorDescription {
             public var prevParticipant: Api.ChannelParticipant
             public var newParticipant: Api.ChannelParticipant
             public init(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant) {
                 self.prevParticipant = prevParticipant
                 self.newParticipant = newParticipant
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantToggleAdmin", [("prevParticipant", self.prevParticipant as Any), ("newParticipant", self.newParticipant as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantToggleBan {
+        public class Cons_channelAdminLogEventActionParticipantToggleBan: TypeConstructorDescription {
             public var prevParticipant: Api.ChannelParticipant
             public var newParticipant: Api.ChannelParticipant
             public init(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant) {
                 self.prevParticipant = prevParticipant
                 self.newParticipant = newParticipant
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantToggleBan", [("prevParticipant", self.prevParticipant as Any), ("newParticipant", self.newParticipant as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantUnmute {
+        public class Cons_channelAdminLogEventActionParticipantUnmute: TypeConstructorDescription {
             public var participant: Api.GroupCallParticipant
             public init(participant: Api.GroupCallParticipant) {
                 self.participant = participant
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantUnmute", [("participant", self.participant as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionParticipantVolume {
+        public class Cons_channelAdminLogEventActionParticipantVolume: TypeConstructorDescription {
             public var participant: Api.GroupCallParticipant
             public init(participant: Api.GroupCallParticipant) {
                 self.participant = participant
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantVolume", [("participant", self.participant as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionPinTopic {
+        public class Cons_channelAdminLogEventActionPinTopic: TypeConstructorDescription {
             public var flags: Int32
             public var prevTopic: Api.ForumTopic?
             public var newTopic: Api.ForumTopic?
@@ -758,91 +887,136 @@ public extension Api {
                 self.prevTopic = prevTopic
                 self.newTopic = newTopic
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionPinTopic", [("flags", self.flags as Any), ("prevTopic", self.prevTopic as Any), ("newTopic", self.newTopic as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionSendMessage {
+        public class Cons_channelAdminLogEventActionSendMessage: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionSendMessage", [("message", self.message as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionStartGroupCall {
+        public class Cons_channelAdminLogEventActionStartGroupCall: TypeConstructorDescription {
             public var call: Api.InputGroupCall
             public init(call: Api.InputGroupCall) {
                 self.call = call
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionStartGroupCall", [("call", self.call as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionStopPoll {
+        public class Cons_channelAdminLogEventActionStopPoll: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionStopPoll", [("message", self.message as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleAntiSpam {
+        public class Cons_channelAdminLogEventActionToggleAntiSpam: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleAntiSpam", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleAutotranslation {
+        public class Cons_channelAdminLogEventActionToggleAutotranslation: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleAutotranslation", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleForum {
+        public class Cons_channelAdminLogEventActionToggleForum: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleForum", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleGroupCallSetting {
+        public class Cons_channelAdminLogEventActionToggleGroupCallSetting: TypeConstructorDescription {
             public var joinMuted: Api.Bool
             public init(joinMuted: Api.Bool) {
                 self.joinMuted = joinMuted
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleGroupCallSetting", [("joinMuted", self.joinMuted as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleInvites {
+        public class Cons_channelAdminLogEventActionToggleInvites: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleInvites", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleNoForwards {
+        public class Cons_channelAdminLogEventActionToggleNoForwards: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleNoForwards", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionTogglePreHistoryHidden {
+        public class Cons_channelAdminLogEventActionTogglePreHistoryHidden: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionTogglePreHistoryHidden", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleSignatureProfiles {
+        public class Cons_channelAdminLogEventActionToggleSignatureProfiles: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleSignatureProfiles", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleSignatures {
+        public class Cons_channelAdminLogEventActionToggleSignatures: TypeConstructorDescription {
             public var newValue: Api.Bool
             public init(newValue: Api.Bool) {
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleSignatures", [("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionToggleSlowMode {
+        public class Cons_channelAdminLogEventActionToggleSlowMode: TypeConstructorDescription {
             public var prevValue: Int32
             public var newValue: Int32
             public init(prevValue: Int32, newValue: Int32) {
                 self.prevValue = prevValue
                 self.newValue = newValue
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionToggleSlowMode", [("prevValue", self.prevValue as Any), ("newValue", self.newValue as Any)])
+            }
         }
-        public class Cons_channelAdminLogEventActionUpdatePinned {
+        public class Cons_channelAdminLogEventActionUpdatePinned: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionUpdatePinned", [("message", self.message as Any)])
             }
         }
         case channelAdminLogEventActionChangeAbout(Cons_channelAdminLogEventActionChangeAbout)

@@ -1,9 +1,12 @@
 public extension Api {
     enum DisallowedGiftsSettings: TypeConstructorDescription {
-        public class Cons_disallowedGiftsSettings {
+        public class Cons_disallowedGiftsSettings: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("disallowedGiftsSettings", [("flags", self.flags as Any)])
             }
         }
         case disallowedGiftsSettings(Cons_disallowedGiftsSettings)
@@ -41,7 +44,7 @@ public extension Api {
 }
 public extension Api {
     enum Document: TypeConstructorDescription {
-        public class Cons_document {
+        public class Cons_document: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var accessHash: Int64
@@ -66,11 +69,17 @@ public extension Api {
                 self.dcId = dcId
                 self.attributes = attributes
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("document", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("fileReference", self.fileReference as Any), ("date", self.date as Any), ("mimeType", self.mimeType as Any), ("size", self.size as Any), ("thumbs", self.thumbs as Any), ("videoThumbs", self.videoThumbs as Any), ("dcId", self.dcId as Any), ("attributes", self.attributes as Any)])
+            }
         }
-        public class Cons_documentEmpty {
+        public class Cons_documentEmpty: TypeConstructorDescription {
             public var id: Int64
             public init(id: Int64) {
                 self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("documentEmpty", [("id", self.id as Any)])
             }
         }
         case document(Cons_document)
@@ -194,7 +203,7 @@ public extension Api {
 }
 public extension Api {
     enum DocumentAttribute: TypeConstructorDescription {
-        public class Cons_documentAttributeAudio {
+        public class Cons_documentAttributeAudio: TypeConstructorDescription {
             public var flags: Int32
             public var duration: Int32
             public var title: String?
@@ -207,8 +216,11 @@ public extension Api {
                 self.performer = performer
                 self.waveform = waveform
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("documentAttributeAudio", [("flags", self.flags as Any), ("duration", self.duration as Any), ("title", self.title as Any), ("performer", self.performer as Any), ("waveform", self.waveform as Any)])
+            }
         }
-        public class Cons_documentAttributeCustomEmoji {
+        public class Cons_documentAttributeCustomEmoji: TypeConstructorDescription {
             public var flags: Int32
             public var alt: String
             public var stickerset: Api.InputStickerSet
@@ -217,22 +229,31 @@ public extension Api {
                 self.alt = alt
                 self.stickerset = stickerset
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("documentAttributeCustomEmoji", [("flags", self.flags as Any), ("alt", self.alt as Any), ("stickerset", self.stickerset as Any)])
+            }
         }
-        public class Cons_documentAttributeFilename {
+        public class Cons_documentAttributeFilename: TypeConstructorDescription {
             public var fileName: String
             public init(fileName: String) {
                 self.fileName = fileName
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("documentAttributeFilename", [("fileName", self.fileName as Any)])
+            }
         }
-        public class Cons_documentAttributeImageSize {
+        public class Cons_documentAttributeImageSize: TypeConstructorDescription {
             public var w: Int32
             public var h: Int32
             public init(w: Int32, h: Int32) {
                 self.w = w
                 self.h = h
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("documentAttributeImageSize", [("w", self.w as Any), ("h", self.h as Any)])
+            }
         }
-        public class Cons_documentAttributeSticker {
+        public class Cons_documentAttributeSticker: TypeConstructorDescription {
             public var flags: Int32
             public var alt: String
             public var stickerset: Api.InputStickerSet
@@ -243,8 +264,11 @@ public extension Api {
                 self.stickerset = stickerset
                 self.maskCoords = maskCoords
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("documentAttributeSticker", [("flags", self.flags as Any), ("alt", self.alt as Any), ("stickerset", self.stickerset as Any), ("maskCoords", self.maskCoords as Any)])
+            }
         }
-        public class Cons_documentAttributeVideo {
+        public class Cons_documentAttributeVideo: TypeConstructorDescription {
             public var flags: Int32
             public var duration: Double
             public var w: Int32
@@ -260,6 +284,9 @@ public extension Api {
                 self.preloadPrefixSize = preloadPrefixSize
                 self.videoStartTs = videoStartTs
                 self.videoCodec = videoCodec
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("documentAttributeVideo", [("flags", self.flags as Any), ("duration", self.duration as Any), ("w", self.w as Any), ("h", self.h as Any), ("preloadPrefixSize", self.preloadPrefixSize as Any), ("videoStartTs", self.videoStartTs as Any), ("videoCodec", self.videoCodec as Any)])
             }
         }
         case documentAttributeAnimated
@@ -517,7 +544,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum DraftMessage: TypeConstructorDescription {
-        public class Cons_draftMessage {
+        public class Cons_draftMessage: TypeConstructorDescription {
             public var flags: Int32
             public var replyTo: Api.InputReplyTo?
             public var message: String
@@ -536,13 +563,19 @@ public extension Api {
                 self.effect = effect
                 self.suggestedPost = suggestedPost
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("draftMessage", [("flags", self.flags as Any), ("replyTo", self.replyTo as Any), ("message", self.message as Any), ("entities", self.entities as Any), ("media", self.media as Any), ("date", self.date as Any), ("effect", self.effect as Any), ("suggestedPost", self.suggestedPost as Any)])
+            }
         }
-        public class Cons_draftMessageEmpty {
+        public class Cons_draftMessageEmpty: TypeConstructorDescription {
             public var flags: Int32
             public var date: Int32?
             public init(flags: Int32, date: Int32?) {
                 self.flags = flags
                 self.date = date
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("draftMessageEmpty", [("flags", self.flags as Any), ("date", self.date as Any)])
             }
         }
         case draftMessage(Cons_draftMessage)
@@ -668,22 +701,31 @@ public extension Api {
 }
 public extension Api {
     enum EmailVerification: TypeConstructorDescription {
-        public class Cons_emailVerificationApple {
+        public class Cons_emailVerificationApple: TypeConstructorDescription {
             public var token: String
             public init(token: String) {
                 self.token = token
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emailVerificationApple", [("token", self.token as Any)])
+            }
         }
-        public class Cons_emailVerificationCode {
+        public class Cons_emailVerificationCode: TypeConstructorDescription {
             public var code: String
             public init(code: String) {
                 self.code = code
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emailVerificationCode", [("code", self.code as Any)])
+            }
         }
-        public class Cons_emailVerificationGoogle {
+        public class Cons_emailVerificationGoogle: TypeConstructorDescription {
             public var token: String
             public init(token: String) {
                 self.token = token
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emailVerificationGoogle", [("token", self.token as Any)])
             }
         }
         case emailVerificationApple(Cons_emailVerificationApple)
@@ -761,12 +803,15 @@ public extension Api {
 }
 public extension Api {
     enum EmailVerifyPurpose: TypeConstructorDescription {
-        public class Cons_emailVerifyPurposeLoginSetup {
+        public class Cons_emailVerifyPurposeLoginSetup: TypeConstructorDescription {
             public var phoneNumber: String
             public var phoneCodeHash: String
             public init(phoneNumber: String, phoneCodeHash: String) {
                 self.phoneNumber = phoneNumber
                 self.phoneCodeHash = phoneCodeHash
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emailVerifyPurposeLoginSetup", [("phoneNumber", self.phoneNumber as Any), ("phoneCodeHash", self.phoneCodeHash as Any)])
             }
         }
         case emailVerifyPurposeLoginChange
@@ -830,7 +875,7 @@ public extension Api {
 }
 public extension Api {
     enum EmojiGroup: TypeConstructorDescription {
-        public class Cons_emojiGroup {
+        public class Cons_emojiGroup: TypeConstructorDescription {
             public var title: String
             public var iconEmojiId: Int64
             public var emoticons: [String]
@@ -839,8 +884,11 @@ public extension Api {
                 self.iconEmojiId = iconEmojiId
                 self.emoticons = emoticons
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiGroup", [("title", self.title as Any), ("iconEmojiId", self.iconEmojiId as Any), ("emoticons", self.emoticons as Any)])
+            }
         }
-        public class Cons_emojiGroupGreeting {
+        public class Cons_emojiGroupGreeting: TypeConstructorDescription {
             public var title: String
             public var iconEmojiId: Int64
             public var emoticons: [String]
@@ -849,13 +897,19 @@ public extension Api {
                 self.iconEmojiId = iconEmojiId
                 self.emoticons = emoticons
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiGroupGreeting", [("title", self.title as Any), ("iconEmojiId", self.iconEmojiId as Any), ("emoticons", self.emoticons as Any)])
+            }
         }
-        public class Cons_emojiGroupPremium {
+        public class Cons_emojiGroupPremium: TypeConstructorDescription {
             public var title: String
             public var iconEmojiId: Int64
             public init(title: String, iconEmojiId: Int64) {
                 self.title = title
                 self.iconEmojiId = iconEmojiId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiGroupPremium", [("title", self.title as Any), ("iconEmojiId", self.iconEmojiId as Any)])
             }
         }
         case emojiGroup(Cons_emojiGroup)
@@ -965,20 +1019,26 @@ public extension Api {
 }
 public extension Api {
     enum EmojiKeyword: TypeConstructorDescription {
-        public class Cons_emojiKeyword {
+        public class Cons_emojiKeyword: TypeConstructorDescription {
             public var keyword: String
             public var emoticons: [String]
             public init(keyword: String, emoticons: [String]) {
                 self.keyword = keyword
                 self.emoticons = emoticons
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiKeyword", [("keyword", self.keyword as Any), ("emoticons", self.emoticons as Any)])
+            }
         }
-        public class Cons_emojiKeywordDeleted {
+        public class Cons_emojiKeywordDeleted: TypeConstructorDescription {
             public var keyword: String
             public var emoticons: [String]
             public init(keyword: String, emoticons: [String]) {
                 self.keyword = keyword
                 self.emoticons = emoticons
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiKeywordDeleted", [("keyword", self.keyword as Any), ("emoticons", self.emoticons as Any)])
             }
         }
         case emojiKeyword(Cons_emojiKeyword)
@@ -1056,7 +1116,7 @@ public extension Api {
 }
 public extension Api {
     enum EmojiKeywordsDifference: TypeConstructorDescription {
-        public class Cons_emojiKeywordsDifference {
+        public class Cons_emojiKeywordsDifference: TypeConstructorDescription {
             public var langCode: String
             public var fromVersion: Int32
             public var version: Int32
@@ -1066,6 +1126,9 @@ public extension Api {
                 self.fromVersion = fromVersion
                 self.version = version
                 self.keywords = keywords
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiKeywordsDifference", [("langCode", self.langCode as Any), ("fromVersion", self.fromVersion as Any), ("version", self.version as Any), ("keywords", self.keywords as Any)])
             }
         }
         case emojiKeywordsDifference(Cons_emojiKeywordsDifference)
@@ -1121,10 +1184,13 @@ public extension Api {
 }
 public extension Api {
     enum EmojiLanguage: TypeConstructorDescription {
-        public class Cons_emojiLanguage {
+        public class Cons_emojiLanguage: TypeConstructorDescription {
             public var langCode: String
             public init(langCode: String) {
                 self.langCode = langCode
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiLanguage", [("langCode", self.langCode as Any)])
             }
         }
         case emojiLanguage(Cons_emojiLanguage)
@@ -1162,12 +1228,15 @@ public extension Api {
 }
 public extension Api {
     enum EmojiList: TypeConstructorDescription {
-        public class Cons_emojiList {
+        public class Cons_emojiList: TypeConstructorDescription {
             public var hash: Int64
             public var documentId: [Int64]
             public init(hash: Int64, documentId: [Int64]) {
                 self.hash = hash
                 self.documentId = documentId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiList", [("hash", self.hash as Any), ("documentId", self.documentId as Any)])
             }
         }
         case emojiList(Cons_emojiList)
@@ -1226,7 +1295,7 @@ public extension Api {
 }
 public extension Api {
     enum EmojiStatus: TypeConstructorDescription {
-        public class Cons_emojiStatus {
+        public class Cons_emojiStatus: TypeConstructorDescription {
             public var flags: Int32
             public var documentId: Int64
             public var until: Int32?
@@ -1235,8 +1304,11 @@ public extension Api {
                 self.documentId = documentId
                 self.until = until
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiStatus", [("flags", self.flags as Any), ("documentId", self.documentId as Any), ("until", self.until as Any)])
+            }
         }
-        public class Cons_emojiStatusCollectible {
+        public class Cons_emojiStatusCollectible: TypeConstructorDescription {
             public var flags: Int32
             public var collectibleId: Int64
             public var documentId: Int64
@@ -1261,8 +1333,11 @@ public extension Api {
                 self.textColor = textColor
                 self.until = until
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiStatusCollectible", [("flags", self.flags as Any), ("collectibleId", self.collectibleId as Any), ("documentId", self.documentId as Any), ("title", self.title as Any), ("slug", self.slug as Any), ("patternDocumentId", self.patternDocumentId as Any), ("centerColor", self.centerColor as Any), ("edgeColor", self.edgeColor as Any), ("patternColor", self.patternColor as Any), ("textColor", self.textColor as Any), ("until", self.until as Any)])
+            }
         }
-        public class Cons_inputEmojiStatusCollectible {
+        public class Cons_inputEmojiStatusCollectible: TypeConstructorDescription {
             public var flags: Int32
             public var collectibleId: Int64
             public var until: Int32?
@@ -1270,6 +1345,9 @@ public extension Api {
                 self.flags = flags
                 self.collectibleId = collectibleId
                 self.until = until
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputEmojiStatusCollectible", [("flags", self.flags as Any), ("collectibleId", self.collectibleId as Any), ("until", self.until as Any)])
             }
         }
         case emojiStatus(Cons_emojiStatus)

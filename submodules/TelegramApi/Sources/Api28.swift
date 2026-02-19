@@ -1,6 +1,6 @@
 public extension Api {
     enum TopPeerCategoryPeers: TypeConstructorDescription {
-        public class Cons_topPeerCategoryPeers {
+        public class Cons_topPeerCategoryPeers: TypeConstructorDescription {
             public var category: Api.TopPeerCategory
             public var count: Int32
             public var peers: [Api.TopPeer]
@@ -8,6 +8,9 @@ public extension Api {
                 self.category = category
                 self.count = count
                 self.peers = peers
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("topPeerCategoryPeers", [("category", self.category as Any), ("count", self.count as Any), ("peers", self.peers as Any)])
             }
         }
         case topPeerCategoryPeers(Cons_topPeerCategoryPeers)
@@ -61,15 +64,18 @@ public extension Api {
 }
 public extension Api {
     indirect enum Update: TypeConstructorDescription {
-        public class Cons_updateBotBusinessConnect {
+        public class Cons_updateBotBusinessConnect: TypeConstructorDescription {
             public var connection: Api.BotBusinessConnection
             public var qts: Int32
             public init(connection: Api.BotBusinessConnection, qts: Int32) {
                 self.connection = connection
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotBusinessConnect", [("connection", self.connection as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotCallbackQuery {
+        public class Cons_updateBotCallbackQuery: TypeConstructorDescription {
             public var flags: Int32
             public var queryId: Int64
             public var userId: Int64
@@ -88,8 +94,11 @@ public extension Api {
                 self.data = data
                 self.gameShortName = gameShortName
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotCallbackQuery", [("flags", self.flags as Any), ("queryId", self.queryId as Any), ("userId", self.userId as Any), ("peer", self.peer as Any), ("msgId", self.msgId as Any), ("chatInstance", self.chatInstance as Any), ("data", self.data as Any), ("gameShortName", self.gameShortName as Any)])
+            }
         }
-        public class Cons_updateBotChatBoost {
+        public class Cons_updateBotChatBoost: TypeConstructorDescription {
             public var peer: Api.Peer
             public var boost: Api.Boost
             public var qts: Int32
@@ -98,8 +107,11 @@ public extension Api {
                 self.boost = boost
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotChatBoost", [("peer", self.peer as Any), ("boost", self.boost as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotChatInviteRequester {
+        public class Cons_updateBotChatInviteRequester: TypeConstructorDescription {
             public var peer: Api.Peer
             public var date: Int32
             public var userId: Int64
@@ -114,8 +126,11 @@ public extension Api {
                 self.invite = invite
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotChatInviteRequester", [("peer", self.peer as Any), ("date", self.date as Any), ("userId", self.userId as Any), ("about", self.about as Any), ("invite", self.invite as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotCommands {
+        public class Cons_updateBotCommands: TypeConstructorDescription {
             public var peer: Api.Peer
             public var botId: Int64
             public var commands: [Api.BotCommand]
@@ -124,8 +139,11 @@ public extension Api {
                 self.botId = botId
                 self.commands = commands
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotCommands", [("peer", self.peer as Any), ("botId", self.botId as Any), ("commands", self.commands as Any)])
+            }
         }
-        public class Cons_updateBotDeleteBusinessMessage {
+        public class Cons_updateBotDeleteBusinessMessage: TypeConstructorDescription {
             public var connectionId: String
             public var peer: Api.Peer
             public var messages: [Int32]
@@ -136,8 +154,11 @@ public extension Api {
                 self.messages = messages
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotDeleteBusinessMessage", [("connectionId", self.connectionId as Any), ("peer", self.peer as Any), ("messages", self.messages as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotEditBusinessMessage {
+        public class Cons_updateBotEditBusinessMessage: TypeConstructorDescription {
             public var flags: Int32
             public var connectionId: String
             public var message: Api.Message
@@ -150,8 +171,11 @@ public extension Api {
                 self.replyToMessage = replyToMessage
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotEditBusinessMessage", [("flags", self.flags as Any), ("connectionId", self.connectionId as Any), ("message", self.message as Any), ("replyToMessage", self.replyToMessage as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotInlineQuery {
+        public class Cons_updateBotInlineQuery: TypeConstructorDescription {
             public var flags: Int32
             public var queryId: Int64
             public var userId: Int64
@@ -168,8 +192,11 @@ public extension Api {
                 self.peerType = peerType
                 self.offset = offset
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotInlineQuery", [("flags", self.flags as Any), ("queryId", self.queryId as Any), ("userId", self.userId as Any), ("query", self.query as Any), ("geo", self.geo as Any), ("peerType", self.peerType as Any), ("offset", self.offset as Any)])
+            }
         }
-        public class Cons_updateBotInlineSend {
+        public class Cons_updateBotInlineSend: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var query: String
@@ -184,16 +211,22 @@ public extension Api {
                 self.id = id
                 self.msgId = msgId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotInlineSend", [("flags", self.flags as Any), ("userId", self.userId as Any), ("query", self.query as Any), ("geo", self.geo as Any), ("id", self.id as Any), ("msgId", self.msgId as Any)])
+            }
         }
-        public class Cons_updateBotMenuButton {
+        public class Cons_updateBotMenuButton: TypeConstructorDescription {
             public var botId: Int64
             public var button: Api.BotMenuButton
             public init(botId: Int64, button: Api.BotMenuButton) {
                 self.botId = botId
                 self.button = button
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotMenuButton", [("botId", self.botId as Any), ("button", self.button as Any)])
+            }
         }
-        public class Cons_updateBotMessageReaction {
+        public class Cons_updateBotMessageReaction: TypeConstructorDescription {
             public var peer: Api.Peer
             public var msgId: Int32
             public var date: Int32
@@ -210,8 +243,11 @@ public extension Api {
                 self.newReactions = newReactions
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotMessageReaction", [("peer", self.peer as Any), ("msgId", self.msgId as Any), ("date", self.date as Any), ("actor", self.actor as Any), ("oldReactions", self.oldReactions as Any), ("newReactions", self.newReactions as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotMessageReactions {
+        public class Cons_updateBotMessageReactions: TypeConstructorDescription {
             public var peer: Api.Peer
             public var msgId: Int32
             public var date: Int32
@@ -224,8 +260,11 @@ public extension Api {
                 self.reactions = reactions
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotMessageReactions", [("peer", self.peer as Any), ("msgId", self.msgId as Any), ("date", self.date as Any), ("reactions", self.reactions as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotNewBusinessMessage {
+        public class Cons_updateBotNewBusinessMessage: TypeConstructorDescription {
             public var flags: Int32
             public var connectionId: String
             public var message: Api.Message
@@ -238,8 +277,11 @@ public extension Api {
                 self.replyToMessage = replyToMessage
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotNewBusinessMessage", [("flags", self.flags as Any), ("connectionId", self.connectionId as Any), ("message", self.message as Any), ("replyToMessage", self.replyToMessage as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotPrecheckoutQuery {
+        public class Cons_updateBotPrecheckoutQuery: TypeConstructorDescription {
             public var flags: Int32
             public var queryId: Int64
             public var userId: Int64
@@ -258,8 +300,11 @@ public extension Api {
                 self.currency = currency
                 self.totalAmount = totalAmount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotPrecheckoutQuery", [("flags", self.flags as Any), ("queryId", self.queryId as Any), ("userId", self.userId as Any), ("payload", self.payload as Any), ("info", self.info as Any), ("shippingOptionId", self.shippingOptionId as Any), ("currency", self.currency as Any), ("totalAmount", self.totalAmount as Any)])
+            }
         }
-        public class Cons_updateBotPurchasedPaidMedia {
+        public class Cons_updateBotPurchasedPaidMedia: TypeConstructorDescription {
             public var userId: Int64
             public var payload: String
             public var qts: Int32
@@ -268,8 +313,11 @@ public extension Api {
                 self.payload = payload
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotPurchasedPaidMedia", [("userId", self.userId as Any), ("payload", self.payload as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotShippingQuery {
+        public class Cons_updateBotShippingQuery: TypeConstructorDescription {
             public var queryId: Int64
             public var userId: Int64
             public var payload: Buffer
@@ -280,8 +328,11 @@ public extension Api {
                 self.payload = payload
                 self.shippingAddress = shippingAddress
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotShippingQuery", [("queryId", self.queryId as Any), ("userId", self.userId as Any), ("payload", self.payload as Any), ("shippingAddress", self.shippingAddress as Any)])
+            }
         }
-        public class Cons_updateBotStopped {
+        public class Cons_updateBotStopped: TypeConstructorDescription {
             public var userId: Int64
             public var date: Int32
             public var stopped: Api.Bool
@@ -292,14 +343,20 @@ public extension Api {
                 self.stopped = stopped
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotStopped", [("userId", self.userId as Any), ("date", self.date as Any), ("stopped", self.stopped as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateBotWebhookJSON {
+        public class Cons_updateBotWebhookJSON: TypeConstructorDescription {
             public var data: Api.DataJSON
             public init(data: Api.DataJSON) {
                 self.data = data
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotWebhookJSON", [("data", self.data as Any)])
+            }
         }
-        public class Cons_updateBotWebhookJSONQuery {
+        public class Cons_updateBotWebhookJSONQuery: TypeConstructorDescription {
             public var queryId: Int64
             public var data: Api.DataJSON
             public var timeout: Int32
@@ -308,8 +365,11 @@ public extension Api {
                 self.data = data
                 self.timeout = timeout
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBotWebhookJSONQuery", [("queryId", self.queryId as Any), ("data", self.data as Any), ("timeout", self.timeout as Any)])
+            }
         }
-        public class Cons_updateBusinessBotCallbackQuery {
+        public class Cons_updateBusinessBotCallbackQuery: TypeConstructorDescription {
             public var flags: Int32
             public var queryId: Int64
             public var userId: Int64
@@ -328,22 +388,31 @@ public extension Api {
                 self.chatInstance = chatInstance
                 self.data = data
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateBusinessBotCallbackQuery", [("flags", self.flags as Any), ("queryId", self.queryId as Any), ("userId", self.userId as Any), ("connectionId", self.connectionId as Any), ("message", self.message as Any), ("replyToMessage", self.replyToMessage as Any), ("chatInstance", self.chatInstance as Any), ("data", self.data as Any)])
+            }
         }
-        public class Cons_updateChannel {
+        public class Cons_updateChannel: TypeConstructorDescription {
             public var channelId: Int64
             public init(channelId: Int64) {
                 self.channelId = channelId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannel", [("channelId", self.channelId as Any)])
+            }
         }
-        public class Cons_updateChannelAvailableMessages {
+        public class Cons_updateChannelAvailableMessages: TypeConstructorDescription {
             public var channelId: Int64
             public var availableMinId: Int32
             public init(channelId: Int64, availableMinId: Int32) {
                 self.channelId = channelId
                 self.availableMinId = availableMinId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelAvailableMessages", [("channelId", self.channelId as Any), ("availableMinId", self.availableMinId as Any)])
+            }
         }
-        public class Cons_updateChannelMessageForwards {
+        public class Cons_updateChannelMessageForwards: TypeConstructorDescription {
             public var channelId: Int64
             public var id: Int32
             public var forwards: Int32
@@ -352,8 +421,11 @@ public extension Api {
                 self.id = id
                 self.forwards = forwards
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelMessageForwards", [("channelId", self.channelId as Any), ("id", self.id as Any), ("forwards", self.forwards as Any)])
+            }
         }
-        public class Cons_updateChannelMessageViews {
+        public class Cons_updateChannelMessageViews: TypeConstructorDescription {
             public var channelId: Int64
             public var id: Int32
             public var views: Int32
@@ -362,8 +434,11 @@ public extension Api {
                 self.id = id
                 self.views = views
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelMessageViews", [("channelId", self.channelId as Any), ("id", self.id as Any), ("views", self.views as Any)])
+            }
         }
-        public class Cons_updateChannelParticipant {
+        public class Cons_updateChannelParticipant: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var date: Int32
@@ -384,8 +459,11 @@ public extension Api {
                 self.invite = invite
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelParticipant", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("date", self.date as Any), ("actorId", self.actorId as Any), ("userId", self.userId as Any), ("prevParticipant", self.prevParticipant as Any), ("newParticipant", self.newParticipant as Any), ("invite", self.invite as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateChannelReadMessagesContents {
+        public class Cons_updateChannelReadMessagesContents: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var topMsgId: Int32?
@@ -398,8 +476,11 @@ public extension Api {
                 self.savedPeerId = savedPeerId
                 self.messages = messages
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelReadMessagesContents", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("topMsgId", self.topMsgId as Any), ("savedPeerId", self.savedPeerId as Any), ("messages", self.messages as Any)])
+            }
         }
-        public class Cons_updateChannelTooLong {
+        public class Cons_updateChannelTooLong: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var pts: Int32?
@@ -408,8 +489,11 @@ public extension Api {
                 self.channelId = channelId
                 self.pts = pts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelTooLong", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("pts", self.pts as Any)])
+            }
         }
-        public class Cons_updateChannelUserTyping {
+        public class Cons_updateChannelUserTyping: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var topMsgId: Int32?
@@ -422,16 +506,22 @@ public extension Api {
                 self.fromId = fromId
                 self.action = action
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelUserTyping", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("topMsgId", self.topMsgId as Any), ("fromId", self.fromId as Any), ("action", self.action as Any)])
+            }
         }
-        public class Cons_updateChannelViewForumAsMessages {
+        public class Cons_updateChannelViewForumAsMessages: TypeConstructorDescription {
             public var channelId: Int64
             public var enabled: Api.Bool
             public init(channelId: Int64, enabled: Api.Bool) {
                 self.channelId = channelId
                 self.enabled = enabled
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelViewForumAsMessages", [("channelId", self.channelId as Any), ("enabled", self.enabled as Any)])
+            }
         }
-        public class Cons_updateChannelWebPage {
+        public class Cons_updateChannelWebPage: TypeConstructorDescription {
             public var channelId: Int64
             public var webpage: Api.WebPage
             public var pts: Int32
@@ -442,14 +532,20 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChannelWebPage", [("channelId", self.channelId as Any), ("webpage", self.webpage as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateChat {
+        public class Cons_updateChat: TypeConstructorDescription {
             public var chatId: Int64
             public init(chatId: Int64) {
                 self.chatId = chatId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChat", [("chatId", self.chatId as Any)])
+            }
         }
-        public class Cons_updateChatDefaultBannedRights {
+        public class Cons_updateChatDefaultBannedRights: TypeConstructorDescription {
             public var peer: Api.Peer
             public var defaultBannedRights: Api.ChatBannedRights
             public var version: Int32
@@ -458,8 +554,11 @@ public extension Api {
                 self.defaultBannedRights = defaultBannedRights
                 self.version = version
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatDefaultBannedRights", [("peer", self.peer as Any), ("defaultBannedRights", self.defaultBannedRights as Any), ("version", self.version as Any)])
+            }
         }
-        public class Cons_updateChatParticipant {
+        public class Cons_updateChatParticipant: TypeConstructorDescription {
             public var flags: Int32
             public var chatId: Int64
             public var date: Int32
@@ -480,8 +579,11 @@ public extension Api {
                 self.invite = invite
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatParticipant", [("flags", self.flags as Any), ("chatId", self.chatId as Any), ("date", self.date as Any), ("actorId", self.actorId as Any), ("userId", self.userId as Any), ("prevParticipant", self.prevParticipant as Any), ("newParticipant", self.newParticipant as Any), ("invite", self.invite as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateChatParticipantAdd {
+        public class Cons_updateChatParticipantAdd: TypeConstructorDescription {
             public var chatId: Int64
             public var userId: Int64
             public var inviterId: Int64
@@ -494,8 +596,11 @@ public extension Api {
                 self.date = date
                 self.version = version
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatParticipantAdd", [("chatId", self.chatId as Any), ("userId", self.userId as Any), ("inviterId", self.inviterId as Any), ("date", self.date as Any), ("version", self.version as Any)])
+            }
         }
-        public class Cons_updateChatParticipantAdmin {
+        public class Cons_updateChatParticipantAdmin: TypeConstructorDescription {
             public var chatId: Int64
             public var userId: Int64
             public var isAdmin: Api.Bool
@@ -506,8 +611,11 @@ public extension Api {
                 self.isAdmin = isAdmin
                 self.version = version
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatParticipantAdmin", [("chatId", self.chatId as Any), ("userId", self.userId as Any), ("isAdmin", self.isAdmin as Any), ("version", self.version as Any)])
+            }
         }
-        public class Cons_updateChatParticipantDelete {
+        public class Cons_updateChatParticipantDelete: TypeConstructorDescription {
             public var chatId: Int64
             public var userId: Int64
             public var version: Int32
@@ -516,8 +624,11 @@ public extension Api {
                 self.userId = userId
                 self.version = version
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatParticipantDelete", [("chatId", self.chatId as Any), ("userId", self.userId as Any), ("version", self.version as Any)])
+            }
         }
-        public class Cons_updateChatParticipantRank {
+        public class Cons_updateChatParticipantRank: TypeConstructorDescription {
             public var chatId: Int64
             public var userId: Int64
             public var rank: String
@@ -528,14 +639,20 @@ public extension Api {
                 self.rank = rank
                 self.version = version
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatParticipantRank", [("chatId", self.chatId as Any), ("userId", self.userId as Any), ("rank", self.rank as Any), ("version", self.version as Any)])
+            }
         }
-        public class Cons_updateChatParticipants {
+        public class Cons_updateChatParticipants: TypeConstructorDescription {
             public var participants: Api.ChatParticipants
             public init(participants: Api.ChatParticipants) {
                 self.participants = participants
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatParticipants", [("participants", self.participants as Any)])
+            }
         }
-        public class Cons_updateChatUserTyping {
+        public class Cons_updateChatUserTyping: TypeConstructorDescription {
             public var chatId: Int64
             public var fromId: Api.Peer
             public var action: Api.SendMessageAction
@@ -544,14 +661,20 @@ public extension Api {
                 self.fromId = fromId
                 self.action = action
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateChatUserTyping", [("chatId", self.chatId as Any), ("fromId", self.fromId as Any), ("action", self.action as Any)])
+            }
         }
-        public class Cons_updateDcOptions {
+        public class Cons_updateDcOptions: TypeConstructorDescription {
             public var dcOptions: [Api.DcOption]
             public init(dcOptions: [Api.DcOption]) {
                 self.dcOptions = dcOptions
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDcOptions", [("dcOptions", self.dcOptions as Any)])
+            }
         }
-        public class Cons_updateDeleteChannelMessages {
+        public class Cons_updateDeleteChannelMessages: TypeConstructorDescription {
             public var channelId: Int64
             public var messages: [Int32]
             public var pts: Int32
@@ -562,16 +685,22 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDeleteChannelMessages", [("channelId", self.channelId as Any), ("messages", self.messages as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateDeleteGroupCallMessages {
+        public class Cons_updateDeleteGroupCallMessages: TypeConstructorDescription {
             public var call: Api.InputGroupCall
             public var messages: [Int32]
             public init(call: Api.InputGroupCall, messages: [Int32]) {
                 self.call = call
                 self.messages = messages
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDeleteGroupCallMessages", [("call", self.call as Any), ("messages", self.messages as Any)])
+            }
         }
-        public class Cons_updateDeleteMessages {
+        public class Cons_updateDeleteMessages: TypeConstructorDescription {
             public var messages: [Int32]
             public var pts: Int32
             public var ptsCount: Int32
@@ -580,22 +709,31 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDeleteMessages", [("messages", self.messages as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateDeleteQuickReply {
+        public class Cons_updateDeleteQuickReply: TypeConstructorDescription {
             public var shortcutId: Int32
             public init(shortcutId: Int32) {
                 self.shortcutId = shortcutId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDeleteQuickReply", [("shortcutId", self.shortcutId as Any)])
+            }
         }
-        public class Cons_updateDeleteQuickReplyMessages {
+        public class Cons_updateDeleteQuickReplyMessages: TypeConstructorDescription {
             public var shortcutId: Int32
             public var messages: [Int32]
             public init(shortcutId: Int32, messages: [Int32]) {
                 self.shortcutId = shortcutId
                 self.messages = messages
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDeleteQuickReplyMessages", [("shortcutId", self.shortcutId as Any), ("messages", self.messages as Any)])
+            }
         }
-        public class Cons_updateDeleteScheduledMessages {
+        public class Cons_updateDeleteScheduledMessages: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var messages: [Int32]
@@ -606,8 +744,11 @@ public extension Api {
                 self.messages = messages
                 self.sentMessages = sentMessages
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDeleteScheduledMessages", [("flags", self.flags as Any), ("peer", self.peer as Any), ("messages", self.messages as Any), ("sentMessages", self.sentMessages as Any)])
+            }
         }
-        public class Cons_updateDialogFilter {
+        public class Cons_updateDialogFilter: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int32
             public var filter: Api.DialogFilter?
@@ -616,14 +757,20 @@ public extension Api {
                 self.id = id
                 self.filter = filter
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDialogFilter", [("flags", self.flags as Any), ("id", self.id as Any), ("filter", self.filter as Any)])
+            }
         }
-        public class Cons_updateDialogFilterOrder {
+        public class Cons_updateDialogFilterOrder: TypeConstructorDescription {
             public var order: [Int32]
             public init(order: [Int32]) {
                 self.order = order
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDialogFilterOrder", [("order", self.order as Any)])
+            }
         }
-        public class Cons_updateDialogPinned {
+        public class Cons_updateDialogPinned: TypeConstructorDescription {
             public var flags: Int32
             public var folderId: Int32?
             public var peer: Api.DialogPeer
@@ -632,8 +779,11 @@ public extension Api {
                 self.folderId = folderId
                 self.peer = peer
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDialogPinned", [("flags", self.flags as Any), ("folderId", self.folderId as Any), ("peer", self.peer as Any)])
+            }
         }
-        public class Cons_updateDialogUnreadMark {
+        public class Cons_updateDialogUnreadMark: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.DialogPeer
             public var savedPeerId: Api.Peer?
@@ -642,8 +792,11 @@ public extension Api {
                 self.peer = peer
                 self.savedPeerId = savedPeerId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDialogUnreadMark", [("flags", self.flags as Any), ("peer", self.peer as Any), ("savedPeerId", self.savedPeerId as Any)])
+            }
         }
-        public class Cons_updateDraftMessage {
+        public class Cons_updateDraftMessage: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var topMsgId: Int32?
@@ -656,8 +809,11 @@ public extension Api {
                 self.savedPeerId = savedPeerId
                 self.draft = draft
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateDraftMessage", [("flags", self.flags as Any), ("peer", self.peer as Any), ("topMsgId", self.topMsgId as Any), ("savedPeerId", self.savedPeerId as Any), ("draft", self.draft as Any)])
+            }
         }
-        public class Cons_updateEditChannelMessage {
+        public class Cons_updateEditChannelMessage: TypeConstructorDescription {
             public var message: Api.Message
             public var pts: Int32
             public var ptsCount: Int32
@@ -666,8 +822,11 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateEditChannelMessage", [("message", self.message as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateEditMessage {
+        public class Cons_updateEditMessage: TypeConstructorDescription {
             public var message: Api.Message
             public var pts: Int32
             public var ptsCount: Int32
@@ -676,20 +835,29 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateEditMessage", [("message", self.message as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateEmojiGameInfo {
+        public class Cons_updateEmojiGameInfo: TypeConstructorDescription {
             public var info: Api.messages.EmojiGameInfo
             public init(info: Api.messages.EmojiGameInfo) {
                 self.info = info
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateEmojiGameInfo", [("info", self.info as Any)])
+            }
         }
-        public class Cons_updateEncryptedChatTyping {
+        public class Cons_updateEncryptedChatTyping: TypeConstructorDescription {
             public var chatId: Int32
             public init(chatId: Int32) {
                 self.chatId = chatId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateEncryptedChatTyping", [("chatId", self.chatId as Any)])
+            }
         }
-        public class Cons_updateEncryptedMessagesRead {
+        public class Cons_updateEncryptedMessagesRead: TypeConstructorDescription {
             public var chatId: Int32
             public var maxDate: Int32
             public var date: Int32
@@ -698,16 +866,22 @@ public extension Api {
                 self.maxDate = maxDate
                 self.date = date
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateEncryptedMessagesRead", [("chatId", self.chatId as Any), ("maxDate", self.maxDate as Any), ("date", self.date as Any)])
+            }
         }
-        public class Cons_updateEncryption {
+        public class Cons_updateEncryption: TypeConstructorDescription {
             public var chat: Api.EncryptedChat
             public var date: Int32
             public init(chat: Api.EncryptedChat, date: Int32) {
                 self.chat = chat
                 self.date = date
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateEncryption", [("chat", self.chat as Any), ("date", self.date as Any)])
+            }
         }
-        public class Cons_updateFolderPeers {
+        public class Cons_updateFolderPeers: TypeConstructorDescription {
             public var folderPeers: [Api.FolderPeer]
             public var pts: Int32
             public var ptsCount: Int32
@@ -716,16 +890,22 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateFolderPeers", [("folderPeers", self.folderPeers as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateGeoLiveViewed {
+        public class Cons_updateGeoLiveViewed: TypeConstructorDescription {
             public var peer: Api.Peer
             public var msgId: Int32
             public init(peer: Api.Peer, msgId: Int32) {
                 self.peer = peer
                 self.msgId = msgId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateGeoLiveViewed", [("peer", self.peer as Any), ("msgId", self.msgId as Any)])
+            }
         }
-        public class Cons_updateGroupCall {
+        public class Cons_updateGroupCall: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer?
             public var call: Api.GroupCall
@@ -734,8 +914,11 @@ public extension Api {
                 self.peer = peer
                 self.call = call
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateGroupCall", [("flags", self.flags as Any), ("peer", self.peer as Any), ("call", self.call as Any)])
+            }
         }
-        public class Cons_updateGroupCallChainBlocks {
+        public class Cons_updateGroupCallChainBlocks: TypeConstructorDescription {
             public var call: Api.InputGroupCall
             public var subChainId: Int32
             public var blocks: [Buffer]
@@ -746,16 +929,22 @@ public extension Api {
                 self.blocks = blocks
                 self.nextOffset = nextOffset
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateGroupCallChainBlocks", [("call", self.call as Any), ("subChainId", self.subChainId as Any), ("blocks", self.blocks as Any), ("nextOffset", self.nextOffset as Any)])
+            }
         }
-        public class Cons_updateGroupCallConnection {
+        public class Cons_updateGroupCallConnection: TypeConstructorDescription {
             public var flags: Int32
             public var params: Api.DataJSON
             public init(flags: Int32, params: Api.DataJSON) {
                 self.flags = flags
                 self.params = params
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateGroupCallConnection", [("flags", self.flags as Any), ("params", self.params as Any)])
+            }
         }
-        public class Cons_updateGroupCallEncryptedMessage {
+        public class Cons_updateGroupCallEncryptedMessage: TypeConstructorDescription {
             public var call: Api.InputGroupCall
             public var fromId: Api.Peer
             public var encryptedMessage: Buffer
@@ -764,16 +953,22 @@ public extension Api {
                 self.fromId = fromId
                 self.encryptedMessage = encryptedMessage
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateGroupCallEncryptedMessage", [("call", self.call as Any), ("fromId", self.fromId as Any), ("encryptedMessage", self.encryptedMessage as Any)])
+            }
         }
-        public class Cons_updateGroupCallMessage {
+        public class Cons_updateGroupCallMessage: TypeConstructorDescription {
             public var call: Api.InputGroupCall
             public var message: Api.GroupCallMessage
             public init(call: Api.InputGroupCall, message: Api.GroupCallMessage) {
                 self.call = call
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateGroupCallMessage", [("call", self.call as Any), ("message", self.message as Any)])
+            }
         }
-        public class Cons_updateGroupCallParticipants {
+        public class Cons_updateGroupCallParticipants: TypeConstructorDescription {
             public var call: Api.InputGroupCall
             public var participants: [Api.GroupCallParticipant]
             public var version: Int32
@@ -782,8 +977,11 @@ public extension Api {
                 self.participants = participants
                 self.version = version
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateGroupCallParticipants", [("call", self.call as Any), ("participants", self.participants as Any), ("version", self.version as Any)])
+            }
         }
-        public class Cons_updateInlineBotCallbackQuery {
+        public class Cons_updateInlineBotCallbackQuery: TypeConstructorDescription {
             public var flags: Int32
             public var queryId: Int64
             public var userId: Int64
@@ -800,20 +998,29 @@ public extension Api {
                 self.data = data
                 self.gameShortName = gameShortName
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateInlineBotCallbackQuery", [("flags", self.flags as Any), ("queryId", self.queryId as Any), ("userId", self.userId as Any), ("msgId", self.msgId as Any), ("chatInstance", self.chatInstance as Any), ("data", self.data as Any), ("gameShortName", self.gameShortName as Any)])
+            }
         }
-        public class Cons_updateLangPack {
+        public class Cons_updateLangPack: TypeConstructorDescription {
             public var difference: Api.LangPackDifference
             public init(difference: Api.LangPackDifference) {
                 self.difference = difference
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateLangPack", [("difference", self.difference as Any)])
+            }
         }
-        public class Cons_updateLangPackTooLong {
+        public class Cons_updateLangPackTooLong: TypeConstructorDescription {
             public var langCode: String
             public init(langCode: String) {
                 self.langCode = langCode
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateLangPackTooLong", [("langCode", self.langCode as Any)])
+            }
         }
-        public class Cons_updateMessageExtendedMedia {
+        public class Cons_updateMessageExtendedMedia: TypeConstructorDescription {
             public var peer: Api.Peer
             public var msgId: Int32
             public var extendedMedia: [Api.MessageExtendedMedia]
@@ -822,16 +1029,22 @@ public extension Api {
                 self.msgId = msgId
                 self.extendedMedia = extendedMedia
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateMessageExtendedMedia", [("peer", self.peer as Any), ("msgId", self.msgId as Any), ("extendedMedia", self.extendedMedia as Any)])
+            }
         }
-        public class Cons_updateMessageID {
+        public class Cons_updateMessageID: TypeConstructorDescription {
             public var id: Int32
             public var randomId: Int64
             public init(id: Int32, randomId: Int64) {
                 self.id = id
                 self.randomId = randomId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateMessageID", [("id", self.id as Any), ("randomId", self.randomId as Any)])
+            }
         }
-        public class Cons_updateMessagePoll {
+        public class Cons_updateMessagePoll: TypeConstructorDescription {
             public var flags: Int32
             public var pollId: Int64
             public var poll: Api.Poll?
@@ -842,8 +1055,11 @@ public extension Api {
                 self.poll = poll
                 self.results = results
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateMessagePoll", [("flags", self.flags as Any), ("pollId", self.pollId as Any), ("poll", self.poll as Any), ("results", self.results as Any)])
+            }
         }
-        public class Cons_updateMessagePollVote {
+        public class Cons_updateMessagePollVote: TypeConstructorDescription {
             public var pollId: Int64
             public var peer: Api.Peer
             public var options: [Buffer]
@@ -854,8 +1070,11 @@ public extension Api {
                 self.options = options
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateMessagePollVote", [("pollId", self.pollId as Any), ("peer", self.peer as Any), ("options", self.options as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateMessageReactions {
+        public class Cons_updateMessageReactions: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var msgId: Int32
@@ -870,8 +1089,11 @@ public extension Api {
                 self.savedPeerId = savedPeerId
                 self.reactions = reactions
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateMessageReactions", [("flags", self.flags as Any), ("peer", self.peer as Any), ("msgId", self.msgId as Any), ("topMsgId", self.topMsgId as Any), ("savedPeerId", self.savedPeerId as Any), ("reactions", self.reactions as Any)])
+            }
         }
-        public class Cons_updateMonoForumNoPaidException {
+        public class Cons_updateMonoForumNoPaidException: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var savedPeerId: Api.Peer
@@ -880,16 +1102,22 @@ public extension Api {
                 self.channelId = channelId
                 self.savedPeerId = savedPeerId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateMonoForumNoPaidException", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("savedPeerId", self.savedPeerId as Any)])
+            }
         }
-        public class Cons_updateMoveStickerSetToTop {
+        public class Cons_updateMoveStickerSetToTop: TypeConstructorDescription {
             public var flags: Int32
             public var stickerset: Int64
             public init(flags: Int32, stickerset: Int64) {
                 self.flags = flags
                 self.stickerset = stickerset
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateMoveStickerSetToTop", [("flags", self.flags as Any), ("stickerset", self.stickerset as Any)])
+            }
         }
-        public class Cons_updateNewAuthorization {
+        public class Cons_updateNewAuthorization: TypeConstructorDescription {
             public var flags: Int32
             public var hash: Int64
             public var date: Int32?
@@ -902,8 +1130,11 @@ public extension Api {
                 self.device = device
                 self.location = location
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewAuthorization", [("flags", self.flags as Any), ("hash", self.hash as Any), ("date", self.date as Any), ("device", self.device as Any), ("location", self.location as Any)])
+            }
         }
-        public class Cons_updateNewChannelMessage {
+        public class Cons_updateNewChannelMessage: TypeConstructorDescription {
             public var message: Api.Message
             public var pts: Int32
             public var ptsCount: Int32
@@ -912,16 +1143,22 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewChannelMessage", [("message", self.message as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateNewEncryptedMessage {
+        public class Cons_updateNewEncryptedMessage: TypeConstructorDescription {
             public var message: Api.EncryptedMessage
             public var qts: Int32
             public init(message: Api.EncryptedMessage, qts: Int32) {
                 self.message = message
                 self.qts = qts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewEncryptedMessage", [("message", self.message as Any), ("qts", self.qts as Any)])
+            }
         }
-        public class Cons_updateNewMessage {
+        public class Cons_updateNewMessage: TypeConstructorDescription {
             public var message: Api.Message
             public var pts: Int32
             public var ptsCount: Int32
@@ -930,26 +1167,38 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewMessage", [("message", self.message as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateNewQuickReply {
+        public class Cons_updateNewQuickReply: TypeConstructorDescription {
             public var quickReply: Api.QuickReply
             public init(quickReply: Api.QuickReply) {
                 self.quickReply = quickReply
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewQuickReply", [("quickReply", self.quickReply as Any)])
+            }
         }
-        public class Cons_updateNewScheduledMessage {
+        public class Cons_updateNewScheduledMessage: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewScheduledMessage", [("message", self.message as Any)])
+            }
         }
-        public class Cons_updateNewStickerSet {
+        public class Cons_updateNewStickerSet: TypeConstructorDescription {
             public var stickerset: Api.messages.StickerSet
             public init(stickerset: Api.messages.StickerSet) {
                 self.stickerset = stickerset
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewStickerSet", [("stickerset", self.stickerset as Any)])
+            }
         }
-        public class Cons_updateNewStoryReaction {
+        public class Cons_updateNewStoryReaction: TypeConstructorDescription {
             public var storyId: Int32
             public var peer: Api.Peer
             public var reaction: Api.Reaction
@@ -958,38 +1207,42 @@ public extension Api {
                 self.peer = peer
                 self.reaction = reaction
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNewStoryReaction", [("storyId", self.storyId as Any), ("peer", self.peer as Any), ("reaction", self.reaction as Any)])
+            }
         }
-        public class Cons_updateNotifySettings {
+        public class Cons_updateNotifySettings: TypeConstructorDescription {
             public var peer: Api.NotifyPeer
             public var notifySettings: Api.PeerNotifySettings
             public init(peer: Api.NotifyPeer, notifySettings: Api.PeerNotifySettings) {
                 self.peer = peer
                 self.notifySettings = notifySettings
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateNotifySettings", [("peer", self.peer as Any), ("notifySettings", self.notifySettings as Any)])
+            }
         }
-        public class Cons_updatePaidReactionPrivacy {
+        public class Cons_updatePaidReactionPrivacy: TypeConstructorDescription {
             public var `private`: Api.PaidReactionPrivacy
             public init(`private`: Api.PaidReactionPrivacy) {
                 self.`private` = `private`
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePaidReactionPrivacy", [("`private`", self.`private` as Any)])
+            }
         }
-        public class Cons_updatePeerBlocked {
+        public class Cons_updatePeerBlocked: TypeConstructorDescription {
             public var flags: Int32
             public var peerId: Api.Peer
             public init(flags: Int32, peerId: Api.Peer) {
                 self.flags = flags
                 self.peerId = peerId
             }
-        }
-        public class Cons_updatePeerHistoryNoForwards {
-            public var flags: Int32
-            public var peer: Api.Peer
-            public init(flags: Int32, peer: Api.Peer) {
-                self.flags = flags
-                self.peer = peer
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePeerBlocked", [("flags", self.flags as Any), ("peerId", self.peerId as Any)])
             }
         }
-        public class Cons_updatePeerHistoryTTL {
+        public class Cons_updatePeerHistoryTTL: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var ttlPeriod: Int32?
@@ -998,22 +1251,31 @@ public extension Api {
                 self.peer = peer
                 self.ttlPeriod = ttlPeriod
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePeerHistoryTTL", [("flags", self.flags as Any), ("peer", self.peer as Any), ("ttlPeriod", self.ttlPeriod as Any)])
+            }
         }
-        public class Cons_updatePeerLocated {
+        public class Cons_updatePeerLocated: TypeConstructorDescription {
             public var peers: [Api.PeerLocated]
             public init(peers: [Api.PeerLocated]) {
                 self.peers = peers
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePeerLocated", [("peers", self.peers as Any)])
+            }
         }
-        public class Cons_updatePeerSettings {
+        public class Cons_updatePeerSettings: TypeConstructorDescription {
             public var peer: Api.Peer
             public var settings: Api.PeerSettings
             public init(peer: Api.Peer, settings: Api.PeerSettings) {
                 self.peer = peer
                 self.settings = settings
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePeerSettings", [("peer", self.peer as Any), ("settings", self.settings as Any)])
+            }
         }
-        public class Cons_updatePeerWallpaper {
+        public class Cons_updatePeerWallpaper: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var wallpaper: Api.WallPaper?
@@ -1022,8 +1284,11 @@ public extension Api {
                 self.peer = peer
                 self.wallpaper = wallpaper
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePeerWallpaper", [("flags", self.flags as Any), ("peer", self.peer as Any), ("wallpaper", self.wallpaper as Any)])
+            }
         }
-        public class Cons_updatePendingJoinRequests {
+        public class Cons_updatePendingJoinRequests: TypeConstructorDescription {
             public var peer: Api.Peer
             public var requestsPending: Int32
             public var recentRequesters: [Int64]
@@ -1032,22 +1297,31 @@ public extension Api {
                 self.requestsPending = requestsPending
                 self.recentRequesters = recentRequesters
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePendingJoinRequests", [("peer", self.peer as Any), ("requestsPending", self.requestsPending as Any), ("recentRequesters", self.recentRequesters as Any)])
+            }
         }
-        public class Cons_updatePhoneCall {
+        public class Cons_updatePhoneCall: TypeConstructorDescription {
             public var phoneCall: Api.PhoneCall
             public init(phoneCall: Api.PhoneCall) {
                 self.phoneCall = phoneCall
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePhoneCall", [("phoneCall", self.phoneCall as Any)])
+            }
         }
-        public class Cons_updatePhoneCallSignalingData {
+        public class Cons_updatePhoneCallSignalingData: TypeConstructorDescription {
             public var phoneCallId: Int64
             public var data: Buffer
             public init(phoneCallId: Int64, data: Buffer) {
                 self.phoneCallId = phoneCallId
                 self.data = data
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePhoneCallSignalingData", [("phoneCallId", self.phoneCallId as Any), ("data", self.data as Any)])
+            }
         }
-        public class Cons_updatePinnedChannelMessages {
+        public class Cons_updatePinnedChannelMessages: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var messages: [Int32]
@@ -1060,8 +1334,11 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePinnedChannelMessages", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("messages", self.messages as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updatePinnedDialogs {
+        public class Cons_updatePinnedDialogs: TypeConstructorDescription {
             public var flags: Int32
             public var folderId: Int32?
             public var order: [Api.DialogPeer]?
@@ -1070,8 +1347,11 @@ public extension Api {
                 self.folderId = folderId
                 self.order = order
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePinnedDialogs", [("flags", self.flags as Any), ("folderId", self.folderId as Any), ("order", self.order as Any)])
+            }
         }
-        public class Cons_updatePinnedForumTopic {
+        public class Cons_updatePinnedForumTopic: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var topicId: Int32
@@ -1080,8 +1360,11 @@ public extension Api {
                 self.peer = peer
                 self.topicId = topicId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePinnedForumTopic", [("flags", self.flags as Any), ("peer", self.peer as Any), ("topicId", self.topicId as Any)])
+            }
         }
-        public class Cons_updatePinnedForumTopics {
+        public class Cons_updatePinnedForumTopics: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var order: [Int32]?
@@ -1090,8 +1373,11 @@ public extension Api {
                 self.peer = peer
                 self.order = order
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePinnedForumTopics", [("flags", self.flags as Any), ("peer", self.peer as Any), ("order", self.order as Any)])
+            }
         }
-        public class Cons_updatePinnedMessages {
+        public class Cons_updatePinnedMessages: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var messages: [Int32]
@@ -1104,36 +1390,51 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePinnedMessages", [("flags", self.flags as Any), ("peer", self.peer as Any), ("messages", self.messages as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updatePinnedSavedDialogs {
+        public class Cons_updatePinnedSavedDialogs: TypeConstructorDescription {
             public var flags: Int32
             public var order: [Api.DialogPeer]?
             public init(flags: Int32, order: [Api.DialogPeer]?) {
                 self.flags = flags
                 self.order = order
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePinnedSavedDialogs", [("flags", self.flags as Any), ("order", self.order as Any)])
+            }
         }
-        public class Cons_updatePrivacy {
+        public class Cons_updatePrivacy: TypeConstructorDescription {
             public var key: Api.PrivacyKey
             public var rules: [Api.PrivacyRule]
             public init(key: Api.PrivacyKey, rules: [Api.PrivacyRule]) {
                 self.key = key
                 self.rules = rules
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updatePrivacy", [("key", self.key as Any), ("rules", self.rules as Any)])
+            }
         }
-        public class Cons_updateQuickReplies {
+        public class Cons_updateQuickReplies: TypeConstructorDescription {
             public var quickReplies: [Api.QuickReply]
             public init(quickReplies: [Api.QuickReply]) {
                 self.quickReplies = quickReplies
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateQuickReplies", [("quickReplies", self.quickReplies as Any)])
+            }
         }
-        public class Cons_updateQuickReplyMessage {
+        public class Cons_updateQuickReplyMessage: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateQuickReplyMessage", [("message", self.message as Any)])
+            }
         }
-        public class Cons_updateReadChannelDiscussionInbox {
+        public class Cons_updateReadChannelDiscussionInbox: TypeConstructorDescription {
             public var flags: Int32
             public var channelId: Int64
             public var topMsgId: Int32
@@ -1148,8 +1449,11 @@ public extension Api {
                 self.broadcastId = broadcastId
                 self.broadcastPost = broadcastPost
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadChannelDiscussionInbox", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("topMsgId", self.topMsgId as Any), ("readMaxId", self.readMaxId as Any), ("broadcastId", self.broadcastId as Any), ("broadcastPost", self.broadcastPost as Any)])
+            }
         }
-        public class Cons_updateReadChannelDiscussionOutbox {
+        public class Cons_updateReadChannelDiscussionOutbox: TypeConstructorDescription {
             public var channelId: Int64
             public var topMsgId: Int32
             public var readMaxId: Int32
@@ -1158,8 +1462,11 @@ public extension Api {
                 self.topMsgId = topMsgId
                 self.readMaxId = readMaxId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadChannelDiscussionOutbox", [("channelId", self.channelId as Any), ("topMsgId", self.topMsgId as Any), ("readMaxId", self.readMaxId as Any)])
+            }
         }
-        public class Cons_updateReadChannelInbox {
+        public class Cons_updateReadChannelInbox: TypeConstructorDescription {
             public var flags: Int32
             public var folderId: Int32?
             public var channelId: Int64
@@ -1174,16 +1481,22 @@ public extension Api {
                 self.stillUnreadCount = stillUnreadCount
                 self.pts = pts
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadChannelInbox", [("flags", self.flags as Any), ("folderId", self.folderId as Any), ("channelId", self.channelId as Any), ("maxId", self.maxId as Any), ("stillUnreadCount", self.stillUnreadCount as Any), ("pts", self.pts as Any)])
+            }
         }
-        public class Cons_updateReadChannelOutbox {
+        public class Cons_updateReadChannelOutbox: TypeConstructorDescription {
             public var channelId: Int64
             public var maxId: Int32
             public init(channelId: Int64, maxId: Int32) {
                 self.channelId = channelId
                 self.maxId = maxId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadChannelOutbox", [("channelId", self.channelId as Any), ("maxId", self.maxId as Any)])
+            }
         }
-        public class Cons_updateReadHistoryInbox {
+        public class Cons_updateReadHistoryInbox: TypeConstructorDescription {
             public var flags: Int32
             public var folderId: Int32?
             public var peer: Api.Peer
@@ -1202,8 +1515,11 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadHistoryInbox", [("flags", self.flags as Any), ("folderId", self.folderId as Any), ("peer", self.peer as Any), ("topMsgId", self.topMsgId as Any), ("maxId", self.maxId as Any), ("stillUnreadCount", self.stillUnreadCount as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateReadHistoryOutbox {
+        public class Cons_updateReadHistoryOutbox: TypeConstructorDescription {
             public var peer: Api.Peer
             public var maxId: Int32
             public var pts: Int32
@@ -1214,8 +1530,11 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadHistoryOutbox", [("peer", self.peer as Any), ("maxId", self.maxId as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateReadMessagesContents {
+        public class Cons_updateReadMessagesContents: TypeConstructorDescription {
             public var flags: Int32
             public var messages: [Int32]
             public var pts: Int32
@@ -1228,8 +1547,11 @@ public extension Api {
                 self.ptsCount = ptsCount
                 self.date = date
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadMessagesContents", [("flags", self.flags as Any), ("messages", self.messages as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any), ("date", self.date as Any)])
+            }
         }
-        public class Cons_updateReadMonoForumInbox {
+        public class Cons_updateReadMonoForumInbox: TypeConstructorDescription {
             public var channelId: Int64
             public var savedPeerId: Api.Peer
             public var readMaxId: Int32
@@ -1238,8 +1560,11 @@ public extension Api {
                 self.savedPeerId = savedPeerId
                 self.readMaxId = readMaxId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadMonoForumInbox", [("channelId", self.channelId as Any), ("savedPeerId", self.savedPeerId as Any), ("readMaxId", self.readMaxId as Any)])
+            }
         }
-        public class Cons_updateReadMonoForumOutbox {
+        public class Cons_updateReadMonoForumOutbox: TypeConstructorDescription {
             public var channelId: Int64
             public var savedPeerId: Api.Peer
             public var readMaxId: Int32
@@ -1248,30 +1573,42 @@ public extension Api {
                 self.savedPeerId = savedPeerId
                 self.readMaxId = readMaxId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadMonoForumOutbox", [("channelId", self.channelId as Any), ("savedPeerId", self.savedPeerId as Any), ("readMaxId", self.readMaxId as Any)])
+            }
         }
-        public class Cons_updateReadStories {
+        public class Cons_updateReadStories: TypeConstructorDescription {
             public var peer: Api.Peer
             public var maxId: Int32
             public init(peer: Api.Peer, maxId: Int32) {
                 self.peer = peer
                 self.maxId = maxId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateReadStories", [("peer", self.peer as Any), ("maxId", self.maxId as Any)])
+            }
         }
-        public class Cons_updateSavedDialogPinned {
+        public class Cons_updateSavedDialogPinned: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.DialogPeer
             public init(flags: Int32, peer: Api.DialogPeer) {
                 self.flags = flags
                 self.peer = peer
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateSavedDialogPinned", [("flags", self.flags as Any), ("peer", self.peer as Any)])
+            }
         }
-        public class Cons_updateSentPhoneCode {
+        public class Cons_updateSentPhoneCode: TypeConstructorDescription {
             public var sentCode: Api.auth.SentCode
             public init(sentCode: Api.auth.SentCode) {
                 self.sentCode = sentCode
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateSentPhoneCode", [("sentCode", self.sentCode as Any)])
+            }
         }
-        public class Cons_updateSentStoryReaction {
+        public class Cons_updateSentStoryReaction: TypeConstructorDescription {
             public var peer: Api.Peer
             public var storyId: Int32
             public var reaction: Api.Reaction
@@ -1280,8 +1617,11 @@ public extension Api {
                 self.storyId = storyId
                 self.reaction = reaction
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateSentStoryReaction", [("peer", self.peer as Any), ("storyId", self.storyId as Any), ("reaction", self.reaction as Any)])
+            }
         }
-        public class Cons_updateServiceNotification {
+        public class Cons_updateServiceNotification: TypeConstructorDescription {
             public var flags: Int32
             public var inboxDate: Int32?
             public var type: String
@@ -1296,86 +1636,122 @@ public extension Api {
                 self.media = media
                 self.entities = entities
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateServiceNotification", [("flags", self.flags as Any), ("inboxDate", self.inboxDate as Any), ("type", self.type as Any), ("message", self.message as Any), ("media", self.media as Any), ("entities", self.entities as Any)])
+            }
         }
-        public class Cons_updateSmsJob {
+        public class Cons_updateSmsJob: TypeConstructorDescription {
             public var jobId: String
             public init(jobId: String) {
                 self.jobId = jobId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateSmsJob", [("jobId", self.jobId as Any)])
+            }
         }
-        public class Cons_updateStarGiftAuctionState {
+        public class Cons_updateStarGiftAuctionState: TypeConstructorDescription {
             public var giftId: Int64
             public var state: Api.StarGiftAuctionState
             public init(giftId: Int64, state: Api.StarGiftAuctionState) {
                 self.giftId = giftId
                 self.state = state
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStarGiftAuctionState", [("giftId", self.giftId as Any), ("state", self.state as Any)])
+            }
         }
-        public class Cons_updateStarGiftAuctionUserState {
+        public class Cons_updateStarGiftAuctionUserState: TypeConstructorDescription {
             public var giftId: Int64
             public var userState: Api.StarGiftAuctionUserState
             public init(giftId: Int64, userState: Api.StarGiftAuctionUserState) {
                 self.giftId = giftId
                 self.userState = userState
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStarGiftAuctionUserState", [("giftId", self.giftId as Any), ("userState", self.userState as Any)])
+            }
         }
-        public class Cons_updateStarsBalance {
+        public class Cons_updateStarsBalance: TypeConstructorDescription {
             public var balance: Api.StarsAmount
             public init(balance: Api.StarsAmount) {
                 self.balance = balance
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStarsBalance", [("balance", self.balance as Any)])
+            }
         }
-        public class Cons_updateStarsRevenueStatus {
+        public class Cons_updateStarsRevenueStatus: TypeConstructorDescription {
             public var peer: Api.Peer
             public var status: Api.StarsRevenueStatus
             public init(peer: Api.Peer, status: Api.StarsRevenueStatus) {
                 self.peer = peer
                 self.status = status
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStarsRevenueStatus", [("peer", self.peer as Any), ("status", self.status as Any)])
+            }
         }
-        public class Cons_updateStickerSets {
+        public class Cons_updateStickerSets: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStickerSets", [("flags", self.flags as Any)])
+            }
         }
-        public class Cons_updateStickerSetsOrder {
+        public class Cons_updateStickerSetsOrder: TypeConstructorDescription {
             public var flags: Int32
             public var order: [Int64]
             public init(flags: Int32, order: [Int64]) {
                 self.flags = flags
                 self.order = order
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStickerSetsOrder", [("flags", self.flags as Any), ("order", self.order as Any)])
+            }
         }
-        public class Cons_updateStoriesStealthMode {
+        public class Cons_updateStoriesStealthMode: TypeConstructorDescription {
             public var stealthMode: Api.StoriesStealthMode
             public init(stealthMode: Api.StoriesStealthMode) {
                 self.stealthMode = stealthMode
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStoriesStealthMode", [("stealthMode", self.stealthMode as Any)])
+            }
         }
-        public class Cons_updateStory {
+        public class Cons_updateStory: TypeConstructorDescription {
             public var peer: Api.Peer
             public var story: Api.StoryItem
             public init(peer: Api.Peer, story: Api.StoryItem) {
                 self.peer = peer
                 self.story = story
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStory", [("peer", self.peer as Any), ("story", self.story as Any)])
+            }
         }
-        public class Cons_updateStoryID {
+        public class Cons_updateStoryID: TypeConstructorDescription {
             public var id: Int32
             public var randomId: Int64
             public init(id: Int32, randomId: Int64) {
                 self.id = id
                 self.randomId = randomId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateStoryID", [("id", self.id as Any), ("randomId", self.randomId as Any)])
+            }
         }
-        public class Cons_updateTheme {
+        public class Cons_updateTheme: TypeConstructorDescription {
             public var theme: Api.Theme
             public init(theme: Api.Theme) {
                 self.theme = theme
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateTheme", [("theme", self.theme as Any)])
+            }
         }
-        public class Cons_updateTranscribedAudio {
+        public class Cons_updateTranscribedAudio: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var msgId: Int32
@@ -1388,22 +1764,31 @@ public extension Api {
                 self.transcriptionId = transcriptionId
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateTranscribedAudio", [("flags", self.flags as Any), ("peer", self.peer as Any), ("msgId", self.msgId as Any), ("transcriptionId", self.transcriptionId as Any), ("text", self.text as Any)])
+            }
         }
-        public class Cons_updateUser {
+        public class Cons_updateUser: TypeConstructorDescription {
             public var userId: Int64
             public init(userId: Int64) {
                 self.userId = userId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateUser", [("userId", self.userId as Any)])
+            }
         }
-        public class Cons_updateUserEmojiStatus {
+        public class Cons_updateUserEmojiStatus: TypeConstructorDescription {
             public var userId: Int64
             public var emojiStatus: Api.EmojiStatus
             public init(userId: Int64, emojiStatus: Api.EmojiStatus) {
                 self.userId = userId
                 self.emojiStatus = emojiStatus
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateUserEmojiStatus", [("userId", self.userId as Any), ("emojiStatus", self.emojiStatus as Any)])
+            }
         }
-        public class Cons_updateUserName {
+        public class Cons_updateUserName: TypeConstructorDescription {
             public var userId: Int64
             public var firstName: String
             public var lastName: String
@@ -1414,24 +1799,33 @@ public extension Api {
                 self.lastName = lastName
                 self.usernames = usernames
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateUserName", [("userId", self.userId as Any), ("firstName", self.firstName as Any), ("lastName", self.lastName as Any), ("usernames", self.usernames as Any)])
+            }
         }
-        public class Cons_updateUserPhone {
+        public class Cons_updateUserPhone: TypeConstructorDescription {
             public var userId: Int64
             public var phone: String
             public init(userId: Int64, phone: String) {
                 self.userId = userId
                 self.phone = phone
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateUserPhone", [("userId", self.userId as Any), ("phone", self.phone as Any)])
+            }
         }
-        public class Cons_updateUserStatus {
+        public class Cons_updateUserStatus: TypeConstructorDescription {
             public var userId: Int64
             public var status: Api.UserStatus
             public init(userId: Int64, status: Api.UserStatus) {
                 self.userId = userId
                 self.status = status
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateUserStatus", [("userId", self.userId as Any), ("status", self.status as Any)])
+            }
         }
-        public class Cons_updateUserTyping {
+        public class Cons_updateUserTyping: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Int64
             public var topMsgId: Int32?
@@ -1442,8 +1836,11 @@ public extension Api {
                 self.topMsgId = topMsgId
                 self.action = action
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateUserTyping", [("flags", self.flags as Any), ("userId", self.userId as Any), ("topMsgId", self.topMsgId as Any), ("action", self.action as Any)])
+            }
         }
-        public class Cons_updateWebPage {
+        public class Cons_updateWebPage: TypeConstructorDescription {
             public var webpage: Api.WebPage
             public var pts: Int32
             public var ptsCount: Int32
@@ -1452,11 +1849,17 @@ public extension Api {
                 self.pts = pts
                 self.ptsCount = ptsCount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateWebPage", [("webpage", self.webpage as Any), ("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any)])
+            }
         }
-        public class Cons_updateWebViewResultSent {
+        public class Cons_updateWebViewResultSent: TypeConstructorDescription {
             public var queryId: Int64
             public init(queryId: Int64) {
                 self.queryId = queryId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("updateWebViewResultSent", [("queryId", self.queryId as Any)])
             }
         }
         case updateAttachMenuBots
@@ -1552,7 +1955,6 @@ public extension Api {
         case updateNotifySettings(Cons_updateNotifySettings)
         case updatePaidReactionPrivacy(Cons_updatePaidReactionPrivacy)
         case updatePeerBlocked(Cons_updatePeerBlocked)
-        case updatePeerHistoryNoForwards(Cons_updatePeerHistoryNoForwards)
         case updatePeerHistoryTTL(Cons_updatePeerHistoryTTL)
         case updatePeerLocated(Cons_updatePeerLocated)
         case updatePeerSettings(Cons_updatePeerSettings)
@@ -2519,13 +2921,6 @@ public extension Api {
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.peerId.serialize(buffer, true)
                 break
-            case .updatePeerHistoryNoForwards(let _data):
-                if boxed {
-                    buffer.appendInt32(1463202714)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                _data.peer.serialize(buffer, true)
-                break
             case .updatePeerHistoryTTL(let _data):
                 if boxed {
                     buffer.appendInt32(-1147422299)
@@ -3232,8 +3627,6 @@ public extension Api {
                 return ("updatePaidReactionPrivacy", [("`private`", _data.`private` as Any)])
             case .updatePeerBlocked(let _data):
                 return ("updatePeerBlocked", [("flags", _data.flags as Any), ("peerId", _data.peerId as Any)])
-            case .updatePeerHistoryNoForwards(let _data):
-                return ("updatePeerHistoryNoForwards", [("flags", _data.flags as Any), ("peer", _data.peer as Any)])
             case .updatePeerHistoryTTL(let _data):
                 return ("updatePeerHistoryTTL", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("ttlPeriod", _data.ttlPeriod as Any)])
             case .updatePeerLocated(let _data):
@@ -5215,22 +5608,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updatePeerBlocked(Cons_updatePeerBlocked(flags: _1!, peerId: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updatePeerHistoryNoForwards(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updatePeerHistoryNoForwards(Cons_updatePeerHistoryNoForwards(flags: _1!, peer: _2!))
             }
             else {
                 return nil

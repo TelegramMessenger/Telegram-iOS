@@ -1,17 +1,23 @@
 public extension Api {
     enum NotificationSound: TypeConstructorDescription {
-        public class Cons_notificationSoundLocal {
+        public class Cons_notificationSoundLocal: TypeConstructorDescription {
             public var title: String
             public var data: String
             public init(title: String, data: String) {
                 self.title = title
                 self.data = data
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("notificationSoundLocal", [("title", self.title as Any), ("data", self.data as Any)])
+            }
         }
-        public class Cons_notificationSoundRingtone {
+        public class Cons_notificationSoundRingtone: TypeConstructorDescription {
             public var id: Int64
             public init(id: Int64) {
                 self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("notificationSoundRingtone", [("id", self.id as Any)])
             }
         }
         case notificationSoundDefault
@@ -95,18 +101,24 @@ public extension Api {
 }
 public extension Api {
     enum NotifyPeer: TypeConstructorDescription {
-        public class Cons_notifyForumTopic {
+        public class Cons_notifyForumTopic: TypeConstructorDescription {
             public var peer: Api.Peer
             public var topMsgId: Int32
             public init(peer: Api.Peer, topMsgId: Int32) {
                 self.peer = peer
                 self.topMsgId = topMsgId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("notifyForumTopic", [("peer", self.peer as Any), ("topMsgId", self.topMsgId as Any)])
+            }
         }
-        public class Cons_notifyPeer {
+        public class Cons_notifyPeer: TypeConstructorDescription {
             public var peer: Api.Peer
             public init(peer: Api.Peer) {
                 self.peer = peer
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("notifyPeer", [("peer", self.peer as Any)])
             }
         }
         case notifyBroadcasts
@@ -205,10 +217,13 @@ public extension Api {
 }
 public extension Api {
     enum OutboxReadDate: TypeConstructorDescription {
-        public class Cons_outboxReadDate {
+        public class Cons_outboxReadDate: TypeConstructorDescription {
             public var date: Int32
             public init(date: Int32) {
                 self.date = date
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("outboxReadDate", [("date", self.date as Any)])
             }
         }
         case outboxReadDate(Cons_outboxReadDate)
@@ -246,7 +261,7 @@ public extension Api {
 }
 public extension Api {
     enum Page: TypeConstructorDescription {
-        public class Cons_page {
+        public class Cons_page: TypeConstructorDescription {
             public var flags: Int32
             public var url: String
             public var blocks: [Api.PageBlock]
@@ -260,6 +275,9 @@ public extension Api {
                 self.photos = photos
                 self.documents = documents
                 self.views = views
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("page", [("flags", self.flags as Any), ("url", self.url as Any), ("blocks", self.blocks as Any), ("photos", self.photos as Any), ("documents", self.documents as Any), ("views", self.views as Any)])
             }
         }
         case page(Cons_page)
@@ -339,57 +357,78 @@ public extension Api {
 }
 public extension Api {
     indirect enum PageBlock: TypeConstructorDescription {
-        public class Cons_pageBlockAnchor {
+        public class Cons_pageBlockAnchor: TypeConstructorDescription {
             public var name: String
             public init(name: String) {
                 self.name = name
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockAnchor", [("name", self.name as Any)])
+            }
         }
-        public class Cons_pageBlockAudio {
+        public class Cons_pageBlockAudio: TypeConstructorDescription {
             public var audioId: Int64
             public var caption: Api.PageCaption
             public init(audioId: Int64, caption: Api.PageCaption) {
                 self.audioId = audioId
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockAudio", [("audioId", self.audioId as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockAuthorDate {
+        public class Cons_pageBlockAuthorDate: TypeConstructorDescription {
             public var author: Api.RichText
             public var publishedDate: Int32
             public init(author: Api.RichText, publishedDate: Int32) {
                 self.author = author
                 self.publishedDate = publishedDate
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockAuthorDate", [("author", self.author as Any), ("publishedDate", self.publishedDate as Any)])
+            }
         }
-        public class Cons_pageBlockBlockquote {
+        public class Cons_pageBlockBlockquote: TypeConstructorDescription {
             public var text: Api.RichText
             public var caption: Api.RichText
             public init(text: Api.RichText, caption: Api.RichText) {
                 self.text = text
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockBlockquote", [("text", self.text as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockChannel {
+        public class Cons_pageBlockChannel: TypeConstructorDescription {
             public var channel: Api.Chat
             public init(channel: Api.Chat) {
                 self.channel = channel
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockChannel", [("channel", self.channel as Any)])
+            }
         }
-        public class Cons_pageBlockCollage {
+        public class Cons_pageBlockCollage: TypeConstructorDescription {
             public var items: [Api.PageBlock]
             public var caption: Api.PageCaption
             public init(items: [Api.PageBlock], caption: Api.PageCaption) {
                 self.items = items
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockCollage", [("items", self.items as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockCover {
+        public class Cons_pageBlockCover: TypeConstructorDescription {
             public var cover: Api.PageBlock
             public init(cover: Api.PageBlock) {
                 self.cover = cover
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockCover", [("cover", self.cover as Any)])
+            }
         }
-        public class Cons_pageBlockDetails {
+        public class Cons_pageBlockDetails: TypeConstructorDescription {
             public var flags: Int32
             public var blocks: [Api.PageBlock]
             public var title: Api.RichText
@@ -398,8 +437,11 @@ public extension Api {
                 self.blocks = blocks
                 self.title = title
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockDetails", [("flags", self.flags as Any), ("blocks", self.blocks as Any), ("title", self.title as Any)])
+            }
         }
-        public class Cons_pageBlockEmbed {
+        public class Cons_pageBlockEmbed: TypeConstructorDescription {
             public var flags: Int32
             public var url: String?
             public var html: String?
@@ -416,8 +458,11 @@ public extension Api {
                 self.h = h
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockEmbed", [("flags", self.flags as Any), ("url", self.url as Any), ("html", self.html as Any), ("posterPhotoId", self.posterPhotoId as Any), ("w", self.w as Any), ("h", self.h as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockEmbedPost {
+        public class Cons_pageBlockEmbedPost: TypeConstructorDescription {
             public var url: String
             public var webpageId: Int64
             public var authorPhotoId: Int64
@@ -434,32 +479,47 @@ public extension Api {
                 self.blocks = blocks
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockEmbedPost", [("url", self.url as Any), ("webpageId", self.webpageId as Any), ("authorPhotoId", self.authorPhotoId as Any), ("author", self.author as Any), ("date", self.date as Any), ("blocks", self.blocks as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockFooter {
+        public class Cons_pageBlockFooter: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockFooter", [("text", self.text as Any)])
+            }
         }
-        public class Cons_pageBlockHeader {
+        public class Cons_pageBlockHeader: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockHeader", [("text", self.text as Any)])
+            }
         }
-        public class Cons_pageBlockKicker {
+        public class Cons_pageBlockKicker: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockKicker", [("text", self.text as Any)])
+            }
         }
-        public class Cons_pageBlockList {
+        public class Cons_pageBlockList: TypeConstructorDescription {
             public var items: [Api.PageListItem]
             public init(items: [Api.PageListItem]) {
                 self.items = items
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockList", [("items", self.items as Any)])
+            }
         }
-        public class Cons_pageBlockMap {
+        public class Cons_pageBlockMap: TypeConstructorDescription {
             public var geo: Api.GeoPoint
             public var zoom: Int32
             public var w: Int32
@@ -472,20 +532,29 @@ public extension Api {
                 self.h = h
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockMap", [("geo", self.geo as Any), ("zoom", self.zoom as Any), ("w", self.w as Any), ("h", self.h as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockOrderedList {
+        public class Cons_pageBlockOrderedList: TypeConstructorDescription {
             public var items: [Api.PageListOrderedItem]
             public init(items: [Api.PageListOrderedItem]) {
                 self.items = items
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockOrderedList", [("items", self.items as Any)])
+            }
         }
-        public class Cons_pageBlockParagraph {
+        public class Cons_pageBlockParagraph: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockParagraph", [("text", self.text as Any)])
+            }
         }
-        public class Cons_pageBlockPhoto {
+        public class Cons_pageBlockPhoto: TypeConstructorDescription {
             public var flags: Int32
             public var photoId: Int64
             public var caption: Api.PageCaption
@@ -498,52 +567,73 @@ public extension Api {
                 self.url = url
                 self.webpageId = webpageId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockPhoto", [("flags", self.flags as Any), ("photoId", self.photoId as Any), ("caption", self.caption as Any), ("url", self.url as Any), ("webpageId", self.webpageId as Any)])
+            }
         }
-        public class Cons_pageBlockPreformatted {
+        public class Cons_pageBlockPreformatted: TypeConstructorDescription {
             public var text: Api.RichText
             public var language: String
             public init(text: Api.RichText, language: String) {
                 self.text = text
                 self.language = language
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockPreformatted", [("text", self.text as Any), ("language", self.language as Any)])
+            }
         }
-        public class Cons_pageBlockPullquote {
+        public class Cons_pageBlockPullquote: TypeConstructorDescription {
             public var text: Api.RichText
             public var caption: Api.RichText
             public init(text: Api.RichText, caption: Api.RichText) {
                 self.text = text
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockPullquote", [("text", self.text as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockRelatedArticles {
+        public class Cons_pageBlockRelatedArticles: TypeConstructorDescription {
             public var title: Api.RichText
             public var articles: [Api.PageRelatedArticle]
             public init(title: Api.RichText, articles: [Api.PageRelatedArticle]) {
                 self.title = title
                 self.articles = articles
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockRelatedArticles", [("title", self.title as Any), ("articles", self.articles as Any)])
+            }
         }
-        public class Cons_pageBlockSlideshow {
+        public class Cons_pageBlockSlideshow: TypeConstructorDescription {
             public var items: [Api.PageBlock]
             public var caption: Api.PageCaption
             public init(items: [Api.PageBlock], caption: Api.PageCaption) {
                 self.items = items
                 self.caption = caption
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockSlideshow", [("items", self.items as Any), ("caption", self.caption as Any)])
+            }
         }
-        public class Cons_pageBlockSubheader {
+        public class Cons_pageBlockSubheader: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockSubheader", [("text", self.text as Any)])
+            }
         }
-        public class Cons_pageBlockSubtitle {
+        public class Cons_pageBlockSubtitle: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockSubtitle", [("text", self.text as Any)])
+            }
         }
-        public class Cons_pageBlockTable {
+        public class Cons_pageBlockTable: TypeConstructorDescription {
             public var flags: Int32
             public var title: Api.RichText
             public var rows: [Api.PageTableRow]
@@ -552,14 +642,20 @@ public extension Api {
                 self.title = title
                 self.rows = rows
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockTable", [("flags", self.flags as Any), ("title", self.title as Any), ("rows", self.rows as Any)])
+            }
         }
-        public class Cons_pageBlockTitle {
+        public class Cons_pageBlockTitle: TypeConstructorDescription {
             public var text: Api.RichText
             public init(text: Api.RichText) {
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockTitle", [("text", self.text as Any)])
+            }
         }
-        public class Cons_pageBlockVideo {
+        public class Cons_pageBlockVideo: TypeConstructorDescription {
             public var flags: Int32
             public var videoId: Int64
             public var caption: Api.PageCaption
@@ -567,6 +663,9 @@ public extension Api {
                 self.flags = flags
                 self.videoId = videoId
                 self.caption = caption
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pageBlockVideo", [("flags", self.flags as Any), ("videoId", self.videoId as Any), ("caption", self.caption as Any)])
             }
         }
         case pageBlockAnchor(Cons_pageBlockAnchor)
