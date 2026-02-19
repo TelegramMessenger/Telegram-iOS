@@ -56,6 +56,9 @@
 - (void)editorTransitionIn;
 - (void)editorTransitionOut;
 
+- (void)beginEditingCaption;
+- (void)setupGifEditing;
+
 - (void)onDismiss;
 
 - (void)setTabBarUserInteractionEnabled:(bool)enabled;

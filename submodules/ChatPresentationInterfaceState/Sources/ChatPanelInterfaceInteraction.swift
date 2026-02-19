@@ -122,7 +122,8 @@ public final class ChatPanelInterfaceInteraction {
     public let displayVideoUnmuteTip: (CGPoint?) -> Void
     public let switchMediaRecordingMode: () -> Void
     public let setupMessageAutoremoveTimeout: () -> Void
-    public let sendSticker: (FileMediaReference, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+    public let sendSticker: (FileMediaReference, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool
+    public let editSticker: (TelegramMediaFile) -> Void
     public let unblockPeer: () -> Void
     public let pinMessage: (MessageId, ContextControllerProtocol?) -> Void
     public let unpinMessage: (MessageId, Bool, ContextControllerProtocol?) -> Void
@@ -250,7 +251,8 @@ public final class ChatPanelInterfaceInteraction {
         displayVideoUnmuteTip: @escaping (CGPoint?) -> Void,
         switchMediaRecordingMode: @escaping () -> Void,
         setupMessageAutoremoveTimeout: @escaping () -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool,
+        editSticker: @escaping (TelegramMediaFile) -> Void,
         unblockPeer: @escaping () -> Void,
         pinMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
         unpinMessage: @escaping (MessageId, Bool, ContextControllerProtocol?) -> Void,
@@ -378,6 +380,7 @@ public final class ChatPanelInterfaceInteraction {
         self.switchMediaRecordingMode = switchMediaRecordingMode
         self.setupMessageAutoremoveTimeout = setupMessageAutoremoveTimeout
         self.sendSticker = sendSticker
+        self.editSticker = editSticker
         self.unblockPeer = unblockPeer
         self.pinMessage = pinMessage
         self.unpinMessage = unpinMessage
@@ -513,6 +516,7 @@ public final class ChatPanelInterfaceInteraction {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _, _, _, _, _, _ in
             return false
+        }, editSticker: { _ in
         }, unblockPeer: {
         }, pinMessage: { _, _ in
         }, unpinMessage: { _, _, _ in

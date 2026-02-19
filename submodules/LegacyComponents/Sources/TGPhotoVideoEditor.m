@@ -155,7 +155,7 @@
     }
 }
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSAttributedString *)caption withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint adjustments:(bool)adjustments recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext fromRect:(CGRect)fromRect mainSnapshot:(UIView *)mainSnapshot snapshots:(NSArray *)snapshots immediate:(bool)immediate appeared:(void (^)(void))appeared completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
++ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSAttributedString *)caption withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint adjustments:(bool)adjustments recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext fromRect:(CGRect)fromRect mainSnapshot:(UIView *)mainSnapshot snapshots:(NSArray *)snapshots immediate:(bool)immediate activateInput:(bool)activateInput isGif:(bool)isGif appeared:(void (^)(void))appeared completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     id<LegacyComponentsContext> windowContext = [windowManager context];
@@ -172,10 +172,11 @@
     //galleryController.hasFadeOutTransition = true;
     
     id<TGModernGalleryEditableItem> galleryItem = nil;
-    if (item.isVideo)
+    if (item.isVideo) {
         galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:item];
-    else
+    } else {
         galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:item];
+    }
     galleryItem.editingContext = editingContext;
     galleryItem.stickersContext = stickersContext;
     
@@ -273,6 +274,10 @@
     controllerWindow.hidden = false;
     galleryController.view.clipsToBounds = true;
     
+    if (isGif) {
+        [model setupGifEditing];
+    }
+    
     if (paint) {
         TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
             [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab snapshots:snapshots fromRect:fromRect];
@@ -280,6 +285,10 @@
     } else if (adjustments) {
         TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
             [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorToolsTab snapshots:snapshots fromRect:fromRect];
+        });
+    } else if (activateInput) {
+        TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+            [model beginEditingCaption];
         });
     }
 }

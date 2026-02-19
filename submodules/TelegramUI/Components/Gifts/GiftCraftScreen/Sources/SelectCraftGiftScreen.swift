@@ -32,6 +32,7 @@ final class SelectGiftPageContent: Component {
     let gift: StarGift.UniqueGift
     let genericGift: StarGift.Gift
     let selectedGiftIds: Set<Int64>
+    let selectingMainGift: Bool
     let starsTopUpOptions: Signal<[StarsTopUpOption]?, NoError>
     let selectGift: (GiftItem) -> Void
     let dismiss: () -> Void
@@ -44,6 +45,7 @@ final class SelectGiftPageContent: Component {
         gift: StarGift.UniqueGift,
         genericGift: StarGift.Gift,
         selectedGiftIds: Set<Int64>,
+        selectingMainGift: Bool,
         starsTopUpOptions: Signal<[StarsTopUpOption]?, NoError>,
         selectGift: @escaping (GiftItem) -> Void,
         dismiss: @escaping () -> Void,
@@ -55,6 +57,7 @@ final class SelectGiftPageContent: Component {
         self.gift = gift
         self.genericGift = genericGift
         self.selectedGiftIds = selectedGiftIds
+        self.selectingMainGift = selectingMainGift
         self.starsTopUpOptions = starsTopUpOptions
         self.selectGift = selectGift
         self.dismiss = dismiss
@@ -370,6 +373,10 @@ final class SelectGiftPageContent: Component {
                         }
                         existingIds.insert(uniqueGift.id)
                         
+                        if component.selectingMainGift && uniqueGift.giftAddress != nil {
+                            continue
+                        }
+                        
                         let giftItem = GiftItem(
                             gift: uniqueGift,
                             reference: reference
@@ -523,6 +530,7 @@ private final class SheetContainerComponent: CombinedComponent {
     let gift: StarGift.UniqueGift
     let genericGift: StarGift.Gift
     let selectedGiftIds: Set<Int64>
+    let selectingMainGift: Bool
     let starsTopUpOptions: Signal<[StarsTopUpOption]?, NoError>
     let selectGift: (GiftItem) -> Void
     
@@ -533,6 +541,7 @@ private final class SheetContainerComponent: CombinedComponent {
         gift: StarGift.UniqueGift,
         genericGift: StarGift.Gift,
         selectedGiftIds: Set<Int64>,
+        selectingMainGift: Bool,
         starsTopUpOptions: Signal<[StarsTopUpOption]?, NoError>,
         selectGift: @escaping (GiftItem) -> Void
     ) {
@@ -542,6 +551,7 @@ private final class SheetContainerComponent: CombinedComponent {
         self.gift = gift
         self.genericGift = genericGift
         self.selectedGiftIds = selectedGiftIds
+        self.selectingMainGift = selectingMainGift
         self.starsTopUpOptions = starsTopUpOptions
         self.selectGift = selectGift
     }
@@ -603,6 +613,7 @@ private final class SheetContainerComponent: CombinedComponent {
                             gift: component.gift,
                             genericGift: component.genericGift,
                             selectedGiftIds: component.selectedGiftIds,
+                            selectingMainGift: component.selectingMainGift,
                             starsTopUpOptions: component.starsTopUpOptions,
                             selectGift: component.selectGift,
                             dismiss: {
@@ -676,6 +687,7 @@ final class SelectCraftGiftScreen: ViewControllerComponentContainer {
         gift: StarGift.UniqueGift,
         genericGift: StarGift.Gift,
         selectedGiftIds: Set<Int64>,
+        selectingMainGift: Bool,
         starsTopUpOptions: Signal<[StarsTopUpOption]?, NoError>,
         selectGift: @escaping (GiftItem) -> Void
     ) {
@@ -688,6 +700,7 @@ final class SelectCraftGiftScreen: ViewControllerComponentContainer {
                 gift: gift,
                 genericGift: genericGift,
                 selectedGiftIds: selectedGiftIds,
+                selectingMainGift: selectingMainGift,
                 starsTopUpOptions: starsTopUpOptions,
                 selectGift: selectGift
             ),

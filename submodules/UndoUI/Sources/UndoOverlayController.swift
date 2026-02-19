@@ -83,11 +83,13 @@ public final class UndoOverlayController: ViewController {
     }
     
     public struct Appearance {
+        public var isNarrow: Bool?
         public var isBlurred: Bool?
         public var sideInset: CGFloat?
         public var bottomInset: CGFloat?
         
-        public init(isBlurred: Bool? = nil, sideInset: CGFloat? = nil, bottomInset: CGFloat? = nil) {
+        public init(isNarrow: Bool? = nil, isBlurred: Bool? = nil, sideInset: CGFloat? = nil, bottomInset: CGFloat? = nil) {
+            self.isNarrow = isNarrow
             self.isBlurred = isBlurred
             self.sideInset = sideInset
             self.bottomInset = bottomInset

@@ -216,14 +216,14 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelBannedMemberControllerArguments
         switch self {
             case let .info(_, _, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rightsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .rightItem(_, _, text, right, value, enabled, subPermissions, isExpanded):
                 if !subPermissions.isEmpty {
-                    return ItemListExpandableSwitchItem(presentationData: presentationData, title: text, value: value, isExpanded: isExpanded, subItems: subPermissions.map { item in
+                    return ItemListExpandableSwitchItem(presentationData: presentationData, systemStyle: .glass, title: text, value: value, isExpanded: isExpanded, subItems: subPermissions.map { item in
                         return ItemListExpandableSwitchItem.SubItem(
                             id: AnyHashable(item.flags.rawValue),
                             title: item.title,
@@ -249,20 +249,20 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
                         }
                     })
                 } else {
-                    return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, type: .icon, enableInteractiveChanges: enabled, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
+                    return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: text, value: value, type: .icon, enableInteractiveChanges: enabled, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                         arguments.toggleRight(right, value)
                     }, activatedWhileDisabled: {
                         arguments.toggleRightWhileDisabled(right)
                     })
                 }
             case let .timeout(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openTimeout()
                 })
             case let .exceptionInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .delete(_, text):
-                return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: text, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.delete()
                 })
         }

@@ -315,6 +315,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always, animated: true).startStandalone()
             }
         }, tapMessage: nil, clickThroughMessage: { _, _ in }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in return false
+        }, editGif: { _, _ in
         }, requestMessageActionCallback: { [weak self] message, _, _, _, _ in
             guard let self else {
                 return
@@ -652,7 +653,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, requestToggleTodoMessageItem: { _, _, _ in
         }, displayTodoToggleUnavailable: { _ in
         }, openStarsPurchase: { _ in
-        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
+        }, openRankInfo: { _, _, _ in }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
         

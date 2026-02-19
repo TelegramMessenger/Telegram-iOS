@@ -84,6 +84,19 @@ func chatHistoryEntriesForView(
                         stickersEnabled = false
                     }
                 }
+            } else if case let .cachedPeerData(_, peerData) = additionalEntry {
+                if let cachedGroupData = peerData as? CachedGroupData, let participants = cachedGroupData.participants {
+                    for participant in participants.participants {
+                        switch participant {
+                        case let .member(_, _, _, rank):
+                            adminRanks[participant.peerId] = .member(rank)
+                        case let .creator(_, rank):
+                            adminRanks[participant.peerId] = .creator(rank)
+                        case let .admin(_, _, _, rank):
+                            adminRanks[participant.peerId] = .admin(rank)
+                        }
+                    }
+                }
             }
         }
     }

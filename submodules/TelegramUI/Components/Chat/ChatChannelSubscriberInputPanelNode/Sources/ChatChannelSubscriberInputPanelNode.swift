@@ -213,6 +213,18 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         switch action {
         case .join, .joinGroup, .applyToJoin:
+            Queue.mainQueue().after(1.0) {
+                //TODO:localize
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: "You joined the group", cancel: "Add Tag", destructive: false), elevatedLayout: true, action: { action in
+                    if case .undo = action {
+                        let tagController = context.sharedContext.makeChatCustomRankSetupScreen(context: context, peerId: peer.id, participantId: context.account.peerId, rank: nil)
+                        self.interfaceInteraction?.getNavigationController()?.pushViewController(tagController)
+                    }
+                    return true
+                })
+                self.interfaceInteraction?.presentController(controller, nil)
+            }
             self.isJoining = true
             if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, maxOverlayHeight, isSecondary, metrics) = self.layoutData, let presentationInterfaceState = self.presentationInterfaceState {
                 let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, maxOverlayHeight: maxOverlayHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics, force: true)

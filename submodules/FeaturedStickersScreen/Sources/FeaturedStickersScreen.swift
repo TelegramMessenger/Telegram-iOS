@@ -193,7 +193,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var controller: FeaturedStickersScreen?
-    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     private var searchItemContext = StickerPaneSearchGlobalItemContext()
     
     let gridNode: GridNode
@@ -223,7 +223,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     }
     private var didSetReady: Bool = false
     
-    init(context: AccountContext, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) {
+    init(context: AccountContext, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?) {
         self.context = context
         var presentationData = context.sharedContext.currentPresentationData.with { $0 }
         if let forceTheme = controller.forceTheme {
@@ -845,7 +845,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
 public final class FeaturedStickersScreen: ViewController {
     private let context: AccountContext
     fileprivate let highlightedPackId: ItemCollectionId?
-    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     fileprivate var stickerActionTitle: String?
     
     private var controllerNode: FeaturedStickersScreenNode {
@@ -863,7 +863,7 @@ public final class FeaturedStickersScreen: ViewController {
     
     fileprivate var searchNavigationNode: SearchNavigationContentNode?
     
-    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, forceTheme: PresentationTheme? = nil, stickerActionTitle: String? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, forceTheme: PresentationTheme? = nil, stickerActionTitle: String? = nil, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)? = nil) {
         self.context = context
         self.highlightedPackId = highlightedPackId
         self.sendSticker = sendSticker
@@ -1152,7 +1152,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     private var interaction: StickerPaneSearchInteraction?
     private weak var controller: FeaturedStickersScreen?
-    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     private let itemContext: StickerPaneSearchGlobalItemContext
     
     private var theme: PresentationTheme
@@ -1187,7 +1187,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     }
     var isActiveUpdated: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, inputNodeInteraction: ChatMediaInputNodeInteraction, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, itemContext: StickerPaneSearchGlobalItemContext) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, inputNodeInteraction: ChatMediaInputNodeInteraction, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?, itemContext: StickerPaneSearchGlobalItemContext) {
         self.context = context
         self.inputNodeInteraction = inputNodeInteraction
         self.controller = controller

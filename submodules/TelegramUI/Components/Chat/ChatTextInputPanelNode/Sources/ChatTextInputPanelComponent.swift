@@ -601,6 +601,8 @@ public final class ChatTextInputPanelComponent: Component {
                     sendSticker: { _, _, _, _, _, _ in
                         return false
                     },
+                    editSticker: { _ in
+                    },
                     unblockPeer: {
                     },
                     pinMessage: { _, _ in

@@ -436,6 +436,8 @@ final class MediaEditorScreenComponent: Component {
                     sendBotContextResultAsGif: { _, _, _, _, _, _ in
                         return false
                     },
+                    editGif: { _, _ in
+                    },
                     updateChoosingSticker: { _ in },
                     switchToTextInput: { [weak self] in
                         if let self {
@@ -6756,7 +6758,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     public var completion: ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
-    public var sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    public var sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     
     private var adminedChannels = Promise<[EnginePeer]>()
     private var closeFriends = Promise<[EnginePeer]>()

@@ -21,6 +21,68 @@ private final class WeakController {
     }
 }
 
+private func makePanelPath(in rect: CGRect, topRadius: CGFloat, bottomRadius: CGFloat) -> UIBezierPath {
+    let maxTop = min(topRadius, rect.width * 0.5, rect.height * 0.5)
+    let maxBottom = bottomRadius - 13.0 //min(bottomRadius, rect.width * 0.5, rect.height * 0.5)
+
+    let path = UIBezierPath()
+
+    path.move(to: CGPoint(x: rect.minX, y: rect.minY + maxTop))
+    path.addArc(withCenter: CGPoint(x: rect.minX + maxTop, y: rect.minY + maxTop),
+                radius: maxTop,
+                startAngle: .pi,
+                endAngle: 1.5 * .pi,
+                clockwise: true)
+
+    path.addLine(to: CGPoint(x: rect.maxX - maxTop, y: rect.minY))
+    path.addArc(withCenter: CGPoint(x: rect.maxX - maxTop, y: rect.minY + maxTop),
+                radius: maxTop,
+                startAngle: 1.5 * .pi,
+                endAngle: 0,
+                clockwise: true)
+
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - maxBottom))
+    path.addArc(withCenter: CGPoint(x: rect.maxX - maxBottom, y: rect.maxY - maxBottom),
+                radius: maxBottom,
+                startAngle: 0,
+                endAngle: 0.5 * .pi,
+                clockwise: true)
+
+    path.addLine(to: CGPoint(x: rect.minX + maxBottom, y: rect.maxY))
+    path.addArc(withCenter: CGPoint(x: rect.minX + maxBottom, y: rect.maxY - maxBottom),
+                radius: maxBottom,
+                startAngle: 0.5 * .pi,
+                endAngle: .pi,
+                clockwise: true)
+
+    path.close()
+    return path
+}
+
+private class BackgroundView: UIView {
+    static override var layerClass: AnyClass {
+        return SimpleShapeLayer.self
+    }
+    
+    var shapeLayer: SimpleShapeLayer {
+        return self.layer as! SimpleShapeLayer
+    }
+    
+    private var params: (size: CGSize, topCornerRadius: CGFloat, bottomCornerRadius: CGFloat)?
+    
+    func update(size: CGSize, color: UIColor, topCornerRadius: CGFloat, bottomCornerRadius: CGFloat, transition: ComponentTransition) {
+        if self.params?.size != size, self.params?.topCornerRadius != topCornerRadius, self.params?.bottomCornerRadius != bottomCornerRadius {
+            self.params = (size, topCornerRadius, bottomCornerRadius)
+            
+            let inset: CGFloat = 5.0 - 0.333
+            let width = size.width - inset * 2.0
+            let path = makePanelPath(in: CGRect(origin: CGPoint(x: inset, y: 0.0), size: CGSize(width: width, height: size.height)), topRadius: topCornerRadius, bottomRadius: bottomCornerRadius)
+            transition.setShapeLayerPath(layer: self.shapeLayer, path: path.cgPath)
+        }
+        transition.setShapeLayerFillColor(layer: self.shapeLayer, color: UIColor.gray)
+    }
+}
+
 final class MinimizedHeaderNode: ASDisplayNode {
     var theme: NavigationControllerTheme {
         didSet {
@@ -31,12 +93,14 @@ final class MinimizedHeaderNode: ASDisplayNode {
     }
     let strings: PresentationStrings
     
-    private let backgroundView = UIView()
+    private let backgroundView = BackgroundView()
     private let progressView = UIView()
     private var iconView = UIImageView()
     private let titleLabel = ComponentView<Empty>()
     private let closeButton = ComponentView<Empty>()
     private var titleDisposable: Disposable?
+    
+    private var closeIcon: UIImage?
     
     private var _controllers: [WeakController] = []
     var controllers: [MinimizableController] {
@@ -132,11 +196,11 @@ final class MinimizedHeaderNode: ASDisplayNode {
         self.strings = strings
         
         self.backgroundView.clipsToBounds = true
-        self.backgroundView.backgroundColor = self.theme.navigationBar.opaqueBackgroundColor
-        self.backgroundView.layer.cornerRadius = 10.0
-        if #available(iOS 11.0, *) {
-            self.backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-        }
+//        self.backgroundView.backgroundColor =
+//        self.backgroundView.layer.cornerRadius = 10.0
+//        if #available(iOS 11.0, *) {
+//            self.backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+//        }
         
         self.progressView.backgroundColor = self.theme.navigationBar.primaryTextColor.withAlphaComponent(0.06)
         
@@ -176,7 +240,11 @@ final class MinimizedHeaderNode: ASDisplayNode {
     func update(size: CGSize, insets: UIEdgeInsets, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, insets, isExpanded)
                         
-        let headerHeight: CGFloat = 44.0
+        if self.closeIcon == nil {
+            self.closeIcon = generateCloseButtonImage()
+        }
+        
+        let headerHeight: CGFloat = 56.0
         let titleSpacing: CGFloat = 6.0
         var titleSideInset: CGFloat = 56.0
         if !isExpanded {
@@ -184,7 +252,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
         }
         
         let iconSize = CGSize(width: 20.0, height: 20.0)
-                
+                        
         let titleSize = self.titleLabel.update(
             transition: .immediate,
             component: AnyComponent(
@@ -220,13 +288,10 @@ final class MinimizedHeaderNode: ASDisplayNode {
             component: AnyComponent(
                 PlainButtonComponent(
                     content: AnyComponent(
-                        BundleIconComponent(
-                            name: "Instant View/Close",
-                            tintColor: self.theme.navigationBar.primaryTextColor
-                        )
+                        Image(image: self.closeIcon, tintColor: self.theme.navigationBar.primaryTextColor, size: CGSize(width: 14.0, height: 14.0))
                     ),
                     effectAlignment: .center,
-                    minSize: CGSize(width: 44.0, height: 44.0),
+                    minSize: CGSize(width: 56.0, height: 56.0),
                     action: { [weak self] in
                         self?.requestClose()
                     },
@@ -234,9 +299,9 @@ final class MinimizedHeaderNode: ASDisplayNode {
                 )
             ),
             environment: {},
-            containerSize: CGSize(width: 44.0, height: 44.0)
+            containerSize: CGSize(width: 56.0, height: 56.0)
         )
-        let closeButtonFrame = CGRect(origin: CGPoint(x: isExpanded ? 0.0 : insets.left, y: 0.0), size: CGSize(width: 44.0, height: 44.0))
+        let closeButtonFrame = CGRect(origin: CGPoint(x: isExpanded ? 0.0 : insets.left, y: 0.0), size: CGSize(width: 56.0, height: 56.0))
         if let view = self.closeButton.view {
             if view.superview == nil {
                 self.backgroundView.addSubview(view)
@@ -247,9 +312,31 @@ final class MinimizedHeaderNode: ASDisplayNode {
         
         transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: size.width, height: 243.0)))
         
+        self.backgroundView.update(size: CGSize(width: size.width, height: 243.0), color: self.theme.navigationBar.opaqueBackgroundColor, topCornerRadius: 25.0, bottomCornerRadius: 62.0, transition: .immediate)
+        
         transition.updateAlpha(layer: self.progressView.layer, alpha: isExpanded && self.progress != nil ? 1.0 : 0.0)
         if let progress = self.progress {
             self.progressView.frame = CGRect(origin: .zero, size: CGSize(width: size.width * CGFloat(progress), height: 243.0))
         }
     }
+}
+
+private func generateCloseButtonImage() -> UIImage? {
+    return generateImage(CGSize(width: 14.0, height: 14.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setLineWidth(2.0)
+        context.setLineCap(.round)
+        context.setStrokeColor(UIColor.black.cgColor)
+        
+        let inset: CGFloat = 1.0 + UIScreenPixel
+        
+        context.move(to: CGPoint(x: inset, y: inset))
+        context.addLine(to: CGPoint(x: size.width - inset, y: size.height - inset))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: size.width - inset, y: inset))
+        context.addLine(to: CGPoint(x: inset, y: size.height - inset))
+        context.strokePath()
+    })
 }

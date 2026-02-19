@@ -48,10 +48,11 @@ public struct ChatMediaInputPaneScrollState {
 
 public final class ChatEntityKeyboardInputNode: ChatInputNode {
     public final class Interaction {
-        let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+        let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool
         let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
         let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
         let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool
+        let editGif: (FileMediaReference, Bool) -> Void
         let updateChoosingSticker: (Bool) -> Void
         let switchToTextInput: () -> Void
         let dismissTextInput: () -> Void
@@ -65,10 +66,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         public var forceTheme: PresentationTheme?
         
         public init(
-            sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
+            sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool,
             sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
             sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
             sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool,
+            editGif: @escaping (FileMediaReference, Bool) -> Void,
             updateChoosingSticker: @escaping (Bool) -> Void,
             switchToTextInput: @escaping () -> Void,
             dismissTextInput: @escaping () -> Void,
@@ -84,6 +86,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             self.sendEmoji = sendEmoji
             self.sendGif = sendGif
             self.sendBotContextResultAsGif = sendBotContextResultAsGif
+            self.editGif = editGif
             self.updateChoosingSticker = updateChoosingSticker
             self.switchToTextInput = switchToTextInput
             self.dismissTextInput = dismissTextInput
@@ -100,6 +103,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             self.sendSticker = chatControllerInteraction.sendSticker
             self.sendEmoji = chatControllerInteraction.sendEmoji
             self.sendGif = chatControllerInteraction.sendGif
+            self.editGif = chatControllerInteraction.editGif
             self.sendBotContextResultAsGif = chatControllerInteraction.sendBotContextResultAsGif
             self.updateChoosingSticker = chatControllerInteraction.updateChoosingSticker
             self.switchToTextInput = { [weak chatControllerInteraction] in
@@ -2281,6 +2285,25 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Add Caption", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCaption"), color: theme.actionSheet.primaryTextColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                if let self {
+                    let _ = self.interaction?.editGif(file, true)
+                }
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: "Edit", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.actionSheet.primaryTextColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                if let self {
+                    let _ = self.interaction?.editGif(file, false)
+                }
+            })))
+            
             if isSaved || isGifSaved {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
@@ -2698,7 +2721,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
 
 public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
     public class Interaction {
-        public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+        public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool
         public let sendEmoji: (TelegramMediaFile) -> Void
         public let setStatus: (TelegramMediaFile) -> Void
         public let copyEmoji: (TelegramMediaFile) -> Void
@@ -2707,7 +2730,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
         public let navigationController: () -> NavigationController?
         public let updateIsPreviewing: (Bool) -> Void
         
-        public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool, sendEmoji: @escaping (TelegramMediaFile) -> Void, setStatus: @escaping (TelegramMediaFile) -> Void, copyEmoji: @escaping (TelegramMediaFile) -> Void, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, updateIsPreviewing: @escaping (Bool) -> Void) {
+        public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool, sendEmoji: @escaping (TelegramMediaFile) -> Void, setStatus: @escaping (TelegramMediaFile) -> Void, copyEmoji: @escaping (TelegramMediaFile) -> Void, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, updateIsPreviewing: @escaping (Bool) -> Void) {
             self.sendSticker = sendSticker
             self.sendEmoji = sendEmoji
             self.setStatus = setStatus
@@ -2906,7 +2929,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                         let isLocked = file.isPremiumSticker && !hasPremium
                         
                         if let interaction = strongSelf.interaction {
-                            let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void = { fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
+                            let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?) -> Void = { fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer in
                                 let _ = interaction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
                             }
                             
@@ -2972,6 +2995,32 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                     })
                                 }))
                             )
+                            
+                            
+                            
+                            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Stickers_EditSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                f(.default)
+                                
+                                var emoji: [String] = []
+                                for attribute in file.attributes {
+                                    if case let .Sticker(displayText, _, _) = attribute {
+                                        emoji = [displayText]
+                                    }
+                                }
+         
+                                let controller = context.sharedContext.makeStickerEditorScreen(
+                                    context: context,
+                                    source: (file, emoji),
+                                    mode: .generic,
+                                    transitionArguments: nil,
+                                    completion: { file, _, commit in
+                                        commit()
+                                        sendSticker(.standalone(media: file), false, false, nil, false, nil, .zero, nil)
+                                    },
+                                    cancelled: {}
+                                )
+                                interaction.navigationController()?.pushViewController(controller)
+                            })))
                             
                             loop: for attribute in file.attributes {
                                 switch attribute {

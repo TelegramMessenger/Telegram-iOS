@@ -160,6 +160,10 @@
     _inputPanelView.hidden = hidden;
 }
 
+- (void)activateInput {
+    [_inputPanel activateInput];
+}
+
 - (void)beginEditing
 {
     _editing = true;

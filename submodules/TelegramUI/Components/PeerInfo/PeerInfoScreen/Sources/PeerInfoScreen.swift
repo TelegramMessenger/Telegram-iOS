@@ -142,6 +142,7 @@ enum PeerInfoMemberAction {
     case restrict
     case remove
     case openStories(sourceView: UIView)
+    case editRank
 }
 
 enum PeerInfoContextSubject {
@@ -656,7 +657,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.openBirthdayContextMenu(node: node, gesture: gesture)
-            }, editingOpenAffiliateProgram: { [weak self] in
+            }, openMemberContextMenu: { [weak self] member, node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openMemberContextMenu(member: member, node: node, gesture: gesture)
+            },
+            editingOpenAffiliateProgram: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -1053,6 +1060,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return false
         }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
+        }, editGif: { _, _ in
         }, requestMessageActionCallback: { _, _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _ in
         }, activateSwitchInline: { _, _, _ in
@@ -1232,7 +1240,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, requestToggleTodoMessageItem: { _, _, _ in
         }, displayTodoToggleUnavailable: { _ in
         }, openStarsPurchase: { _ in
-        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+        }, openRankInfo: { _, _, _ in }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
             guard let strongSelf = self else {
@@ -4242,20 +4250,37 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openPeerInfo(peer: Peer, isMember: Bool) {
-        var mode: PeerInfoControllerMode = .generic
-        if isMember {
-            mode = .group(self.peerId)
-        }
-        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-            (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
+        if peer.id == self.context.account.peerId {
+            let controller = self.context.sharedContext.makeChatParticipantRightsScreen(context: self.context, peerId: self.peerId, participantId: peer.id, rank: "")
+            (self.controller?.navigationController as? NavigationController)?.pushViewController(controller)
+        } else {
+            var mode: PeerInfoControllerMode = .generic
+            if isMember {
+                mode = .group(self.peerId)
+            }
+            if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
+            }
         }
     }
     
-    private func performMemberAction(member: PeerInfoMember, action: PeerInfoMemberAction) {
+    func performMemberAction(member: PeerInfoMember, action: PeerInfoMemberAction) {
         guard let data = self.data, let peer = data.peer else {
             return
         }
         switch action {
+        case .editRank:
+            let rank: String?
+            switch member {
+            case let .channelMember(participant, _):
+                rank = participant.participant.rank
+            case let .legacyGroupMember(_, _, _, _, _, rankValue):
+                rank = rankValue
+            default:
+                rank = nil
+            }
+            let controller = self.context.sharedContext.makeChatCustomRankSetupScreen(context: self.context, peerId: peer.id, participantId: member.id, rank: rank)
+            self.controller?.push(controller)
         case .promote:
             if case let .channelMember(channelMember, _) = member {
                 var upgradedToSupergroupImpl: (() -> Void)?

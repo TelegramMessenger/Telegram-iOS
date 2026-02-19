@@ -60,10 +60,11 @@ public enum LegacyAttachmentMenuMediaEditing {
 }
 
 public enum LegacyMediaEditorMode {
+    case `default`
+    case caption
     case draw
     case adjustments
 }
-
 
 public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditableItem, cropRect: CGRect, adjustments: TGMediaEditAdjustments?, referenceView: UIView, beginTransitionOut: ((Bool) -> Void)?, finishTransitionOut: (() -> Void)?, completion: @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, fullSizeCompletion: @escaping (UIImage?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -130,7 +131,7 @@ public func legacyStoryMediaEditor(context: AccountContext, item: TGMediaEditabl
     
     present(legacyController, nil)
     
-    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, adjustments: false, recipientName: "", stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [] as [Any], immediate: true, appeared: {
+    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, adjustments: false, recipientName: "", stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [] as [Any], immediate: true, activateInput: false, isGif: false, appeared: {
         
     }, completion: { result, editingContext in
         var completionResult: Signal<StoryMediaEditorResult, NoError>
@@ -205,7 +206,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: 
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: mode == .draw, adjustments: mode == .adjustments, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, appeared: {
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: mode == .draw, adjustments: mode == .adjustments, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, activateInput: mode == .caption, isGif: [.default, .caption].contains(mode), appeared: {
             transitionCompletion?()
         }, completion: { result, editingContext in
             let nativeGenerator = legacyAssetPickerItemGenerator()
@@ -516,7 +517,7 @@ public func legacyAttachmentMenu(
                 
                 present(legacyController, nil)
                 
-                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: false, adjustments: false, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [], immediate: false, appeared: {
+                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: false, adjustments: false, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [], immediate: false, activateInput: false, isGif: false, appeared: {
                 }, completion: { result, editingContext in
                     let nativeGenerator = legacyAssetPickerItemGenerator()
                     var selectableResult: TGMediaSelectableItem?

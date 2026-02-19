@@ -8,7 +8,7 @@ import ComponentFlow
 import AccountContext
 import UIKitRuntimeUtils
 
-private let minimizedNavigationHeight: CGFloat = 44.0
+private let minimizedNavigationHeight: CGFloat = 56.0
 private let minimizedTopMargin: CGFloat = 3.0
 private let maximizeLastStandingController = false
 
@@ -343,17 +343,19 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         
         self.bottomEdgeView = UIImageView()
         self.bottomEdgeView.contentMode = .scaleToFill
-        self.bottomEdgeView.image = generateImage(CGSize(width: 22.0, height: 24.0), rotatedContext: { size, context in
+        
+        let bottomEdgeCornerRadius: CGFloat = 30.0
+        self.bottomEdgeView.image = generateImage(CGSize(width: bottomEdgeCornerRadius * 2.0 + 10.0, height: bottomEdgeCornerRadius + 10.0), rotatedContext: { size, context in
             context.setFillColor(UIColor.black.cgColor)
             context.fill(CGRect(origin: .zero, size: size))
             
             context.setBlendMode(.clear)
             context.setFillColor(UIColor.clear.cgColor)
             
-            let path = UIBezierPath(roundedRect: CGRect(x: 0, y: -10, width: 22, height: 20), cornerRadius: 10)
+            let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: -bottomEdgeCornerRadius - 7.0, width: bottomEdgeCornerRadius * 2.0 + 10.0, height: bottomEdgeCornerRadius * 2.0 + 10.0), cornerRadius: bottomEdgeCornerRadius)
             context.addPath(path.cgPath)
             context.fillPath()
-        })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 12)
+        })?.stretchableImage(withLeftCapWidth: Int(bottomEdgeCornerRadius + 3), topCapHeight: Int(bottomEdgeCornerRadius + 3))
         
         self.blurView = BlurView(effect: nil)
         self.dimView = UIView()
@@ -744,7 +746,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
         }
         self.blurView.isUserInteractionEnabled = self.isExpanded
         
-        let bottomEdgeHeight = 24.0 + 33.0 + layout.intrinsicInsets.bottom
+        let bottomEdgeHeight = 95.0 + layout.intrinsicInsets.bottom
         let bottomEdgeOrigin = layout.size.height - bottomEdgeHeight
         containerTransition.updateFrame(view: self.bottomEdgeView, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomEdgeHeight), size: CGSize(width: layout.size.width, height: bottomEdgeHeight)))
         
@@ -891,8 +893,6 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 let effectiveItemTransform = currentItemTransform
                 
                 if let dismissingItemId = self.dismissingItemId, let deletingIndex = self.items.firstIndex(where: { $0.id == dismissingItemId }), let offset = self.dismissingItemOffset {
-//                    var targetItemFrame: CGRect?
-//                    var targetItemTransform: CATransform3D?
                     if deletingIndex == index {
                         let effectiveOffset: CGFloat
                         if offset <= 0.0 {
@@ -901,33 +901,14 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                             effectiveOffset = scrollingRubberBandingOffset(offset: offset, bandingStart: 0.0, range: 20.0)
                         }
                         effectiveItemFrame = effectiveItemFrame.offsetBy(dx: effectiveOffset, dy: 0.0)
-                    } 
-//                    else if index < deletingIndex {
-//                        let frame = frameForIndex(index: index, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
-//                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
-//                        
-//                        targetItemFrame = frame
-//                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
-//                    } else {
-//                        let frame = frameForIndex(index: index - 1, size: layout.size, insets: itemInsets, itemCount: self.items.count - 1, boundingSize: layout.size)
-//                        let spacing = interitemSpacing(itemCount: self.items.count - 1, boundingSize: layout.size, insets: itemInsets)
-//                        
-//                        targetItemFrame = frame
-//                        targetItemTransform = final3dTransform(for: frame.minY, size: layout.size, contentHeight: contentHeight - layout.size.height - spacing, itemCount: self.items.count - 1, scrollBounds: self.scrollView.bounds, insets: itemInsets)
-//                    }
-                    
-//                    if let targetItemFrame, let targetItemTransform {
-//                        let fraction = max(0.0, min(1.0, -1.0 * offset / (layout.size.width * 1.5)))
-//                        effectiveItemFrame = effectiveItemFrame.interpolate(with: targetItemFrame, fraction: fraction)
-//                        effectiveItemTransform = effectiveItemTransform.interpolate(with: targetItemTransform, fraction: fraction)
-//                    }
+                    }
                 }
                 itemFrame = effectiveItemFrame
                 itemTransform = effectiveItemTransform
                 
                 itemNode.isCovered = false
             } else {
-                var itemOffset: CGFloat = bottomEdgeOrigin + 13.0
+                var itemOffset: CGFloat = bottomEdgeOrigin + 37.0
                 var hideTransform = false
                 if let currentTransition = self.currentTransition {
                     if case let .maximize(itemId) = currentTransition {
@@ -948,7 +929,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                     effectiveItemTransform = CATransform3DMakeScale(0.7, 0.7, 1.0)
                 } else if index == self.items.count - 1 {
                     if self.items.count > 1 {
-                        effectiveItemFrame = effectiveItemFrame.offsetBy(dx: 0.0, dy: 4.0)
+                        effectiveItemFrame = effectiveItemFrame.offsetBy(dx: 0.0, dy: 6.0)
                     }
                     effectiveItemTransform = CATransform3DIdentity
                 } else {
@@ -1210,6 +1191,6 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
     }
     
     public func collapsedHeight(layout: ContainerViewLayout) -> CGFloat {
-        return minimizedNavigationHeight + minimizedTopMargin + layout.intrinsicInsets.bottom
+        return minimizedNavigationHeight + minimizedTopMargin + layout.intrinsicInsets.bottom + 3.0
     }
 }

@@ -189,10 +189,11 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let toggleMessagesSelection: ([MessageId], Bool) -> Void
     public let sendCurrentMessage: (Bool, ChatSendMessageEffect?) -> Void
     public let sendMessage: (String) -> Void
-    public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+    public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool
     public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
     public let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool
+    public let editGif: (FileMediaReference, Bool) -> Void
     public let requestMessageActionCallback: (Message, MemoryBuffer?, Bool, Bool, Promise<Bool>?) -> Void
     public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     public let activateSwitchInline: (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void
@@ -290,6 +291,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let requestToggleTodoMessageItem: (MessageId, Int32, Bool) -> Void
     public let displayTodoToggleUnavailable: (MessageId) -> Void
     public let openStarsPurchase: (Int64?) -> Void
+    public let openRankInfo: (EnginePeer, ChatRankInfoScreenRole, String) -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -358,10 +360,11 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool, ChatSendMessageEffect?) -> Void,
         sendMessage: @escaping (String) -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool,
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool,
+        editGif: @escaping (FileMediaReference, Bool) -> Void,
         requestMessageActionCallback: @escaping (Message, MemoryBuffer?, Bool, Bool, Promise<Bool>?) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void,
@@ -459,6 +462,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         requestToggleTodoMessageItem: @escaping (MessageId, Int32, Bool) -> Void,
         displayTodoToggleUnavailable: @escaping (MessageId) -> Void,
         openStarsPurchase: @escaping (Int64?) -> Void,
+        openRankInfo: @escaping (EnginePeer, ChatRankInfoScreenRole, String) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -484,6 +488,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.sendEmoji = sendEmoji
         self.sendGif = sendGif
         self.sendBotContextResultAsGif = sendBotContextResultAsGif
+        self.editGif = editGif
         self.requestMessageActionCallback = requestMessageActionCallback
         self.requestMessageActionUrlAuth = requestMessageActionUrlAuth
         self.activateSwitchInline = activateSwitchInline
@@ -582,6 +587,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.requestToggleTodoMessageItem = requestToggleTodoMessageItem
         self.displayTodoToggleUnavailable = displayTodoToggleUnavailable
         self.openStarsPurchase = openStarsPurchase
+        self.openRankInfo = openRankInfo
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

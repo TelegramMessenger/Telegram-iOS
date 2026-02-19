@@ -15,6 +15,7 @@ import PeerPresenceStatusManager
 import AppBundle
 import PhoneNumberFormat
 import AccountContext
+import ListItemComponentAdaptor
 
 private let updatingAvatarOverlayImage = generateFilledCircleImage(diameter: 66.0, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
 
@@ -114,7 +115,7 @@ public final class ItemListAvatarAndNameInfoItemContext {
     }
 }
 
-public enum ItemListAvatarAndNameInfoItemStyle {
+public enum ItemListAvatarAndNameInfoItemStyle: Equatable {
     case plain
     case blocks(withTopInset: Bool, withExtendedBottomInset: Bool)
 }
@@ -131,7 +132,7 @@ public enum ItemListAvatarAndNameInfoItemMode {
     case editSettings
 }
 
-public class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
+public class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     public enum ItemContext {
         case accountContext(AccountContext)
         case other(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network)
@@ -235,6 +236,53 @@ public class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     public func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
         self.action?()
+    }
+    
+    public func item() -> ListViewItem {
+        return self
+    }
+    
+    public static func ==(lhs: ItemListAvatarAndNameInfoItem, rhs: ItemListAvatarAndNameInfoItem) -> Bool {
+        if lhs.presentationData !== rhs.presentationData {
+            return false
+        }
+        if lhs.systemStyle != rhs.systemStyle {
+            return false
+        }
+        if lhs.dateTimeFormat != rhs.dateTimeFormat {
+            return false
+        }
+        if lhs.mode != rhs.mode {
+            return false
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.presence != rhs.presence {
+            return false
+        }
+        if lhs.label != rhs.label {
+            return false
+        }
+        if lhs.memberCount != rhs.memberCount {
+            return false
+        }
+        if lhs.state != rhs.state {
+            return false
+        }
+        if lhs.sectionId != rhs.sectionId {
+            return false
+        }
+        if lhs.style != rhs.style {
+            return false
+        }
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.updatingImage != rhs.updatingImage {
+            return false
+        }
+        return true
     }
 }
 

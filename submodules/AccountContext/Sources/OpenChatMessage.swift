@@ -40,7 +40,7 @@ public final class OpenChatMessageParams {
     public let callPeer: (PeerId, Bool) -> Void
     public let openConferenceCall: (Message) -> Void
     public let enqueueMessage: (EnqueueMessage) -> Void
-    public let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    public let sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     public let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
     public let setupTemporaryHiddenMedia: (Signal<Any?, NoError>, Int, Media) -> Void
     public let chatAvatarHiddenMedia: (Signal<MessageId?, NoError>, Media) -> Void
@@ -74,7 +74,7 @@ public final class OpenChatMessageParams {
         callPeer: @escaping (PeerId, Bool) -> Void,
         openConferenceCall: @escaping (Message) -> Void,
         enqueueMessage: @escaping (EnqueueMessage) -> Void,
-        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+        sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
         setupTemporaryHiddenMedia: @escaping (Signal<Any?, NoError>, Int, Media) -> Void,
         chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void,

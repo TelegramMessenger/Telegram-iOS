@@ -1774,11 +1774,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_CopyProtection_Disabled(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     }
                 }
-            case let .copyProtectionRequest(hasExpired, previousValue, newValue):
-                let _ = hasExpired
-                let _ = previousValue
-                let _ = newValue
-                attributedString = nil
+            case .copyProtectionRequest:
+                //TODO:localize
+                let peerName = message.peers[message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                if message.author?.id == accountPeerId {
+                    attributedString = NSAttributedString(string: "You suggested enabling sharing in this chat", font: titleFont, textColor: primaryTextColor)
+                } else {
+                    attributedString = NSAttributedString(string: "\(peerName) would like to enable sharing in this chat", font: titleFont, textColor: primaryTextColor)
+                }
             case .unknown:
                 attributedString = nil
             }

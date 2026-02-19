@@ -534,6 +534,9 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
         return strings.Channel_BanUser_PermissionSendVoiceMessage
     } else if right.contains(.banSendInstantVideos) {
         return strings.Channel_BanUser_PermissionSendVideoMessage
+    } else if right.contains(.banEditRank) {
+        //TODO:localize
+        return "Edit Own Tags"
     } else {
         return ""
     }
@@ -570,6 +573,9 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
         return strings.GroupPermission_NoPinMessages
     } else if right.contains(.banManageTopics) {
         return strings.GroupPermission_NoManageTopics
+    } else if right.contains(.banEditRank) {
+        //TODO:localize
+        return "no tag"
     } else {
         return ""
     }
@@ -590,7 +596,8 @@ private let internal_allPossibleGroupPermissionList: [(TelegramChatBannedRightsF
     (.banAddMembers, .banMembers),
     (.banPinMessages, .pinMessages),
     (.banManageTopics, .manageTopics),
-    (.banChangeInfo, .changeInfo)
+    (.banChangeInfo, .changeInfo),
+    (.banEditRank, .editRank)
 ]
 
 public func allGroupPermissionList(peer: EnginePeer, expandMedia: Bool) -> [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] {
@@ -610,6 +617,7 @@ public func allGroupPermissionList(peer: EnginePeer, expandMedia: Bool) -> [(Tel
             (.banSendMedia, .banMembers),
             (.banAddMembers, .banMembers),
             (.banPinMessages, .pinMessages),
+            (.banEditRank, .editRank),
             (.banChangeInfo, .changeInfo)
         ]
     }

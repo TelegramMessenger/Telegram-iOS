@@ -1168,6 +1168,7 @@ private final class CraftGiftPageContent: Component {
                                 gift: selectedMainGift,
                                 genericGift: genericGift,
                                 selectedGiftIds: Set(component.selectedGiftIds.values),
+                                selectingMainGift: index == 0,
                                 starsTopUpOptions: component.starsTopUpOptionsPromise.get(),
                                 selectGift: { [weak self] item in
                                     guard let self, let component = self.component else {
@@ -1580,6 +1581,7 @@ private final class SheetContainerComponent: CombinedComponent {
                         gift: component.gift,
                         genericGift: genericGift,
                         selectedGiftIds: Set(),
+                        selectingMainGift: true,
                         starsTopUpOptions: starsTopUpOptionsPromise.get(),
                         selectGift: { [weak navigationController] item in
                             if let navigationController{

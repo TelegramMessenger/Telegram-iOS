@@ -74,6 +74,7 @@ public final class BrowserBookmarksScreen: ViewController {
                 return false
             }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
                 return false
+            }, editGif: { _, _ in
             }, requestMessageActionCallback: { _, _, _, _, _ in
             }, requestMessageActionUrlAuth: { _, _ in
             }, activateSwitchInline: { _, _, _ in
@@ -184,7 +185,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, requestToggleTodoMessageItem: { _, _, _ in
             }, displayTodoToggleUnavailable: { _ in
             }, openStarsPurchase: { _ in
-            }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
+            }, openRankInfo: { _, _, _ in }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
             
             
             let tagMask: MessageTags = .webPage

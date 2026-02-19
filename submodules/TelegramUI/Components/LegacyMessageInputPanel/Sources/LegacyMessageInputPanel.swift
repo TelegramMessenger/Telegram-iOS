@@ -22,6 +22,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private let chatLocation: ChatLocation
     private let isScheduledMessages: Bool
     private let isFile: Bool
+    private let hasTimer: Bool
     private let present: (ViewController) -> Void
     private let presentInGlobalOverlay:  (ViewController) -> Void
     private let makeEntityInputView: () -> LegacyMessageInputPanelInputView?
@@ -57,6 +58,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         chatLocation: ChatLocation,
         isScheduledMessages: Bool,
         isFile: Bool,
+        hasTimer: Bool,
         present: @escaping (ViewController) -> Void,
         presentInGlobalOverlay: @escaping (ViewController) -> Void,
         makeEntityInputView: @escaping () -> LegacyMessageInputPanelInputView?
@@ -65,6 +67,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         self.chatLocation = chatLocation
         self.isScheduledMessages = isScheduledMessages
         self.isFile = isFile
+        self.hasTimer = hasTimer
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
         self.makeEntityInputView = makeEntityInputView
@@ -198,7 +201,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             self.scheduledMessageInput = nil
         }
         
-        var hasTimer = self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser && !self.isScheduledMessages
+        var hasTimer = self.hasTimer && self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser && !self.isScheduledMessages
         if self.chatLocation.peerId?.isRepliesOrSavedMessages(accountPeerId: self.context.account.peerId) == true {
             hasTimer = false
         }

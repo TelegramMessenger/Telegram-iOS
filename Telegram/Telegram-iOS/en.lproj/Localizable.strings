@@ -15813,3 +15813,5 @@ Error: %8$@";
 "Notification.CopyProtection.Disabled" = "%1$@ enabled sharing in this chat";
 "Notification.CopyProtection.DisabledYou" = "You enabled sharing in this chat";
 "Notification.CopyProtection.StillEnabled" = "Sharing in this chat is still disabled";
+
+"Gallery.CreateSticker" = "Create Sticker";

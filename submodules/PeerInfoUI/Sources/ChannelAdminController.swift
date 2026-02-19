@@ -281,23 +281,44 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
+            case .rankTitle:
+                switch rhs {
+                    case .info, .rankTitle:
+                        return false
+                    default:
+                        return true
+                }
+            case .rank:
+                switch rhs {
+                    case .info, .rankTitle, .rank:
+                        return false
+                    default:
+                        return true
+                }
+            case .rankInfo:
+                switch rhs {
+                    case .info, .rankTitle, .rank, .rankInfo:
+                        return false
+                    default:
+                        return true
+                }
             case .adminRights:
                 switch rhs {
-                case .info, .adminRights:
+                case .info, .rankTitle, .rank, .rankInfo, .adminRights:
                         return false
                     default:
                         return true
                 }
             case .rightsTitle:
                 switch rhs {
-                    case .info, .adminRights, .rightsTitle:
+                    case .info, .rankTitle, .rank, .rankInfo, .adminRights, .rightsTitle:
                         return false
                     default:
                         return true
                 }
             case let .rightItem(_, lhsIndex, _, _, _, _, _, _, _):
                 switch rhs {
-                    case .info, .adminRights, .rightsTitle:
+                    case .info, .rankTitle, .rank, .rankInfo, .adminRights, .rightsTitle:
                         return false
                     case let .rightItem(_, rhsIndex, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -306,35 +327,14 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }
             case .addAdminsInfo:
                 switch rhs {
-                    case .info, .adminRights, .rightsTitle, .rightItem, .addAdminsInfo:
+                    case .info, .rankTitle, .rank, .rankInfo, .adminRights, .rightsTitle, .rightItem, .addAdminsInfo:
                         return false
                     default:
                         return true
                 }
             case .transfer:
                 switch rhs {
-                    case .info, .adminRights, .rightsTitle, .rightItem, .addAdminsInfo, .transfer:
-                        return false
-                    default:
-                        return true
-                }
-            case .rankTitle:
-                switch rhs {
-                    case .info, .adminRights, .rightsTitle, .rightItem, .addAdminsInfo, .transfer, .rankTitle:
-                        return false
-                    default:
-                        return true
-                }
-            case .rank:
-                switch rhs {
-                    case .info, .adminRights, .rightsTitle, .rightItem, .addAdminsInfo, .transfer, .rankTitle, .rank:
-                        return false
-                    default:
-                        return true
-                }
-            case .rankInfo:
-                switch rhs {
-                    case .info, .adminRights, .rightsTitle, .rightItem, .addAdminsInfo, .transfer, .rankTitle, .rank, .rankInfo:
+                    case .info, .rankTitle, .rank, .rankInfo, .adminRights, .rightsTitle, .rightItem, .addAdminsInfo, .transfer:
                         return false
                     default:
                         return true
@@ -665,6 +665,25 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 }
         }
         
+        if isGroup, !invite {
+            let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
+            
+            let currentRank: String?
+            if let updatedRank = state.updatedRank {
+                currentRank = updatedRank
+            } else if let initialParticipant = initialParticipant {
+                currentRank = initialParticipant.rank
+            } else {
+                currentRank = nil
+            }
+            
+            let rankEnabled = !state.updating && canEdit
+            //TODO:localize
+            entries.append(.rankTitle(presentationData.theme, "Member Tag".uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
+            entries.append(.rank(presentationData.theme, presentationData.strings, placeholder, currentRank ?? "", rankEnabled))
+            entries.append(.rankInfo(presentationData.theme, "Add short tag next to \(admin.compactDisplayTitle)'s name.", invite))
+        }
+        
         if isCreator {
             if isGroup {
                 entries.append(.rightsTitle(presentationData.theme, presentationData.strings.Channel_EditAdmin_PermissionsHeader))
@@ -888,24 +907,6 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             if canTransfer {
                 entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
             }
-            
-            if case .group = channel.info {
-                let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
-                
-                let currentRank: String?
-                if let updatedRank = state.updatedRank {
-                    currentRank = updatedRank
-                } else if let initialParticipant = initialParticipant {
-                    currentRank = initialParticipant.rank
-                } else {
-                    currentRank = nil
-                }
-                
-                let rankEnabled = !state.updating && canEdit
-                entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
-                entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
-                entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
-            }
         }
         
         if canDismiss {
@@ -928,9 +929,16 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
         
         let rankEnabled = !state.updating && canEdit
         
+        if !invite {
+            //TODO:localize
+            let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
+            entries.append(.rankTitle(presentationData.theme, "Member Tag".uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
+            entries.append(.rank(presentationData.theme, presentationData.strings, placeholder, currentRank ?? "", rankEnabled))
+            entries.append(.rankInfo(presentationData.theme, "Add short tag next to \(admin.compactDisplayTitle)'s name.", invite))
+        }
+        
         if isCreator {
-            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
-            entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
+            
         } else {
             if case let .user(adminPeer) = adminPeer, adminPeer.botInfo != nil, invite {
                 if let initialParticipant = initialParticipant, case let .member(_, _, adminRights, _, _, _) = initialParticipant, adminRights != nil {
@@ -987,11 +995,6 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 if case let .user(admin) = admin, case .creator = group.role, admin.botInfo == nil && !admin.isDeleted && areAllAdminRightsEnabled(currentRightsFlags, peer: .legacyGroup(group), except: .canBeAnonymous) {
                     entries.append(.transfer(presentationData.theme, presentationData.strings.Group_EditAdmin_TransferOwnership))
                 }
-                
-                let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
-                entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
-                entries.append(.rank(presentationData.theme, presentationData.strings, placeholder, currentRank ?? "", rankEnabled))
-                entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
             }
             
             if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _, _) = initialParticipant, admin.id != accountPeerId, let adminInfo {

@@ -1,0 +1,239 @@
+import Foundation
+import UIKit
+import AsyncDisplayKit
+import Display
+import ComponentFlow
+import SwiftSignalKit
+import Postbox
+import TelegramCore
+import TelegramPresentationData
+import TelegramUIPreferences
+import AccountContext
+import AppBundle
+import AvatarNode
+import GiftItemComponent
+import TabSelectorComponent
+import BundleIconComponent
+import MultilineTextComponent
+import TelegramStringFormatting
+import TooltipUI
+import AlertComponent
+import AlertTransferHeaderComponent
+import AvatarComponent
+import AlertTableComponent
+import TableComponent
+import StarsAvatarComponent
+
+public func giftSaleAlertController(
+    context: AccountContext,
+    gift: StarGift.UniqueGift,
+    resellAmount: CurrencyAmount,
+    commit: @escaping () -> Void,
+    dismissed: @escaping () -> Void
+) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let strings = presentationData.strings
+    
+    var showAttributeInfoImpl: ((Any, String) -> Void)?
+    
+    var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+    content.append(AnyComponentWithIdentity(
+        id: "header",
+        component: AnyComponent(
+            AlertTransferHeaderComponent(
+                fromComponent: AnyComponentWithIdentity(id: "gift", component: AnyComponent(
+                    GiftItemComponent(
+                        context: context,
+                        theme: presentationData.theme,
+                        strings: strings,
+                        peer: nil,
+                        subject: .uniqueGift(gift: gift, price: nil),
+                        mode: .thumbnail
+                    )
+                )),
+                toComponent: AnyComponentWithIdentity(id: "avatar", component: AnyComponent(
+                    ZStack([
+                        AnyComponentWithIdentity(id: "background", component: AnyComponent(
+                            RoundedRectangle(colors: [
+                                UIColor(rgb: 0x72d5fd),
+                                UIColor(rgb: 0x2a9ef1)
+                            ], cornerRadius: 30.0, gradientDirection: .vertical, size: CGSize(width: 60.0, height: 60.0))
+                        )),
+                        AnyComponentWithIdentity(id: "icon", component: AnyComponent(
+                            BundleIconComponent(name: "Premium/Stars/GiftStore", tintColor: .white)
+                        ))
+                    ])
+                )),
+                type: .transfer
+            )
+        )
+    ))
+    
+    content.append(AnyComponentWithIdentity(
+        id: "title",
+        component: AnyComponent(
+            AlertTitleComponent(title: strings.Gift_Sell_Confirm_Title)
+        )
+    ))
+    
+    let giftTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))"
+    var priceString = ""
+    switch resellAmount.currency {
+    case .stars:
+        priceString = strings.Gift_Buy_Confirm_Text_Stars(Int32(clamping: resellAmount.amount.value))
+    case .ton:
+        priceString = "**\(formatTonAmountText(resellAmount.amount.value, dateTimeFormat: presentationData.dateTimeFormat)) TON**"
+    }
+    
+    //TODO:localize
+    let text = strings.Gift_Sell_Confirm_Text(giftTitle, priceString).string
+    content.append(AnyComponentWithIdentity(
+        id: "text",
+        component: AnyComponent(
+            AlertTextComponent(content: .plain(text))
+        )
+    ))
+    
+    let tableFont = Font.regular(15.0)
+    let tableTextColor = presentationData.theme.list.itemPrimaryTextColor
+    
+    let modelButtonTag = GenericComponentViewTag()
+    let backdropButtonTag = GenericComponentViewTag()
+    let symbolButtonTag = GenericComponentViewTag()
+    
+    var tableItems: [TableComponent.Item] = []
+    let order: [StarGift.UniqueGift.Attribute.AttributeType] = [
+        .model, .pattern, .backdrop, .originalInfo
+    ]
+    
+    var attributeMap: [StarGift.UniqueGift.Attribute.AttributeType: StarGift.UniqueGift.Attribute] = [:]
+    for attribute in gift.attributes {
+        attributeMap[attribute.attributeType] = attribute
+    }
+    
+    for type in order {
+        if let attribute = attributeMap[type] {
+            let id: String?
+            let title: String?
+            let value: NSAttributedString
+            let percentage: Float?
+            let tag: AnyObject?
+            
+            switch attribute {
+            case let .model(name, _, rarity, _):
+                id = "model"
+                title = strings.Gift_Unique_Model
+                value = NSAttributedString(string: name, font: tableFont, textColor: tableTextColor)
+                percentage = Float(rarity.permilleValue) * 0.1
+                tag = modelButtonTag
+            case let .backdrop(name, _, _, _, _, _, rarity):
+                id = "backdrop"
+                title = strings.Gift_Unique_Backdrop
+                value = NSAttributedString(string: name, font: tableFont, textColor: tableTextColor)
+                percentage = Float(rarity.permilleValue) * 0.1
+                tag = backdropButtonTag
+            case let .pattern(name, _, rarity):
+                id = "pattern"
+                title = strings.Gift_Unique_Symbol
+                value = NSAttributedString(string: name, font: tableFont, textColor: tableTextColor)
+                percentage = Float(rarity.permilleValue) * 0.1
+                tag = symbolButtonTag
+            case .originalInfo:
+                continue
+            }
+            
+            var items: [AnyComponentWithIdentity<Empty>] = []
+            items.append(
+                AnyComponentWithIdentity(
+                    id: AnyHashable(0),
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(value))
+                    )
+                )
+            )
+            if let percentage, let tag {
+                items.append(AnyComponentWithIdentity(
+                    id: AnyHashable(1),
+                    component: AnyComponent(Button(
+                        content: AnyComponent(ButtonContentComponent(
+                            context: context,
+                            text: formatPercentage(percentage),
+                            color: presentationData.theme.list.itemAccentColor
+                        )),
+                        action: {
+                            showAttributeInfoImpl?(tag, strings.Gift_Unique_AttributeDescription(formatPercentage(percentage)).string)
+                        }
+                    ).tagged(tag))
+                ))
+            }
+            let itemComponent = AnyComponent(
+                HStack(items, spacing: 4.0)
+            )
+            
+            tableItems.append(.init(
+                id: id,
+                title: title,
+                hasBackground: false,
+                component: itemComponent
+            ))
+        }
+    }
+    content.append(AnyComponentWithIdentity(
+        id: "table",
+        component: AnyComponent(
+            AlertTableComponent(items: tableItems)
+        )
+    ))
+        
+    var actions: [AlertScreen.Action] = []
+    var listString = ""
+    switch resellAmount.currency {
+    case .stars:
+        listString = strings.Gift_Sell_Confirm_ListFor(Int32(resellAmount.amount.value))
+    case .ton:
+        listString = strings.Gift_Sell_Confirm_ListForTon(formatTonAmountText(resellAmount.amount.value, dateTimeFormat: presentationData.dateTimeFormat)).string
+    }
+    actions.append(.init(id: "list", title: listString, type: .default, action: {
+        commit()
+    }))
+    actions.append(.init(title: strings.Common_Cancel))
+    
+    let alertController = AlertScreen(
+        context: context,
+        configuration: AlertScreen.Configuration(actionAlignment: .vertical),
+        content: content,
+        actions: actions
+    )
+    
+    var dismissAllTooltipsImpl: (() -> Void)?
+    showAttributeInfoImpl = { [weak alertController] tag, text in
+        dismissAllTooltipsImpl?()
+        guard let alertController, let sourceView = alertController.node.hostView.findTaggedView(tag: tag), let absoluteLocation = sourceView.superview?.convert(sourceView.center, to: alertController.view) else {
+            return
+        }
+        
+        let location = CGRect(origin: CGPoint(x: absoluteLocation.x, y: absoluteLocation.y - 12.0), size: CGSize())
+        let tooltipController = TooltipScreen(account: context.account, sharedContext: context.sharedContext, text: .plain(text: text), style: .wide, location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+            return .dismiss(consume: false)
+        })
+        alertController.present(tooltipController, in: .current)
+    }
+    dismissAllTooltipsImpl = { [weak alertController] in
+        guard let alertController else {
+            return
+        }
+        alertController.window?.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss(inPlace: false)
+            }
+        })
+        alertController.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss(inPlace: false)
+            }
+            return true
+        })
+    }
+    
+    return alertController
+}

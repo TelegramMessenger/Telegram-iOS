@@ -58,7 +58,7 @@ private final class SheetContent: CombinedComponent {
     static var body: Body {
         let closeButton = Child(GlassBarButtonComponent.self)
         let title = Child(Text.self)
-        let amountSection = Child(ListSectionComponent.self)
+        let previewSection = Child(ListSectionComponent.self)
         let button = Child(ButtonComponent.self)
         
         return { context in
@@ -117,7 +117,7 @@ private final class SheetContent: CombinedComponent {
             })
 
             let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.WebApp_ShareMessage_Info(component.botName).string, attributes: amountMarkdownAttributes, textAlignment: .natural))
-            let amountFooter = AnyComponent(MultilineTextComponent(
+            let previewFooter = AnyComponent(MultilineTextComponent(
                 text: .plain(amountInfoString),
                 maximumNumberOfLines: 0,
                 highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.1),
@@ -210,7 +210,7 @@ private final class SheetContent: CombinedComponent {
                      
             let listItemParams = ListViewItemLayoutParams(width: context.availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             
-            let amountSection = amountSection.update(
+            let previewSection = previewSection.update(
                 component: ListSectionComponent(
                     theme: theme,
                     header: AnyComponent(MultilineTextComponent(
@@ -221,7 +221,7 @@ private final class SheetContent: CombinedComponent {
                         )),
                         maximumNumberOfLines: 0
                     )),
-                    footer: amountFooter,
+                    footer: previewFooter,
                     items: [
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
                             itemGenerator: PeerNameColorChatPreviewItem(
@@ -245,12 +245,12 @@ private final class SheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
                 transition: context.transition
             )
-            context.add(amountSection
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + amountSection.size.height / 2.0))
+            context.add(previewSection
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + previewSection.size.height / 2.0))
                 .clipsToBounds(true)
                 .cornerRadius(10.0)
             )
-            contentSize.height += amountSection.size.height
+            contentSize.height += previewSection.size.height
             contentSize.height += 32.0
             
             let buttonString: String = environment.strings.WebApp_ShareMessage_Share
@@ -281,8 +281,6 @@ private final class SheetContent: CombinedComponent {
                 transition: .immediate
             )
             context.add(button
-                .clipsToBounds(true)
-                .cornerRadius(10.0)
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
             )
             contentSize.height += button.size.height

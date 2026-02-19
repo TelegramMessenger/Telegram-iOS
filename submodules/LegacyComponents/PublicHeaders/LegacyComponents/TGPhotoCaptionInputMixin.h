@@ -29,6 +29,7 @@
 @property (nonatomic, readonly) bool editing;
 
 - (void)createInputPanelIfNeeded;
+- (void)activateInput;
 - (void)beginEditing;
 - (void)finishEditing;
 - (void)enableDismissal;

@@ -411,6 +411,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedAutoremoveTimeout(contentData.state.autoremoveTimeout)
             presentationInterfaceState = presentationInterfaceState.updatedCurrentSendAsPeerId(contentData.state.currentSendAsPeerId)
             presentationInterfaceState = presentationInterfaceState.updatedCopyProtectionEnabled(contentData.state.copyProtectionEnabled)
+            presentationInterfaceState = presentationInterfaceState.updatedMyCopyProtectionEnabled(contentData.state.myCopyProtectionEnabled)
             presentationInterfaceState = presentationInterfaceState.updatedHasSearchTags(contentData.state.hasSearchTags)
             presentationInterfaceState = presentationInterfaceState.updatedIsPremiumRequiredForMessaging(contentData.state.isPremiumRequiredForMessaging)
             presentationInterfaceState = presentationInterfaceState.updatedSendPaidMessageStars(contentData.state.sendPaidMessageStars)
@@ -3016,6 +3017,10 @@ extension ChatControllerImpl {
                 return strongSelf.controllerInteraction?.sendSticker(file, false, false, nil, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets) ?? false
             } else {
                 return false
+            }
+        }, editSticker: { [weak self] file in
+            if let self {
+                self.openStickerEditing(file: file)
             }
         }, unblockPeer: { [weak self] in
             self?.unblockPeer()

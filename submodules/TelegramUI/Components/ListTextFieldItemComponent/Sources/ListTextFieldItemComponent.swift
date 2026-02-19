@@ -31,6 +31,7 @@ public final class ListTextFieldItemComponent: Component {
     public let initialText: String
     public let resetText: ResetText?
     public let placeholder: String
+    public let characterLimit: Int?
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
     public let returnKeyType: UIReturnKeyType
@@ -45,6 +46,7 @@ public final class ListTextFieldItemComponent: Component {
         initialText: String,
         resetText: ResetText? = nil,
         placeholder: String,
+        characterLimit: Int? = nil,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
         returnKeyType: UIReturnKeyType = .default,
@@ -58,6 +60,7 @@ public final class ListTextFieldItemComponent: Component {
         self.initialText = initialText
         self.resetText = resetText
         self.placeholder = placeholder
+        self.characterLimit = characterLimit
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
         self.returnKeyType = returnKeyType
@@ -81,6 +84,9 @@ public final class ListTextFieldItemComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.characterLimit != rhs.characterLimit {
             return false
         }
         if lhs.autocapitalizationType != rhs.autocapitalizationType {
@@ -174,6 +180,10 @@ public final class ListTextFieldItemComponent: Component {
         
         public func activateInput() {
             self.textField.becomeFirstResponder()
+        }
+        
+        public func selectAll() {
+            self.textField.selectAll(nil)
         }
         
         public func textFieldDidBeginEditing(_ textField: UITextField) {

@@ -110,6 +110,7 @@ extension ChatControllerImpl {
             var autoremoveTimeout: Int32?
             var currentSendAsPeerId: EnginePeer.Id?
             var copyProtectionEnabled: Bool = false
+            var myCopyProtectionEnabled: Bool = false
             var sendPaidMessageStars: StarsAmount?
             var alwaysShowGiftButton: Bool = false
             var disallowedGifts: TelegramDisallowedGifts?
@@ -894,6 +895,7 @@ extension ChatControllerImpl {
                     var currentSendAsPeerId: PeerId?
                     var autoremoveTimeout: Int32?
                     var copyProtectionEnabled: Bool = false
+                    var myCopyProtectionEnabled: Bool = false
                     var hasBirthdayToday = false
                     var peerVerification: PeerVerification?
                     if let peer = peerView.peers[peerView.peerId] {
@@ -905,7 +907,8 @@ extension ChatControllerImpl {
                             }
                         }
                         if let cachedUserData = peerView.cachedData as? CachedUserData {
-                            copyProtectionEnabled = cachedUserData.flags.contains(.copyProtectionEnabled)
+                            copyProtectionEnabled = cachedUserData.flags.contains(.copyProtectionEnabled) || cachedUserData.flags.contains(.myCopyProtectionEnabled)
+                            myCopyProtectionEnabled = cachedUserData.flags.contains(.myCopyProtectionEnabled)
                         } else {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                         }
@@ -1023,6 +1026,7 @@ extension ChatControllerImpl {
                     strongSelf.state.autoremoveTimeout = autoremoveTimeout
                     strongSelf.state.currentSendAsPeerId = currentSendAsPeerId
                     strongSelf.state.copyProtectionEnabled = copyProtectionEnabled
+                    strongSelf.state.myCopyProtectionEnabled = myCopyProtectionEnabled
                     strongSelf.state.hasSearchTags = hasSearchTags
                     strongSelf.state.isPremiumRequiredForMessaging = isPremiumRequiredForMessaging
                     strongSelf.state.sendPaidMessageStars = sendPaidMessageStars

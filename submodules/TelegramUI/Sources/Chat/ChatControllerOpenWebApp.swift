@@ -652,6 +652,8 @@ public extension ChatControllerImpl {
                 },
                 context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotAppSettings(id: botPeer.id))
             ).startStandalone(next: { [weak parentController, weak chatController] noticed, attachMenuBots, attachMenuBot, appSettings in
+                chatController?.chatDisplayNode.dismissInput()
+                
                 var isAttachMenuBotInstalled: Bool?
                 if let _ = attachMenuBot {
                     if let _ = attachMenuBots.first(where: { $0.peer.id == botPeer.id && !$0.flags.contains(.notActivated) }) {

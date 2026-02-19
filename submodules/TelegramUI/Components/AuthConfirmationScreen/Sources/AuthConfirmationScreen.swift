@@ -29,13 +29,13 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
     
     let context: AccountContext
     let subject: MessageActionUrlAuthResult
-    let completion: (AccountContext, EnginePeer, Bool, Bool) -> Void
+    let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
     let cancel: (Bool) -> Void
     
     init(
         context: AccountContext,
         subject: MessageActionUrlAuthResult,
-        completion: @escaping (AccountContext, EnginePeer, Bool, Bool) -> Void,
+        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void,
         cancel: @escaping  (Bool) -> Void
     ) {
         self.context = context
@@ -468,7 +468,16 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         id: AnyHashable(0),
                         component: AnyComponent(MultilineTextComponent(text: .plain(NSMutableAttributedString(string: strings.AuthConfirmation_Cancel, font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center))))
                     ),
-                    action: {
+                    action: { [weak state] in
+                        guard let state else {
+                            return
+                        }
+                        let accountContext = state.forcedAccount?.0 ?? component.context
+                        guard let accountPeer = state.forcedAccount?.1 ?? state.peer else {
+                            return
+                        }
+                        
+                        component.completion(accountContext, accountPeer, .decline)
                         component.cancel(true)
                     }
                 ),
@@ -509,12 +518,12 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         
                         if flags.contains(.requestPhoneNumber) {
                             state.displayPhoneNumberConfirmation(commit: { sharePhoneNumber in
-                                component.completion(accountContext, accountPeer, allowWrite, sharePhoneNumber)
+                                component.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: sharePhoneNumber))
                                 state.inProgress = true
                                 state.updated()
                             })
                         } else {
-                            component.completion(accountContext, accountPeer, allowWrite, false)
+                            component.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: false))
                             state.inProgress = true
                             state.updated()
                         }
@@ -539,12 +548,12 @@ private final class AuthConfirmationSheetComponent: CombinedComponent {
     
     let context: AccountContext
     let subject: MessageActionUrlAuthResult
-    let completion: (AccountContext, EnginePeer, Bool, Bool) -> Void
+    let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
     
     init(
         context: AccountContext,
         subject: MessageActionUrlAuthResult,
-        completion: @escaping (AccountContext, EnginePeer, Bool, Bool) -> Void
+        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -628,14 +637,19 @@ private final class AuthConfirmationSheetComponent: CombinedComponent {
 }
 
 public class AuthConfirmationScreen: ViewControllerComponentContainer {
+    public enum Result {
+        case accept(allowWriteAccess: Bool, sharePhoneNumber: Bool)
+        case decline
+    }
+    
     private let context: AccountContext
     private let subject: MessageActionUrlAuthResult
-    fileprivate let completion: (AccountContext, EnginePeer, Bool, Bool) -> Void
+    fileprivate let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
     
     public init(
         context: AccountContext,
         subject: MessageActionUrlAuthResult,
-        completion: @escaping (AccountContext, EnginePeer, Bool, Bool) -> Void
+        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
     ) {
         self.context = context
         self.subject = subject

@@ -373,6 +373,8 @@ extension ChatControllerImpl {
                     }, presentFiles: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
                         self?.presentICloudFileGallery()
+                    }, presentDocumentScanner: { [weak self] in
+                        self?.presentDocumentScanner()
                     }, send: { [weak self] mediaReference in
                         guard let self else {
                             return
@@ -1813,12 +1815,12 @@ extension ChatControllerImpl {
         }))
     }
     
-    func getCaptionPanelView(isFile: Bool) -> TGCaptionPanelView? {
+    func getCaptionPanelView(isFile: Bool, hasTimer: Bool = true) -> TGCaptionPanelView? {
         var isScheduledMessages = false
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
         }
-        return self.context.sharedContext.makeGalleryCaptionPanelView(context: self.context, chatLocation: self.presentationInterfaceState.chatLocation, isScheduledMessages: isScheduledMessages, isFile: isFile, customEmojiAvailable: self.presentationInterfaceState.customEmojiAvailable, present: { [weak self] c in
+        return self.context.sharedContext.makeGalleryCaptionPanelView(context: self.context, chatLocation: self.presentationInterfaceState.chatLocation, isScheduledMessages: isScheduledMessages, isFile: isFile, hasTimer: hasTimer, customEmojiAvailable: self.presentationInterfaceState.customEmojiAvailable, present: { [weak self] c in
             self?.present(c, in: .window(.root))
         }, presentInGlobalOverlay: { [weak self] c in
             guard let self else {

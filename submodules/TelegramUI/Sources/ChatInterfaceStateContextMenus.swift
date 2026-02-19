@@ -1800,6 +1800,22 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        var editStickerFile: TelegramMediaFile?
+        for media in messages[0].media {
+            if let file = media as? TelegramMediaFile, file.isSticker && !file.isPremiumSticker {
+                editStickerFile = file
+                break
+            }
+        }
+        if let editStickerFile {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Stickers_EditSticker, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                interfaceInteraction.editSticker(editStickerFile)
+            })))
+        }
+        
         if data.messageActions.options.contains(.viewStickerPack) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.StickerPack_ViewPack, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
@@ -2284,10 +2300,11 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         TelegramEngine.EngineData.Item.Configuration.Limits(),
         EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
         EngineDataMap(Set(messageIds).map(TelegramEngine.EngineData.Item.Messages.Message.init)),
+        EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.CopyProtectionEnabled.init)),
         TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId)
     )
     |> take(keepUpdated ? Int.max : 1)
-    |> map { limitsConfiguration, peerMap, messageMap, accountPeer -> ChatAvailableMessageActions in
+    |> map { limitsConfiguration, peerMap, messageMap, copyProtectionMap, accountPeer -> ChatAvailableMessageActions in
         let isPremium: Bool
         if let accountPeer {
             isPremium = accountPeer.isPremium
@@ -2328,6 +2345,13 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
             }
         }
         
+        func isPeerCopyProtected(_ peerId: PeerId) -> Bool? {
+            if let copyProtection = copyProtectionMap[peerId] {
+                return copyProtection
+            } else {
+                return nil
+            }
+        }
         
         for id in messageIds {
             let isScheduled = id.namespace == Namespaces.Message.ScheduledCloud
@@ -2357,6 +2381,11 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                 if message.isCopyProtected() || message.containsSecretMedia {
                     isCopyProtected = true
                 }
+                
+                if isPeerCopyProtected(message.id.peerId) == true {
+                    isCopyProtected = true
+                }
+                
                 for media in message.media {
                     if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
                         isShareProtected = true

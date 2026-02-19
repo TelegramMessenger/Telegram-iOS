@@ -535,6 +535,10 @@
     
 }
 
+- (void)beginEditingCaption {
+    [_captionMixin activateInput];
+}
+
 - (void)setHasCaptions:(bool)hasCaptions
 {
     _hasCaptions = hasCaptions;
@@ -1504,6 +1508,18 @@
     }
 }
 
+- (void)setupGifEditing {
+    if (![_currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
+        return;
+    
+    TGModernGalleryItemView *currentItemView = _currentItemView;
+    bool sendableAsGif = [currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
+    if (sendableAsGif)
+        [(TGMediaPickerGalleryVideoItemView *)currentItemView toggleSendAsGif:false];
+    
+    [_muteButton removeFromSuperview];
+}
+
 - (void)toggleSendAsGif
 {
     if (![_currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
@@ -1512,7 +1528,7 @@
     TGModernGalleryItemView *currentItemView = _currentItemView;
     bool sendableAsGif = [currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]];
     if (sendableAsGif)
-        [(TGMediaPickerGalleryVideoItemView *)currentItemView toggleSendAsGif];
+        [(TGMediaPickerGalleryVideoItemView *)currentItemView toggleSendAsGif:true];
 }
 
 - (void)toggleGrouping

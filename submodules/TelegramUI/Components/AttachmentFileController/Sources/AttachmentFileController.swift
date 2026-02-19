@@ -25,14 +25,16 @@ private final class AttachmentFileControllerArguments {
     let isAudio: Bool
     let openGallery: () -> Void
     let openFiles: () -> Void
+    let scanDocument: () -> Void
     let expandSavedMusic: () -> Void
     let send: (Message) -> Void
    
-    init(context: AccountContext, isAudio: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, send: @escaping (Message) -> Void) {
+    init(context: AccountContext, isAudio: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, scanDocument: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, send: @escaping (Message) -> Void) {
         self.context = context
         self.isAudio = isAudio
         self.openGallery = openGallery
         self.openFiles = openFiles
+        self.scanDocument = scanDocument
         self.expandSavedMusic = expandSavedMusic
         self.send = send
     }
@@ -60,6 +62,7 @@ private func areMessagesEqual(_ lhsMessage: Message?, _ rhsMessage: Message?) ->
 private enum AttachmentFileEntry: ItemListNodeEntry {
     case selectFromGallery(PresentationTheme, String)
     case selectFromFiles(PresentationTheme, String)
+    case scanDocument(PresentationTheme, String)
     
     case savedHeader(PresentationTheme, String)
     case savedFile(Int32, PresentationTheme, Message?)
@@ -70,7 +73,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
   
     var section: ItemListSectionId {
         switch self {
-            case .selectFromGallery, .selectFromFiles:
+            case .selectFromGallery, .selectFromFiles, .scanDocument:
                 return AttachmentFileSection.select.rawValue
             case .savedHeader, .savedFile, .showMore:
                 return AttachmentFileSection.savedMusic.rawValue
@@ -85,10 +88,12 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
                 return 0
             case .selectFromFiles:
                 return 1
-            case .savedHeader:
+            case .scanDocument:
                 return 2
+            case .savedHeader:
+                return 3
             case let .savedFile(index, _, _):
-                return 3 + index
+                return 4 + index
             case .showMore:
                 return 9999
             case .recentHeader:
@@ -108,6 +113,12 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
                 }
             case let .selectFromFiles(lhsTheme, lhsText):
                 if case let .selectFromFiles(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .scanDocument(lhsTheme, lhsText):
+                if case let .scanDocument(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -160,7 +171,10 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.cloudIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.openFiles()
                 })
-            
+            case let .scanDocument(_, text):
+                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.scanIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
+                    arguments.scanDocument()
+                })
             case let .savedHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .savedFile(_, _, message):
@@ -192,7 +206,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
     }
 }
 
-private func attachmentFileControllerEntries(presentationData: PresentationData, mode: AttachmentFileControllerMode, state: AttachmentFileControllerState, savedMusic: [Message]?, recentDocuments: [Message]?, empty: Bool) -> [AttachmentFileEntry] {
+private func attachmentFileControllerEntries(presentationData: PresentationData, mode: AttachmentFileControllerMode, state: AttachmentFileControllerState, savedMusic: [Message]?, recentDocuments: [Message]?, hasScan: Bool, empty: Bool) -> [AttachmentFileEntry] {
     guard !empty else {
         return []
     }
@@ -201,6 +215,9 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
         entries.append(.selectFromGallery(presentationData.theme, presentationData.strings.Attachment_SelectFromGallery))
     }
     entries.append(.selectFromFiles(presentationData.theme, presentationData.strings.Attachment_SelectFromFiles))
+    if hasScan {
+        entries.append(.scanDocument(presentationData.theme, "Scan Document"))
+    }
     
     let listTitle: String
     switch mode {
@@ -343,7 +360,16 @@ public enum AttachmentFileControllerMode {
     case audio
 }
 
-public func makeAttachmentFileControllerImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: AttachmentFileControllerMode = .recent, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController {
+public func makeAttachmentFileControllerImpl(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    mode: AttachmentFileControllerMode = .recent,
+    bannedSendMedia: (Int32, Bool)?,
+    presentGallery: @escaping () -> Void,
+    presentFiles: @escaping () -> Void,
+    presentDocumentScanner: (() -> Void)?,
+    send: @escaping (AnyMediaReference) -> Void
+) -> AttachmentFileController {
     let actionsDisposable = DisposableSet()
     
     let statePromise = ValuePromise(AttachmentFileControllerState(searching: false, savedMusicExpanded: false), ignoreRepeated: true)
@@ -351,7 +377,7 @@ public func makeAttachmentFileControllerImpl(context: AccountContext, updatedPre
     let updateState: ((AttachmentFileControllerState) -> AttachmentFileControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
-    
+        
     var updateTabBarVisibilityImpl: ((Bool) -> Void)?
     var expandImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
@@ -365,6 +391,10 @@ public func makeAttachmentFileControllerImpl(context: AccountContext, updatedPre
         },
         openFiles: {
             presentFiles()
+        },
+        scanDocument: {
+            presentDocumentScanner?()
+            dismissImpl?()
         },
         expandSavedMusic: {
             updateState { state in
@@ -429,9 +459,6 @@ public func makeAttachmentFileControllerImpl(context: AccountContext, updatedPre
                 let peerId = context.account.peerId
                 var messages: [Message] = []
                 let peers = SimpleDictionary<PeerId, Peer>()
-//                if let peer {
-//                    peers[peerId] = peer._asPeer()
-//                }
                 for file in state.files {
                     let stableId = UInt32(clamping: file.fileId.id % Int64(Int32.max))
                     messages.append(Message(stableId: stableId, stableVersion: 0, id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: Int32(stableId)), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [.music], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
@@ -591,7 +618,7 @@ public func makeAttachmentFileControllerImpl(context: AccountContext, updatedPre
             })
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: attachmentFileControllerEntries(presentationData: presentationData, mode: mode, state: state, savedMusic: savedMusic, recentDocuments: recentDocuments, empty: bannedSendMedia != nil), style: .blocks, emptyStateItem: emptyItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: attachmentFileControllerEntries(presentationData: presentationData, mode: mode, state: state, savedMusic: savedMusic, recentDocuments: recentDocuments, hasScan: presentDocumentScanner != nil, empty: bannedSendMedia != nil), style: .blocks, emptyStateItem: emptyItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -659,7 +686,7 @@ public func storyAudioPickerController(
         let filePickerController = makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: .audio, bannedSendMedia: nil, presentGallery: {}, presentFiles: {
             selectFromFiles()
             dismissImpl?()
-        }, send: { file in
+        }, presentDocumentScanner: nil, send: { file in
             completion(file)
             dismissImpl?()
         }) as! AttachmentFileControllerImpl

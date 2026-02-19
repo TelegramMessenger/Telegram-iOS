@@ -762,6 +762,36 @@ extension PeerInfoScreenNode {
                         })))
                     }
                     
+                    if let user = data.peer as? TelegramUser, let cachedData = data.cachedData as? CachedUserData, user.botInfo == nil && !user.flags.contains(.isSupport) && user.id != strongSelf.context.account.peerId {
+                        let copyProtectionEnabled = cachedData.flags.contains(.myCopyProtectionEnabled) || cachedData.flags.contains(.copyProtectionEnabled)
+                        //TODO:localize
+                        items.append(.action(ContextMenuActionItem(text: !copyProtectionEnabled ? "Disable Sharing" : "Enable Sharing", icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: !copyProtectionEnabled ? "Chat/Context Menu/ForwardDisable" : "Chat/Context Menu/ForwardEnable"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            guard let self, let peer = self.data?.peer, let navigationController = self.controller?.navigationController as? NavigationController else {
+                                return
+                            }
+                            
+                            if !copyProtectionEnabled {
+                                let infoController = self.context.sharedContext.makePeerCopyProtectionInfoScreen(context: self.context, completion: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = self.context.engine.peers.toggleMessageCopyProtection(peerId: user.id, enabled: true).start()
+                                    
+                                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: .default, peerNearbyData: nil, completion: { _ in }))
+                                })
+                                self.controller?.push(infoController)
+                            } else {
+                                let _ = self.context.engine.peers.toggleMessageCopyProtection(peerId: user.id, enabled: false).start()
+                                
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: .default, peerNearbyData: nil, completion: { _ in }))
+                            }
+                        })))
+                    }
+                    
                     let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: user, chatPeer: chatPeer, cachedData: strongSelf.data?.cachedData)
                     if clearPeerHistory.canClearForMyself != nil || clearPeerHistory.canClearForEveryone != nil {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in

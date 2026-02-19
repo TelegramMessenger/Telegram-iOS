@@ -279,10 +279,15 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
             case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, hasAction):
                 let peerText: String
                 var action: (() -> Void)?
+            
+                var labelString: String?
+                var labelColor: UIColor?
                 switch participant.participant {
-                    case .creator:
-                        peerText = strings.Channel_Management_LabelOwner
-                    case let .member(_, _, adminInfo, _, _, _):
+                    case let .creator(_, _, rank):
+                        peerText = ""
+                        labelString = rank ?? strings.Conversation_Owner
+                        labelColor = UIColor(rgb: 0x956ac8)
+                    case let .member(_, _, adminInfo, _, rank, _):
                         if let adminInfo = adminInfo {
                             if let peer = participant.peers[adminInfo.promotedBy] {
                                 if peer.id == participant.peer.id {
@@ -293,8 +298,11 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                             } else {
                                 peerText = ""
                             }
+                            labelString = rank ?? strings.Conversation_Admin
+                            labelColor = UIColor(rgb: 0x49a355)
                         } else {
                             peerText = ""
+                            labelString = rank
                         }
                 }
                 if hasAction {
@@ -302,7 +310,15 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         arguments.openAdmin(participant.participant)
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: nil, text: .text(peerText, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
+            
+                let label: ItemListPeerItemLabel
+                if let labelString {
+                    label = .text(labelString, .standard, labelColor ?? presentationData.theme.list.itemSecondaryTextColor, true)
+                } else {
+                    label = .none
+                }
+            
+                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: nil, text: .text(peerText, .secondary), label: label, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removeAdmin(peerId)

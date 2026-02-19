@@ -249,7 +249,7 @@ public func galleryItemForEntry(
     } else if let file = media as? TelegramMediaFile {
         if file.isVideo {
             let content: UniversalVideoContent
-            let captureProtected = message.isCopyProtected() || message.containsSecretMedia || message.minAutoremoveOrClearTimeout == viewOnceTimeout || message.paidContent != nil
+            let captureProtected = message.isCopyProtected() || message.containsSecretMedia || message.minAutoremoveOrClearTimeout == viewOnceTimeout || message.paidContent != nil || peerIsCopyProtected
             if file.isAnimated {
                 content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), loopVideo: true, enableSound: false, tempFilePath: tempFilePath, captureProtected: captureProtected, storeAfterDownload: generateStoreAfterDownload?(message, file))
             } else {
@@ -382,11 +382,11 @@ public func galleryItemForEntry(
         var content: UniversalVideoContent?
         switch websiteType(of: webpageContent.websiteName) {
         case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
-            content = NativeVideoContent(id: .message(message.stableId, webpageContent.file?.id ?? webpage.webpageId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, enableSound: true, captureProtected: message.isCopyProtected() || message.containsSecretMedia, storeAfterDownload: nil)
+            content = NativeVideoContent(id: .message(message.stableId, webpageContent.file?.id ?? webpage.webpageId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, enableSound: true, captureProtected: message.isCopyProtected() || message.containsSecretMedia || peerIsCopyProtected, storeAfterDownload: nil)
         default:
             if let embedUrl = webpageContent.embedUrl, let image = webpageContent.image {
                 if let file = webpageContent.file, file.isVideo {
-                    content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected() || message.containsSecretMedia, storeAfterDownload: generateStoreAfterDownload?(message, file))
+                    content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: message.isCopyProtected() || message.containsSecretMedia || peerIsCopyProtected, storeAfterDownload: generateStoreAfterDownload?(message, file))
                 } else if URL(string: embedUrl)?.pathExtension == "mp4" {
                     content = SystemVideoContent(userLocation: .peer(message.id.peerId), url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize?.cgSize ?? CGSize(width: 640.0, height: 640.0), duration: webpageContent.duration.flatMap(Double.init) ?? 0.0)
                 }
@@ -713,16 +713,16 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     context.engine.messages.internalReindexSavedMessagesCustomTagsIfNeeded(threadId: threadIdValue, tag: customTag)
                 }
             
-                message = context.account.postbox.messageAtId(messageId)
-                |> mapToSignal { message -> Signal<(Message, Bool)?, NoError> in
-                    if let message, let peer = message.peers[message.id.peerId] as? TelegramGroup, let migrationPeerId = peer.migrationReference?.peerId {
-                        return context.account.postbox.loadedPeerWithId(migrationPeerId)
-                        |> map { peer -> (Message, Bool)? in
-                            return (message, peer.isCopyProtectionEnabled)
-                        }
-                    } else {
-                        return .single(message.flatMap { ($0, false) })
+                message = context.account.postbox.transaction { transaction -> (Message, Bool)? in
+                    guard let message = transaction.getMessage(messageId) else {
+                        return nil
                     }
+                    if let peer = message.peers[message.id.peerId] as? TelegramGroup, let migrationPeerId = peer.migrationReference?.peerId, let migrationPeer = transaction.getPeer(migrationPeerId) {
+                        return (message, migrationPeer.isCopyProtectionEnabled)
+                    } else if let peer = message.peers[message.id.peerId] as? TelegramUser, let cachedUserData = transaction.getPeerCachedData(peerId: peer.id) as? CachedUserData {
+                        return (message, cachedUserData.flags.contains(.copyProtectionEnabled) || cachedUserData.flags.contains(.myCopyProtectionEnabled))
+                    }
+                    return (message, false)
                 }
                 translateToLanguage = chatTranslationState(context: context, peerId: messageId.peerId, threadId: threadIdValue)
                 |> map { translationState in
@@ -862,11 +862,30 @@ public class GalleryController: ViewController, StandalonePresentableController,
                                 if entry.stableId == strongSelf.centralEntryStableId {
                                     isCentral = true
                                 }
-                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, playbackRate: { return self?.playbackRate }, displayInfoOnTop: displayInfoOnTop, configuration: configuration, translateToLanguage: translateToLanguage, peerIsCopyProtected: view.peerIsCopyProtected, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in }, generateStoreAfterDownload: strongSelf.generateStoreAfterDownload, present: { [weak self] c, a in
-                                    if let strongSelf = self {
-                                        strongSelf.presentInGlobalOverlay(c, with: a)
+                                if let item = galleryItemForEntry(
+                                    context: context,
+                                    presentationData: strongSelf.presentationData,
+                                    entry: entry,
+                                    isCentral: isCentral,
+                                    streamVideos: streamSingleVideo,
+                                    fromPlayingVideo: isCentral && fromPlayingVideo,
+                                    landscape: isCentral && landscape,
+                                    timecode: isCentral ? timecode : nil,
+                                    playbackRate: { return self?.playbackRate },
+                                    displayInfoOnTop: displayInfoOnTop,
+                                    configuration: configuration,
+                                    translateToLanguage: translateToLanguage,
+                                    peerIsCopyProtected: view.peerIsCopyProtected,
+                                    performAction: strongSelf.performAction,
+                                    openActionOptions: strongSelf.openActionOptions,
+                                    storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in },
+                                    generateStoreAfterDownload: strongSelf.generateStoreAfterDownload,
+                                    present: { [weak self] c, a in
+                                        if let strongSelf = self {
+                                            strongSelf.presentInGlobalOverlay(c, with: a)
+                                        }
                                     }
-                                }) {
+                                ) {
                                     if isCentral {
                                         centralItemIndex = items.count
                                     }

@@ -110,6 +110,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _, _, _, _, _, _ in
             return false
+        }, editSticker: { _ in
         }, unblockPeer: {
         }, pinMessage: { _, _ in
         }, unpinMessage: { _, _, _ in

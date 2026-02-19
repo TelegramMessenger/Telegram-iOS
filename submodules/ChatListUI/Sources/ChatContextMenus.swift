@@ -352,7 +352,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                             })))
                         } else if !isForum {
                             var canMarkAsUnread = true
-                            if peerId.namespace == Namespaces.Peer.CloudChannel && !joined {
+                            if peerId.namespace == Namespaces.Peer.CloudChannel && joined {
                                 canMarkAsUnread = false
                             }
                             if canMarkAsUnread {

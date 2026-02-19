@@ -70,7 +70,7 @@ func openResolvedUrlImpl(
     forceUpdate: Bool,
     openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer) -> Void,
     sendFile: ((FileMediaReference) -> Void)?,
-    sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+    sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
     requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)? = nil,
     joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?,
@@ -1820,43 +1820,48 @@ func openResolvedUrlImpl(
             |> deliverOnMainQueue).start(next: { result in
                 if case .request = result {
                     var dismissImpl: (() -> Void)?
-                    let controller = AuthConfirmationScreen(context: context, subject: result, completion: { accountContext, accountPeer, allowWriteAccess, sharePhoneNumber in
-                        let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
-                        if accountContext === context {
-                            signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
-                        } else {
-                            accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                            signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: .url(url))
-                            |> castError(MessageActionUrlAuthError.self)
-                            |> mapToSignal { result in
-                                return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
-                            } |> afterDisposed {
-                                accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
-                            }
-                        }
-                        
-                        let _ = (signal
-                        |> deliverOnMainQueue).start(next: { _ in
-                            dismissImpl?()
-                            
-                            Queue.mainQueue().after(0.3) {
-                                let text: String
-                                if case let .request(domain, _, _, flags, _, _) = result {
-                                    if flags.contains(.requestPhoneNumber) && !sharePhoneNumber {
-                                        text = presentationData.strings.AuthConfirmation_LoginSuccess_TextNoNumber(domain).string
-                                    } else {
-                                        text = presentationData.strings.AuthConfirmation_LoginSuccess_Text(domain).string
-                                    }
-                                    let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), action: { _ in return true })
-                                    (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                    let controller = AuthConfirmationScreen(context: context, subject: result, completion: { accountContext, accountPeer, authResult in
+                        switch authResult {
+                        case let .accept(allowWriteAccess, sharePhoneNumber):
+                            let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
+                            if accountContext === context {
+                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
+                            } else {
+                                accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
+                                signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: .url(url))
+                                |> castError(MessageActionUrlAuthError.self)
+                                |> mapToSignal { result in
+                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
+                                } |> afterDisposed {
+                                    accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
                                 }
                             }
-                        }, error: { _ in
-                            if case let .request(domain, _, _, _, _, _) = result {
-                                let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, cancel: nil, destructive: false), action: { _ in return true })
-                                (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
-                            }
-                        })
+                            
+                            let _ = (signal
+                            |> deliverOnMainQueue).start(next: { _ in
+                                dismissImpl?()
+                                
+                                Queue.mainQueue().after(0.3) {
+                                    let text: String
+                                    if case let .request(domain, _, _, flags, _, _) = result {
+                                        if flags.contains(.requestPhoneNumber) && !sharePhoneNumber {
+                                            text = presentationData.strings.AuthConfirmation_LoginSuccess_TextNoNumber(domain).string
+                                        } else {
+                                            text = presentationData.strings.AuthConfirmation_LoginSuccess_Text(domain).string
+                                        }
+                                        let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), action: { _ in return true })
+                                        (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                    }
+                                }
+                            }, error: { _ in
+                                if case let .request(domain, _, _, _, _, _) = result {
+                                    let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, cancel: nil, destructive: false), action: { _ in return true })
+                                    (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                }
+                            })
+                        case .decline:
+                            let _ = context.engine.messages.declineUrlAuth(url: url).start()
+                        }
                     })
                     navigationController?.pushViewController(controller)
                     dismissImpl = {

@@ -718,6 +718,30 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 })))
                 
                 if !message.isCopyProtected() && !self.peerIsCopyProtected && message.paidContent == nil, let media = self.contextAndMedia?.1 {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_CreateSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                        f(.default)
+                        guard let self else {
+                            return
+                        }
+                        let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
+                        |> deliverOnMainQueue).start(next: { [weak self] (value, isImage) in
+                            guard let self, case let .data(data) = value, data.complete, isImage, let image = UIImage(contentsOfFile: data.path) else {
+                                return
+                            }
+                            let controller = context.sharedContext.makeStickerEditorScreen(context: context, source: image, mode: .generic, transitionArguments: (self.imageNode.view, self.imageNode.bounds, self.imageNode.image), completion: { file, _, _ in
+                                
+                            }, cancelled: {})
+                            guard let galleryController = self.galleryController(), let navigationController = self.baseNavigationController() else {
+                                return
+                            }
+                            (navigationController.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                            self.imageNode.isHidden = true
+                            Queue.mainQueue().after(0.5, {
+                                galleryController.dismiss()
+                            })
+                        })
+                    })))
+                    
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
                         f(.default)
                         

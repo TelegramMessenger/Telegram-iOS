@@ -389,10 +389,10 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.text = self.presentationData.strings.ChatContextMenu_MessageViewsPrivacyTip
             self.targetSelectionIndex = nil
             icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
-        case let .messageCopyProtection(isChannel):
-            self.text = isChannel ? self.presentationData.strings.Conversation_CopyProtectionInfoChannel : self.presentationData.strings.Conversation_CopyProtectionInfoGroup
+        case let .messageCopyProtection(text):
+            self.text = text
             self.targetSelectionIndex = nil
-            icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
+            icon = nil
         case let .animatedEmoji(text, arguments, file, action):
             self.action = action
             self.text = text ?? ""

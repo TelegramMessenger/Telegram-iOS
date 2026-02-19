@@ -179,6 +179,8 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                 }
                 return false
             },
+            editGif: { _, _ in
+            },
             updateChoosingSticker: { _ in },
             switchToTextInput: { [weak self] in
                 if let self {
@@ -1946,7 +1948,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                             }
                             attachmentController?.dismiss(animated: true)
                             self.presentICloudFileGallery(view: view, peer: peer, replyMessageId: nil, replyToStoryId: focusedStoryId)
-                        }, send: { [weak view] mediaReference in
+                        }, presentDocumentScanner: nil, send: { [weak view] mediaReference in
                             guard let view, let component = view.component else {
                                 return
                             }
@@ -2722,7 +2724,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             return nil
         }
         //TODO:self.presentationInterfaceState.customEmojiAvailable
-        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, isFile: false, customEmojiAvailable: true, present: { [weak view] c in
+        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, isFile: false, hasTimer: true, customEmojiAvailable: true, present: { [weak view] c in
             guard let view else {
                 return
             }
