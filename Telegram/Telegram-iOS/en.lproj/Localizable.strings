@@ -15801,3 +15801,15 @@ Error: %8$@";
 "FormattedDate.LongDate_m10" = "October %1$@, %2$@";
 "FormattedDate.LongDate_m11" = "November %1$@, %2$@";
 "FormattedDate.LongDate_m12" = "December %1$@, %2$@";
+
+"Gift.Sell.Confirm.Title" = "Confirm Sale";
+"Gift.Sell.Confirm.Text" = "Do you want to list **%1$@** for sale at %2$@?";
+"Gift.Sell.Confirm.ListFor_1" = "List for %@ Star";
+"Gift.Sell.Confirm.ListFor_any" = "List for %@ Stars";
+"Gift.Sell.Confirm.ListForTon" = "List for %@ TON";
+
+"Notification.CopyProtection.Enabled" = "%1$@ disabled sharing in this chat";
+"Notification.CopyProtection.EnabledYou" = "You disabled sharing in this chat";
+"Notification.CopyProtection.Disabled" = "%1$@ enabled sharing in this chat";
+"Notification.CopyProtection.DisabledYou" = "You enabled sharing in this chat";
+"Notification.CopyProtection.StillEnabled" = "Sharing in this chat is still disabled";
