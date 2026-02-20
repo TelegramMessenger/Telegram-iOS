@@ -272,7 +272,7 @@ func _internal_declineUrlAuth(account: Account, url: String) -> Signal<Never, No
     |> ignoreValues
 }
 
-func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject, allowWriteAccess: Bool, sharePhoneNumber: Bool) -> Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError> {
+func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject, allowWriteAccess: Bool, sharePhoneNumber: Bool, matchCode: String? = nil) -> Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError> {
     var flags: Int32 = 0
     if allowWriteAccess {
         flags |= Int32(1 << 0)
@@ -280,7 +280,10 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
     if sharePhoneNumber {
         flags |= Int32(1 << 3)
     }
-    
+    if matchCode != nil {
+        flags |= Int32(1 << 4)
+    }
+
     let request: Signal<Api.UrlAuthResult?, MTRpcError>
     switch subject {
         case let .message(messageId, buttonId):
@@ -290,8 +293,11 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
             |> castError(MTRpcError.self)
             |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
                 if let inputPeer = apiInputPeer(peer) {
-                    let flags: Int32 = 1 << 1
-                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, matchCode: nil))
+                    var msgFlags: Int32 = 1 << 1
+                    if matchCode != nil {
+                        msgFlags |= Int32(1 << 4)
+                    }
+                    return account.network.request(Api.functions.messages.acceptUrlAuth(flags: msgFlags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, matchCode: matchCode))
                     |> map(Optional.init)
                 } else {
                     return .single(nil)
@@ -299,7 +305,7 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
             }
         case let .url(url):
             flags |= (1 << 2)
-            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, matchCode: nil))
+            request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, matchCode: matchCode))
             |> map(Optional.init)
     }
     
