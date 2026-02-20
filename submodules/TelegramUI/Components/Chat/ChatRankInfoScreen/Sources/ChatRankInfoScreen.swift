@@ -32,6 +32,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
     let userPeer: EnginePeer
     let role: ChatRankInfoScreenRole
     let rank: String
+    let canChange: Bool
     let getController: () -> ViewController?
     let dismiss: () -> Void
     
@@ -41,6 +42,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
         userPeer: EnginePeer,
         role: ChatRankInfoScreenRole,
         rank: String,
+        canChange: Bool,
         getController: @escaping () -> ViewController?,
         dismiss: @escaping () -> Void
     ) {
@@ -49,6 +51,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
         self.userPeer = userPeer
         self.role = role
         self.rank = rank
+        self.canChange = canChange
         self.getController = getController
         self.dismiss = dismiss
     }
@@ -122,6 +125,8 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
             let additionalTextString: String? = "Only admins can assign member tags in this group."
             var adminPreviewTag = "Admin Tag"
             var adminPreviewRole: ChatRankInfoScreenRole = .admin
+            
+            var canEdit = false
             switch context.component.role {
             case .creator:
                 var rank = !context.component.rank.isEmpty ? context.component.rank : strings.Conversation_Owner
@@ -146,6 +151,10 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
                 linkHasBackground = false
                 titleString = "Member Tag"
                 textString = "This grey tag [\(rank)]() is **\(context.component.userPeer.compactDisplayTitle)'s** member tag. **\(context.component.userPeer.compactDisplayTitle)** is a member of **\(context.component.chatPeer.compactDisplayTitle)**."
+                
+                if component.canChange {
+                    canEdit = true
+                }
             }
             
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
@@ -368,20 +377,30 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
             )
             
             var buttonTitle: [AnyComponentWithIdentity<Empty>] = []
-            buttonTitle.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(LottieComponent(
-                content: LottieComponent.AppBundleContent(name: "anim_ok"),
-                color: theme.list.itemCheckColors.foregroundColor,
-                startingPosition: .begin,
-                size: CGSize(width: 28.0, height: 28.0),
-                playOnce: state.playButtonAnimation
-            ))))
-            buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
-                text: strings.CocoonInfo_Understood,
-                badge: 0,
-                textColor: theme.list.itemCheckColors.foregroundColor,
-                badgeBackground: theme.list.itemCheckColors.foregroundColor,
-                badgeForeground: theme.list.itemCheckColors.fillColor
-            ))))
+            if canEdit {
+                buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
+                    text: "Add My Tag",
+                    badge: 0,
+                    textColor: theme.list.itemCheckColors.foregroundColor,
+                    badgeBackground: theme.list.itemCheckColors.foregroundColor,
+                    badgeForeground: theme.list.itemCheckColors.fillColor
+                ))))
+            } else {
+                buttonTitle.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "anim_ok"),
+                    color: theme.list.itemCheckColors.foregroundColor,
+                    startingPosition: .begin,
+                    size: CGSize(width: 28.0, height: 28.0),
+                    playOnce: state.playButtonAnimation
+                ))))
+                buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
+                    text: strings.CocoonInfo_Understood,
+                    badge: 0,
+                    textColor: theme.list.itemCheckColors.foregroundColor,
+                    badgeBackground: theme.list.itemCheckColors.foregroundColor,
+                    badgeForeground: theme.list.itemCheckColors.fillColor
+                ))))
+            }
             
             let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
             let button = button.update(
@@ -401,7 +420,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
                     action: {
                         component.dismiss()
                         
-                        if let controller = controller() as? ChatRankInfoScreen {
+                        if canEdit, let controller = controller() as? ChatRankInfoScreen {
                             controller.completion?()
                         }
                     }
@@ -430,6 +449,7 @@ final class ChatRankInfoSheetComponent: CombinedComponent {
     let userPeer: EnginePeer
     let role: ChatRankInfoScreenRole
     let rank: String
+    let canChange: Bool
     
     init(
         context: AccountContext,
@@ -437,12 +457,14 @@ final class ChatRankInfoSheetComponent: CombinedComponent {
         userPeer: EnginePeer,
         role: ChatRankInfoScreenRole,
         rank: String,
+        canChange: Bool
     ) {
         self.context = context
         self.chatPeer = chatPeer
         self.userPeer = userPeer
         self.role = role
         self.rank = rank
+        self.canChange = canChange
     }
     
     static func ==(lhs: ChatRankInfoSheetComponent, rhs: ChatRankInfoSheetComponent) -> Bool {
@@ -484,6 +506,7 @@ final class ChatRankInfoSheetComponent: CombinedComponent {
                         userPeer: context.component.userPeer,
                         role: context.component.role,
                         rank: context.component.rank,
+                        canChange: context.component.canChange,
                         getController: controller,
                         dismiss: {
                             dismiss(true)
@@ -572,7 +595,8 @@ public final class ChatRankInfoScreen: ViewControllerComponentContainer {
                 chatPeer: chatPeer,
                 userPeer: userPeer,
                 role: role,
-                rank: rank
+                rank: rank,
+                canChange: canChange
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,

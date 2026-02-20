@@ -195,6 +195,7 @@ extension ChatControllerImpl {
             cropOrientation: .up,
             gradientColors: [.clear, .clear],
             videoTrimRange: nil,
+            videoBounce: false,
             videoIsMuted: false,
             videoIsFullHd: false,
             videoIsMirrored: false,

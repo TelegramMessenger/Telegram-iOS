@@ -1376,6 +1376,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
                 self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, userLocation: content.userLocation, userContentType: .video, fileReference: content.fileReference)
+                if content.fileReference.media.isLivePhoto {
+                    disablePlayerControls = true
+                    isAnimated = false
+                }
             } else if let _ = item.content as? SystemVideoContent {
                 self._title.set(.single(item.presentationData.strings.Message_Video))
             } else if let content = item.content as? WebEmbedVideoContent {

@@ -255,12 +255,21 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         break inner
                                     } else {
                                         if message.text.isEmpty {
-                                            messageText = strings.Message_Video
+                                            if flags.contains(.isLivePhoto) {
+                                                //TODO:localize
+                                                messageText = "Live Photo"
+                                            } else {
+                                                messageText = strings.Message_Video
+                                            }
                                             processed = true
                                         } else {
                                             if enableMediaEmoji {
                                                 if !fileMedia.isAnimated {
-                                                    messageText = "📹 \(messageText)"
+                                                    if flags.contains(.isLivePhoto) {
+                                                        messageText = "🖼 \(messageText)"
+                                                    } else {
+                                                        messageText = "📹 \(messageText)"
+                                                    }
                                                 }
                                             }
                                             processed = true

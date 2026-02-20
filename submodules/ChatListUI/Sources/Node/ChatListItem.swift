@@ -964,7 +964,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
             if file.isInstantVideo {
                 isRound = true
             }
-            if file.isVideo && !file.isAnimated {
+            if file.isVideo && !file.isAnimated && !file.isLivePhoto {
                 self.playIcon.isHidden = false
             } else {
                 self.playIcon.isHidden = true

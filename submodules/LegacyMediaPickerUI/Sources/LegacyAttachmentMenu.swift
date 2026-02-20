@@ -164,11 +164,12 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: 
             return
         }
         
+        let isGif = [.default, .caption].contains(mode)
         let item: TGMediaEditableItem & TGMediaSelectableItem
         if let image = UIImage(contentsOfFile: data.path) {
             item = TGCameraCapturedPhoto(existing: image)
         } else {
-            item = TGCameraCapturedVideo(url: URL(fileURLWithPath: data.path))
+            item = TGCameraCapturedVideo(url: URL(fileURLWithPath: data.path), isAnimation: isGif)
         }
         
         let paintStickersContext = LegacyPaintStickersContext(context: context)
@@ -206,7 +207,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: 
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: mode == .draw, adjustments: mode == .adjustments, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, activateInput: mode == .caption, isGif: [.default, .caption].contains(mode), appeared: {
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: mode == .draw, adjustments: mode == .adjustments, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, activateInput: mode == .caption, isGif: isGif, appeared: {
             transitionCompletion?()
         }, completion: { result, editingContext in
             let nativeGenerator = legacyAssetPickerItemGenerator()

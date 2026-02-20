@@ -228,7 +228,6 @@
         
         UIView *scrubberBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _headerView.frame.size.width, 64.0f)];
         scrubberBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        //scrubberBackgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
         [_scrubberPanelView addSubview:scrubberBackgroundView];
         
         _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, _headerView.frame.size.height - 44.0f, _headerView.frame.size.width, 68.0f) cover:false];
@@ -284,7 +283,7 @@
     if (_volumeOverlayFixView != nil)
         return;
     
-    UIWindow *keyWindow = self.window; //[UIApplication sharedApplication].keyWindow;
+    UIWindow *keyWindow = self.window;
     UIView *rootView = keyWindow.rootViewController.view;
     
     if (iosMajorVersion() < 13) {
@@ -427,10 +426,6 @@
     
     if (itemChanged) {
         [self _playerCleanup];
-     
-//        if (!item.asFile) {
-//            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startStrictWithNext:nil file:__FILE_NAME__ line:__LINE__]];
-//        }
     }
     
     _scrubberView.allowsTrimming = false;
@@ -445,24 +440,33 @@
         [_contentWrapperView addSubview:_entitiesView];
     }
         
+    
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
-    [_videoDurationVar set:[[[item.durationSignal deliverOn:[SQueue mainQueue]] catch:^SSignal *(__unused id error)
-    {
-        __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-        if (strongSelf != nil && [error isKindOfClass:[NSNumber class]])
-            [strongSelf _setDownloadRequired];
-        
-        return nil;
-    }] onNext:^(__unused id next)
-    {
-        __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-        if (strongSelf != nil)
+    
+    SSignal *durationSignal = item.durationSignal;
+    if (durationSignal != nil) {
+        [_videoDurationVar set:[[[durationSignal deliverOn:[SQueue mainQueue]] catch:^SSignal *(__unused id error)
         {
-            strongSelf->_downloaded = true;
-            if (strongSelf->_currentAvailabilityObserver != nil)
-                strongSelf->_currentAvailabilityObserver(true);
-        }
-    }]];
+            __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
+            if (strongSelf != nil && [error isKindOfClass:[NSNumber class]])
+                [strongSelf _setDownloadRequired];
+            
+            return nil;
+        }] onNext:^(__unused id next)
+                                {
+            __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
+            if (strongSelf != nil)
+            {
+                strongSelf->_downloaded = true;
+                if (strongSelf->_currentAvailabilityObserver != nil)
+                    strongSelf->_currentAvailabilityObserver(true);
+            }
+        }]];
+    } else {
+        _downloaded = true;
+        if (_currentAvailabilityObserver != nil)
+            _currentAvailabilityObserver(true);
+    }
     
     SSignal *imageSignal = nil;
     if (item.asset != nil)
@@ -470,6 +474,10 @@
         SSignal *assetSignal = [SSignal single:nil];
         if ([item.asset isKindOfClass:[TGMediaAsset class]])
         {
+            if (((TGMediaAsset *)item.asset).type == TGMediaAssetPhotoType) {
+                [_scrubberPanelView setHidden:true];
+            }
+            
             assetSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
         }
         else
@@ -745,7 +753,7 @@
 - (bool)itemIsLivePhoto
 {
     if ([self.item.asset isKindOfClass:[TGMediaAsset class]])
-        return ((TGMediaAsset *)self.item.asset).subtypes & TGMediaAssetSubtypePhotoLive;
+        return ((TGMediaAsset *)self.item.asset) ;
     
     return false;
 }

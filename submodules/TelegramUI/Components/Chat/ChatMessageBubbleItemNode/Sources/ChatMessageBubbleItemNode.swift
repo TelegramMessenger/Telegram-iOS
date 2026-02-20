@@ -6002,7 +6002,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             break
                         case let .date(date, _):
                             return .action(InternalBubbleTapAction.Action { [weak self] in
-                                guard let self, let contentNode = self.contextContentNodeForLink(stringForFullDate(timestamp: date, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat), rects: rects) else {
+                                let fullDate = stringForEntityFormattedDate(timestamp: date, format: .full(timeFormat: .short, dateFormat: .long, dayOfWeek: false), strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
+                                guard let self, let contentNode = self.contextContentNodeForLink(fullDate, rects: rects) else {
                                     return
                                 }
                                 item.controllerInteraction.longTap(.date(date), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))

@@ -573,6 +573,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
 
 public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersContext {
     public var captionPanelView: (() -> TGCaptionPanelView?)?
+    public var livePhotoButton: (() -> TGLivePhotoButton?)?
     public var editCover: ((CGSize, @escaping (UIImage) -> Void) -> Void)?
     
     private let context: AccountContext

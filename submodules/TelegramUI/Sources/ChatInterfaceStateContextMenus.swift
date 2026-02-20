@@ -1273,6 +1273,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 UIPasteboard.general.string = diceEmoji
                             } else {
                                 let copyTextWithEntities = {
+                                    var messageText = message.text
                                     var messageEntities: [MessageTextEntity]?
                                     var restrictedText: String?
                                     for attribute in message.attributes {
@@ -1281,6 +1282,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         }
                                         if let attribute = attribute as? RestrictedContentMessageAttribute {
                                             restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                                        }
+                                        if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                                            messageText = attribute.text
                                         }
                                     }
                                     
@@ -1296,7 +1300,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                                             storeMessageTextInPasteboard(translation.text, entities: translation.entities)
                                         } else {
-                                            storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                                            storeMessageTextInPasteboard(messageText, entities: messageEntities)
                                         }
                                     }
                                     
@@ -1309,8 +1313,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                     for media in message.media {
                                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                                             let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
-                                                     |> take(1)
-                                                     |> deliverOnMainQueue).startStandalone(next: { data in
+                                            |> take(1)
+                                            |> deliverOnMainQueue).startStandalone(next: { data in
                                                 if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                                     if let image = UIImage(data: imageData) {
                                                         if !messageText.isEmpty {

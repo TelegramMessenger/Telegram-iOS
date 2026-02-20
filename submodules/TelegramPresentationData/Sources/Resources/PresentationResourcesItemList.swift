@@ -317,7 +317,7 @@ public struct PresentationResourcesItemList {
     
     public static func scanIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListScanIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Scan"), color: theme.list.itemAccentColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Scan"), color: theme.list.itemAccentColor)
         })
     }
     

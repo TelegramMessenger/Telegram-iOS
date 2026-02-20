@@ -2861,6 +2861,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
         }
         
+
         if isSecretMedia {
             let remainingTime: Int32?
             if let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, Int32(timeout) != viewOnceTimeout {
@@ -2886,6 +2887,14 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 } else {
                     badgeContent = .text(inset: 10.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: strings.MessageTimer_ShortSeconds(Int32(remainingTime))), iconName: "Chat/Message/SecretMediaPlay")
                 }
+            }
+        }
+        
+        if let file = media as? TelegramMediaFile, file.isLivePhoto {
+            badgeContent = nil
+            if case .progress = state {   
+            } else {
+                state = .none
             }
         }
         

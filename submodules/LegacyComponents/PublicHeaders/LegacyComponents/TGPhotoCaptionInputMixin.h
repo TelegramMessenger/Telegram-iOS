@@ -3,6 +3,7 @@
 
 @protocol TGPhotoPaintStickersContext;
 @protocol TGCaptionPanelView;
+@protocol TGLivePhotoButton;
 
 @interface TGPhotoCaptionInputMixin : NSObject
 
@@ -11,6 +12,9 @@
 @property (nonatomic, readonly) id<TGCaptionPanelView> inputPanel;
 @property (nonatomic, readonly) UIView *inputPanelView;
 @property (nonatomic, readonly) UIView *dismissView;
+
+@property (nonatomic, readonly) id<TGLivePhotoButton> livePhotoButton;
+@property (nonatomic, readonly) UIView *livePhotoButtonView;
 
 @property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
 @property (nonatomic, readonly) CGFloat keyboardHeight;
@@ -25,6 +29,8 @@
 @property (nonatomic, copy) void (^keyboardHeightChanged)(CGFloat keyboardHeight, NSTimeInterval duration, NSInteger animationCurve);
 @property (nonatomic, copy) void (^timerUpdated)(NSNumber *timeout);
 @property (nonatomic, copy) void (^captionIsAboveUpdated)(bool captionIsAbove);
+
+@property (nonatomic, copy) void(^livePhotoModeUpdated)(NSUInteger mode);
 
 @property (nonatomic, readonly) bool editing;
 
@@ -43,6 +49,9 @@
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)animated;
 
 - (void)setTimeout:(int32_t)timeout isVideo:(bool)isVideo isCaptionAbove:(bool)isCaptionAbove;
+
+- (void)setLivePhotoHidden:(bool)hidden;
+- (void)setLivePhotoMode:(NSUInteger)mode;
 
 - (void)updateLayoutWithFrame:(CGRect)frame edgeInsets:(UIEdgeInsets)edgeInsets animated:(bool)animated;
 

@@ -15815,3 +15815,6 @@ Error: %8$@";
 "Notification.CopyProtection.StillEnabled" = "Sharing in this chat is still disabled";
 
 "Gallery.CreateSticker" = "Create Sticker";
+
+"Premium.CopyProtection" = "Disable Sharing";
+"Premium.CopyProtectionInfo" = "Prevent forwarding, saving and copying content in private chats.";

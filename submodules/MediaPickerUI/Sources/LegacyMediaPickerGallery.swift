@@ -101,7 +101,34 @@ enum LegacyMediaPickerGallerySource {
     case selection(item: TGMediaSelectableItem)
 }
 
-func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?, threadTitle: String?, chatLocation: ChatLocation?, isScheduledMessages: Bool, presentationData: PresentationData, source: LegacyMediaPickerGallerySource, immediateThumbnail: UIImage?, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, hasSilentPosting: Bool, hasSchedule: Bool, hasTimer: Bool, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (String) -> UIView?, completed: @escaping (TGMediaSelectableItem & TGMediaEditableItem, Bool, Int32?, @escaping () -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void, finishedTransitionIn: @escaping () -> Void, willTransitionOut: @escaping () -> Void, dismissAll: @escaping () -> Void, editCover: @escaping (CGSize, @escaping (UIImage) -> Void) -> Void = { _, _ in }) -> TGModernGalleryController {
+func presentLegacyMediaPickerGallery(
+    context: AccountContext,
+    peer: EnginePeer?,
+    threadTitle: String?,
+    chatLocation: ChatLocation?,
+    isScheduledMessages: Bool,
+    presentationData: PresentationData,
+    source: LegacyMediaPickerGallerySource,
+    immediateThumbnail: UIImage?,
+    selectionContext: TGMediaSelectionContext?,
+    editingContext: TGMediaEditingContext,
+    hasSilentPosting: Bool,
+    hasSchedule: Bool,
+    hasTimer: Bool,
+    updateHiddenMedia: @escaping (String?) -> Void,
+    initialLayout: ContainerViewLayout?,
+    transitionHostView: @escaping () -> UIView?,
+    transitionView: @escaping (String) -> UIView?,
+    completed: @escaping (TGMediaSelectableItem & TGMediaEditableItem, Bool, Int32?, @escaping () -> Void) -> Void,
+    presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void,
+    presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void,
+    getCaptionPanelView: @escaping () -> TGCaptionPanelView?,
+    present: @escaping (ViewController, Any?) -> Void,
+    finishedTransitionIn: @escaping () -> Void,
+    willTransitionOut: @escaping () -> Void,
+    dismissAll: @escaping () -> Void,
+    editCover: @escaping (CGSize, @escaping (UIImage) -> Void) -> Void = { _, _ in }
+) -> TGModernGalleryController {
     let reminder = peer?.id == context.account.peerId
     let hasSilentPosting = hasSilentPosting && peer?.id != context.account.peerId
     var hasCoverButton = false
@@ -117,6 +144,12 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.captionPanelView = {
         return getCaptionPanelView()
+    }
+    paintStickersContext.livePhotoButton = {
+        let livePhotoButton = LivePhotoButton()
+        livePhotoButton.present = present
+        livePhotoButton.context = context
+        return livePhotoButton
     }
     paintStickersContext.editCover = { dimensions, completion in
         editCover(dimensions, completion)

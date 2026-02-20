@@ -2941,6 +2941,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .animatedEmoji
         case .todo:
             mappedSource = .todo
+        case .copyProtection:
+            mappedSource = .copyProtection
         case let .auth(price):
             mappedSource = .auth(price)
         case let .premiumGift(file):
@@ -3021,6 +3023,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .messageEffects
         case .todo:
             mappedSubject = .todo
+        case .copyProtection:
+            mappedSubject = .copyProtection
         case .business:
             mappedSubject = .business
             buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton
