@@ -4891,6 +4891,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 return
                             }
                             strongSelf.performMessageButtonAction(button: button, progress: progress)
+                        } else {
+                            strongSelf.performMessageButtonAction(button: button, progress: progress)
                         }
                     }
                 }

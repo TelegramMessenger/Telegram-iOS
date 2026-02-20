@@ -220,7 +220,7 @@ func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageAct
             |> castError(MTRpcError.self)
             |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
                 if let inputPeer = apiInputPeer(peer) {
-                    return account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil))
+                    return account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, inAppOrigin: nil))
                     |> map(Optional.init)
                 } else {
                     return .single(nil)
@@ -228,7 +228,7 @@ func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageAct
             }
         case let .url(url):
             flags |= (1 << 2)
-            request = account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url))
+            request = account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, inAppOrigin: nil))
             |> map(Optional.init)
     }
     
