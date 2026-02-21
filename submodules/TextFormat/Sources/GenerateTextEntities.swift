@@ -298,7 +298,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                             }
                             
                             type = .Url
-                        } else if result.resultType == NSTextCheckingResult.CheckingType.date, let date = result.date?.timeIntervalSince1970 {
+                        } else if result.resultType == NSTextCheckingResult.CheckingType.date, let date = result.date?.timeIntervalSince1970, date > Date().timeIntervalSince1970 {
                             #if DEBUG
                             var dayOfWeek = false
                             var format: MessageTextEntityType.DateTimeFormat?
