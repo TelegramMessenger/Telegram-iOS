@@ -1219,6 +1219,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             var labelMaximumNumberOfLines = 1
             var labelInset: CGFloat = 0.0
             var labelAlignment: NSTextAlignment = .natural
+            var labelLineSpacing: CGFloat = 0.0
             var updatedLabelArrowNode: ASImageNode?
             switch item.label {
             case .none:
@@ -1228,6 +1229,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 labelInset += 15.0
                 labelMaximumNumberOfLines = 2
                 labelAlignment = .right
+                labelLineSpacing = 0.3
             case let .text(text, font, color, _):
                 let selectedFont: UIFont
                 switch font {
@@ -1258,7 +1260,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             
             labelInset += reorderInset
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, backgroundColor: nil, maximumNumberOfLines: labelMaximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: labelAlignment, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, backgroundColor: nil, maximumNumberOfLines: labelMaximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: labelAlignment, lineSpacing: labelLineSpacing, cutout: nil, insets: UIEdgeInsets()))
             
             let constrainedTitleSize = CGSize(width: params.width - leftInset - 12.0 - editingOffset - rightInset - labelLayout.size.width - labelInset - titleIconsWidth, height: CGFloat.greatestFiniteMagnitude)
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedTitleSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -1480,10 +1482,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         let animationCache = item.context.animationCache
                         let animationRenderer = item.context.animationRenderer
                         
+                        var verifiedIconTransition = transition
                         let verifiedIconView: ComponentHostView<Empty>
                         if let current = strongSelf.verifiedIconView {
                             verifiedIconView = current
                         } else {
+                            verifiedIconTransition = .immediate
                             verifiedIconView = ComponentHostView<Empty>()
                             strongSelf.containerNode.view.addSubview(verifiedIconView)
                             strongSelf.verifiedIconView = verifiedIconView
@@ -1509,7 +1513,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             containerSize: CGSize(width: 16.0, height: 16.0)
                         )
                         
-                        transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                        verifiedIconTransition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
                       
                         titleLeftOffset += iconSize.width + 4.0
                         nextIconX += iconSize.width + 4.0
@@ -1526,10 +1530,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         let animationCache = item.context.animationCache
                         let animationRenderer = item.context.animationRenderer
                         
+                        var creditibilityIconTransition = transition
                         let credibilityIconView: ComponentHostView<Empty>
                         if let current = strongSelf.credibilityIconView {
                             credibilityIconView = current
                         } else {
+                            creditibilityIconTransition = .immediate
                             credibilityIconView = ComponentHostView<Empty>()
                             strongSelf.containerNode.view.addSubview(credibilityIconView)
                             strongSelf.credibilityIconView = credibilityIconView
@@ -1556,7 +1562,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         )
                         
                         nextIconX += 4.0
-                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextIconX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                        creditibilityIconTransition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextIconX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
                     } else if let credibilityIconView = strongSelf.credibilityIconView {
                         strongSelf.credibilityIconView = nil
                         credibilityIconView.removeFromSuperview()

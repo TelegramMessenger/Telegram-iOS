@@ -93,7 +93,8 @@ final class MinimizedHeaderNode: ASDisplayNode {
     }
     let strings: PresentationStrings
     
-    private let backgroundView = BackgroundView()
+    //private let backgroundView = BackgroundView()
+    private let backgroundView = UIView()
     private let progressView = UIView()
     private var iconView = UIImageView()
     private let titleLabel = ComponentView<Empty>()
@@ -196,11 +197,11 @@ final class MinimizedHeaderNode: ASDisplayNode {
         self.strings = strings
         
         self.backgroundView.clipsToBounds = true
-//        self.backgroundView.backgroundColor =
-//        self.backgroundView.layer.cornerRadius = 10.0
-//        if #available(iOS 11.0, *) {
-//            self.backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-//        }
+        self.backgroundView.backgroundColor = theme.navigationBar.opaqueBackgroundColor
+        self.backgroundView.layer.cornerRadius = 25.0
+        if #available(iOS 11.0, *) {
+            self.backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        }
         
         self.progressView.backgroundColor = self.theme.navigationBar.primaryTextColor.withAlphaComponent(0.06)
         
@@ -312,7 +313,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
         
         transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: size.width, height: 243.0)))
         
-        self.backgroundView.update(size: CGSize(width: size.width, height: 243.0), color: self.theme.navigationBar.opaqueBackgroundColor, topCornerRadius: 25.0, bottomCornerRadius: 62.0, transition: .immediate)
+        //self.backgroundView.update(size: CGSize(width: size.width, height: 243.0), color: self.theme.navigationBar.opaqueBackgroundColor, topCornerRadius: 25.0, bottomCornerRadius: 62.0, transition: .immediate)
         
         transition.updateAlpha(layer: self.progressView.layer, alpha: isExpanded && self.progress != nil ? 1.0 : 0.0)
         if let progress = self.progress {

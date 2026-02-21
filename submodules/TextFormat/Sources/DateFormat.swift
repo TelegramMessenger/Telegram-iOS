@@ -143,7 +143,7 @@ public func stringForMessageTimestamp(timestamp: Int32, dateTimeFormat: Presenta
     return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, seconds: withSeconds ? timeinfo.tm_sec : nil, dateTimeFormat: dateTimeFormat)
 }
 
-private func stringForShortDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, withTime: Bool = true) -> String {
+public func stringForShortDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, withTime: Bool = true) -> String {
     var t: time_t = Int(timestamp)
     var timeinfo = tm()
     localtime_r(&t, &timeinfo);
