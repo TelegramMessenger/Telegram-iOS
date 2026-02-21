@@ -1,9 +1,12 @@
 public extension Api {
     enum AccountDaysTTL: TypeConstructorDescription {
-        public class Cons_accountDaysTTL {
+        public class Cons_accountDaysTTL: TypeConstructorDescription {
             public var days: Int32
             public init(days: Int32) {
                 self.days = days
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("accountDaysTTL", [("days", self.days as Any)])
             }
         }
         case accountDaysTTL(Cons_accountDaysTTL)
@@ -41,7 +44,7 @@ public extension Api {
 }
 public extension Api {
     enum AttachMenuBot: TypeConstructorDescription {
-        public class Cons_attachMenuBot {
+        public class Cons_attachMenuBot: TypeConstructorDescription {
             public var flags: Int32
             public var botId: Int64
             public var shortName: String
@@ -53,6 +56,9 @@ public extension Api {
                 self.shortName = shortName
                 self.peerTypes = peerTypes
                 self.icons = icons
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("attachMenuBot", [("flags", self.flags as Any), ("botId", self.botId as Any), ("shortName", self.shortName as Any), ("peerTypes", self.peerTypes as Any), ("icons", self.icons as Any)])
             }
         }
         case attachMenuBot(Cons_attachMenuBot)
@@ -122,7 +128,7 @@ public extension Api {
 }
 public extension Api {
     enum AttachMenuBotIcon: TypeConstructorDescription {
-        public class Cons_attachMenuBotIcon {
+        public class Cons_attachMenuBotIcon: TypeConstructorDescription {
             public var flags: Int32
             public var name: String
             public var icon: Api.Document
@@ -132,6 +138,9 @@ public extension Api {
                 self.name = name
                 self.icon = icon
                 self.colors = colors
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("attachMenuBotIcon", [("flags", self.flags as Any), ("name", self.name as Any), ("icon", self.icon as Any), ("colors", self.colors as Any)])
             }
         }
         case attachMenuBotIcon(Cons_attachMenuBotIcon)
@@ -193,12 +202,15 @@ public extension Api {
 }
 public extension Api {
     enum AttachMenuBotIconColor: TypeConstructorDescription {
-        public class Cons_attachMenuBotIconColor {
+        public class Cons_attachMenuBotIconColor: TypeConstructorDescription {
             public var name: String
             public var color: Int32
             public init(name: String, color: Int32) {
                 self.name = name
                 self.color = color
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("attachMenuBotIconColor", [("name", self.name as Any), ("color", self.color as Any)])
             }
         }
         case attachMenuBotIconColor(Cons_attachMenuBotIconColor)
@@ -240,7 +252,7 @@ public extension Api {
 }
 public extension Api {
     enum AttachMenuBots: TypeConstructorDescription {
-        public class Cons_attachMenuBots {
+        public class Cons_attachMenuBots: TypeConstructorDescription {
             public var hash: Int64
             public var bots: [Api.AttachMenuBot]
             public var users: [Api.User]
@@ -248,6 +260,9 @@ public extension Api {
                 self.hash = hash
                 self.bots = bots
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("attachMenuBots", [("hash", self.hash as Any), ("bots", self.bots as Any), ("users", self.users as Any)])
             }
         }
         case attachMenuBots(Cons_attachMenuBots)
@@ -316,12 +331,15 @@ public extension Api {
 }
 public extension Api {
     enum AttachMenuBotsBot: TypeConstructorDescription {
-        public class Cons_attachMenuBotsBot {
+        public class Cons_attachMenuBotsBot: TypeConstructorDescription {
             public var bot: Api.AttachMenuBot
             public var users: [Api.User]
             public init(bot: Api.AttachMenuBot, users: [Api.User]) {
                 self.bot = bot
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("attachMenuBotsBot", [("bot", self.bot as Any), ("users", self.users as Any)])
             }
         }
         case attachMenuBotsBot(Cons_attachMenuBotsBot)
@@ -441,7 +459,7 @@ public extension Api {
 }
 public extension Api {
     enum AuctionBidLevel: TypeConstructorDescription {
-        public class Cons_auctionBidLevel {
+        public class Cons_auctionBidLevel: TypeConstructorDescription {
             public var pos: Int32
             public var amount: Int64
             public var date: Int32
@@ -449,6 +467,9 @@ public extension Api {
                 self.pos = pos
                 self.amount = amount
                 self.date = date
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("auctionBidLevel", [("pos", self.pos as Any), ("amount", self.amount as Any), ("date", self.date as Any)])
             }
         }
         case auctionBidLevel(Cons_auctionBidLevel)
@@ -494,7 +515,7 @@ public extension Api {
 }
 public extension Api {
     enum Authorization: TypeConstructorDescription {
-        public class Cons_authorization {
+        public class Cons_authorization: TypeConstructorDescription {
             public var flags: Int32
             public var hash: Int64
             public var deviceModel: String
@@ -522,6 +543,9 @@ public extension Api {
                 self.ip = ip
                 self.country = country
                 self.region = region
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("authorization", [("flags", self.flags as Any), ("hash", self.hash as Any), ("deviceModel", self.deviceModel as Any), ("platform", self.platform as Any), ("systemVersion", self.systemVersion as Any), ("apiId", self.apiId as Any), ("appName", self.appName as Any), ("appVersion", self.appVersion as Any), ("dateCreated", self.dateCreated as Any), ("dateActive", self.dateActive as Any), ("ip", self.ip as Any), ("country", self.country as Any), ("region", self.region as Any)])
             }
         }
         case authorization(Cons_authorization)
@@ -607,7 +631,7 @@ public extension Api {
 }
 public extension Api {
     enum AutoDownloadSettings: TypeConstructorDescription {
-        public class Cons_autoDownloadSettings {
+        public class Cons_autoDownloadSettings: TypeConstructorDescription {
             public var flags: Int32
             public var photoSizeMax: Int32
             public var videoSizeMax: Int64
@@ -623,6 +647,9 @@ public extension Api {
                 self.videoUploadMaxbitrate = videoUploadMaxbitrate
                 self.smallQueueActiveOperationsMax = smallQueueActiveOperationsMax
                 self.largeQueueActiveOperationsMax = largeQueueActiveOperationsMax
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("autoDownloadSettings", [("flags", self.flags as Any), ("photoSizeMax", self.photoSizeMax as Any), ("videoSizeMax", self.videoSizeMax as Any), ("fileSizeMax", self.fileSizeMax as Any), ("videoUploadMaxbitrate", self.videoUploadMaxbitrate as Any), ("smallQueueActiveOperationsMax", self.smallQueueActiveOperationsMax as Any), ("largeQueueActiveOperationsMax", self.largeQueueActiveOperationsMax as Any)])
             }
         }
         case autoDownloadSettings(Cons_autoDownloadSettings)
@@ -684,12 +711,15 @@ public extension Api {
 }
 public extension Api {
     enum AutoSaveException: TypeConstructorDescription {
-        public class Cons_autoSaveException {
+        public class Cons_autoSaveException: TypeConstructorDescription {
             public var peer: Api.Peer
             public var settings: Api.AutoSaveSettings
             public init(peer: Api.Peer, settings: Api.AutoSaveSettings) {
                 self.peer = peer
                 self.settings = settings
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("autoSaveException", [("peer", self.peer as Any), ("settings", self.settings as Any)])
             }
         }
         case autoSaveException(Cons_autoSaveException)
@@ -735,12 +765,15 @@ public extension Api {
 }
 public extension Api {
     enum AutoSaveSettings: TypeConstructorDescription {
-        public class Cons_autoSaveSettings {
+        public class Cons_autoSaveSettings: TypeConstructorDescription {
             public var flags: Int32
             public var videoMaxSize: Int64?
             public init(flags: Int32, videoMaxSize: Int64?) {
                 self.flags = flags
                 self.videoMaxSize = videoMaxSize
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("autoSaveSettings", [("flags", self.flags as Any), ("videoMaxSize", self.videoMaxSize as Any)])
             }
         }
         case autoSaveSettings(Cons_autoSaveSettings)
@@ -786,7 +819,7 @@ public extension Api {
 }
 public extension Api {
     enum AvailableEffect: TypeConstructorDescription {
-        public class Cons_availableEffect {
+        public class Cons_availableEffect: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var emoticon: String
@@ -800,6 +833,9 @@ public extension Api {
                 self.staticIconId = staticIconId
                 self.effectStickerId = effectStickerId
                 self.effectAnimationId = effectAnimationId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("availableEffect", [("flags", self.flags as Any), ("id", self.id as Any), ("emoticon", self.emoticon as Any), ("staticIconId", self.staticIconId as Any), ("effectStickerId", self.effectStickerId as Any), ("effectAnimationId", self.effectAnimationId as Any)])
             }
         }
         case availableEffect(Cons_availableEffect)
@@ -865,7 +901,7 @@ public extension Api {
 }
 public extension Api {
     enum AvailableReaction: TypeConstructorDescription {
-        public class Cons_availableReaction {
+        public class Cons_availableReaction: TypeConstructorDescription {
             public var flags: Int32
             public var reaction: String
             public var title: String
@@ -887,6 +923,9 @@ public extension Api {
                 self.effectAnimation = effectAnimation
                 self.aroundAnimation = aroundAnimation
                 self.centerIcon = centerIcon
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("availableReaction", [("flags", self.flags as Any), ("reaction", self.reaction as Any), ("title", self.title as Any), ("staticIcon", self.staticIcon as Any), ("appearAnimation", self.appearAnimation as Any), ("selectAnimation", self.selectAnimation as Any), ("activateAnimation", self.activateAnimation as Any), ("effectAnimation", self.effectAnimation as Any), ("aroundAnimation", self.aroundAnimation as Any), ("centerIcon", self.centerIcon as Any)])
             }
         }
         case availableReaction(Cons_availableReaction)
@@ -982,12 +1021,15 @@ public extension Api {
 }
 public extension Api {
     enum BankCardOpenUrl: TypeConstructorDescription {
-        public class Cons_bankCardOpenUrl {
+        public class Cons_bankCardOpenUrl: TypeConstructorDescription {
             public var url: String
             public var name: String
             public init(url: String, name: String) {
                 self.url = url
                 self.name = name
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("bankCardOpenUrl", [("url", self.url as Any), ("name", self.name as Any)])
             }
         }
         case bankCardOpenUrl(Cons_bankCardOpenUrl)
@@ -1099,7 +1141,7 @@ public extension Api {
 }
 public extension Api {
     enum Birthday: TypeConstructorDescription {
-        public class Cons_birthday {
+        public class Cons_birthday: TypeConstructorDescription {
             public var flags: Int32
             public var day: Int32
             public var month: Int32
@@ -1109,6 +1151,9 @@ public extension Api {
                 self.day = day
                 self.month = month
                 self.year = year
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("birthday", [("flags", self.flags as Any), ("day", self.day as Any), ("month", self.month as Any), ("year", self.year as Any)])
             }
         }
         case birthday(Cons_birthday)
@@ -1199,7 +1244,7 @@ public extension Api {
 }
 public extension Api {
     enum Boost: TypeConstructorDescription {
-        public class Cons_boost {
+        public class Cons_boost: TypeConstructorDescription {
             public var flags: Int32
             public var id: String
             public var userId: Int64?
@@ -1219,6 +1264,9 @@ public extension Api {
                 self.usedGiftSlug = usedGiftSlug
                 self.multiplier = multiplier
                 self.stars = stars
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("boost", [("flags", self.flags as Any), ("id", self.id as Any), ("userId", self.userId as Any), ("giveawayMsgId", self.giveawayMsgId as Any), ("date", self.date as Any), ("expires", self.expires as Any), ("usedGiftSlug", self.usedGiftSlug as Any), ("multiplier", self.multiplier as Any), ("stars", self.stars as Any)])
             }
         }
         case boost(Cons_boost)
@@ -1308,7 +1356,7 @@ public extension Api {
 }
 public extension Api {
     enum BotApp: TypeConstructorDescription {
-        public class Cons_botApp {
+        public class Cons_botApp: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var accessHash: Int64
@@ -1328,6 +1376,9 @@ public extension Api {
                 self.photo = photo
                 self.document = document
                 self.hash = hash
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("botApp", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("shortName", self.shortName as Any), ("title", self.title as Any), ("description", self.description as Any), ("photo", self.photo as Any), ("document", self.document as Any), ("hash", self.hash as Any)])
             }
         }
         case botApp(Cons_botApp)
@@ -1416,7 +1467,7 @@ public extension Api {
 }
 public extension Api {
     enum BotAppSettings: TypeConstructorDescription {
-        public class Cons_botAppSettings {
+        public class Cons_botAppSettings: TypeConstructorDescription {
             public var flags: Int32
             public var placeholderPath: Buffer?
             public var backgroundColor: Int32?
@@ -1430,6 +1481,9 @@ public extension Api {
                 self.backgroundDarkColor = backgroundDarkColor
                 self.headerColor = headerColor
                 self.headerDarkColor = headerDarkColor
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("botAppSettings", [("flags", self.flags as Any), ("placeholderPath", self.placeholderPath as Any), ("backgroundColor", self.backgroundColor as Any), ("backgroundDarkColor", self.backgroundDarkColor as Any), ("headerColor", self.headerColor as Any), ("headerDarkColor", self.headerDarkColor as Any)])
             }
         }
         case botAppSettings(Cons_botAppSettings)

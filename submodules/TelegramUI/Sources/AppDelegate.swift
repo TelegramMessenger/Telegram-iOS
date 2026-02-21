@@ -1012,6 +1012,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let dcDigit = digits[digits.index(digits.startIndex, offsetBy: 5)]
             let phoneCode = String(repeating: dcDigit, count: 5)
 
+            let window = self.window!
+            window.makeKeyAndVisible()
+
+            NSLog("[DeleteAccount] starting for +\(digits)")
             let _ = test_loginAndDeleteAccount(
                 rootPath: rootPath,
                 accountManager: accountManager,
@@ -1019,10 +1023,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 encryptionParameters: encryptionParameters,
                 phoneNumber: "+\(digits)",
                 phoneCode: phoneCode
-            ).start(error: { _ in
+            ).start(error: { error in
+                NSLog("[DeleteAccount] error: \(error)")
                 preconditionFailure("test_loginAndDeleteAccount failed")
-            }, completed: { [weak self] in
-                self?.window?.accessibilityIdentifier = "DeleteAccount.Success"
+            }, completed: {
+                NSLog("[DeleteAccount] completed")
+                DispatchQueue.main.async {
+                    window.accessibilityIdentifier = "DeleteAccount.Success"
+                }
             })
 
             return true

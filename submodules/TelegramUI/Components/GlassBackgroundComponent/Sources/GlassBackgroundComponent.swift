@@ -1225,16 +1225,17 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
         self.normalParams = normalParams
         
         if case .normal = self.state {
-            self.applyState(transition: .transition(transition.containedViewLayoutTransition), completion: nil)
+            self.applyState(previousState: self.state, transition: .transition(transition.containedViewLayoutTransition), completion: nil)
         }
     }
     
     public func updateState(state: State, transition: Transition, completion: ((Bool) -> Void)?) {
+        let previousState = self.state
         self.state = state
-        self.applyState(transition: transition, completion: completion)
+        self.applyState(previousState: previousState, transition: transition, completion: completion)
     }
     
-    private func applyState(transition: Transition, completion: ((Bool) -> Void)?) {
+    private func applyState(previousState: State?, transition: Transition, completion: ((Bool) -> Void)?) {
         guard let normalParams = self.normalParams else {
             completion?(true)
             return
@@ -1286,15 +1287,54 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
                     completion?(completed)
                 })
                 
-                self.glassView.update(
-                    size: size,
-                    cornerRadius: cornerRadius,
-                    isDark: normalParams.isDark,
-                    tintColor: normalParams.tintColor,
-                    isInteractive: normalParams.isInteractive,
-                    isVisible: normalParams.isVisible,
-                    transition: mappedTransition
-                )
+                if case let .curve(duration, curve) = mappedTransition.animation, case .spring = curve, let previousState, case let .extracted(_, previousCornerRadius, previousExtractedState) = previousState, case .animatedOut = previousExtractedState {
+                    self.glassView.update(
+                        size: size,
+                        cornerRadius: previousCornerRadius,
+                        isDark: normalParams.isDark,
+                        tintColor: normalParams.tintColor,
+                        isInteractive: normalParams.isInteractive,
+                        isVisible: normalParams.isVisible,
+                        transition: mappedTransition
+                    )
+                    let firstPartDuration: Double = 0.35
+                    self.glassView.update(
+                        size: size,
+                        cornerRadius: min(size.width, size.height) * 0.5,
+                        isDark: normalParams.isDark,
+                        tintColor: normalParams.tintColor,
+                        isInteractive: normalParams.isInteractive,
+                        isVisible: normalParams.isVisible,
+                        transition: .easeInOut(duration: duration * firstPartDuration)
+                    )
+                    DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + UIView.animationDurationFactor() * duration * firstPartDuration, execute: { [weak self] in
+                        guard let self, let normalParams = self.normalParams else {
+                            return
+                        }
+                        guard case let .extracted(newSize, newCornerRadius, newExtractionState) = self.state, newSize == size, newCornerRadius == cornerRadius, newExtractionState == extractionState else {
+                            return
+                        }
+                        self.glassView.update(
+                            size: size,
+                            cornerRadius: cornerRadius,
+                            isDark: normalParams.isDark,
+                            tintColor: normalParams.tintColor,
+                            isInteractive: normalParams.isInteractive,
+                            isVisible: normalParams.isVisible,
+                            transition: .spring(duration: duration * (1.0 - firstPartDuration))
+                        )
+                    })
+                } else {
+                    self.glassView.update(
+                        size: size,
+                        cornerRadius: cornerRadius,
+                        isDark: normalParams.isDark,
+                        tintColor: normalParams.tintColor,
+                        isInteractive: normalParams.isInteractive,
+                        isVisible: normalParams.isVisible,
+                        transition: mappedTransition
+                    )
+                }
             }
         }
     }

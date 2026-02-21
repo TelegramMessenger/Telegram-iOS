@@ -1,31 +1,43 @@
 public extension Api {
     enum InputPaymentCredentials: TypeConstructorDescription {
-        public class Cons_inputPaymentCredentials {
+        public class Cons_inputPaymentCredentials: TypeConstructorDescription {
             public var flags: Int32
             public var data: Api.DataJSON
             public init(flags: Int32, data: Api.DataJSON) {
                 self.flags = flags
                 self.data = data
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPaymentCredentials", [("flags", self.flags as Any), ("data", self.data as Any)])
+            }
         }
-        public class Cons_inputPaymentCredentialsApplePay {
+        public class Cons_inputPaymentCredentialsApplePay: TypeConstructorDescription {
             public var paymentData: Api.DataJSON
             public init(paymentData: Api.DataJSON) {
                 self.paymentData = paymentData
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPaymentCredentialsApplePay", [("paymentData", self.paymentData as Any)])
+            }
         }
-        public class Cons_inputPaymentCredentialsGooglePay {
+        public class Cons_inputPaymentCredentialsGooglePay: TypeConstructorDescription {
             public var paymentToken: Api.DataJSON
             public init(paymentToken: Api.DataJSON) {
                 self.paymentToken = paymentToken
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPaymentCredentialsGooglePay", [("paymentToken", self.paymentToken as Any)])
+            }
         }
-        public class Cons_inputPaymentCredentialsSaved {
+        public class Cons_inputPaymentCredentialsSaved: TypeConstructorDescription {
             public var id: String
             public var tmpPassword: Buffer
             public init(id: String, tmpPassword: Buffer) {
                 self.id = id
                 self.tmpPassword = tmpPassword
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPaymentCredentialsSaved", [("id", self.id as Any), ("tmpPassword", self.tmpPassword as Any)])
             }
         }
         case inputPaymentCredentials(Cons_inputPaymentCredentials)
@@ -137,15 +149,18 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputPeer: TypeConstructorDescription {
-        public class Cons_inputPeerChannel {
+        public class Cons_inputPeerChannel: TypeConstructorDescription {
             public var channelId: Int64
             public var accessHash: Int64
             public init(channelId: Int64, accessHash: Int64) {
                 self.channelId = channelId
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPeerChannel", [("channelId", self.channelId as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputPeerChannelFromMessage {
+        public class Cons_inputPeerChannelFromMessage: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var msgId: Int32
             public var channelId: Int64
@@ -154,22 +169,31 @@ public extension Api {
                 self.msgId = msgId
                 self.channelId = channelId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPeerChannelFromMessage", [("peer", self.peer as Any), ("msgId", self.msgId as Any), ("channelId", self.channelId as Any)])
+            }
         }
-        public class Cons_inputPeerChat {
+        public class Cons_inputPeerChat: TypeConstructorDescription {
             public var chatId: Int64
             public init(chatId: Int64) {
                 self.chatId = chatId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPeerChat", [("chatId", self.chatId as Any)])
+            }
         }
-        public class Cons_inputPeerUser {
+        public class Cons_inputPeerUser: TypeConstructorDescription {
             public var userId: Int64
             public var accessHash: Int64
             public init(userId: Int64, accessHash: Int64) {
                 self.userId = userId
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPeerUser", [("userId", self.userId as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputPeerUserFromMessage {
+        public class Cons_inputPeerUserFromMessage: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var msgId: Int32
             public var userId: Int64
@@ -177,6 +201,9 @@ public extension Api {
                 self.peer = peer
                 self.msgId = msgId
                 self.userId = userId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPeerUserFromMessage", [("peer", self.peer as Any), ("msgId", self.msgId as Any), ("userId", self.userId as Any)])
             }
         }
         case inputPeerChannel(Cons_inputPeerChannel)
@@ -344,7 +371,7 @@ public extension Api {
 }
 public extension Api {
     enum InputPeerNotifySettings: TypeConstructorDescription {
-        public class Cons_inputPeerNotifySettings {
+        public class Cons_inputPeerNotifySettings: TypeConstructorDescription {
             public var flags: Int32
             public var showPreviews: Api.Bool?
             public var silent: Api.Bool?
@@ -362,6 +389,9 @@ public extension Api {
                 self.storiesMuted = storiesMuted
                 self.storiesHideSender = storiesHideSender
                 self.storiesSound = storiesSound
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPeerNotifySettings", [("flags", self.flags as Any), ("showPreviews", self.showPreviews as Any), ("silent", self.silent as Any), ("muteUntil", self.muteUntil as Any), ("sound", self.sound as Any), ("storiesMuted", self.storiesMuted as Any), ("storiesHideSender", self.storiesHideSender as Any), ("storiesSound", self.storiesSound as Any)])
             }
         }
         case inputPeerNotifySettings(Cons_inputPeerNotifySettings)
@@ -467,12 +497,15 @@ public extension Api {
 }
 public extension Api {
     enum InputPhoneCall: TypeConstructorDescription {
-        public class Cons_inputPhoneCall {
+        public class Cons_inputPhoneCall: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPhoneCall", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
             }
         }
         case inputPhoneCall(Cons_inputPhoneCall)
@@ -514,7 +547,7 @@ public extension Api {
 }
 public extension Api {
     enum InputPhoto: TypeConstructorDescription {
-        public class Cons_inputPhoto {
+        public class Cons_inputPhoto: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public var fileReference: Buffer
@@ -522,6 +555,9 @@ public extension Api {
                 self.id = id
                 self.accessHash = accessHash
                 self.fileReference = fileReference
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPhoto", [("id", self.id as Any), ("accessHash", self.accessHash as Any), ("fileReference", self.fileReference as Any)])
             }
         }
         case inputPhoto(Cons_inputPhoto)
@@ -747,28 +783,40 @@ public extension Api {
 }
 public extension Api {
     enum InputPrivacyRule: TypeConstructorDescription {
-        public class Cons_inputPrivacyValueAllowChatParticipants {
+        public class Cons_inputPrivacyValueAllowChatParticipants: TypeConstructorDescription {
             public var chats: [Int64]
             public init(chats: [Int64]) {
                 self.chats = chats
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPrivacyValueAllowChatParticipants", [("chats", self.chats as Any)])
+            }
         }
-        public class Cons_inputPrivacyValueAllowUsers {
+        public class Cons_inputPrivacyValueAllowUsers: TypeConstructorDescription {
             public var users: [Api.InputUser]
             public init(users: [Api.InputUser]) {
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPrivacyValueAllowUsers", [("users", self.users as Any)])
+            }
         }
-        public class Cons_inputPrivacyValueDisallowChatParticipants {
+        public class Cons_inputPrivacyValueDisallowChatParticipants: TypeConstructorDescription {
             public var chats: [Int64]
             public init(chats: [Int64]) {
                 self.chats = chats
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPrivacyValueDisallowChatParticipants", [("chats", self.chats as Any)])
+            }
         }
-        public class Cons_inputPrivacyValueDisallowUsers {
+        public class Cons_inputPrivacyValueDisallowUsers: TypeConstructorDescription {
             public var users: [Api.InputUser]
             public init(users: [Api.InputUser]) {
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPrivacyValueDisallowUsers", [("users", self.users as Any)])
             }
         }
         case inputPrivacyValueAllowAll

@@ -1,11 +1,14 @@
 public extension Api.messages {
     enum AllStickers: TypeConstructorDescription {
-        public class Cons_allStickers {
+        public class Cons_allStickers: TypeConstructorDescription {
             public var hash: Int64
             public var sets: [Api.StickerSet]
             public init(hash: Int64, sets: [Api.StickerSet]) {
                 self.hash = hash
                 self.sets = sets
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("allStickers", [("hash", self.hash as Any), ("sets", self.sets as Any)])
             }
         }
         case allStickers(Cons_allStickers)
@@ -64,12 +67,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum ArchivedStickers: TypeConstructorDescription {
-        public class Cons_archivedStickers {
+        public class Cons_archivedStickers: TypeConstructorDescription {
             public var count: Int32
             public var sets: [Api.StickerSetCovered]
             public init(count: Int32, sets: [Api.StickerSetCovered]) {
                 self.count = count
                 self.sets = sets
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("archivedStickers", [("count", self.count as Any), ("sets", self.sets as Any)])
             }
         }
         case archivedStickers(Cons_archivedStickers)
@@ -117,7 +123,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum AvailableEffects: TypeConstructorDescription {
-        public class Cons_availableEffects {
+        public class Cons_availableEffects: TypeConstructorDescription {
             public var hash: Int32
             public var effects: [Api.AvailableEffect]
             public var documents: [Api.Document]
@@ -125,6 +131,9 @@ public extension Api.messages {
                 self.hash = hash
                 self.effects = effects
                 self.documents = documents
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("availableEffects", [("hash", self.hash as Any), ("effects", self.effects as Any), ("documents", self.documents as Any)])
             }
         }
         case availableEffects(Cons_availableEffects)
@@ -193,12 +202,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum AvailableReactions: TypeConstructorDescription {
-        public class Cons_availableReactions {
+        public class Cons_availableReactions: TypeConstructorDescription {
             public var hash: Int32
             public var reactions: [Api.AvailableReaction]
             public init(hash: Int32, reactions: [Api.AvailableReaction]) {
                 self.hash = hash
                 self.reactions = reactions
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("availableReactions", [("hash", self.hash as Any), ("reactions", self.reactions as Any)])
             }
         }
         case availableReactions(Cons_availableReactions)
@@ -257,12 +269,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum BotApp: TypeConstructorDescription {
-        public class Cons_botApp {
+        public class Cons_botApp: TypeConstructorDescription {
             public var flags: Int32
             public var app: Api.BotApp
             public init(flags: Int32, app: Api.BotApp) {
                 self.flags = flags
                 self.app = app
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("botApp", [("flags", self.flags as Any), ("app", self.app as Any)])
             }
         }
         case botApp(Cons_botApp)
@@ -306,7 +321,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum BotCallbackAnswer: TypeConstructorDescription {
-        public class Cons_botCallbackAnswer {
+        public class Cons_botCallbackAnswer: TypeConstructorDescription {
             public var flags: Int32
             public var message: String?
             public var url: String?
@@ -316,6 +331,9 @@ public extension Api.messages {
                 self.message = message
                 self.url = url
                 self.cacheTime = cacheTime
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("botCallbackAnswer", [("flags", self.flags as Any), ("message", self.message as Any), ("url", self.url as Any), ("cacheTime", self.cacheTime as Any)])
             }
         }
         case botCallbackAnswer(Cons_botCallbackAnswer)
@@ -373,12 +391,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum BotPreparedInlineMessage: TypeConstructorDescription {
-        public class Cons_botPreparedInlineMessage {
+        public class Cons_botPreparedInlineMessage: TypeConstructorDescription {
             public var id: String
             public var expireDate: Int32
             public init(id: String, expireDate: Int32) {
                 self.id = id
                 self.expireDate = expireDate
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("botPreparedInlineMessage", [("id", self.id as Any), ("expireDate", self.expireDate as Any)])
             }
         }
         case botPreparedInlineMessage(Cons_botPreparedInlineMessage)
@@ -420,7 +441,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum BotResults: TypeConstructorDescription {
-        public class Cons_botResults {
+        public class Cons_botResults: TypeConstructorDescription {
             public var flags: Int32
             public var queryId: Int64
             public var nextOffset: String?
@@ -438,6 +459,9 @@ public extension Api.messages {
                 self.results = results
                 self.cacheTime = cacheTime
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("botResults", [("flags", self.flags as Any), ("queryId", self.queryId as Any), ("nextOffset", self.nextOffset as Any), ("switchPm", self.switchPm as Any), ("switchWebview", self.switchWebview as Any), ("results", self.results as Any), ("cacheTime", self.cacheTime as Any), ("users", self.users as Any)])
             }
         }
         case botResults(Cons_botResults)
@@ -531,12 +555,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum ChatAdminsWithInvites: TypeConstructorDescription {
-        public class Cons_chatAdminsWithInvites {
+        public class Cons_chatAdminsWithInvites: TypeConstructorDescription {
             public var admins: [Api.ChatAdminWithInvites]
             public var users: [Api.User]
             public init(admins: [Api.ChatAdminWithInvites], users: [Api.User]) {
                 self.admins = admins
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatAdminsWithInvites", [("admins", self.admins as Any), ("users", self.users as Any)])
             }
         }
         case chatAdminsWithInvites(Cons_chatAdminsWithInvites)
@@ -590,7 +617,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum ChatFull: TypeConstructorDescription {
-        public class Cons_chatFull {
+        public class Cons_chatFull: TypeConstructorDescription {
             public var fullChat: Api.ChatFull
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -598,6 +625,9 @@ public extension Api.messages {
                 self.fullChat = fullChat
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatFull", [("fullChat", self.fullChat as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case chatFull(Cons_chatFull)
@@ -657,7 +687,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum ChatInviteImporters: TypeConstructorDescription {
-        public class Cons_chatInviteImporters {
+        public class Cons_chatInviteImporters: TypeConstructorDescription {
             public var count: Int32
             public var importers: [Api.ChatInviteImporter]
             public var users: [Api.User]
@@ -665,6 +695,9 @@ public extension Api.messages {
                 self.count = count
                 self.importers = importers
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatInviteImporters", [("count", self.count as Any), ("importers", self.importers as Any), ("users", self.users as Any)])
             }
         }
         case chatInviteImporters(Cons_chatInviteImporters)
@@ -722,18 +755,24 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum Chats: TypeConstructorDescription {
-        public class Cons_chats {
+        public class Cons_chats: TypeConstructorDescription {
             public var chats: [Api.Chat]
             public init(chats: [Api.Chat]) {
                 self.chats = chats
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chats", [("chats", self.chats as Any)])
+            }
         }
-        public class Cons_chatsSlice {
+        public class Cons_chatsSlice: TypeConstructorDescription {
             public var count: Int32
             public var chats: [Api.Chat]
             public init(count: Int32, chats: [Api.Chat]) {
                 self.count = count
                 self.chats = chats
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatsSlice", [("count", self.count as Any), ("chats", self.chats as Any)])
             }
         }
         case chats(Cons_chats)
@@ -807,10 +846,13 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum CheckedHistoryImportPeer: TypeConstructorDescription {
-        public class Cons_checkedHistoryImportPeer {
+        public class Cons_checkedHistoryImportPeer: TypeConstructorDescription {
             public var confirmText: String
             public init(confirmText: String) {
                 self.confirmText = confirmText
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("checkedHistoryImportPeer", [("confirmText", self.confirmText as Any)])
             }
         }
         case checkedHistoryImportPeer(Cons_checkedHistoryImportPeer)
@@ -848,7 +890,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum DhConfig: TypeConstructorDescription {
-        public class Cons_dhConfig {
+        public class Cons_dhConfig: TypeConstructorDescription {
             public var g: Int32
             public var p: Buffer
             public var version: Int32
@@ -859,11 +901,17 @@ public extension Api.messages {
                 self.version = version
                 self.random = random
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("dhConfig", [("g", self.g as Any), ("p", self.p as Any), ("version", self.version as Any), ("random", self.random as Any)])
+            }
         }
-        public class Cons_dhConfigNotModified {
+        public class Cons_dhConfigNotModified: TypeConstructorDescription {
             public var random: Buffer
             public init(random: Buffer) {
                 self.random = random
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("dhConfigNotModified", [("random", self.random as Any)])
             }
         }
         case dhConfig(Cons_dhConfig)
@@ -933,12 +981,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum DialogFilters: TypeConstructorDescription {
-        public class Cons_dialogFilters {
+        public class Cons_dialogFilters: TypeConstructorDescription {
             public var flags: Int32
             public var filters: [Api.DialogFilter]
             public init(flags: Int32, filters: [Api.DialogFilter]) {
                 self.flags = flags
                 self.filters = filters
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("dialogFilters", [("flags", self.flags as Any), ("filters", self.filters as Any)])
             }
         }
         case dialogFilters(Cons_dialogFilters)
@@ -986,7 +1037,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum Dialogs: TypeConstructorDescription {
-        public class Cons_dialogs {
+        public class Cons_dialogs: TypeConstructorDescription {
             public var dialogs: [Api.Dialog]
             public var messages: [Api.Message]
             public var chats: [Api.Chat]
@@ -997,14 +1048,20 @@ public extension Api.messages {
                 self.chats = chats
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("dialogs", [("dialogs", self.dialogs as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_dialogsNotModified {
+        public class Cons_dialogsNotModified: TypeConstructorDescription {
             public var count: Int32
             public init(count: Int32) {
                 self.count = count
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("dialogsNotModified", [("count", self.count as Any)])
+            }
         }
-        public class Cons_dialogsSlice {
+        public class Cons_dialogsSlice: TypeConstructorDescription {
             public var count: Int32
             public var dialogs: [Api.Dialog]
             public var messages: [Api.Message]
@@ -1016,6 +1073,9 @@ public extension Api.messages {
                 self.messages = messages
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("dialogsSlice", [("count", self.count as Any), ("dialogs", self.dialogs as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case dialogs(Cons_dialogs)
@@ -1169,7 +1229,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum DiscussionMessage: TypeConstructorDescription {
-        public class Cons_discussionMessage {
+        public class Cons_discussionMessage: TypeConstructorDescription {
             public var flags: Int32
             public var messages: [Api.Message]
             public var maxId: Int32?
@@ -1187,6 +1247,9 @@ public extension Api.messages {
                 self.unreadCount = unreadCount
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("discussionMessage", [("flags", self.flags as Any), ("messages", self.messages as Any), ("maxId", self.maxId as Any), ("readInboxMaxId", self.readInboxMaxId as Any), ("readOutboxMaxId", self.readOutboxMaxId as Any), ("unreadCount", self.unreadCount as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case discussionMessage(Cons_discussionMessage)
@@ -1282,7 +1345,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum EmojiGameInfo: TypeConstructorDescription {
-        public class Cons_emojiGameDiceInfo {
+        public class Cons_emojiGameDiceInfo: TypeConstructorDescription {
             public var flags: Int32
             public var gameHash: String
             public var prevStake: Int64
@@ -1296,6 +1359,9 @@ public extension Api.messages {
                 self.currentStreak = currentStreak
                 self.params = params
                 self.playsLeft = playsLeft
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiGameDiceInfo", [("flags", self.flags as Any), ("gameHash", self.gameHash as Any), ("prevStake", self.prevStake as Any), ("currentStreak", self.currentStreak as Any), ("params", self.params as Any), ("playsLeft", self.playsLeft as Any)])
             }
         }
         case emojiGameDiceInfo(Cons_emojiGameDiceInfo)
@@ -1374,7 +1440,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum EmojiGameOutcome: TypeConstructorDescription {
-        public class Cons_emojiGameOutcome {
+        public class Cons_emojiGameOutcome: TypeConstructorDescription {
             public var seed: Buffer
             public var stakeTonAmount: Int64
             public var tonAmount: Int64
@@ -1382,6 +1448,9 @@ public extension Api.messages {
                 self.seed = seed
                 self.stakeTonAmount = stakeTonAmount
                 self.tonAmount = tonAmount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiGameOutcome", [("seed", self.seed as Any), ("stakeTonAmount", self.stakeTonAmount as Any), ("tonAmount", self.tonAmount as Any)])
             }
         }
         case emojiGameOutcome(Cons_emojiGameOutcome)
@@ -1427,12 +1496,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum EmojiGroups: TypeConstructorDescription {
-        public class Cons_emojiGroups {
+        public class Cons_emojiGroups: TypeConstructorDescription {
             public var hash: Int32
             public var groups: [Api.EmojiGroup]
             public init(hash: Int32, groups: [Api.EmojiGroup]) {
                 self.hash = hash
                 self.groups = groups
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("emojiGroups", [("hash", self.hash as Any), ("groups", self.groups as Any)])
             }
         }
         case emojiGroups(Cons_emojiGroups)
@@ -1491,15 +1563,18 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum ExportedChatInvite: TypeConstructorDescription {
-        public class Cons_exportedChatInvite {
+        public class Cons_exportedChatInvite: TypeConstructorDescription {
             public var invite: Api.ExportedChatInvite
             public var users: [Api.User]
             public init(invite: Api.ExportedChatInvite, users: [Api.User]) {
                 self.invite = invite
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedChatInvite", [("invite", self.invite as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_exportedChatInviteReplaced {
+        public class Cons_exportedChatInviteReplaced: TypeConstructorDescription {
             public var invite: Api.ExportedChatInvite
             public var newInvite: Api.ExportedChatInvite
             public var users: [Api.User]
@@ -1507,6 +1582,9 @@ public extension Api.messages {
                 self.invite = invite
                 self.newInvite = newInvite
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedChatInviteReplaced", [("invite", self.invite as Any), ("newInvite", self.newInvite as Any), ("users", self.users as Any)])
             }
         }
         case exportedChatInvite(Cons_exportedChatInvite)
@@ -1594,7 +1672,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum ExportedChatInvites: TypeConstructorDescription {
-        public class Cons_exportedChatInvites {
+        public class Cons_exportedChatInvites: TypeConstructorDescription {
             public var count: Int32
             public var invites: [Api.ExportedChatInvite]
             public var users: [Api.User]
@@ -1602,6 +1680,9 @@ public extension Api.messages {
                 self.count = count
                 self.invites = invites
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedChatInvites", [("count", self.count as Any), ("invites", self.invites as Any), ("users", self.users as Any)])
             }
         }
         case exportedChatInvites(Cons_exportedChatInvites)

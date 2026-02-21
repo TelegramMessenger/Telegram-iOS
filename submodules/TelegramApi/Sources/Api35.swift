@@ -1,6 +1,6 @@
 public extension Api.messages {
     enum FavedStickers: TypeConstructorDescription {
-        public class Cons_favedStickers {
+        public class Cons_favedStickers: TypeConstructorDescription {
             public var hash: Int64
             public var packs: [Api.StickerPack]
             public var stickers: [Api.Document]
@@ -8,6 +8,9 @@ public extension Api.messages {
                 self.hash = hash
                 self.packs = packs
                 self.stickers = stickers
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("favedStickers", [("hash", self.hash as Any), ("packs", self.packs as Any), ("stickers", self.stickers as Any)])
             }
         }
         case favedStickers(Cons_favedStickers)
@@ -76,7 +79,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum FeaturedStickers: TypeConstructorDescription {
-        public class Cons_featuredStickers {
+        public class Cons_featuredStickers: TypeConstructorDescription {
             public var flags: Int32
             public var hash: Int64
             public var count: Int32
@@ -89,11 +92,17 @@ public extension Api.messages {
                 self.sets = sets
                 self.unread = unread
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("featuredStickers", [("flags", self.flags as Any), ("hash", self.hash as Any), ("count", self.count as Any), ("sets", self.sets as Any), ("unread", self.unread as Any)])
+            }
         }
-        public class Cons_featuredStickersNotModified {
+        public class Cons_featuredStickersNotModified: TypeConstructorDescription {
             public var count: Int32
             public init(count: Int32) {
                 self.count = count
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("featuredStickersNotModified", [("count", self.count as Any)])
             }
         }
         case featuredStickers(Cons_featuredStickers)
@@ -179,7 +188,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum ForumTopics: TypeConstructorDescription {
-        public class Cons_forumTopics {
+        public class Cons_forumTopics: TypeConstructorDescription {
             public var flags: Int32
             public var count: Int32
             public var topics: [Api.ForumTopic]
@@ -195,6 +204,9 @@ public extension Api.messages {
                 self.chats = chats
                 self.users = users
                 self.pts = pts
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("forumTopics", [("flags", self.flags as Any), ("count", self.count as Any), ("topics", self.topics as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("pts", self.pts as Any)])
             }
         }
         case forumTopics(Cons_forumTopics)
@@ -280,12 +292,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum FoundStickerSets: TypeConstructorDescription {
-        public class Cons_foundStickerSets {
+        public class Cons_foundStickerSets: TypeConstructorDescription {
             public var hash: Int64
             public var sets: [Api.StickerSetCovered]
             public init(hash: Int64, sets: [Api.StickerSetCovered]) {
                 self.hash = hash
                 self.sets = sets
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("foundStickerSets", [("hash", self.hash as Any), ("sets", self.sets as Any)])
             }
         }
         case foundStickerSets(Cons_foundStickerSets)
@@ -344,7 +359,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum FoundStickers: TypeConstructorDescription {
-        public class Cons_foundStickers {
+        public class Cons_foundStickers: TypeConstructorDescription {
             public var flags: Int32
             public var nextOffset: Int32?
             public var hash: Int64
@@ -355,13 +370,19 @@ public extension Api.messages {
                 self.hash = hash
                 self.stickers = stickers
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("foundStickers", [("flags", self.flags as Any), ("nextOffset", self.nextOffset as Any), ("hash", self.hash as Any), ("stickers", self.stickers as Any)])
+            }
         }
-        public class Cons_foundStickersNotModified {
+        public class Cons_foundStickersNotModified: TypeConstructorDescription {
             public var flags: Int32
             public var nextOffset: Int32?
             public init(flags: Int32, nextOffset: Int32?) {
                 self.flags = flags
                 self.nextOffset = nextOffset
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("foundStickersNotModified", [("flags", self.flags as Any), ("nextOffset", self.nextOffset as Any)])
             }
         }
         case foundStickers(Cons_foundStickers)
@@ -449,12 +470,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum HighScores: TypeConstructorDescription {
-        public class Cons_highScores {
+        public class Cons_highScores: TypeConstructorDescription {
             public var scores: [Api.HighScore]
             public var users: [Api.User]
             public init(scores: [Api.HighScore], users: [Api.User]) {
                 self.scores = scores
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("highScores", [("scores", self.scores as Any), ("users", self.users as Any)])
             }
         }
         case highScores(Cons_highScores)
@@ -508,10 +532,13 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum HistoryImport: TypeConstructorDescription {
-        public class Cons_historyImport {
+        public class Cons_historyImport: TypeConstructorDescription {
             public var id: Int64
             public init(id: Int64) {
                 self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("historyImport", [("id", self.id as Any)])
             }
         }
         case historyImport(Cons_historyImport)
@@ -549,12 +576,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum HistoryImportParsed: TypeConstructorDescription {
-        public class Cons_historyImportParsed {
+        public class Cons_historyImportParsed: TypeConstructorDescription {
             public var flags: Int32
             public var title: String?
             public init(flags: Int32, title: String?) {
                 self.flags = flags
                 self.title = title
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("historyImportParsed", [("flags", self.flags as Any), ("title", self.title as Any)])
             }
         }
         case historyImportParsed(Cons_historyImportParsed)
@@ -600,7 +630,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum InactiveChats: TypeConstructorDescription {
-        public class Cons_inactiveChats {
+        public class Cons_inactiveChats: TypeConstructorDescription {
             public var dates: [Int32]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -608,6 +638,9 @@ public extension Api.messages {
                 self.dates = dates
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inactiveChats", [("dates", self.dates as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case inactiveChats(Cons_inactiveChats)
@@ -671,12 +704,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     indirect enum InvitedUsers: TypeConstructorDescription {
-        public class Cons_invitedUsers {
+        public class Cons_invitedUsers: TypeConstructorDescription {
             public var updates: Api.Updates
             public var missingInvitees: [Api.MissingInvitee]
             public init(updates: Api.Updates, missingInvitees: [Api.MissingInvitee]) {
                 self.updates = updates
                 self.missingInvitees = missingInvitees
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("invitedUsers", [("updates", self.updates as Any), ("missingInvitees", self.missingInvitees as Any)])
             }
         }
         case invitedUsers(Cons_invitedUsers)
@@ -726,10 +762,13 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum MessageEditData: TypeConstructorDescription {
-        public class Cons_messageEditData {
+        public class Cons_messageEditData: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEditData", [("flags", self.flags as Any)])
             }
         }
         case messageEditData(Cons_messageEditData)
@@ -767,7 +806,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum MessageReactionsList: TypeConstructorDescription {
-        public class Cons_messageReactionsList {
+        public class Cons_messageReactionsList: TypeConstructorDescription {
             public var flags: Int32
             public var count: Int32
             public var reactions: [Api.MessagePeerReaction]
@@ -781,6 +820,9 @@ public extension Api.messages {
                 self.chats = chats
                 self.users = users
                 self.nextOffset = nextOffset
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageReactionsList", [("flags", self.flags as Any), ("count", self.count as Any), ("reactions", self.reactions as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("nextOffset", self.nextOffset as Any)])
             }
         }
         case messageReactionsList(Cons_messageReactionsList)
@@ -860,7 +902,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum MessageViews: TypeConstructorDescription {
-        public class Cons_messageViews {
+        public class Cons_messageViews: TypeConstructorDescription {
             public var views: [Api.MessageViews]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -868,6 +910,9 @@ public extension Api.messages {
                 self.views = views
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageViews", [("views", self.views as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case messageViews(Cons_messageViews)
@@ -931,7 +976,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum Messages: TypeConstructorDescription {
-        public class Cons_channelMessages {
+        public class Cons_channelMessages: TypeConstructorDescription {
             public var flags: Int32
             public var pts: Int32
             public var count: Int32
@@ -950,8 +995,11 @@ public extension Api.messages {
                 self.chats = chats
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelMessages", [("flags", self.flags as Any), ("pts", self.pts as Any), ("count", self.count as Any), ("offsetIdOffset", self.offsetIdOffset as Any), ("messages", self.messages as Any), ("topics", self.topics as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_messages {
+        public class Cons_messages: TypeConstructorDescription {
             public var messages: [Api.Message]
             public var topics: [Api.ForumTopic]
             public var chats: [Api.Chat]
@@ -962,14 +1010,20 @@ public extension Api.messages {
                 self.chats = chats
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messages", [("messages", self.messages as Any), ("topics", self.topics as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_messagesNotModified {
+        public class Cons_messagesNotModified: TypeConstructorDescription {
             public var count: Int32
             public init(count: Int32) {
                 self.count = count
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messagesNotModified", [("count", self.count as Any)])
+            }
         }
-        public class Cons_messagesSlice {
+        public class Cons_messagesSlice: TypeConstructorDescription {
             public var flags: Int32
             public var count: Int32
             public var nextRate: Int32?
@@ -989,6 +1043,9 @@ public extension Api.messages {
                 self.topics = topics
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messagesSlice", [("flags", self.flags as Any), ("count", self.count as Any), ("nextRate", self.nextRate as Any), ("offsetIdOffset", self.offsetIdOffset as Any), ("searchFlood", self.searchFlood as Any), ("messages", self.messages as Any), ("topics", self.topics as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case channelMessages(Cons_channelMessages)
@@ -1248,12 +1305,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum MyStickers: TypeConstructorDescription {
-        public class Cons_myStickers {
+        public class Cons_myStickers: TypeConstructorDescription {
             public var count: Int32
             public var sets: [Api.StickerSetCovered]
             public init(count: Int32, sets: [Api.StickerSetCovered]) {
                 self.count = count
                 self.sets = sets
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("myStickers", [("count", self.count as Any), ("sets", self.sets as Any)])
             }
         }
         case myStickers(Cons_myStickers)
@@ -1301,7 +1361,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum PeerDialogs: TypeConstructorDescription {
-        public class Cons_peerDialogs {
+        public class Cons_peerDialogs: TypeConstructorDescription {
             public var dialogs: [Api.Dialog]
             public var messages: [Api.Message]
             public var chats: [Api.Chat]
@@ -1313,6 +1373,9 @@ public extension Api.messages {
                 self.chats = chats
                 self.users = users
                 self.state = state
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("peerDialogs", [("dialogs", self.dialogs as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("state", self.state as Any)])
             }
         }
         case peerDialogs(Cons_peerDialogs)
@@ -1392,7 +1455,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum PeerSettings: TypeConstructorDescription {
-        public class Cons_peerSettings {
+        public class Cons_peerSettings: TypeConstructorDescription {
             public var settings: Api.PeerSettings
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -1400,6 +1463,9 @@ public extension Api.messages {
                 self.settings = settings
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("peerSettings", [("settings", self.settings as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case peerSettings(Cons_peerSettings)
@@ -1459,7 +1525,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum PreparedInlineMessage: TypeConstructorDescription {
-        public class Cons_preparedInlineMessage {
+        public class Cons_preparedInlineMessage: TypeConstructorDescription {
             public var queryId: Int64
             public var result: Api.BotInlineResult
             public var peerTypes: [Api.InlineQueryPeerType]
@@ -1471,6 +1537,9 @@ public extension Api.messages {
                 self.peerTypes = peerTypes
                 self.cacheTime = cacheTime
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("preparedInlineMessage", [("queryId", self.queryId as Any), ("result", self.result as Any), ("peerTypes", self.peerTypes as Any), ("cacheTime", self.cacheTime as Any), ("users", self.users as Any)])
             }
         }
         case preparedInlineMessage(Cons_preparedInlineMessage)
@@ -1538,7 +1607,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum QuickReplies: TypeConstructorDescription {
-        public class Cons_quickReplies {
+        public class Cons_quickReplies: TypeConstructorDescription {
             public var quickReplies: [Api.QuickReply]
             public var messages: [Api.Message]
             public var chats: [Api.Chat]
@@ -1548,6 +1617,9 @@ public extension Api.messages {
                 self.messages = messages
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("quickReplies", [("quickReplies", self.quickReplies as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case quickReplies(Cons_quickReplies)
@@ -1632,12 +1704,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum Reactions: TypeConstructorDescription {
-        public class Cons_reactions {
+        public class Cons_reactions: TypeConstructorDescription {
             public var hash: Int64
             public var reactions: [Api.Reaction]
             public init(hash: Int64, reactions: [Api.Reaction]) {
                 self.hash = hash
                 self.reactions = reactions
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("reactions", [("hash", self.hash as Any), ("reactions", self.reactions as Any)])
             }
         }
         case reactions(Cons_reactions)
@@ -1696,7 +1771,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum RecentStickers: TypeConstructorDescription {
-        public class Cons_recentStickers {
+        public class Cons_recentStickers: TypeConstructorDescription {
             public var hash: Int64
             public var packs: [Api.StickerPack]
             public var stickers: [Api.Document]
@@ -1706,6 +1781,9 @@ public extension Api.messages {
                 self.packs = packs
                 self.stickers = stickers
                 self.dates = dates
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("recentStickers", [("hash", self.hash as Any), ("packs", self.packs as Any), ("stickers", self.stickers as Any), ("dates", self.dates as Any)])
             }
         }
         case recentStickers(Cons_recentStickers)
@@ -1784,7 +1862,7 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum SavedDialogs: TypeConstructorDescription {
-        public class Cons_savedDialogs {
+        public class Cons_savedDialogs: TypeConstructorDescription {
             public var dialogs: [Api.SavedDialog]
             public var messages: [Api.Message]
             public var chats: [Api.Chat]
@@ -1795,14 +1873,20 @@ public extension Api.messages {
                 self.chats = chats
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedDialogs", [("dialogs", self.dialogs as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_savedDialogsNotModified {
+        public class Cons_savedDialogsNotModified: TypeConstructorDescription {
             public var count: Int32
             public init(count: Int32) {
                 self.count = count
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedDialogsNotModified", [("count", self.count as Any)])
+            }
         }
-        public class Cons_savedDialogsSlice {
+        public class Cons_savedDialogsSlice: TypeConstructorDescription {
             public var count: Int32
             public var dialogs: [Api.SavedDialog]
             public var messages: [Api.Message]
@@ -1814,6 +1898,9 @@ public extension Api.messages {
                 self.messages = messages
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedDialogsSlice", [("count", self.count as Any), ("dialogs", self.dialogs as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case savedDialogs(Cons_savedDialogs)

@@ -1412,7 +1412,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         let backgroundContainerInset: CGFloat
         let backgroundView: GlassBackgroundView
         var sourceExtractableContainer: ContextExtractableContainer?
-        let contentContainer: UIView//LensTransitionContainer
+        let contentContainer: LensTransitionContainer
         
         var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
         var requestPop: (() -> Void)?
@@ -1431,7 +1431,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             self.backgroundView = GlassBackgroundView()
             self.backgroundContainer.contentView.addSubview(self.backgroundView)
             
-            self.contentContainer = UIView()
+            self.contentContainer = LensTransitionContainer()
             self.contentContainer.clipsToBounds = true
             self.backgroundView.contentView.addSubview(self.contentContainer)
             
@@ -1513,14 +1513,12 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             }
             
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: sourceSize)
-            //self.contentContainer.update(size: sourceSize, cornerRadius: min(sourceSize.width, sourceSize.height) * 0.5, state: .animatedOut, transition: .immediate)
-            self.contentContainer.layer.cornerRadius = normalCornerRadius
+            self.contentContainer.update(size: sourceSize, cornerRadius: min(sourceSize.width, sourceSize.height) * 0.5, state: .animatedOut, transition: .immediate)
             
             extractableContainer.extractableContentView.frame = CGRect(origin: CGPoint(x: (currentSize.width - sourceSize.width) * 0.5, y: (currentSize.height - sourceSize.height) * 0.5), size: sourceSize).offsetBy(dx: self.backgroundContainerInset, dy: self.backgroundContainerInset)
             transition.setFrame(view: extractableContainer.extractableContentView, frame: CGRect(origin: CGPoint(x: self.backgroundContainerInset, y: self.backgroundContainerInset), size: currentSize))
             transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: currentSize))
-            //self.contentContainer.update(size: currentSize, cornerRadius: 30.0, state: .animatedIn, transition: transition)
-            transition.setCornerRadius(layer: self.contentContainer.layer, cornerRadius: 30.0)
+            self.contentContainer.update(size: currentSize, cornerRadius: 30.0, state: .animatedIn, transition: transition)
             self.contentContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
             
             extractableContainer.updateState(state: .extracted(size: sourceSize, cornerRadius: normalCornerRadius, state: .animatedOut), transition: .transition(.immediate), completion: nil)
@@ -1543,7 +1541,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             transition.setFrame(view: extractableContainer.extractableContentView, frame: CGRect(origin: CGPoint(x: self.backgroundContainerInset, y: self.backgroundContainerInset), size: normalSize).offsetBy(dx: (currentSize.width - normalSize.width) * 0.5, dy: (currentSize.height - normalSize.height) * 0.5))
             
             transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: normalSize))
-            //self.contentContainer.update(size: normalSize, cornerRadius: normalCornerRadius, state: .animatedOut, transition: transition)
+            self.contentContainer.update(size: normalSize, cornerRadius: normalCornerRadius, state: .animatedOut, transition: transition)
             
             transition.setCornerRadius(layer: self.contentContainer.layer, cornerRadius: normalCornerRadius)
             transition.setAlpha(view: self.contentContainer, alpha: 0.0)
@@ -1936,7 +1934,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             positionLock: positionLock
         )
         self.itemContainers.append(itemContainer)
-        self.navigationContainer.contentContainer.addSubview(itemContainer.view)
+        self.navigationContainer.contentContainer.contentsView.addSubview(itemContainer.view)
         self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1
         
         let transition: ContainedViewLayoutTransition

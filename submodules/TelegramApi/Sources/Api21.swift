@@ -1,27 +1,39 @@
 public extension Api {
     enum PrivacyRule: TypeConstructorDescription {
-        public class Cons_privacyValueAllowChatParticipants {
+        public class Cons_privacyValueAllowChatParticipants: TypeConstructorDescription {
             public var chats: [Int64]
             public init(chats: [Int64]) {
                 self.chats = chats
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("privacyValueAllowChatParticipants", [("chats", self.chats as Any)])
+            }
         }
-        public class Cons_privacyValueAllowUsers {
+        public class Cons_privacyValueAllowUsers: TypeConstructorDescription {
             public var users: [Int64]
             public init(users: [Int64]) {
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("privacyValueAllowUsers", [("users", self.users as Any)])
+            }
         }
-        public class Cons_privacyValueDisallowChatParticipants {
+        public class Cons_privacyValueDisallowChatParticipants: TypeConstructorDescription {
             public var chats: [Int64]
             public init(chats: [Int64]) {
                 self.chats = chats
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("privacyValueDisallowChatParticipants", [("chats", self.chats as Any)])
+            }
         }
-        public class Cons_privacyValueDisallowUsers {
+        public class Cons_privacyValueDisallowUsers: TypeConstructorDescription {
             public var users: [Int64]
             public init(users: [Int64]) {
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("privacyValueDisallowUsers", [("users", self.users as Any)])
             }
         }
         case privacyValueAllowAll
@@ -334,18 +346,24 @@ public extension Api {
 }
 public extension Api {
     indirect enum PublicForward: TypeConstructorDescription {
-        public class Cons_publicForwardMessage {
+        public class Cons_publicForwardMessage: TypeConstructorDescription {
             public var message: Api.Message
             public init(message: Api.Message) {
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("publicForwardMessage", [("message", self.message as Any)])
+            }
         }
-        public class Cons_publicForwardStory {
+        public class Cons_publicForwardStory: TypeConstructorDescription {
             public var peer: Api.Peer
             public var story: Api.StoryItem
             public init(peer: Api.Peer, story: Api.StoryItem) {
                 self.peer = peer
                 self.story = story
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("publicForwardStory", [("peer", self.peer as Any), ("story", self.story as Any)])
             }
         }
         case publicForwardMessage(Cons_publicForwardMessage)
@@ -413,7 +431,7 @@ public extension Api {
 }
 public extension Api {
     enum QuickReply: TypeConstructorDescription {
-        public class Cons_quickReply {
+        public class Cons_quickReply: TypeConstructorDescription {
             public var shortcutId: Int32
             public var shortcut: String
             public var topMessage: Int32
@@ -423,6 +441,9 @@ public extension Api {
                 self.shortcut = shortcut
                 self.topMessage = topMessage
                 self.count = count
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("quickReply", [("shortcutId", self.shortcutId as Any), ("shortcut", self.shortcut as Any), ("topMessage", self.topMessage as Any), ("count", self.count as Any)])
             }
         }
         case quickReply(Cons_quickReply)
@@ -472,16 +493,22 @@ public extension Api {
 }
 public extension Api {
     enum Reaction: TypeConstructorDescription {
-        public class Cons_reactionCustomEmoji {
+        public class Cons_reactionCustomEmoji: TypeConstructorDescription {
             public var documentId: Int64
             public init(documentId: Int64) {
                 self.documentId = documentId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("reactionCustomEmoji", [("documentId", self.documentId as Any)])
+            }
         }
-        public class Cons_reactionEmoji {
+        public class Cons_reactionEmoji: TypeConstructorDescription {
             public var emoticon: String
             public init(emoticon: String) {
                 self.emoticon = emoticon
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("reactionEmoji", [("emoticon", self.emoticon as Any)])
             }
         }
         case reactionCustomEmoji(Cons_reactionCustomEmoji)
@@ -561,7 +588,7 @@ public extension Api {
 }
 public extension Api {
     enum ReactionCount: TypeConstructorDescription {
-        public class Cons_reactionCount {
+        public class Cons_reactionCount: TypeConstructorDescription {
             public var flags: Int32
             public var chosenOrder: Int32?
             public var reaction: Api.Reaction
@@ -571,6 +598,9 @@ public extension Api {
                 self.chosenOrder = chosenOrder
                 self.reaction = reaction
                 self.count = count
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("reactionCount", [("flags", self.flags as Any), ("chosenOrder", self.chosenOrder as Any), ("reaction", self.reaction as Any), ("count", self.count as Any)])
             }
         }
         case reactionCount(Cons_reactionCount)
@@ -663,7 +693,7 @@ public extension Api {
 }
 public extension Api {
     enum ReactionsNotifySettings: TypeConstructorDescription {
-        public class Cons_reactionsNotifySettings {
+        public class Cons_reactionsNotifySettings: TypeConstructorDescription {
             public var flags: Int32
             public var messagesNotifyFrom: Api.ReactionNotificationsFrom?
             public var storiesNotifyFrom: Api.ReactionNotificationsFrom?
@@ -675,6 +705,9 @@ public extension Api {
                 self.storiesNotifyFrom = storiesNotifyFrom
                 self.sound = sound
                 self.showPreviews = showPreviews
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("reactionsNotifySettings", [("flags", self.flags as Any), ("messagesNotifyFrom", self.messagesNotifyFrom as Any), ("storiesNotifyFrom", self.storiesNotifyFrom as Any), ("sound", self.sound as Any), ("showPreviews", self.showPreviews as Any)])
             }
         }
         case reactionsNotifySettings(Cons_reactionsNotifySettings)
@@ -744,12 +777,15 @@ public extension Api {
 }
 public extension Api {
     enum ReadParticipantDate: TypeConstructorDescription {
-        public class Cons_readParticipantDate {
+        public class Cons_readParticipantDate: TypeConstructorDescription {
             public var userId: Int64
             public var date: Int32
             public init(userId: Int64, date: Int32) {
                 self.userId = userId
                 self.date = date
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("readParticipantDate", [("userId", self.userId as Any), ("date", self.date as Any)])
             }
         }
         case readParticipantDate(Cons_readParticipantDate)

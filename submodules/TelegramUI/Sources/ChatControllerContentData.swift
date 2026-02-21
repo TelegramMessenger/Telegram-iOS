@@ -351,9 +351,13 @@ extension ChatControllerImpl {
                         }
                     }
                     
-                    hasTopics = context.sharedContext.subscribeChatListData(context: context, location: .forum(peerId: peerId))
-                    |> map { value -> Bool in
-                        return !value.items.isEmpty
+                    if chatLocation.threadId != nil {
+                        hasTopics = .single(true)
+                    } else {
+                        hasTopics = context.sharedContext.subscribeChatListData(context: context, location: .forum(peerId: peerId))
+                        |> map { value -> Bool in
+                            return !value.items.isEmpty
+                        }
                     }
                 }
                 
@@ -1452,6 +1456,8 @@ extension ChatControllerImpl {
                         }
                         renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: peerView.media)
                     }
+                    
+                    strongSelf.state.hasTopics = true
                     
                     if let savedMessagesPeerId {
                         var peerPresences: [PeerId: PeerPresence] = [:]

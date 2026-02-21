@@ -3768,8 +3768,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
         }
         switch mode {
-        case .generic:
-            mappedMode = .generic
+        case let .generic(canSend):
+            mappedMode = .generic(canSend: canSend)
         case .addingToPack:
             mappedMode = .addingToPack
         case .editing:

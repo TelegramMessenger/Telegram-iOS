@@ -30,8 +30,8 @@ class UITests: XCTestCase {
         XCTAssert(app.wait(for: .runningForeground, timeout: 10.0))
     }
 
-    func testLoginToSetName() throws {
-        deleteTestAccount(phone: "9996625678")
+    func testSignUp() throws {
+        deleteTestAccount(phone: "9996629999")
         app.launch()
 
         // Welcome screen — tap Start Messaging
@@ -50,7 +50,7 @@ class UITests: XCTestCase {
 
         let phoneNumberField = app.textFields["Auth.PhoneEntry.PhoneNumberField"]
         phoneNumberField.tap()
-        phoneNumberField.typeText("6625678")
+        phoneNumberField.typeText("6629999")
 
         let continueButton = app.buttons["Auth.PhoneEntry.ContinueButton"]
         XCTAssert(continueButton.waitForExistence(timeout: 3.0))
@@ -83,5 +83,10 @@ class UITests: XCTestCase {
         let signUpButton = app.buttons["Auth.SetName.ContinueButton"]
         XCTAssert(signUpButton.waitForExistence(timeout: 3.0))
         signUpButton.tap()
+
+        // Wait for post-signup UI to appear
+        sleep(10)
+        let description = app.debugDescription
+        XCTFail("UI DUMP:\n\(description)")
     }
 }

@@ -1,6 +1,6 @@
 public extension Api.bots {
     enum BotInfo: TypeConstructorDescription {
-        public class Cons_botInfo {
+        public class Cons_botInfo: TypeConstructorDescription {
             public var name: String
             public var about: String
             public var description: String
@@ -8,6 +8,9 @@ public extension Api.bots {
                 self.name = name
                 self.about = about
                 self.description = description
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("botInfo", [("name", self.name as Any), ("about", self.about as Any), ("description", self.description as Any)])
             }
         }
         case botInfo(Cons_botInfo)
@@ -53,7 +56,7 @@ public extension Api.bots {
 }
 public extension Api.bots {
     enum PopularAppBots: TypeConstructorDescription {
-        public class Cons_popularAppBots {
+        public class Cons_popularAppBots: TypeConstructorDescription {
             public var flags: Int32
             public var nextOffset: String?
             public var users: [Api.User]
@@ -61,6 +64,9 @@ public extension Api.bots {
                 self.flags = flags
                 self.nextOffset = nextOffset
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("popularAppBots", [("flags", self.flags as Any), ("nextOffset", self.nextOffset as Any), ("users", self.users as Any)])
             }
         }
         case popularAppBots(Cons_popularAppBots)
@@ -116,12 +122,15 @@ public extension Api.bots {
 }
 public extension Api.bots {
     enum PreviewInfo: TypeConstructorDescription {
-        public class Cons_previewInfo {
+        public class Cons_previewInfo: TypeConstructorDescription {
             public var media: [Api.BotPreviewMedia]
             public var langCodes: [String]
             public init(media: [Api.BotPreviewMedia], langCodes: [String]) {
                 self.media = media
                 self.langCodes = langCodes
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("previewInfo", [("media", self.media as Any), ("langCodes", self.langCodes as Any)])
             }
         }
         case previewInfo(Cons_previewInfo)
@@ -175,7 +184,7 @@ public extension Api.bots {
 }
 public extension Api.channels {
     enum AdminLogResults: TypeConstructorDescription {
-        public class Cons_adminLogResults {
+        public class Cons_adminLogResults: TypeConstructorDescription {
             public var events: [Api.ChannelAdminLogEvent]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -183,6 +192,9 @@ public extension Api.channels {
                 self.events = events
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("adminLogResults", [("events", self.events as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case adminLogResults(Cons_adminLogResults)
@@ -246,7 +258,7 @@ public extension Api.channels {
 }
 public extension Api.channels {
     enum ChannelParticipant: TypeConstructorDescription {
-        public class Cons_channelParticipant {
+        public class Cons_channelParticipant: TypeConstructorDescription {
             public var participant: Api.ChannelParticipant
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -254,6 +266,9 @@ public extension Api.channels {
                 self.participant = participant
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipant", [("participant", self.participant as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case channelParticipant(Cons_channelParticipant)
@@ -313,7 +328,7 @@ public extension Api.channels {
 }
 public extension Api.channels {
     enum ChannelParticipants: TypeConstructorDescription {
-        public class Cons_channelParticipants {
+        public class Cons_channelParticipants: TypeConstructorDescription {
             public var count: Int32
             public var participants: [Api.ChannelParticipant]
             public var chats: [Api.Chat]
@@ -323,6 +338,9 @@ public extension Api.channels {
                 self.participants = participants
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelParticipants", [("count", self.count as Any), ("participants", self.participants as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case channelParticipants(Cons_channelParticipants)
@@ -401,7 +419,7 @@ public extension Api.channels {
 }
 public extension Api.channels {
     enum SendAsPeers: TypeConstructorDescription {
-        public class Cons_sendAsPeers {
+        public class Cons_sendAsPeers: TypeConstructorDescription {
             public var peers: [Api.SendAsPeer]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -409,6 +427,9 @@ public extension Api.channels {
                 self.peers = peers
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sendAsPeers", [("peers", self.peers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case sendAsPeers(Cons_sendAsPeers)
@@ -472,12 +493,15 @@ public extension Api.channels {
 }
 public extension Api.channels {
     enum SponsoredMessageReportResult: TypeConstructorDescription {
-        public class Cons_sponsoredMessageReportResultChooseOption {
+        public class Cons_sponsoredMessageReportResultChooseOption: TypeConstructorDescription {
             public var title: String
             public var options: [Api.SponsoredMessageReportOption]
             public init(title: String, options: [Api.SponsoredMessageReportOption]) {
                 self.title = title
                 self.options = options
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sponsoredMessageReportResultChooseOption", [("title", self.title as Any), ("options", self.options as Any)])
             }
         }
         case sponsoredMessageReportResultAdsHidden
@@ -547,7 +571,7 @@ public extension Api.channels {
 }
 public extension Api.chatlists {
     enum ChatlistInvite: TypeConstructorDescription {
-        public class Cons_chatlistInvite {
+        public class Cons_chatlistInvite: TypeConstructorDescription {
             public var flags: Int32
             public var title: Api.TextWithEntities
             public var emoticon: String?
@@ -562,8 +586,11 @@ public extension Api.chatlists {
                 self.chats = chats
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatlistInvite", [("flags", self.flags as Any), ("title", self.title as Any), ("emoticon", self.emoticon as Any), ("peers", self.peers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_chatlistInviteAlready {
+        public class Cons_chatlistInviteAlready: TypeConstructorDescription {
             public var filterId: Int32
             public var missingPeers: [Api.Peer]
             public var alreadyPeers: [Api.Peer]
@@ -575,6 +602,9 @@ public extension Api.chatlists {
                 self.alreadyPeers = alreadyPeers
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatlistInviteAlready", [("filterId", self.filterId as Any), ("missingPeers", self.missingPeers as Any), ("alreadyPeers", self.alreadyPeers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case chatlistInvite(Cons_chatlistInvite)
@@ -716,7 +746,7 @@ public extension Api.chatlists {
 }
 public extension Api.chatlists {
     enum ChatlistUpdates: TypeConstructorDescription {
-        public class Cons_chatlistUpdates {
+        public class Cons_chatlistUpdates: TypeConstructorDescription {
             public var missingPeers: [Api.Peer]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -724,6 +754,9 @@ public extension Api.chatlists {
                 self.missingPeers = missingPeers
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("chatlistUpdates", [("missingPeers", self.missingPeers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case chatlistUpdates(Cons_chatlistUpdates)
@@ -787,12 +820,15 @@ public extension Api.chatlists {
 }
 public extension Api.chatlists {
     enum ExportedChatlistInvite: TypeConstructorDescription {
-        public class Cons_exportedChatlistInvite {
+        public class Cons_exportedChatlistInvite: TypeConstructorDescription {
             public var filter: Api.DialogFilter
             public var invite: Api.ExportedChatlistInvite
             public init(filter: Api.DialogFilter, invite: Api.ExportedChatlistInvite) {
                 self.filter = filter
                 self.invite = invite
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedChatlistInvite", [("filter", self.filter as Any), ("invite", self.invite as Any)])
             }
         }
         case exportedChatlistInvite(Cons_exportedChatlistInvite)
@@ -838,7 +874,7 @@ public extension Api.chatlists {
 }
 public extension Api.chatlists {
     enum ExportedInvites: TypeConstructorDescription {
-        public class Cons_exportedInvites {
+        public class Cons_exportedInvites: TypeConstructorDescription {
             public var invites: [Api.ExportedChatlistInvite]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -846,6 +882,9 @@ public extension Api.chatlists {
                 self.invites = invites
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedInvites", [("invites", self.invites as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case exportedInvites(Cons_exportedInvites)
@@ -909,7 +948,7 @@ public extension Api.chatlists {
 }
 public extension Api.contacts {
     enum Blocked: TypeConstructorDescription {
-        public class Cons_blocked {
+        public class Cons_blocked: TypeConstructorDescription {
             public var blocked: [Api.PeerBlocked]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -918,8 +957,11 @@ public extension Api.contacts {
                 self.chats = chats
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("blocked", [("blocked", self.blocked as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_blockedSlice {
+        public class Cons_blockedSlice: TypeConstructorDescription {
             public var count: Int32
             public var blocked: [Api.PeerBlocked]
             public var chats: [Api.Chat]
@@ -929,6 +971,9 @@ public extension Api.contacts {
                 self.blocked = blocked
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("blockedSlice", [("count", self.count as Any), ("blocked", self.blocked as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case blocked(Cons_blocked)
@@ -1042,12 +1087,15 @@ public extension Api.contacts {
 }
 public extension Api.contacts {
     enum ContactBirthdays: TypeConstructorDescription {
-        public class Cons_contactBirthdays {
+        public class Cons_contactBirthdays: TypeConstructorDescription {
             public var contacts: [Api.ContactBirthday]
             public var users: [Api.User]
             public init(contacts: [Api.ContactBirthday], users: [Api.User]) {
                 self.contacts = contacts
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("contactBirthdays", [("contacts", self.contacts as Any), ("users", self.users as Any)])
             }
         }
         case contactBirthdays(Cons_contactBirthdays)
@@ -1101,7 +1149,7 @@ public extension Api.contacts {
 }
 public extension Api.contacts {
     enum Contacts: TypeConstructorDescription {
-        public class Cons_contacts {
+        public class Cons_contacts: TypeConstructorDescription {
             public var contacts: [Api.Contact]
             public var savedCount: Int32
             public var users: [Api.User]
@@ -1109,6 +1157,9 @@ public extension Api.contacts {
                 self.contacts = contacts
                 self.savedCount = savedCount
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("contacts", [("contacts", self.contacts as Any), ("savedCount", self.savedCount as Any), ("users", self.users as Any)])
             }
         }
         case contacts(Cons_contacts)
@@ -1177,7 +1228,7 @@ public extension Api.contacts {
 }
 public extension Api.contacts {
     enum Found: TypeConstructorDescription {
-        public class Cons_found {
+        public class Cons_found: TypeConstructorDescription {
             public var myResults: [Api.Peer]
             public var results: [Api.Peer]
             public var chats: [Api.Chat]
@@ -1187,6 +1238,9 @@ public extension Api.contacts {
                 self.results = results
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("found", [("myResults", self.myResults as Any), ("results", self.results as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case found(Cons_found)
@@ -1260,7 +1314,7 @@ public extension Api.contacts {
 }
 public extension Api.contacts {
     enum ImportedContacts: TypeConstructorDescription {
-        public class Cons_importedContacts {
+        public class Cons_importedContacts: TypeConstructorDescription {
             public var imported: [Api.ImportedContact]
             public var popularInvites: [Api.PopularContact]
             public var retryContacts: [Int64]
@@ -1270,6 +1324,9 @@ public extension Api.contacts {
                 self.popularInvites = popularInvites
                 self.retryContacts = retryContacts
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("importedContacts", [("imported", self.imported as Any), ("popularInvites", self.popularInvites as Any), ("retryContacts", self.retryContacts as Any), ("users", self.users as Any)])
             }
         }
         case importedContacts(Cons_importedContacts)
@@ -1343,7 +1400,7 @@ public extension Api.contacts {
 }
 public extension Api.contacts {
     enum ResolvedPeer: TypeConstructorDescription {
-        public class Cons_resolvedPeer {
+        public class Cons_resolvedPeer: TypeConstructorDescription {
             public var peer: Api.Peer
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -1351,6 +1408,9 @@ public extension Api.contacts {
                 self.peer = peer
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("resolvedPeer", [("peer", self.peer as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case resolvedPeer(Cons_resolvedPeer)
@@ -1410,7 +1470,7 @@ public extension Api.contacts {
 }
 public extension Api.contacts {
     enum SponsoredPeers: TypeConstructorDescription {
-        public class Cons_sponsoredPeers {
+        public class Cons_sponsoredPeers: TypeConstructorDescription {
             public var peers: [Api.SponsoredPeer]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -1418,6 +1478,9 @@ public extension Api.contacts {
                 self.peers = peers
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sponsoredPeers", [("peers", self.peers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case sponsoredPeers(Cons_sponsoredPeers)
@@ -1492,7 +1555,7 @@ public extension Api.contacts {
 }
 public extension Api.contacts {
     enum TopPeers: TypeConstructorDescription {
-        public class Cons_topPeers {
+        public class Cons_topPeers: TypeConstructorDescription {
             public var categories: [Api.TopPeerCategoryPeers]
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -1500,6 +1563,9 @@ public extension Api.contacts {
                 self.categories = categories
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("topPeers", [("categories", self.categories as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case topPeers(Cons_topPeers)
@@ -1585,7 +1651,7 @@ public extension Api.contacts {
 }
 public extension Api.fragment {
     enum CollectibleInfo: TypeConstructorDescription {
-        public class Cons_collectibleInfo {
+        public class Cons_collectibleInfo: TypeConstructorDescription {
             public var purchaseDate: Int32
             public var currency: String
             public var amount: Int64
@@ -1599,6 +1665,9 @@ public extension Api.fragment {
                 self.cryptoCurrency = cryptoCurrency
                 self.cryptoAmount = cryptoAmount
                 self.url = url
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("collectibleInfo", [("purchaseDate", self.purchaseDate as Any), ("currency", self.currency as Any), ("amount", self.amount as Any), ("cryptoCurrency", self.cryptoCurrency as Any), ("cryptoAmount", self.cryptoAmount as Any), ("url", self.url as Any)])
             }
         }
         case collectibleInfo(Cons_collectibleInfo)
@@ -1656,12 +1725,15 @@ public extension Api.fragment {
 }
 public extension Api.help {
     enum AppConfig: TypeConstructorDescription {
-        public class Cons_appConfig {
+        public class Cons_appConfig: TypeConstructorDescription {
             public var hash: Int32
             public var config: Api.JSONValue
             public init(hash: Int32, config: Api.JSONValue) {
                 self.hash = hash
                 self.config = config
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("appConfig", [("hash", self.hash as Any), ("config", self.config as Any)])
             }
         }
         case appConfig(Cons_appConfig)

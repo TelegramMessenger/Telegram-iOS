@@ -1,6 +1,6 @@
 public extension Api {
     indirect enum InputFileLocation: TypeConstructorDescription {
-        public class Cons_inputDocumentFileLocation {
+        public class Cons_inputDocumentFileLocation: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public var fileReference: Buffer
@@ -11,16 +11,22 @@ public extension Api {
                 self.fileReference = fileReference
                 self.thumbSize = thumbSize
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputDocumentFileLocation", [("id", self.id as Any), ("accessHash", self.accessHash as Any), ("fileReference", self.fileReference as Any), ("thumbSize", self.thumbSize as Any)])
+            }
         }
-        public class Cons_inputEncryptedFileLocation {
+        public class Cons_inputEncryptedFileLocation: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputEncryptedFileLocation", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputFileLocation {
+        public class Cons_inputFileLocation: TypeConstructorDescription {
             public var volumeId: Int64
             public var localId: Int32
             public var secret: Int64
@@ -31,8 +37,11 @@ public extension Api {
                 self.secret = secret
                 self.fileReference = fileReference
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputFileLocation", [("volumeId", self.volumeId as Any), ("localId", self.localId as Any), ("secret", self.secret as Any), ("fileReference", self.fileReference as Any)])
+            }
         }
-        public class Cons_inputGroupCallStream {
+        public class Cons_inputGroupCallStream: TypeConstructorDescription {
             public var flags: Int32
             public var call: Api.InputGroupCall
             public var timeMs: Int64
@@ -47,8 +56,11 @@ public extension Api {
                 self.videoChannel = videoChannel
                 self.videoQuality = videoQuality
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputGroupCallStream", [("flags", self.flags as Any), ("call", self.call as Any), ("timeMs", self.timeMs as Any), ("scale", self.scale as Any), ("videoChannel", self.videoChannel as Any), ("videoQuality", self.videoQuality as Any)])
+            }
         }
-        public class Cons_inputPeerPhotoFileLocation {
+        public class Cons_inputPeerPhotoFileLocation: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.InputPeer
             public var photoId: Int64
@@ -57,8 +69,11 @@ public extension Api {
                 self.peer = peer
                 self.photoId = photoId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPeerPhotoFileLocation", [("flags", self.flags as Any), ("peer", self.peer as Any), ("photoId", self.photoId as Any)])
+            }
         }
-        public class Cons_inputPhotoFileLocation {
+        public class Cons_inputPhotoFileLocation: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public var fileReference: Buffer
@@ -69,8 +84,11 @@ public extension Api {
                 self.fileReference = fileReference
                 self.thumbSize = thumbSize
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPhotoFileLocation", [("id", self.id as Any), ("accessHash", self.accessHash as Any), ("fileReference", self.fileReference as Any), ("thumbSize", self.thumbSize as Any)])
+            }
         }
-        public class Cons_inputPhotoLegacyFileLocation {
+        public class Cons_inputPhotoLegacyFileLocation: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public var fileReference: Buffer
@@ -85,21 +103,30 @@ public extension Api {
                 self.localId = localId
                 self.secret = secret
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputPhotoLegacyFileLocation", [("id", self.id as Any), ("accessHash", self.accessHash as Any), ("fileReference", self.fileReference as Any), ("volumeId", self.volumeId as Any), ("localId", self.localId as Any), ("secret", self.secret as Any)])
+            }
         }
-        public class Cons_inputSecureFileLocation {
+        public class Cons_inputSecureFileLocation: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSecureFileLocation", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputStickerSetThumb {
+        public class Cons_inputStickerSetThumb: TypeConstructorDescription {
             public var stickerset: Api.InputStickerSet
             public var thumbVersion: Int32
             public init(stickerset: Api.InputStickerSet, thumbVersion: Int32) {
                 self.stickerset = stickerset
                 self.thumbVersion = thumbVersion
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStickerSetThumb", [("stickerset", self.stickerset as Any), ("thumbVersion", self.thumbVersion as Any)])
             }
         }
         case inputDocumentFileLocation(Cons_inputDocumentFileLocation)
@@ -418,12 +445,15 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputFolderPeer: TypeConstructorDescription {
-        public class Cons_inputFolderPeer {
+        public class Cons_inputFolderPeer: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var folderId: Int32
             public init(peer: Api.InputPeer, folderId: Int32) {
                 self.peer = peer
                 self.folderId = folderId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputFolderPeer", [("peer", self.peer as Any), ("folderId", self.folderId as Any)])
             }
         }
         case inputFolderPeer(Cons_inputFolderPeer)
@@ -467,20 +497,26 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputGame: TypeConstructorDescription {
-        public class Cons_inputGameID {
+        public class Cons_inputGameID: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputGameID", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputGameShortName {
+        public class Cons_inputGameShortName: TypeConstructorDescription {
             public var botId: Api.InputUser
             public var shortName: String
             public init(botId: Api.InputUser, shortName: String) {
                 self.botId = botId
                 self.shortName = shortName
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputGameShortName", [("botId", self.botId as Any), ("shortName", self.shortName as Any)])
             }
         }
         case inputGameID(Cons_inputGameID)
@@ -548,7 +584,7 @@ public extension Api {
 }
 public extension Api {
     enum InputGeoPoint: TypeConstructorDescription {
-        public class Cons_inputGeoPoint {
+        public class Cons_inputGeoPoint: TypeConstructorDescription {
             public var flags: Int32
             public var lat: Double
             public var long: Double
@@ -558,6 +594,9 @@ public extension Api {
                 self.lat = lat
                 self.long = long
                 self.accuracyRadius = accuracyRadius
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputGeoPoint", [("flags", self.flags as Any), ("lat", self.lat as Any), ("long", self.long as Any), ("accuracyRadius", self.accuracyRadius as Any)])
             }
         }
         case inputGeoPoint(Cons_inputGeoPoint)
@@ -622,24 +661,33 @@ public extension Api {
 }
 public extension Api {
     enum InputGroupCall: TypeConstructorDescription {
-        public class Cons_inputGroupCall {
+        public class Cons_inputGroupCall: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputGroupCall", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputGroupCallInviteMessage {
+        public class Cons_inputGroupCallInviteMessage: TypeConstructorDescription {
             public var msgId: Int32
             public init(msgId: Int32) {
                 self.msgId = msgId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputGroupCallInviteMessage", [("msgId", self.msgId as Any)])
+            }
         }
-        public class Cons_inputGroupCallSlug {
+        public class Cons_inputGroupCallSlug: TypeConstructorDescription {
             public var slug: String
             public init(slug: String) {
                 self.slug = slug
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputGroupCallSlug", [("slug", self.slug as Any)])
             }
         }
         case inputGroupCall(Cons_inputGroupCall)
@@ -721,43 +769,58 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputInvoice: TypeConstructorDescription {
-        public class Cons_inputInvoiceBusinessBotTransferStars {
+        public class Cons_inputInvoiceBusinessBotTransferStars: TypeConstructorDescription {
             public var bot: Api.InputUser
             public var stars: Int64
             public init(bot: Api.InputUser, stars: Int64) {
                 self.bot = bot
                 self.stars = stars
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceBusinessBotTransferStars", [("bot", self.bot as Any), ("stars", self.stars as Any)])
+            }
         }
-        public class Cons_inputInvoiceChatInviteSubscription {
+        public class Cons_inputInvoiceChatInviteSubscription: TypeConstructorDescription {
             public var hash: String
             public init(hash: String) {
                 self.hash = hash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceChatInviteSubscription", [("hash", self.hash as Any)])
+            }
         }
-        public class Cons_inputInvoiceMessage {
+        public class Cons_inputInvoiceMessage: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var msgId: Int32
             public init(peer: Api.InputPeer, msgId: Int32) {
                 self.peer = peer
                 self.msgId = msgId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceMessage", [("peer", self.peer as Any), ("msgId", self.msgId as Any)])
+            }
         }
-        public class Cons_inputInvoicePremiumAuthCode {
+        public class Cons_inputInvoicePremiumAuthCode: TypeConstructorDescription {
             public var purpose: Api.InputStorePaymentPurpose
             public init(purpose: Api.InputStorePaymentPurpose) {
                 self.purpose = purpose
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoicePremiumAuthCode", [("purpose", self.purpose as Any)])
+            }
         }
-        public class Cons_inputInvoicePremiumGiftCode {
+        public class Cons_inputInvoicePremiumGiftCode: TypeConstructorDescription {
             public var purpose: Api.InputStorePaymentPurpose
             public var option: Api.PremiumGiftCodeOption
             public init(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption) {
                 self.purpose = purpose
                 self.option = option
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoicePremiumGiftCode", [("purpose", self.purpose as Any), ("option", self.option as Any)])
+            }
         }
-        public class Cons_inputInvoicePremiumGiftStars {
+        public class Cons_inputInvoicePremiumGiftStars: TypeConstructorDescription {
             public var flags: Int32
             public var userId: Api.InputUser
             public var months: Int32
@@ -768,14 +831,20 @@ public extension Api {
                 self.months = months
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoicePremiumGiftStars", [("flags", self.flags as Any), ("userId", self.userId as Any), ("months", self.months as Any), ("message", self.message as Any)])
+            }
         }
-        public class Cons_inputInvoiceSlug {
+        public class Cons_inputInvoiceSlug: TypeConstructorDescription {
             public var slug: String
             public init(slug: String) {
                 self.slug = slug
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceSlug", [("slug", self.slug as Any)])
+            }
         }
-        public class Cons_inputInvoiceStarGift {
+        public class Cons_inputInvoiceStarGift: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.InputPeer
             public var giftId: Int64
@@ -786,8 +855,11 @@ public extension Api {
                 self.giftId = giftId
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStarGift", [("flags", self.flags as Any), ("peer", self.peer as Any), ("giftId", self.giftId as Any), ("message", self.message as Any)])
+            }
         }
-        public class Cons_inputInvoiceStarGiftAuctionBid {
+        public class Cons_inputInvoiceStarGiftAuctionBid: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.InputPeer?
             public var giftId: Int64
@@ -800,22 +872,31 @@ public extension Api {
                 self.bidAmount = bidAmount
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStarGiftAuctionBid", [("flags", self.flags as Any), ("peer", self.peer as Any), ("giftId", self.giftId as Any), ("bidAmount", self.bidAmount as Any), ("message", self.message as Any)])
+            }
         }
-        public class Cons_inputInvoiceStarGiftDropOriginalDetails {
+        public class Cons_inputInvoiceStarGiftDropOriginalDetails: TypeConstructorDescription {
             public var stargift: Api.InputSavedStarGift
             public init(stargift: Api.InputSavedStarGift) {
                 self.stargift = stargift
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStarGiftDropOriginalDetails", [("stargift", self.stargift as Any)])
+            }
         }
-        public class Cons_inputInvoiceStarGiftPrepaidUpgrade {
+        public class Cons_inputInvoiceStarGiftPrepaidUpgrade: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var hash: String
             public init(peer: Api.InputPeer, hash: String) {
                 self.peer = peer
                 self.hash = hash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStarGiftPrepaidUpgrade", [("peer", self.peer as Any), ("hash", self.hash as Any)])
+            }
         }
-        public class Cons_inputInvoiceStarGiftResale {
+        public class Cons_inputInvoiceStarGiftResale: TypeConstructorDescription {
             public var flags: Int32
             public var slug: String
             public var toId: Api.InputPeer
@@ -824,27 +905,39 @@ public extension Api {
                 self.slug = slug
                 self.toId = toId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStarGiftResale", [("flags", self.flags as Any), ("slug", self.slug as Any), ("toId", self.toId as Any)])
+            }
         }
-        public class Cons_inputInvoiceStarGiftTransfer {
+        public class Cons_inputInvoiceStarGiftTransfer: TypeConstructorDescription {
             public var stargift: Api.InputSavedStarGift
             public var toId: Api.InputPeer
             public init(stargift: Api.InputSavedStarGift, toId: Api.InputPeer) {
                 self.stargift = stargift
                 self.toId = toId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStarGiftTransfer", [("stargift", self.stargift as Any), ("toId", self.toId as Any)])
+            }
         }
-        public class Cons_inputInvoiceStarGiftUpgrade {
+        public class Cons_inputInvoiceStarGiftUpgrade: TypeConstructorDescription {
             public var flags: Int32
             public var stargift: Api.InputSavedStarGift
             public init(flags: Int32, stargift: Api.InputSavedStarGift) {
                 self.flags = flags
                 self.stargift = stargift
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStarGiftUpgrade", [("flags", self.flags as Any), ("stargift", self.stargift as Any)])
+            }
         }
-        public class Cons_inputInvoiceStars {
+        public class Cons_inputInvoiceStars: TypeConstructorDescription {
             public var purpose: Api.InputStorePaymentPurpose
             public init(purpose: Api.InputStorePaymentPurpose) {
                 self.purpose = purpose
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputInvoiceStars", [("purpose", self.purpose as Any)])
             }
         }
         case inputInvoiceBusinessBotTransferStars(Cons_inputInvoiceBusinessBotTransferStars)

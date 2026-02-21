@@ -1,6 +1,6 @@
 public extension Api {
     enum ShippingOption: TypeConstructorDescription {
-        public class Cons_shippingOption {
+        public class Cons_shippingOption: TypeConstructorDescription {
             public var id: String
             public var title: String
             public var prices: [Api.LabeledPrice]
@@ -8,6 +8,9 @@ public extension Api {
                 self.id = id
                 self.title = title
                 self.prices = prices
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("shippingOption", [("id", self.id as Any), ("title", self.title as Any), ("prices", self.prices as Any)])
             }
         }
         case shippingOption(Cons_shippingOption)
@@ -59,7 +62,7 @@ public extension Api {
 }
 public extension Api {
     enum SmsJob: TypeConstructorDescription {
-        public class Cons_smsJob {
+        public class Cons_smsJob: TypeConstructorDescription {
             public var jobId: String
             public var phoneNumber: String
             public var text: String
@@ -67,6 +70,9 @@ public extension Api {
                 self.jobId = jobId
                 self.phoneNumber = phoneNumber
                 self.text = text
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("smsJob", [("jobId", self.jobId as Any), ("phoneNumber", self.phoneNumber as Any), ("text", self.text as Any)])
             }
         }
         case smsJob(Cons_smsJob)
@@ -112,7 +118,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum SponsoredMessage: TypeConstructorDescription {
-        public class Cons_sponsoredMessage {
+        public class Cons_sponsoredMessage: TypeConstructorDescription {
             public var flags: Int32
             public var randomId: Buffer
             public var url: String
@@ -142,6 +148,9 @@ public extension Api {
                 self.additionalInfo = additionalInfo
                 self.minDisplayDuration = minDisplayDuration
                 self.maxDisplayDuration = maxDisplayDuration
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sponsoredMessage", [("flags", self.flags as Any), ("randomId", self.randomId as Any), ("url", self.url as Any), ("title", self.title as Any), ("message", self.message as Any), ("entities", self.entities as Any), ("photo", self.photo as Any), ("media", self.media as Any), ("color", self.color as Any), ("buttonText", self.buttonText as Any), ("sponsorInfo", self.sponsorInfo as Any), ("additionalInfo", self.additionalInfo as Any), ("minDisplayDuration", self.minDisplayDuration as Any), ("maxDisplayDuration", self.maxDisplayDuration as Any)])
             }
         }
         case sponsoredMessage(Cons_sponsoredMessage)
@@ -275,12 +284,15 @@ public extension Api {
 }
 public extension Api {
     enum SponsoredMessageReportOption: TypeConstructorDescription {
-        public class Cons_sponsoredMessageReportOption {
+        public class Cons_sponsoredMessageReportOption: TypeConstructorDescription {
             public var text: String
             public var option: Buffer
             public init(text: String, option: Buffer) {
                 self.text = text
                 self.option = option
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sponsoredMessageReportOption", [("text", self.text as Any), ("option", self.option as Any)])
             }
         }
         case sponsoredMessageReportOption(Cons_sponsoredMessageReportOption)
@@ -322,7 +334,7 @@ public extension Api {
 }
 public extension Api {
     enum SponsoredPeer: TypeConstructorDescription {
-        public class Cons_sponsoredPeer {
+        public class Cons_sponsoredPeer: TypeConstructorDescription {
             public var flags: Int32
             public var randomId: Buffer
             public var peer: Api.Peer
@@ -334,6 +346,9 @@ public extension Api {
                 self.peer = peer
                 self.sponsorInfo = sponsorInfo
                 self.additionalInfo = additionalInfo
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("sponsoredPeer", [("flags", self.flags as Any), ("randomId", self.randomId as Any), ("peer", self.peer as Any), ("sponsorInfo", self.sponsorInfo as Any), ("additionalInfo", self.additionalInfo as Any)])
             }
         }
         case sponsoredPeer(Cons_sponsoredPeer)
@@ -397,7 +412,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGift: TypeConstructorDescription {
-        public class Cons_starGift {
+        public class Cons_starGift: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var sticker: Api.Document
@@ -444,8 +459,11 @@ public extension Api {
                 self.upgradeVariants = upgradeVariants
                 self.background = background
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGift", [("flags", self.flags as Any), ("id", self.id as Any), ("sticker", self.sticker as Any), ("stars", self.stars as Any), ("availabilityRemains", self.availabilityRemains as Any), ("availabilityTotal", self.availabilityTotal as Any), ("availabilityResale", self.availabilityResale as Any), ("convertStars", self.convertStars as Any), ("firstSaleDate", self.firstSaleDate as Any), ("lastSaleDate", self.lastSaleDate as Any), ("upgradeStars", self.upgradeStars as Any), ("resellMinStars", self.resellMinStars as Any), ("title", self.title as Any), ("releasedBy", self.releasedBy as Any), ("perUserTotal", self.perUserTotal as Any), ("perUserRemains", self.perUserRemains as Any), ("lockedUntilDate", self.lockedUntilDate as Any), ("auctionSlug", self.auctionSlug as Any), ("giftsPerRound", self.giftsPerRound as Any), ("auctionStartDate", self.auctionStartDate as Any), ("upgradeVariants", self.upgradeVariants as Any), ("background", self.background as Any)])
+            }
         }
-        public class Cons_starGiftUnique {
+        public class Cons_starGiftUnique: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var giftId: Int64
@@ -493,6 +511,9 @@ public extension Api {
                 self.hostId = hostId
                 self.offerMinStars = offerMinStars
                 self.craftChancePermille = craftChancePermille
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftUnique", [("flags", self.flags as Any), ("id", self.id as Any), ("giftId", self.giftId as Any), ("title", self.title as Any), ("slug", self.slug as Any), ("num", self.num as Any), ("ownerId", self.ownerId as Any), ("ownerName", self.ownerName as Any), ("ownerAddress", self.ownerAddress as Any), ("attributes", self.attributes as Any), ("availabilityIssued", self.availabilityIssued as Any), ("availabilityTotal", self.availabilityTotal as Any), ("giftAddress", self.giftAddress as Any), ("resellAmount", self.resellAmount as Any), ("releasedBy", self.releasedBy as Any), ("valueAmount", self.valueAmount as Any), ("valueCurrency", self.valueCurrency as Any), ("valueUsdAmount", self.valueUsdAmount as Any), ("themePeer", self.themePeer as Any), ("peerColor", self.peerColor as Any), ("hostId", self.hostId as Any), ("offerMinStars", self.offerMinStars as Any), ("craftChancePermille", self.craftChancePermille as Any)])
             }
         }
         case starGift(Cons_starGift)
@@ -874,7 +895,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftActiveAuctionState: TypeConstructorDescription {
-        public class Cons_starGiftActiveAuctionState {
+        public class Cons_starGiftActiveAuctionState: TypeConstructorDescription {
             public var gift: Api.StarGift
             public var state: Api.StarGiftAuctionState
             public var userState: Api.StarGiftAuctionUserState
@@ -882,6 +903,9 @@ public extension Api {
                 self.gift = gift
                 self.state = state
                 self.userState = userState
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftActiveAuctionState", [("gift", self.gift as Any), ("state", self.state as Any), ("userState", self.userState as Any)])
             }
         }
         case starGiftActiveAuctionState(Cons_starGiftActiveAuctionState)
@@ -933,7 +957,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAttribute: TypeConstructorDescription {
-        public class Cons_starGiftAttributeBackdrop {
+        public class Cons_starGiftAttributeBackdrop: TypeConstructorDescription {
             public var name: String
             public var backdropId: Int32
             public var centerColor: Int32
@@ -950,8 +974,11 @@ public extension Api {
                 self.textColor = textColor
                 self.rarity = rarity
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeBackdrop", [("name", self.name as Any), ("backdropId", self.backdropId as Any), ("centerColor", self.centerColor as Any), ("edgeColor", self.edgeColor as Any), ("patternColor", self.patternColor as Any), ("textColor", self.textColor as Any), ("rarity", self.rarity as Any)])
+            }
         }
-        public class Cons_starGiftAttributeModel {
+        public class Cons_starGiftAttributeModel: TypeConstructorDescription {
             public var flags: Int32
             public var name: String
             public var document: Api.Document
@@ -962,8 +989,11 @@ public extension Api {
                 self.document = document
                 self.rarity = rarity
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeModel", [("flags", self.flags as Any), ("name", self.name as Any), ("document", self.document as Any), ("rarity", self.rarity as Any)])
+            }
         }
-        public class Cons_starGiftAttributeOriginalDetails {
+        public class Cons_starGiftAttributeOriginalDetails: TypeConstructorDescription {
             public var flags: Int32
             public var senderId: Api.Peer?
             public var recipientId: Api.Peer
@@ -976,8 +1006,11 @@ public extension Api {
                 self.date = date
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeOriginalDetails", [("flags", self.flags as Any), ("senderId", self.senderId as Any), ("recipientId", self.recipientId as Any), ("date", self.date as Any), ("message", self.message as Any)])
+            }
         }
-        public class Cons_starGiftAttributePattern {
+        public class Cons_starGiftAttributePattern: TypeConstructorDescription {
             public var name: String
             public var document: Api.Document
             public var rarity: Api.StarGiftAttributeRarity
@@ -985,6 +1018,9 @@ public extension Api {
                 self.name = name
                 self.document = document
                 self.rarity = rarity
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributePattern", [("name", self.name as Any), ("document", self.document as Any), ("rarity", self.rarity as Any)])
             }
         }
         case starGiftAttributeBackdrop(Cons_starGiftAttributeBackdrop)
@@ -1166,12 +1202,15 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAttributeCounter: TypeConstructorDescription {
-        public class Cons_starGiftAttributeCounter {
+        public class Cons_starGiftAttributeCounter: TypeConstructorDescription {
             public var attribute: Api.StarGiftAttributeId
             public var count: Int32
             public init(attribute: Api.StarGiftAttributeId, count: Int32) {
                 self.attribute = attribute
                 self.count = count
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeCounter", [("attribute", self.attribute as Any), ("count", self.count as Any)])
             }
         }
         case starGiftAttributeCounter(Cons_starGiftAttributeCounter)
@@ -1215,22 +1254,31 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAttributeId: TypeConstructorDescription {
-        public class Cons_starGiftAttributeIdBackdrop {
+        public class Cons_starGiftAttributeIdBackdrop: TypeConstructorDescription {
             public var backdropId: Int32
             public init(backdropId: Int32) {
                 self.backdropId = backdropId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeIdBackdrop", [("backdropId", self.backdropId as Any)])
+            }
         }
-        public class Cons_starGiftAttributeIdModel {
+        public class Cons_starGiftAttributeIdModel: TypeConstructorDescription {
             public var documentId: Int64
             public init(documentId: Int64) {
                 self.documentId = documentId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeIdModel", [("documentId", self.documentId as Any)])
+            }
         }
-        public class Cons_starGiftAttributeIdPattern {
+        public class Cons_starGiftAttributeIdPattern: TypeConstructorDescription {
             public var documentId: Int64
             public init(documentId: Int64) {
                 self.documentId = documentId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeIdPattern", [("documentId", self.documentId as Any)])
             }
         }
         case starGiftAttributeIdBackdrop(Cons_starGiftAttributeIdBackdrop)
@@ -1308,10 +1356,13 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAttributeRarity: TypeConstructorDescription {
-        public class Cons_starGiftAttributeRarity {
+        public class Cons_starGiftAttributeRarity: TypeConstructorDescription {
             public var permille: Int32
             public init(permille: Int32) {
                 self.permille = permille
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAttributeRarity", [("permille", self.permille as Any)])
             }
         }
         case starGiftAttributeRarity(Cons_starGiftAttributeRarity)
@@ -1393,7 +1444,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAuctionAcquiredGift: TypeConstructorDescription {
-        public class Cons_starGiftAuctionAcquiredGift {
+        public class Cons_starGiftAuctionAcquiredGift: TypeConstructorDescription {
             public var flags: Int32
             public var peer: Api.Peer
             public var date: Int32
@@ -1411,6 +1462,9 @@ public extension Api {
                 self.pos = pos
                 self.message = message
                 self.giftNum = giftNum
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAuctionAcquiredGift", [("flags", self.flags as Any), ("peer", self.peer as Any), ("date", self.date as Any), ("bidAmount", self.bidAmount as Any), ("round", self.round as Any), ("pos", self.pos as Any), ("message", self.message as Any), ("giftNum", self.giftNum as Any)])
             }
         }
         case starGiftAuctionAcquiredGift(Cons_starGiftAuctionAcquiredGift)
@@ -1488,15 +1542,18 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAuctionRound: TypeConstructorDescription {
-        public class Cons_starGiftAuctionRound {
+        public class Cons_starGiftAuctionRound: TypeConstructorDescription {
             public var num: Int32
             public var duration: Int32
             public init(num: Int32, duration: Int32) {
                 self.num = num
                 self.duration = duration
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAuctionRound", [("num", self.num as Any), ("duration", self.duration as Any)])
+            }
         }
-        public class Cons_starGiftAuctionRoundExtendable {
+        public class Cons_starGiftAuctionRoundExtendable: TypeConstructorDescription {
             public var num: Int32
             public var duration: Int32
             public var extendTop: Int32
@@ -1506,6 +1563,9 @@ public extension Api {
                 self.duration = duration
                 self.extendTop = extendTop
                 self.extendWindow = extendWindow
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAuctionRoundExtendable", [("num", self.num as Any), ("duration", self.duration as Any), ("extendTop", self.extendTop as Any), ("extendWindow", self.extendWindow as Any)])
             }
         }
         case starGiftAuctionRound(Cons_starGiftAuctionRound)
@@ -1579,7 +1639,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAuctionState: TypeConstructorDescription {
-        public class Cons_starGiftAuctionState {
+        public class Cons_starGiftAuctionState: TypeConstructorDescription {
             public var version: Int32
             public var startDate: Int32
             public var endDate: Int32
@@ -1606,8 +1666,11 @@ public extension Api {
                 self.totalRounds = totalRounds
                 self.rounds = rounds
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAuctionState", [("version", self.version as Any), ("startDate", self.startDate as Any), ("endDate", self.endDate as Any), ("minBidAmount", self.minBidAmount as Any), ("bidLevels", self.bidLevels as Any), ("topBidders", self.topBidders as Any), ("nextRoundAt", self.nextRoundAt as Any), ("lastGiftNum", self.lastGiftNum as Any), ("giftsLeft", self.giftsLeft as Any), ("currentRound", self.currentRound as Any), ("totalRounds", self.totalRounds as Any), ("rounds", self.rounds as Any)])
+            }
         }
-        public class Cons_starGiftAuctionStateFinished {
+        public class Cons_starGiftAuctionStateFinished: TypeConstructorDescription {
             public var flags: Int32
             public var startDate: Int32
             public var endDate: Int32
@@ -1623,6 +1686,9 @@ public extension Api {
                 self.listedCount = listedCount
                 self.fragmentListedCount = fragmentListedCount
                 self.fragmentListedUrl = fragmentListedUrl
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAuctionStateFinished", [("flags", self.flags as Any), ("startDate", self.startDate as Any), ("endDate", self.endDate as Any), ("averagePrice", self.averagePrice as Any), ("listedCount", self.listedCount as Any), ("fragmentListedCount", self.fragmentListedCount as Any), ("fragmentListedUrl", self.fragmentListedUrl as Any)])
             }
         }
         case starGiftAuctionState(Cons_starGiftAuctionState)
@@ -1789,7 +1855,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftAuctionUserState: TypeConstructorDescription {
-        public class Cons_starGiftAuctionUserState {
+        public class Cons_starGiftAuctionUserState: TypeConstructorDescription {
             public var flags: Int32
             public var bidAmount: Int64?
             public var bidDate: Int32?
@@ -1803,6 +1869,9 @@ public extension Api {
                 self.minBidAmount = minBidAmount
                 self.bidPeer = bidPeer
                 self.acquiredCount = acquiredCount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftAuctionUserState", [("flags", self.flags as Any), ("bidAmount", self.bidAmount as Any), ("bidDate", self.bidDate as Any), ("minBidAmount", self.minBidAmount as Any), ("bidPeer", self.bidPeer as Any), ("acquiredCount", self.acquiredCount as Any)])
             }
         }
         case starGiftAuctionUserState(Cons_starGiftAuctionUserState)
@@ -1878,7 +1947,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftBackground: TypeConstructorDescription {
-        public class Cons_starGiftBackground {
+        public class Cons_starGiftBackground: TypeConstructorDescription {
             public var centerColor: Int32
             public var edgeColor: Int32
             public var textColor: Int32
@@ -1886,6 +1955,9 @@ public extension Api {
                 self.centerColor = centerColor
                 self.edgeColor = edgeColor
                 self.textColor = textColor
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftBackground", [("centerColor", self.centerColor as Any), ("edgeColor", self.edgeColor as Any), ("textColor", self.textColor as Any)])
             }
         }
         case starGiftBackground(Cons_starGiftBackground)
@@ -1931,7 +2003,7 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftCollection: TypeConstructorDescription {
-        public class Cons_starGiftCollection {
+        public class Cons_starGiftCollection: TypeConstructorDescription {
             public var flags: Int32
             public var collectionId: Int32
             public var title: String
@@ -1945,6 +2017,9 @@ public extension Api {
                 self.icon = icon
                 self.giftsCount = giftsCount
                 self.hash = hash
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftCollection", [("flags", self.flags as Any), ("collectionId", self.collectionId as Any), ("title", self.title as Any), ("icon", self.icon as Any), ("giftsCount", self.giftsCount as Any), ("hash", self.hash as Any)])
             }
         }
         case starGiftCollection(Cons_starGiftCollection)
@@ -2008,12 +2083,15 @@ public extension Api {
 }
 public extension Api {
     enum StarGiftUpgradePrice: TypeConstructorDescription {
-        public class Cons_starGiftUpgradePrice {
+        public class Cons_starGiftUpgradePrice: TypeConstructorDescription {
             public var date: Int32
             public var upgradeStars: Int64
             public init(date: Int32, upgradeStars: Int64) {
                 self.date = date
                 self.upgradeStars = upgradeStars
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starGiftUpgradePrice", [("date", self.date as Any), ("upgradeStars", self.upgradeStars as Any)])
             }
         }
         case starGiftUpgradePrice(Cons_starGiftUpgradePrice)
@@ -2055,7 +2133,7 @@ public extension Api {
 }
 public extension Api {
     enum StarRefProgram: TypeConstructorDescription {
-        public class Cons_starRefProgram {
+        public class Cons_starRefProgram: TypeConstructorDescription {
             public var flags: Int32
             public var botId: Int64
             public var commissionPermille: Int32
@@ -2069,6 +2147,9 @@ public extension Api {
                 self.durationMonths = durationMonths
                 self.endDate = endDate
                 self.dailyRevenuePerUser = dailyRevenuePerUser
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("starRefProgram", [("flags", self.flags as Any), ("botId", self.botId as Any), ("commissionPermille", self.commissionPermille as Any), ("durationMonths", self.durationMonths as Any), ("endDate", self.endDate as Any), ("dailyRevenuePerUser", self.dailyRevenuePerUser as Any)])
             }
         }
         case starRefProgram(Cons_starRefProgram)

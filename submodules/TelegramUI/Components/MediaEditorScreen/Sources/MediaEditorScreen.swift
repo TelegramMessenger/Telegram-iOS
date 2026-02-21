@@ -2861,7 +2861,7 @@ let avatarMaxVideoDuration: Double = 10.0
 public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UIDropInteractionDelegate {
     public enum Mode {
         public enum StickerEditorMode {
-            case generic
+            case generic(canSend: Bool)
             case addingToPack
             case editing
             case businessIntro
@@ -7721,47 +7721,49 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         var hasEmojiSelection = true
         if case let .stickerEditor(mode) = self.mode {
             switch mode {
-            case .generic:
-                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-                    guard let self else {
-                        return
-                    }
-                    
-                    if !isVideo {
-                        self.stickerResultController?.disappeared = nil
-                    }
-                    
-                    let _ = (imagesReady.get()
-                    |> filter { $0 }
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+            case let .generic(canSend):
+                if canSend {
+                    menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                         guard let self else {
                             return
                         }
-                        if isVideo {
-                            self.uploadSticker(file, action: .send)
-                        } else {
-                            self.completion([MediaEditorScreenImpl.Result(
-                                media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
-                                mediaAreas: [],
-                                caption: NSAttributedString(),
-                                coverTimestamp: nil,
-                                options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: []),
-                                stickers: [],
-                                randomId: 0
-                            )], { [weak self] finished in
-                                self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                    self?.dismiss()
-                                    Queue.mainQueue().justDispatch {
-                                        finished()
-                                    }
-                                })
-                            })
+                        
+                        if !isVideo {
+                            self.stickerResultController?.disappeared = nil
                         }
-                    })
-                    
-                    f(.default)
-                })))
+                        
+                        let _ = (imagesReady.get()
+                        |> filter { $0 }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            if isVideo {
+                                self.uploadSticker(file, action: .send)
+                            } else {
+                                self.completion([MediaEditorScreenImpl.Result(
+                                    media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
+                                    mediaAreas: [],
+                                    caption: NSAttributedString(),
+                                    coverTimestamp: nil,
+                                    options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: []),
+                                    stickers: [],
+                                    randomId: 0
+                                )], { [weak self] finished in
+                                    self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+                                        self?.dismiss()
+                                        Queue.mainQueue().justDispatch {
+                                            finished()
+                                        }
+                                    })
+                                })
+                            }
+                        })
+                        
+                        f(.default)
+                    })))
+                }
                 menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                     f(.default)
                     guard let self else {

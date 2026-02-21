@@ -1382,7 +1382,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let controller = context.sharedContext.makeStickerEditorScreen(
             context: context,
             source: (initialFile, emoji),
-            mode: isEditing ? .editing : .generic,
+            mode: isEditing ? .editing : .generic(canSend: self.sendSticker != nil),
             transitionArguments: nil,
             completion: { file, emoji, commit in
                 if isEditing {
@@ -1397,7 +1397,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                     
                     let _ = (context.engine.stickers.replaceSticker(previousSticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: initialFile), sticker: sticker)
-                             |> deliverOnMainQueue).start(completed: {
+                    |> deliverOnMainQueue).start(completed: {
                         commit()
                         
                         let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], previewIconFile: nil, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)

@@ -133,7 +133,7 @@ extension PeerInfoScreenNode {
                 }
             })
         }, updateCanReadHistory: { _ in
-        }), centralItemUpdated: { [weak self] messageId in
+        }, sendSticker: nil), centralItemUpdated: { [weak self] messageId in
             let _ = self?.paneContainerNode.requestExpandTabs?()
             self?.paneContainerNode.currentPane?.node.ensureMessageIsVisible(id: messageId)
         }))

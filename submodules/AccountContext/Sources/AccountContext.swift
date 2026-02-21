@@ -1027,7 +1027,7 @@ public enum StoryCameraMode {
 }
 
 public enum StickerEditorMode {
-    case generic
+    case generic(canSend: Bool)
     case editing
     case addingToPack
     case businessIntro

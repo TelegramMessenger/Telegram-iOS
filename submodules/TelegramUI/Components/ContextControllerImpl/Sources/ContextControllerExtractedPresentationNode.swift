@@ -1351,13 +1351,19 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             if let contextExtractableContainer {
-                let positionTransition = ComponentTransition(animation: .curve(duration: 0.4, curve: .bounce(stiffness: 900.0, damping: 95.0)))
-                let transition = ComponentTransition(animation: .curve(duration: 0.9, curve: .bounce(stiffness: 900.0, damping: 95.0)))
+                let positionTransition = ComponentTransition(animation: .curve(duration: 0.35, curve: .bounce(stiffness: 900.0, damping: 95.0)))
+                let transition = ComponentTransition(animation: .curve(duration: 0.5, curve: .spring))
                 
                 positionTransition.animatePosition(layer: self.actionsContainerNode.layer, from: CGPoint(
                     x: contextExtractableContainer.sourceRect.midX - self.actionsContainerNode.frame.midX,
                     y: contextExtractableContainer.sourceRect.midY - self.actionsContainerNode.frame.midY
                 ), to: CGPoint(), additive: true)
+                /*self.actionsContainerNode.layer.animateScale(from: 1.0, to: 1.2, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, completion: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.actionsContainerNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                })*/
                 
                 self.actionsStackNode.animateIn(fromExtractableContainer: contextExtractableContainer.container, transition: transition)
             } else {

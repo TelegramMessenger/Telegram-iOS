@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import Display
 import AccountContext
 import ChatControllerInteraction
+import ChatPresentationInterfaceState
 import LegacyMediaPickerUI
 
 extension ChatControllerImpl {
@@ -21,7 +22,7 @@ extension ChatControllerImpl {
         let controller = self.context.sharedContext.makeStickerEditorScreen(
             context: self.context,
             source: (file, emoji),
-            mode: .generic,
+            mode: .generic(canSend: canSendMessagesToChat(self.presentationInterfaceState)),
             transitionArguments: nil,
             completion: { file, _, commit in
                 commit()

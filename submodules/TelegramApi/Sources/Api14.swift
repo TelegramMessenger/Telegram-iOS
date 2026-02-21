@@ -1,17 +1,23 @@
 public extension Api {
     enum InputTheme: TypeConstructorDescription {
-        public class Cons_inputTheme {
+        public class Cons_inputTheme: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputTheme", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputThemeSlug {
+        public class Cons_inputThemeSlug: TypeConstructorDescription {
             public var slug: String
             public init(slug: String) {
                 self.slug = slug
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputThemeSlug", [("slug", self.slug as Any)])
             }
         }
         case inputTheme(Cons_inputTheme)
@@ -73,7 +79,7 @@ public extension Api {
 }
 public extension Api {
     enum InputThemeSettings: TypeConstructorDescription {
-        public class Cons_inputThemeSettings {
+        public class Cons_inputThemeSettings: TypeConstructorDescription {
             public var flags: Int32
             public var baseTheme: Api.BaseTheme
             public var accentColor: Int32
@@ -89,6 +95,9 @@ public extension Api {
                 self.messageColors = messageColors
                 self.wallpaper = wallpaper
                 self.wallpaperSettings = wallpaperSettings
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputThemeSettings", [("flags", self.flags as Any), ("baseTheme", self.baseTheme as Any), ("accentColor", self.accentColor as Any), ("outboxAccentColor", self.outboxAccentColor as Any), ("messageColors", self.messageColors as Any), ("wallpaper", self.wallpaper as Any), ("wallpaperSettings", self.wallpaperSettings as Any)])
             }
         }
         case inputThemeSettings(Cons_inputThemeSettings)
@@ -178,15 +187,18 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputUser: TypeConstructorDescription {
-        public class Cons_inputUser {
+        public class Cons_inputUser: TypeConstructorDescription {
             public var userId: Int64
             public var accessHash: Int64
             public init(userId: Int64, accessHash: Int64) {
                 self.userId = userId
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputUser", [("userId", self.userId as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputUserFromMessage {
+        public class Cons_inputUserFromMessage: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var msgId: Int32
             public var userId: Int64
@@ -194,6 +206,9 @@ public extension Api {
                 self.peer = peer
                 self.msgId = msgId
                 self.userId = userId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputUserFromMessage", [("peer", self.peer as Any), ("msgId", self.msgId as Any), ("userId", self.userId as Any)])
             }
         }
         case inputUser(Cons_inputUser)
@@ -287,24 +302,33 @@ public extension Api {
 }
 public extension Api {
     enum InputWallPaper: TypeConstructorDescription {
-        public class Cons_inputWallPaper {
+        public class Cons_inputWallPaper: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputWallPaper", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputWallPaperNoFile {
+        public class Cons_inputWallPaperNoFile: TypeConstructorDescription {
             public var id: Int64
             public init(id: Int64) {
                 self.id = id
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputWallPaperNoFile", [("id", self.id as Any)])
+            }
         }
-        public class Cons_inputWallPaperSlug {
+        public class Cons_inputWallPaperSlug: TypeConstructorDescription {
             public var slug: String
             public init(slug: String) {
                 self.slug = slug
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputWallPaperSlug", [("slug", self.slug as Any)])
             }
         }
         case inputWallPaper(Cons_inputWallPaper)
@@ -386,7 +410,7 @@ public extension Api {
 }
 public extension Api {
     enum InputWebDocument: TypeConstructorDescription {
-        public class Cons_inputWebDocument {
+        public class Cons_inputWebDocument: TypeConstructorDescription {
             public var url: String
             public var size: Int32
             public var mimeType: String
@@ -396,6 +420,9 @@ public extension Api {
                 self.size = size
                 self.mimeType = mimeType
                 self.attributes = attributes
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputWebDocument", [("url", self.url as Any), ("size", self.size as Any), ("mimeType", self.mimeType as Any), ("attributes", self.attributes as Any)])
             }
         }
         case inputWebDocument(Cons_inputWebDocument)
@@ -451,7 +478,7 @@ public extension Api {
 }
 public extension Api {
     enum InputWebFileLocation: TypeConstructorDescription {
-        public class Cons_inputWebFileAudioAlbumThumbLocation {
+        public class Cons_inputWebFileAudioAlbumThumbLocation: TypeConstructorDescription {
             public var flags: Int32
             public var document: Api.InputDocument?
             public var title: String?
@@ -462,8 +489,11 @@ public extension Api {
                 self.title = title
                 self.performer = performer
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputWebFileAudioAlbumThumbLocation", [("flags", self.flags as Any), ("document", self.document as Any), ("title", self.title as Any), ("performer", self.performer as Any)])
+            }
         }
-        public class Cons_inputWebFileGeoPointLocation {
+        public class Cons_inputWebFileGeoPointLocation: TypeConstructorDescription {
             public var geoPoint: Api.InputGeoPoint
             public var accessHash: Int64
             public var w: Int32
@@ -478,13 +508,19 @@ public extension Api {
                 self.zoom = zoom
                 self.scale = scale
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputWebFileGeoPointLocation", [("geoPoint", self.geoPoint as Any), ("accessHash", self.accessHash as Any), ("w", self.w as Any), ("h", self.h as Any), ("zoom", self.zoom as Any), ("scale", self.scale as Any)])
+            }
         }
-        public class Cons_inputWebFileLocation {
+        public class Cons_inputWebFileLocation: TypeConstructorDescription {
             public var url: String
             public var accessHash: Int64
             public init(url: String, accessHash: Int64) {
                 self.url = url
                 self.accessHash = accessHash
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputWebFileLocation", [("url", self.url as Any), ("accessHash", self.accessHash as Any)])
             }
         }
         case inputWebFileAudioAlbumThumbLocation(Cons_inputWebFileAudioAlbumThumbLocation)
@@ -614,7 +650,7 @@ public extension Api {
 }
 public extension Api {
     enum Invoice: TypeConstructorDescription {
-        public class Cons_invoice {
+        public class Cons_invoice: TypeConstructorDescription {
             public var flags: Int32
             public var currency: String
             public var prices: [Api.LabeledPrice]
@@ -630,6 +666,9 @@ public extension Api {
                 self.suggestedTipAmounts = suggestedTipAmounts
                 self.termsUrl = termsUrl
                 self.subscriptionPeriod = subscriptionPeriod
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("invoice", [("flags", self.flags as Any), ("currency", self.currency as Any), ("prices", self.prices as Any), ("maxTipAmount", self.maxTipAmount as Any), ("suggestedTipAmounts", self.suggestedTipAmounts as Any), ("termsUrl", self.termsUrl as Any), ("subscriptionPeriod", self.subscriptionPeriod as Any)])
             }
         }
         case invoice(Cons_invoice)
@@ -719,12 +758,15 @@ public extension Api {
 }
 public extension Api {
     enum JSONObjectValue: TypeConstructorDescription {
-        public class Cons_jsonObjectValue {
+        public class Cons_jsonObjectValue: TypeConstructorDescription {
             public var key: String
             public var value: Api.JSONValue
             public init(key: String, value: Api.JSONValue) {
                 self.key = key
                 self.value = value
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("jsonObjectValue", [("key", self.key as Any), ("value", self.value as Any)])
             }
         }
         case jsonObjectValue(Cons_jsonObjectValue)
@@ -768,34 +810,49 @@ public extension Api {
 }
 public extension Api {
     enum JSONValue: TypeConstructorDescription {
-        public class Cons_jsonArray {
+        public class Cons_jsonArray: TypeConstructorDescription {
             public var value: [Api.JSONValue]
             public init(value: [Api.JSONValue]) {
                 self.value = value
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("jsonArray", [("value", self.value as Any)])
+            }
         }
-        public class Cons_jsonBool {
+        public class Cons_jsonBool: TypeConstructorDescription {
             public var value: Api.Bool
             public init(value: Api.Bool) {
                 self.value = value
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("jsonBool", [("value", self.value as Any)])
+            }
         }
-        public class Cons_jsonNumber {
+        public class Cons_jsonNumber: TypeConstructorDescription {
             public var value: Double
             public init(value: Double) {
                 self.value = value
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("jsonNumber", [("value", self.value as Any)])
+            }
         }
-        public class Cons_jsonObject {
+        public class Cons_jsonObject: TypeConstructorDescription {
             public var value: [Api.JSONObjectValue]
             public init(value: [Api.JSONObjectValue]) {
                 self.value = value
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("jsonObject", [("value", self.value as Any)])
+            }
         }
-        public class Cons_jsonString {
+        public class Cons_jsonString: TypeConstructorDescription {
             public var value: String
             public init(value: String) {
                 self.value = value
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("jsonString", [("value", self.value as Any)])
             }
         }
         case jsonArray(Cons_jsonArray)
@@ -938,7 +995,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum KeyboardButton: TypeConstructorDescription {
-        public class Cons_inputKeyboardButtonRequestPeer {
+        public class Cons_inputKeyboardButtonRequestPeer: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -953,8 +1010,11 @@ public extension Api {
                 self.peerType = peerType
                 self.maxQuantity = maxQuantity
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputKeyboardButtonRequestPeer", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("buttonId", self.buttonId as Any), ("peerType", self.peerType as Any), ("maxQuantity", self.maxQuantity as Any)])
+            }
         }
-        public class Cons_inputKeyboardButtonUrlAuth {
+        public class Cons_inputKeyboardButtonUrlAuth: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -969,8 +1029,11 @@ public extension Api {
                 self.url = url
                 self.bot = bot
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputKeyboardButtonUrlAuth", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("fwdText", self.fwdText as Any), ("url", self.url as Any), ("bot", self.bot as Any)])
+            }
         }
-        public class Cons_inputKeyboardButtonUserProfile {
+        public class Cons_inputKeyboardButtonUserProfile: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -981,8 +1044,11 @@ public extension Api {
                 self.text = text
                 self.userId = userId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputKeyboardButtonUserProfile", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("userId", self.userId as Any)])
+            }
         }
-        public class Cons_keyboardButton {
+        public class Cons_keyboardButton: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -991,8 +1057,11 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButton", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            }
         }
-        public class Cons_keyboardButtonBuy {
+        public class Cons_keyboardButtonBuy: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1001,8 +1070,11 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonBuy", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            }
         }
-        public class Cons_keyboardButtonCallback {
+        public class Cons_keyboardButtonCallback: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1013,8 +1085,11 @@ public extension Api {
                 self.text = text
                 self.data = data
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonCallback", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("data", self.data as Any)])
+            }
         }
-        public class Cons_keyboardButtonCopy {
+        public class Cons_keyboardButtonCopy: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1025,8 +1100,11 @@ public extension Api {
                 self.text = text
                 self.copyText = copyText
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonCopy", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("copyText", self.copyText as Any)])
+            }
         }
-        public class Cons_keyboardButtonGame {
+        public class Cons_keyboardButtonGame: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1035,8 +1113,11 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonGame", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            }
         }
-        public class Cons_keyboardButtonRequestGeoLocation {
+        public class Cons_keyboardButtonRequestGeoLocation: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1045,8 +1126,11 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonRequestGeoLocation", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            }
         }
-        public class Cons_keyboardButtonRequestPeer {
+        public class Cons_keyboardButtonRequestPeer: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1061,8 +1145,11 @@ public extension Api {
                 self.peerType = peerType
                 self.maxQuantity = maxQuantity
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonRequestPeer", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("buttonId", self.buttonId as Any), ("peerType", self.peerType as Any), ("maxQuantity", self.maxQuantity as Any)])
+            }
         }
-        public class Cons_keyboardButtonRequestPhone {
+        public class Cons_keyboardButtonRequestPhone: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1071,8 +1158,11 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonRequestPhone", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            }
         }
-        public class Cons_keyboardButtonRequestPoll {
+        public class Cons_keyboardButtonRequestPoll: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var quiz: Api.Bool?
@@ -1083,8 +1173,11 @@ public extension Api {
                 self.quiz = quiz
                 self.text = text
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonRequestPoll", [("flags", self.flags as Any), ("style", self.style as Any), ("quiz", self.quiz as Any), ("text", self.text as Any)])
+            }
         }
-        public class Cons_keyboardButtonSimpleWebView {
+        public class Cons_keyboardButtonSimpleWebView: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1095,8 +1188,11 @@ public extension Api {
                 self.text = text
                 self.url = url
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonSimpleWebView", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("url", self.url as Any)])
+            }
         }
-        public class Cons_keyboardButtonSwitchInline {
+        public class Cons_keyboardButtonSwitchInline: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1109,8 +1205,11 @@ public extension Api {
                 self.query = query
                 self.peerTypes = peerTypes
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonSwitchInline", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("query", self.query as Any), ("peerTypes", self.peerTypes as Any)])
+            }
         }
-        public class Cons_keyboardButtonUrl {
+        public class Cons_keyboardButtonUrl: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1121,8 +1220,11 @@ public extension Api {
                 self.text = text
                 self.url = url
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonUrl", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("url", self.url as Any)])
+            }
         }
-        public class Cons_keyboardButtonUrlAuth {
+        public class Cons_keyboardButtonUrlAuth: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1137,8 +1239,11 @@ public extension Api {
                 self.url = url
                 self.buttonId = buttonId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonUrlAuth", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("fwdText", self.fwdText as Any), ("url", self.url as Any), ("buttonId", self.buttonId as Any)])
+            }
         }
-        public class Cons_keyboardButtonUserProfile {
+        public class Cons_keyboardButtonUserProfile: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1149,8 +1254,11 @@ public extension Api {
                 self.text = text
                 self.userId = userId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonUserProfile", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("userId", self.userId as Any)])
+            }
         }
-        public class Cons_keyboardButtonWebView {
+        public class Cons_keyboardButtonWebView: TypeConstructorDescription {
             public var flags: Int32
             public var style: Api.KeyboardButtonStyle?
             public var text: String
@@ -1160,6 +1268,9 @@ public extension Api {
                 self.style = style
                 self.text = text
                 self.url = url
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("keyboardButtonWebView", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("url", self.url as Any)])
             }
         }
         case inputKeyboardButtonRequestPeer(Cons_inputKeyboardButtonRequestPeer)

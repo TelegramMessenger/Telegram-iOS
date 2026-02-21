@@ -1957,7 +1957,7 @@ extension ChatControllerImpl {
                 
                 let editorController = MediaEditorScreenImpl(
                     context: self.context,
-                    mode: .stickerEditor(mode: .generic),
+                    mode: .stickerEditor(mode: .generic(canSend: true)),
                     subject: subject,
                     transitionIn: fromCamera ? .camera : transitionView.flatMap({ .gallery(
                         MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(

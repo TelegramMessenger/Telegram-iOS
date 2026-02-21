@@ -2996,31 +2996,31 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                 }))
                             )
                             
-                            
-                            
-                            menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Stickers_EditSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                f(.default)
-                                
-                                var emoji: [String] = []
-                                for attribute in file.attributes {
-                                    if case let .Sticker(displayText, _, _) = attribute {
-                                        emoji = [displayText]
+                            if !file.isPremiumSticker {
+                                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Stickers_EditSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                    
+                                    var emoji: [String] = []
+                                    for attribute in file.attributes {
+                                        if case let .Sticker(displayText, _, _) = attribute {
+                                            emoji = [displayText]
+                                        }
                                     }
-                                }
-         
-                                let controller = context.sharedContext.makeStickerEditorScreen(
-                                    context: context,
-                                    source: (file, emoji),
-                                    mode: .generic,
-                                    transitionArguments: nil,
-                                    completion: { file, _, commit in
-                                        commit()
-                                        sendSticker(.standalone(media: file), false, false, nil, false, nil, .zero, nil)
-                                    },
-                                    cancelled: {}
-                                )
-                                interaction.navigationController()?.pushViewController(controller)
-                            })))
+                                    
+                                    let controller = context.sharedContext.makeStickerEditorScreen(
+                                        context: context,
+                                        source: (file, emoji),
+                                        mode: .generic(canSend: self?.chatPeerId != nil),
+                                        transitionArguments: nil,
+                                        completion: { file, _, commit in
+                                            commit()
+                                            sendSticker(.standalone(media: file), false, false, nil, false, nil, .zero, nil)
+                                        },
+                                        cancelled: {}
+                                    )
+                                    interaction.navigationController()?.pushViewController(controller)
+                                })))
+                            }
                             
                             loop: for attribute in file.attributes {
                                 switch attribute {

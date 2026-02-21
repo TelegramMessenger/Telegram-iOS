@@ -1636,7 +1636,7 @@ public func test_loginAndDeleteAccount(
     phoneCode: String
 ) -> Signal<Never, TestLoginAndDeleteAccountError> {
     Logger.shared.logToConsole = true
-    
+
     return accountManager.transaction{ transaction -> AccountRecordId? in
         let record = transaction.createAuth([.environment(AccountEnvironmentAttribute(environment: .test))])
         return record?.id
@@ -1651,7 +1651,7 @@ public func test_loginAndDeleteAccount(
             networkArguments: networkArguments,
             id: accountId,
             encryptionParameters: encryptionParameters,
-            supplementary: true,
+            supplementary: false,
             isSupportUser: false,
             rootPath: rootPath,
             beginWithTestingEnvironment: true,
@@ -1679,8 +1679,8 @@ public func test_loginAndDeleteAccount(
         }
     }
     |> mapToSignal { account -> Signal<(UnauthorizedAccount, UnauthorizedAccountStateContents), TestLoginAndDeleteAccountError> in
-        account.network.shouldKeepConnection.set(.single(true))
-        
+        account.shouldBeServiceTaskMaster.set(.single(.now))
+
         return sendAuthorizationCode(
             accountManager: accountManager,
             account: account,
@@ -1692,7 +1692,8 @@ public func test_loginAndDeleteAccount(
             syncContacts: false,
             forcedPasswordSetupNotice: { _ in nil }
         )
-        |> mapError { _ -> TestLoginAndDeleteAccountError in
+        |> mapError { error -> TestLoginAndDeleteAccountError in
+            NSLog("[DeleteAccount] sendAuthorizationCode error: \(error)")
             return .generic
         }
         |> mapToSignal { result -> Signal<(UnauthorizedAccount, UnauthorizedAccountStateContents), TestLoginAndDeleteAccountError> in
@@ -1717,7 +1718,7 @@ public func test_loginAndDeleteAccount(
         }
     }
     |> mapToSignal { account, state -> Signal<(UnauthorizedAccount, AuthorizeWithCodeResult), TestLoginAndDeleteAccountError> in
-        account.network.shouldKeepConnection.set(.single(true))
+        account.shouldBeServiceTaskMaster.set(.single(.now))
         
         switch state {
         case let .confirmationCodeEntry(_, type, _, _, _, _, _, _):

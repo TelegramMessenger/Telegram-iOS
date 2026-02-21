@@ -1,6 +1,6 @@
 public extension Api.stories {
     enum PeerStories: TypeConstructorDescription {
-        public class Cons_peerStories {
+        public class Cons_peerStories: TypeConstructorDescription {
             public var stories: Api.PeerStories
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -8,6 +8,9 @@ public extension Api.stories {
                 self.stories = stories
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("peerStories", [("stories", self.stories as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case peerStories(Cons_peerStories)
@@ -67,7 +70,7 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum Stories: TypeConstructorDescription {
-        public class Cons_stories {
+        public class Cons_stories: TypeConstructorDescription {
             public var flags: Int32
             public var count: Int32
             public var stories: [Api.StoryItem]
@@ -81,6 +84,9 @@ public extension Api.stories {
                 self.pinnedToTop = pinnedToTop
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("stories", [("flags", self.flags as Any), ("count", self.count as Any), ("stories", self.stories as Any), ("pinnedToTop", self.pinnedToTop as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case stories(Cons_stories)
@@ -166,7 +172,7 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum StoryReactionsList: TypeConstructorDescription {
-        public class Cons_storyReactionsList {
+        public class Cons_storyReactionsList: TypeConstructorDescription {
             public var flags: Int32
             public var count: Int32
             public var reactions: [Api.StoryReaction]
@@ -180,6 +186,9 @@ public extension Api.stories {
                 self.chats = chats
                 self.users = users
                 self.nextOffset = nextOffset
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyReactionsList", [("flags", self.flags as Any), ("count", self.count as Any), ("reactions", self.reactions as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("nextOffset", self.nextOffset as Any)])
             }
         }
         case storyReactionsList(Cons_storyReactionsList)
@@ -259,12 +268,15 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum StoryViews: TypeConstructorDescription {
-        public class Cons_storyViews {
+        public class Cons_storyViews: TypeConstructorDescription {
             public var views: [Api.StoryViews]
             public var users: [Api.User]
             public init(views: [Api.StoryViews], users: [Api.User]) {
                 self.views = views
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyViews", [("views", self.views as Any), ("users", self.users as Any)])
             }
         }
         case storyViews(Cons_storyViews)
@@ -318,7 +330,7 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum StoryViewsList: TypeConstructorDescription {
-        public class Cons_storyViewsList {
+        public class Cons_storyViewsList: TypeConstructorDescription {
             public var flags: Int32
             public var count: Int32
             public var viewsCount: Int32
@@ -338,6 +350,9 @@ public extension Api.stories {
                 self.chats = chats
                 self.users = users
                 self.nextOffset = nextOffset
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("storyViewsList", [("flags", self.flags as Any), ("count", self.count as Any), ("viewsCount", self.viewsCount as Any), ("forwardsCount", self.forwardsCount as Any), ("reactionsCount", self.reactionsCount as Any), ("views", self.views as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("nextOffset", self.nextOffset as Any)])
             }
         }
         case storyViewsList(Cons_storyViewsList)
@@ -429,7 +444,7 @@ public extension Api.stories {
 }
 public extension Api.updates {
     indirect enum ChannelDifference: TypeConstructorDescription {
-        public class Cons_channelDifference {
+        public class Cons_channelDifference: TypeConstructorDescription {
             public var flags: Int32
             public var pts: Int32
             public var timeout: Int32?
@@ -446,8 +461,11 @@ public extension Api.updates {
                 self.chats = chats
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelDifference", [("flags", self.flags as Any), ("pts", self.pts as Any), ("timeout", self.timeout as Any), ("newMessages", self.newMessages as Any), ("otherUpdates", self.otherUpdates as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_channelDifferenceEmpty {
+        public class Cons_channelDifferenceEmpty: TypeConstructorDescription {
             public var flags: Int32
             public var pts: Int32
             public var timeout: Int32?
@@ -456,8 +474,11 @@ public extension Api.updates {
                 self.pts = pts
                 self.timeout = timeout
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelDifferenceEmpty", [("flags", self.flags as Any), ("pts", self.pts as Any), ("timeout", self.timeout as Any)])
+            }
         }
-        public class Cons_channelDifferenceTooLong {
+        public class Cons_channelDifferenceTooLong: TypeConstructorDescription {
             public var flags: Int32
             public var timeout: Int32?
             public var dialog: Api.Dialog
@@ -471,6 +492,9 @@ public extension Api.updates {
                 self.messages = messages
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelDifferenceTooLong", [("flags", self.flags as Any), ("timeout", self.timeout as Any), ("dialog", self.dialog as Any), ("messages", self.messages as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case channelDifference(Cons_channelDifference)
@@ -656,7 +680,7 @@ public extension Api.updates {
 }
 public extension Api.updates {
     enum Difference: TypeConstructorDescription {
-        public class Cons_difference {
+        public class Cons_difference: TypeConstructorDescription {
             public var newMessages: [Api.Message]
             public var newEncryptedMessages: [Api.EncryptedMessage]
             public var otherUpdates: [Api.Update]
@@ -671,16 +695,22 @@ public extension Api.updates {
                 self.users = users
                 self.state = state
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("difference", [("newMessages", self.newMessages as Any), ("newEncryptedMessages", self.newEncryptedMessages as Any), ("otherUpdates", self.otherUpdates as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("state", self.state as Any)])
+            }
         }
-        public class Cons_differenceEmpty {
+        public class Cons_differenceEmpty: TypeConstructorDescription {
             public var date: Int32
             public var seq: Int32
             public init(date: Int32, seq: Int32) {
                 self.date = date
                 self.seq = seq
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("differenceEmpty", [("date", self.date as Any), ("seq", self.seq as Any)])
+            }
         }
-        public class Cons_differenceSlice {
+        public class Cons_differenceSlice: TypeConstructorDescription {
             public var newMessages: [Api.Message]
             public var newEncryptedMessages: [Api.EncryptedMessage]
             public var otherUpdates: [Api.Update]
@@ -695,11 +725,17 @@ public extension Api.updates {
                 self.users = users
                 self.intermediateState = intermediateState
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("differenceSlice", [("newMessages", self.newMessages as Any), ("newEncryptedMessages", self.newEncryptedMessages as Any), ("otherUpdates", self.otherUpdates as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("intermediateState", self.intermediateState as Any)])
+            }
         }
-        public class Cons_differenceTooLong {
+        public class Cons_differenceTooLong: TypeConstructorDescription {
             public var pts: Int32
             public init(pts: Int32) {
                 self.pts = pts
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("differenceTooLong", [("pts", self.pts as Any)])
             }
         }
         case difference(Cons_difference)
@@ -905,7 +941,7 @@ public extension Api.updates {
 }
 public extension Api.updates {
     enum State: TypeConstructorDescription {
-        public class Cons_state {
+        public class Cons_state: TypeConstructorDescription {
             public var pts: Int32
             public var qts: Int32
             public var date: Int32
@@ -917,6 +953,9 @@ public extension Api.updates {
                 self.date = date
                 self.seq = seq
                 self.unreadCount = unreadCount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("state", [("pts", self.pts as Any), ("qts", self.qts as Any), ("date", self.date as Any), ("seq", self.seq as Any), ("unreadCount", self.unreadCount as Any)])
             }
         }
         case state(Cons_state)
@@ -970,16 +1009,22 @@ public extension Api.updates {
 }
 public extension Api.upload {
     enum CdnFile: TypeConstructorDescription {
-        public class Cons_cdnFile {
+        public class Cons_cdnFile: TypeConstructorDescription {
             public var bytes: Buffer
             public init(bytes: Buffer) {
                 self.bytes = bytes
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("cdnFile", [("bytes", self.bytes as Any)])
+            }
         }
-        public class Cons_cdnFileReuploadNeeded {
+        public class Cons_cdnFileReuploadNeeded: TypeConstructorDescription {
             public var requestToken: Buffer
             public init(requestToken: Buffer) {
                 self.requestToken = requestToken
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("cdnFileReuploadNeeded", [("requestToken", self.requestToken as Any)])
             }
         }
         case cdnFile(Cons_cdnFile)
@@ -1037,7 +1082,7 @@ public extension Api.upload {
 }
 public extension Api.upload {
     enum File: TypeConstructorDescription {
-        public class Cons_file {
+        public class Cons_file: TypeConstructorDescription {
             public var type: Api.storage.FileType
             public var mtime: Int32
             public var bytes: Buffer
@@ -1046,8 +1091,11 @@ public extension Api.upload {
                 self.mtime = mtime
                 self.bytes = bytes
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("file", [("type", self.type as Any), ("mtime", self.mtime as Any), ("bytes", self.bytes as Any)])
+            }
         }
-        public class Cons_fileCdnRedirect {
+        public class Cons_fileCdnRedirect: TypeConstructorDescription {
             public var dcId: Int32
             public var fileToken: Buffer
             public var encryptionKey: Buffer
@@ -1059,6 +1107,9 @@ public extension Api.upload {
                 self.encryptionKey = encryptionKey
                 self.encryptionIv = encryptionIv
                 self.fileHashes = fileHashes
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("fileCdnRedirect", [("dcId", self.dcId as Any), ("fileToken", self.fileToken as Any), ("encryptionKey", self.encryptionKey as Any), ("encryptionIv", self.encryptionIv as Any), ("fileHashes", self.fileHashes as Any)])
             }
         }
         case file(Cons_file)
@@ -1148,7 +1199,7 @@ public extension Api.upload {
 }
 public extension Api.upload {
     enum WebFile: TypeConstructorDescription {
-        public class Cons_webFile {
+        public class Cons_webFile: TypeConstructorDescription {
             public var size: Int32
             public var mimeType: String
             public var fileType: Api.storage.FileType
@@ -1160,6 +1211,9 @@ public extension Api.upload {
                 self.fileType = fileType
                 self.mtime = mtime
                 self.bytes = bytes
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("webFile", [("size", self.size as Any), ("mimeType", self.mimeType as Any), ("fileType", self.fileType as Any), ("mtime", self.mtime as Any), ("bytes", self.bytes as Any)])
             }
         }
         case webFile(Cons_webFile)
@@ -1215,18 +1269,24 @@ public extension Api.upload {
 }
 public extension Api.users {
     enum SavedMusic: TypeConstructorDescription {
-        public class Cons_savedMusic {
+        public class Cons_savedMusic: TypeConstructorDescription {
             public var count: Int32
             public var documents: [Api.Document]
             public init(count: Int32, documents: [Api.Document]) {
                 self.count = count
                 self.documents = documents
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedMusic", [("count", self.count as Any), ("documents", self.documents as Any)])
+            }
         }
-        public class Cons_savedMusicNotModified {
+        public class Cons_savedMusicNotModified: TypeConstructorDescription {
             public var count: Int32
             public init(count: Int32) {
                 self.count = count
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("savedMusicNotModified", [("count", self.count as Any)])
             }
         }
         case savedMusic(Cons_savedMusic)
@@ -1294,7 +1354,7 @@ public extension Api.users {
 }
 public extension Api.users {
     enum UserFull: TypeConstructorDescription {
-        public class Cons_userFull {
+        public class Cons_userFull: TypeConstructorDescription {
             public var fullUser: Api.UserFull
             public var chats: [Api.Chat]
             public var users: [Api.User]
@@ -1302,6 +1362,9 @@ public extension Api.users {
                 self.fullUser = fullUser
                 self.chats = chats
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("userFull", [("fullUser", self.fullUser as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
             }
         }
         case userFull(Cons_userFull)
@@ -1361,18 +1424,24 @@ public extension Api.users {
 }
 public extension Api.users {
     enum Users: TypeConstructorDescription {
-        public class Cons_users {
+        public class Cons_users: TypeConstructorDescription {
             public var users: [Api.User]
             public init(users: [Api.User]) {
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("users", [("users", self.users as Any)])
+            }
         }
-        public class Cons_usersSlice {
+        public class Cons_usersSlice: TypeConstructorDescription {
             public var count: Int32
             public var users: [Api.User]
             public init(count: Int32, users: [Api.User]) {
                 self.count = count
                 self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("usersSlice", [("count", self.count as Any), ("users", self.users as Any)])
             }
         }
         case users(Cons_users)

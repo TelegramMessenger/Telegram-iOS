@@ -1600,7 +1600,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     },
                     updateCanReadHistory: { [weak self] canReadHistory in
                         self?.canReadHistory.set(canReadHistory)
-                    }
+                    },
+                    sendSticker: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] file in
+                        let _ = self?.controllerInteraction?.sendSticker(file, false, false, nil, false, nil, nil, nil, [])
+                    } : nil
                 ),
                 navigateToMessageContext: { [weak self] message in
                     Task {

@@ -1,9 +1,12 @@
 public extension Api {
     enum PhoneCallDiscardReason: TypeConstructorDescription {
-        public class Cons_phoneCallDiscardReasonMigrateConferenceCall {
+        public class Cons_phoneCallDiscardReasonMigrateConferenceCall: TypeConstructorDescription {
             public var slug: String
             public init(slug: String) {
                 self.slug = slug
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("phoneCallDiscardReasonMigrateConferenceCall", [("slug", self.slug as Any)])
             }
         }
         case phoneCallDiscardReasonBusy
@@ -85,7 +88,7 @@ public extension Api {
 }
 public extension Api {
     enum PhoneCallProtocol: TypeConstructorDescription {
-        public class Cons_phoneCallProtocol {
+        public class Cons_phoneCallProtocol: TypeConstructorDescription {
             public var flags: Int32
             public var minLayer: Int32
             public var maxLayer: Int32
@@ -95,6 +98,9 @@ public extension Api {
                 self.minLayer = minLayer
                 self.maxLayer = maxLayer
                 self.libraryVersions = libraryVersions
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("phoneCallProtocol", [("flags", self.flags as Any), ("minLayer", self.minLayer as Any), ("maxLayer", self.maxLayer as Any), ("libraryVersions", self.libraryVersions as Any)])
             }
         }
         case phoneCallProtocol(Cons_phoneCallProtocol)
@@ -150,7 +156,7 @@ public extension Api {
 }
 public extension Api {
     enum PhoneConnection: TypeConstructorDescription {
-        public class Cons_phoneConnection {
+        public class Cons_phoneConnection: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var ip: String
@@ -165,8 +171,11 @@ public extension Api {
                 self.port = port
                 self.peerTag = peerTag
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("phoneConnection", [("flags", self.flags as Any), ("id", self.id as Any), ("ip", self.ip as Any), ("ipv6", self.ipv6 as Any), ("port", self.port as Any), ("peerTag", self.peerTag as Any)])
+            }
         }
-        public class Cons_phoneConnectionWebrtc {
+        public class Cons_phoneConnectionWebrtc: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var ip: String
@@ -182,6 +191,9 @@ public extension Api {
                 self.port = port
                 self.username = username
                 self.password = password
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("phoneConnectionWebrtc", [("flags", self.flags as Any), ("id", self.id as Any), ("ip", self.ip as Any), ("ipv6", self.ipv6 as Any), ("port", self.port as Any), ("username", self.username as Any), ("password", self.password as Any)])
             }
         }
         case phoneConnection(Cons_phoneConnection)
@@ -283,7 +295,7 @@ public extension Api {
 }
 public extension Api {
     enum Photo: TypeConstructorDescription {
-        public class Cons_photo {
+        public class Cons_photo: TypeConstructorDescription {
             public var flags: Int32
             public var id: Int64
             public var accessHash: Int64
@@ -302,11 +314,17 @@ public extension Api {
                 self.videoSizes = videoSizes
                 self.dcId = dcId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photo", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("fileReference", self.fileReference as Any), ("date", self.date as Any), ("sizes", self.sizes as Any), ("videoSizes", self.videoSizes as Any), ("dcId", self.dcId as Any)])
+            }
         }
-        public class Cons_photoEmpty {
+        public class Cons_photoEmpty: TypeConstructorDescription {
             public var id: Int64
             public init(id: Int64) {
                 self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photoEmpty", [("id", self.id as Any)])
             }
         }
         case photo(Cons_photo)
@@ -408,7 +426,7 @@ public extension Api {
 }
 public extension Api {
     enum PhotoSize: TypeConstructorDescription {
-        public class Cons_photoCachedSize {
+        public class Cons_photoCachedSize: TypeConstructorDescription {
             public var type: String
             public var w: Int32
             public var h: Int32
@@ -419,16 +437,22 @@ public extension Api {
                 self.h = h
                 self.bytes = bytes
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photoCachedSize", [("type", self.type as Any), ("w", self.w as Any), ("h", self.h as Any), ("bytes", self.bytes as Any)])
+            }
         }
-        public class Cons_photoPathSize {
+        public class Cons_photoPathSize: TypeConstructorDescription {
             public var type: String
             public var bytes: Buffer
             public init(type: String, bytes: Buffer) {
                 self.type = type
                 self.bytes = bytes
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photoPathSize", [("type", self.type as Any), ("bytes", self.bytes as Any)])
+            }
         }
-        public class Cons_photoSize {
+        public class Cons_photoSize: TypeConstructorDescription {
             public var type: String
             public var w: Int32
             public var h: Int32
@@ -439,14 +463,20 @@ public extension Api {
                 self.h = h
                 self.size = size
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photoSize", [("type", self.type as Any), ("w", self.w as Any), ("h", self.h as Any), ("size", self.size as Any)])
+            }
         }
-        public class Cons_photoSizeEmpty {
+        public class Cons_photoSizeEmpty: TypeConstructorDescription {
             public var type: String
             public init(type: String) {
                 self.type = type
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photoSizeEmpty", [("type", self.type as Any)])
+            }
         }
-        public class Cons_photoSizeProgressive {
+        public class Cons_photoSizeProgressive: TypeConstructorDescription {
             public var type: String
             public var w: Int32
             public var h: Int32
@@ -457,13 +487,19 @@ public extension Api {
                 self.h = h
                 self.sizes = sizes
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photoSizeProgressive", [("type", self.type as Any), ("w", self.w as Any), ("h", self.h as Any), ("sizes", self.sizes as Any)])
+            }
         }
-        public class Cons_photoStrippedSize {
+        public class Cons_photoStrippedSize: TypeConstructorDescription {
             public var type: String
             public var bytes: Buffer
             public init(type: String, bytes: Buffer) {
                 self.type = type
                 self.bytes = bytes
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("photoStrippedSize", [("type", self.type as Any), ("bytes", self.bytes as Any)])
             }
         }
         case photoCachedSize(Cons_photoCachedSize)
@@ -651,7 +687,7 @@ public extension Api {
 }
 public extension Api {
     enum Poll: TypeConstructorDescription {
-        public class Cons_poll {
+        public class Cons_poll: TypeConstructorDescription {
             public var id: Int64
             public var flags: Int32
             public var question: Api.TextWithEntities
@@ -665,6 +701,9 @@ public extension Api {
                 self.answers = answers
                 self.closePeriod = closePeriod
                 self.closeDate = closeDate
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("poll", [("id", self.id as Any), ("flags", self.flags as Any), ("question", self.question as Any), ("answers", self.answers as Any), ("closePeriod", self.closePeriod as Any), ("closeDate", self.closeDate as Any)])
             }
         }
         case poll(Cons_poll)
@@ -738,12 +777,15 @@ public extension Api {
 }
 public extension Api {
     enum PollAnswer: TypeConstructorDescription {
-        public class Cons_pollAnswer {
+        public class Cons_pollAnswer: TypeConstructorDescription {
             public var text: Api.TextWithEntities
             public var option: Buffer
             public init(text: Api.TextWithEntities, option: Buffer) {
                 self.text = text
                 self.option = option
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pollAnswer", [("text", self.text as Any), ("option", self.option as Any)])
             }
         }
         case pollAnswer(Cons_pollAnswer)
@@ -787,7 +829,7 @@ public extension Api {
 }
 public extension Api {
     enum PollAnswerVoters: TypeConstructorDescription {
-        public class Cons_pollAnswerVoters {
+        public class Cons_pollAnswerVoters: TypeConstructorDescription {
             public var flags: Int32
             public var option: Buffer
             public var voters: Int32
@@ -795,6 +837,9 @@ public extension Api {
                 self.flags = flags
                 self.option = option
                 self.voters = voters
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pollAnswerVoters", [("flags", self.flags as Any), ("option", self.option as Any), ("voters", self.voters as Any)])
             }
         }
         case pollAnswerVoters(Cons_pollAnswerVoters)
@@ -840,7 +885,7 @@ public extension Api {
 }
 public extension Api {
     enum PollResults: TypeConstructorDescription {
-        public class Cons_pollResults {
+        public class Cons_pollResults: TypeConstructorDescription {
             public var flags: Int32
             public var results: [Api.PollAnswerVoters]?
             public var totalVoters: Int32?
@@ -854,6 +899,9 @@ public extension Api {
                 self.recentVoters = recentVoters
                 self.solution = solution
                 self.solutionEntities = solutionEntities
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pollResults", [("flags", self.flags as Any), ("results", self.results as Any), ("totalVoters", self.totalVoters as Any), ("recentVoters", self.recentVoters as Any), ("solution", self.solution as Any), ("solutionEntities", self.solutionEntities as Any)])
             }
         }
         case pollResults(Cons_pollResults)
@@ -949,12 +997,15 @@ public extension Api {
 }
 public extension Api {
     enum PopularContact: TypeConstructorDescription {
-        public class Cons_popularContact {
+        public class Cons_popularContact: TypeConstructorDescription {
             public var clientId: Int64
             public var importers: Int32
             public init(clientId: Int64, importers: Int32) {
                 self.clientId = clientId
                 self.importers = importers
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("popularContact", [("clientId", self.clientId as Any), ("importers", self.importers as Any)])
             }
         }
         case popularContact(Cons_popularContact)
@@ -996,7 +1047,7 @@ public extension Api {
 }
 public extension Api {
     enum PostAddress: TypeConstructorDescription {
-        public class Cons_postAddress {
+        public class Cons_postAddress: TypeConstructorDescription {
             public var streetLine1: String
             public var streetLine2: String
             public var city: String
@@ -1010,6 +1061,9 @@ public extension Api {
                 self.state = state
                 self.countryIso2 = countryIso2
                 self.postCode = postCode
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("postAddress", [("streetLine1", self.streetLine1 as Any), ("streetLine2", self.streetLine2 as Any), ("city", self.city as Any), ("state", self.state as Any), ("countryIso2", self.countryIso2 as Any), ("postCode", self.postCode as Any)])
             }
         }
         case postAddress(Cons_postAddress)
@@ -1067,7 +1121,7 @@ public extension Api {
 }
 public extension Api {
     enum PostInteractionCounters: TypeConstructorDescription {
-        public class Cons_postInteractionCountersMessage {
+        public class Cons_postInteractionCountersMessage: TypeConstructorDescription {
             public var msgId: Int32
             public var views: Int32
             public var forwards: Int32
@@ -1078,8 +1132,11 @@ public extension Api {
                 self.forwards = forwards
                 self.reactions = reactions
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("postInteractionCountersMessage", [("msgId", self.msgId as Any), ("views", self.views as Any), ("forwards", self.forwards as Any), ("reactions", self.reactions as Any)])
+            }
         }
-        public class Cons_postInteractionCountersStory {
+        public class Cons_postInteractionCountersStory: TypeConstructorDescription {
             public var storyId: Int32
             public var views: Int32
             public var forwards: Int32
@@ -1089,6 +1146,9 @@ public extension Api {
                 self.views = views
                 self.forwards = forwards
                 self.reactions = reactions
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("postInteractionCountersStory", [("storyId", self.storyId as Any), ("views", self.views as Any), ("forwards", self.forwards as Any), ("reactions", self.reactions as Any)])
             }
         }
         case postInteractionCountersMessage(Cons_postInteractionCountersMessage)
@@ -1170,7 +1230,7 @@ public extension Api {
 }
 public extension Api {
     enum PremiumGiftCodeOption: TypeConstructorDescription {
-        public class Cons_premiumGiftCodeOption {
+        public class Cons_premiumGiftCodeOption: TypeConstructorDescription {
             public var flags: Int32
             public var users: Int32
             public var months: Int32
@@ -1186,6 +1246,9 @@ public extension Api {
                 self.storeQuantity = storeQuantity
                 self.currency = currency
                 self.amount = amount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("premiumGiftCodeOption", [("flags", self.flags as Any), ("users", self.users as Any), ("months", self.months as Any), ("storeProduct", self.storeProduct as Any), ("storeQuantity", self.storeQuantity as Any), ("currency", self.currency as Any), ("amount", self.amount as Any)])
             }
         }
         case premiumGiftCodeOption(Cons_premiumGiftCodeOption)
@@ -1255,7 +1318,7 @@ public extension Api {
 }
 public extension Api {
     enum PremiumSubscriptionOption: TypeConstructorDescription {
-        public class Cons_premiumSubscriptionOption {
+        public class Cons_premiumSubscriptionOption: TypeConstructorDescription {
             public var flags: Int32
             public var transaction: String?
             public var months: Int32
@@ -1271,6 +1334,9 @@ public extension Api {
                 self.amount = amount
                 self.botUrl = botUrl
                 self.storeProduct = storeProduct
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("premiumSubscriptionOption", [("flags", self.flags as Any), ("transaction", self.transaction as Any), ("months", self.months as Any), ("currency", self.currency as Any), ("amount", self.amount as Any), ("botUrl", self.botUrl as Any), ("storeProduct", self.storeProduct as Any)])
             }
         }
         case premiumSubscriptionOption(Cons_premiumSubscriptionOption)
@@ -1340,7 +1406,7 @@ public extension Api {
 }
 public extension Api {
     enum PrepaidGiveaway: TypeConstructorDescription {
-        public class Cons_prepaidGiveaway {
+        public class Cons_prepaidGiveaway: TypeConstructorDescription {
             public var id: Int64
             public var months: Int32
             public var quantity: Int32
@@ -1351,8 +1417,11 @@ public extension Api {
                 self.quantity = quantity
                 self.date = date
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("prepaidGiveaway", [("id", self.id as Any), ("months", self.months as Any), ("quantity", self.quantity as Any), ("date", self.date as Any)])
+            }
         }
-        public class Cons_prepaidStarsGiveaway {
+        public class Cons_prepaidStarsGiveaway: TypeConstructorDescription {
             public var id: Int64
             public var stars: Int64
             public var quantity: Int32
@@ -1364,6 +1433,9 @@ public extension Api {
                 self.quantity = quantity
                 self.boosts = boosts
                 self.date = date
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("prepaidStarsGiveaway", [("id", self.id as Any), ("stars", self.stars as Any), ("quantity", self.quantity as Any), ("boosts", self.boosts as Any), ("date", self.date as Any)])
             }
         }
         case prepaidGiveaway(Cons_prepaidGiveaway)

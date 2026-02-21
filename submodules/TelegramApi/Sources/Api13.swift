@@ -1,15 +1,21 @@
 public extension Api {
     enum InputQuickReplyShortcut: TypeConstructorDescription {
-        public class Cons_inputQuickReplyShortcut {
+        public class Cons_inputQuickReplyShortcut: TypeConstructorDescription {
             public var shortcut: String
             public init(shortcut: String) {
                 self.shortcut = shortcut
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputQuickReplyShortcut", [("shortcut", self.shortcut as Any)])
+            }
         }
-        public class Cons_inputQuickReplyShortcutId {
+        public class Cons_inputQuickReplyShortcutId: TypeConstructorDescription {
             public var shortcutId: Int32
             public init(shortcutId: Int32) {
                 self.shortcutId = shortcutId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputQuickReplyShortcutId", [("shortcutId", self.shortcutId as Any)])
             }
         }
         case inputQuickReplyShortcut(Cons_inputQuickReplyShortcut)
@@ -67,7 +73,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputReplyTo: TypeConstructorDescription {
-        public class Cons_inputReplyToMessage {
+        public class Cons_inputReplyToMessage: TypeConstructorDescription {
             public var flags: Int32
             public var replyToMsgId: Int32
             public var topMsgId: Int32?
@@ -88,19 +94,28 @@ public extension Api {
                 self.monoforumPeerId = monoforumPeerId
                 self.todoItemId = todoItemId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputReplyToMessage", [("flags", self.flags as Any), ("replyToMsgId", self.replyToMsgId as Any), ("topMsgId", self.topMsgId as Any), ("replyToPeerId", self.replyToPeerId as Any), ("quoteText", self.quoteText as Any), ("quoteEntities", self.quoteEntities as Any), ("quoteOffset", self.quoteOffset as Any), ("monoforumPeerId", self.monoforumPeerId as Any), ("todoItemId", self.todoItemId as Any)])
+            }
         }
-        public class Cons_inputReplyToMonoForum {
+        public class Cons_inputReplyToMonoForum: TypeConstructorDescription {
             public var monoforumPeerId: Api.InputPeer
             public init(monoforumPeerId: Api.InputPeer) {
                 self.monoforumPeerId = monoforumPeerId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputReplyToMonoForum", [("monoforumPeerId", self.monoforumPeerId as Any)])
+            }
         }
-        public class Cons_inputReplyToStory {
+        public class Cons_inputReplyToStory: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var storyId: Int32
             public init(peer: Api.InputPeer, storyId: Int32) {
                 self.peer = peer
                 self.storyId = storyId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputReplyToStory", [("peer", self.peer as Any), ("storyId", self.storyId as Any)])
             }
         }
         case inputReplyToMessage(Cons_inputReplyToMessage)
@@ -256,24 +271,33 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputSavedStarGift: TypeConstructorDescription {
-        public class Cons_inputSavedStarGiftChat {
+        public class Cons_inputSavedStarGiftChat: TypeConstructorDescription {
             public var peer: Api.InputPeer
             public var savedId: Int64
             public init(peer: Api.InputPeer, savedId: Int64) {
                 self.peer = peer
                 self.savedId = savedId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSavedStarGiftChat", [("peer", self.peer as Any), ("savedId", self.savedId as Any)])
+            }
         }
-        public class Cons_inputSavedStarGiftSlug {
+        public class Cons_inputSavedStarGiftSlug: TypeConstructorDescription {
             public var slug: String
             public init(slug: String) {
                 self.slug = slug
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSavedStarGiftSlug", [("slug", self.slug as Any)])
+            }
         }
-        public class Cons_inputSavedStarGiftUser {
+        public class Cons_inputSavedStarGiftUser: TypeConstructorDescription {
             public var msgId: Int32
             public init(msgId: Int32) {
                 self.msgId = msgId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSavedStarGiftUser", [("msgId", self.msgId as Any)])
             }
         }
         case inputSavedStarGiftChat(Cons_inputSavedStarGiftChat)
@@ -357,15 +381,18 @@ public extension Api {
 }
 public extension Api {
     enum InputSecureFile: TypeConstructorDescription {
-        public class Cons_inputSecureFile {
+        public class Cons_inputSecureFile: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSecureFile", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputSecureFileUploaded {
+        public class Cons_inputSecureFileUploaded: TypeConstructorDescription {
             public var id: Int64
             public var parts: Int32
             public var md5Checksum: String
@@ -377,6 +404,9 @@ public extension Api {
                 self.md5Checksum = md5Checksum
                 self.fileHash = fileHash
                 self.secret = secret
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSecureFileUploaded", [("id", self.id as Any), ("parts", self.parts as Any), ("md5Checksum", self.md5Checksum as Any), ("fileHash", self.fileHash as Any), ("secret", self.secret as Any)])
             }
         }
         case inputSecureFile(Cons_inputSecureFile)
@@ -454,7 +484,7 @@ public extension Api {
 }
 public extension Api {
     enum InputSecureValue: TypeConstructorDescription {
-        public class Cons_inputSecureValue {
+        public class Cons_inputSecureValue: TypeConstructorDescription {
             public var flags: Int32
             public var type: Api.SecureValueType
             public var data: Api.SecureData?
@@ -474,6 +504,9 @@ public extension Api {
                 self.translation = translation
                 self.files = files
                 self.plainData = plainData
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSecureValue", [("flags", self.flags as Any), ("type", self.type as Any), ("data", self.data as Any), ("frontSide", self.frontSide as Any), ("reverseSide", self.reverseSide as Any), ("selfie", self.selfie as Any), ("translation", self.translation as Any), ("files", self.files as Any), ("plainData", self.plainData as Any)])
             }
         }
         case inputSecureValue(Cons_inputSecureValue)
@@ -595,7 +628,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputSingleMedia: TypeConstructorDescription {
-        public class Cons_inputSingleMedia {
+        public class Cons_inputSingleMedia: TypeConstructorDescription {
             public var flags: Int32
             public var media: Api.InputMedia
             public var randomId: Int64
@@ -607,6 +640,9 @@ public extension Api {
                 self.randomId = randomId
                 self.message = message
                 self.entities = entities
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputSingleMedia", [("flags", self.flags as Any), ("media", self.media as Any), ("randomId", self.randomId as Any), ("message", self.message as Any), ("entities", self.entities as Any)])
             }
         }
         case inputSingleMedia(Cons_inputSingleMedia)
@@ -672,16 +708,22 @@ public extension Api {
 }
 public extension Api {
     enum InputStarGiftAuction: TypeConstructorDescription {
-        public class Cons_inputStarGiftAuction {
+        public class Cons_inputStarGiftAuction: TypeConstructorDescription {
             public var giftId: Int64
             public init(giftId: Int64) {
                 self.giftId = giftId
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStarGiftAuction", [("giftId", self.giftId as Any)])
+            }
         }
-        public class Cons_inputStarGiftAuctionSlug {
+        public class Cons_inputStarGiftAuctionSlug: TypeConstructorDescription {
             public var slug: String
             public init(slug: String) {
                 self.slug = slug
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStarGiftAuctionSlug", [("slug", self.slug as Any)])
             }
         }
         case inputStarGiftAuction(Cons_inputStarGiftAuction)
@@ -739,12 +781,15 @@ public extension Api {
 }
 public extension Api {
     enum InputStarsTransaction: TypeConstructorDescription {
-        public class Cons_inputStarsTransaction {
+        public class Cons_inputStarsTransaction: TypeConstructorDescription {
             public var flags: Int32
             public var id: String
             public init(flags: Int32, id: String) {
                 self.flags = flags
                 self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStarsTransaction", [("flags", self.flags as Any), ("id", self.id as Any)])
             }
         }
         case inputStarsTransaction(Cons_inputStarsTransaction)
@@ -786,24 +831,33 @@ public extension Api {
 }
 public extension Api {
     enum InputStickerSet: TypeConstructorDescription {
-        public class Cons_inputStickerSetDice {
+        public class Cons_inputStickerSetDice: TypeConstructorDescription {
             public var emoticon: String
             public init(emoticon: String) {
                 self.emoticon = emoticon
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStickerSetDice", [("emoticon", self.emoticon as Any)])
+            }
         }
-        public class Cons_inputStickerSetID {
+        public class Cons_inputStickerSetID: TypeConstructorDescription {
             public var id: Int64
             public var accessHash: Int64
             public init(id: Int64, accessHash: Int64) {
                 self.id = id
                 self.accessHash = accessHash
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStickerSetID", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            }
         }
-        public class Cons_inputStickerSetShortName {
+        public class Cons_inputStickerSetShortName: TypeConstructorDescription {
             public var shortName: String
             public init(shortName: String) {
                 self.shortName = shortName
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStickerSetShortName", [("shortName", self.shortName as Any)])
             }
         }
         case inputStickerSetAnimatedEmoji
@@ -984,7 +1038,7 @@ public extension Api {
 }
 public extension Api {
     enum InputStickerSetItem: TypeConstructorDescription {
-        public class Cons_inputStickerSetItem {
+        public class Cons_inputStickerSetItem: TypeConstructorDescription {
             public var flags: Int32
             public var document: Api.InputDocument
             public var emoji: String
@@ -996,6 +1050,9 @@ public extension Api {
                 self.emoji = emoji
                 self.maskCoords = maskCoords
                 self.keywords = keywords
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStickerSetItem", [("flags", self.flags as Any), ("document", self.document as Any), ("emoji", self.emoji as Any), ("maskCoords", self.maskCoords as Any), ("keywords", self.keywords as Any)])
             }
         }
         case inputStickerSetItem(Cons_inputStickerSetItem)
@@ -1061,16 +1118,22 @@ public extension Api {
 }
 public extension Api {
     enum InputStickeredMedia: TypeConstructorDescription {
-        public class Cons_inputStickeredMediaDocument {
+        public class Cons_inputStickeredMediaDocument: TypeConstructorDescription {
             public var id: Api.InputDocument
             public init(id: Api.InputDocument) {
                 self.id = id
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStickeredMediaDocument", [("id", self.id as Any)])
+            }
         }
-        public class Cons_inputStickeredMediaPhoto {
+        public class Cons_inputStickeredMediaPhoto: TypeConstructorDescription {
             public var id: Api.InputPhoto
             public init(id: Api.InputPhoto) {
                 self.id = id
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStickeredMediaPhoto", [("id", self.id as Any)])
             }
         }
         case inputStickeredMediaDocument(Cons_inputStickeredMediaDocument)
@@ -1132,7 +1195,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputStorePaymentPurpose: TypeConstructorDescription {
-        public class Cons_inputStorePaymentAuthCode {
+        public class Cons_inputStorePaymentAuthCode: TypeConstructorDescription {
             public var flags: Int32
             public var phoneNumber: String
             public var phoneCodeHash: String
@@ -1145,8 +1208,11 @@ public extension Api {
                 self.currency = currency
                 self.amount = amount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentAuthCode", [("flags", self.flags as Any), ("phoneNumber", self.phoneNumber as Any), ("phoneCodeHash", self.phoneCodeHash as Any), ("currency", self.currency as Any), ("amount", self.amount as Any)])
+            }
         }
-        public class Cons_inputStorePaymentGiftPremium {
+        public class Cons_inputStorePaymentGiftPremium: TypeConstructorDescription {
             public var userId: Api.InputUser
             public var currency: String
             public var amount: Int64
@@ -1155,8 +1221,11 @@ public extension Api {
                 self.currency = currency
                 self.amount = amount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentGiftPremium", [("userId", self.userId as Any), ("currency", self.currency as Any), ("amount", self.amount as Any)])
+            }
         }
-        public class Cons_inputStorePaymentPremiumGiftCode {
+        public class Cons_inputStorePaymentPremiumGiftCode: TypeConstructorDescription {
             public var flags: Int32
             public var users: [Api.InputUser]
             public var boostPeer: Api.InputPeer?
@@ -1171,8 +1240,11 @@ public extension Api {
                 self.amount = amount
                 self.message = message
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentPremiumGiftCode", [("flags", self.flags as Any), ("users", self.users as Any), ("boostPeer", self.boostPeer as Any), ("currency", self.currency as Any), ("amount", self.amount as Any), ("message", self.message as Any)])
+            }
         }
-        public class Cons_inputStorePaymentPremiumGiveaway {
+        public class Cons_inputStorePaymentPremiumGiveaway: TypeConstructorDescription {
             public var flags: Int32
             public var boostPeer: Api.InputPeer
             public var additionalPeers: [Api.InputPeer]?
@@ -1193,14 +1265,20 @@ public extension Api {
                 self.currency = currency
                 self.amount = amount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentPremiumGiveaway", [("flags", self.flags as Any), ("boostPeer", self.boostPeer as Any), ("additionalPeers", self.additionalPeers as Any), ("countriesIso2", self.countriesIso2 as Any), ("prizeDescription", self.prizeDescription as Any), ("randomId", self.randomId as Any), ("untilDate", self.untilDate as Any), ("currency", self.currency as Any), ("amount", self.amount as Any)])
+            }
         }
-        public class Cons_inputStorePaymentPremiumSubscription {
+        public class Cons_inputStorePaymentPremiumSubscription: TypeConstructorDescription {
             public var flags: Int32
             public init(flags: Int32) {
                 self.flags = flags
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentPremiumSubscription", [("flags", self.flags as Any)])
+            }
         }
-        public class Cons_inputStorePaymentStarsGift {
+        public class Cons_inputStorePaymentStarsGift: TypeConstructorDescription {
             public var userId: Api.InputUser
             public var stars: Int64
             public var currency: String
@@ -1211,8 +1289,11 @@ public extension Api {
                 self.currency = currency
                 self.amount = amount
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentStarsGift", [("userId", self.userId as Any), ("stars", self.stars as Any), ("currency", self.currency as Any), ("amount", self.amount as Any)])
+            }
         }
-        public class Cons_inputStorePaymentStarsGiveaway {
+        public class Cons_inputStorePaymentStarsGiveaway: TypeConstructorDescription {
             public var flags: Int32
             public var stars: Int64
             public var boostPeer: Api.InputPeer
@@ -1237,8 +1318,11 @@ public extension Api {
                 self.amount = amount
                 self.users = users
             }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentStarsGiveaway", [("flags", self.flags as Any), ("stars", self.stars as Any), ("boostPeer", self.boostPeer as Any), ("additionalPeers", self.additionalPeers as Any), ("countriesIso2", self.countriesIso2 as Any), ("prizeDescription", self.prizeDescription as Any), ("randomId", self.randomId as Any), ("untilDate", self.untilDate as Any), ("currency", self.currency as Any), ("amount", self.amount as Any), ("users", self.users as Any)])
+            }
         }
-        public class Cons_inputStorePaymentStarsTopup {
+        public class Cons_inputStorePaymentStarsTopup: TypeConstructorDescription {
             public var flags: Int32
             public var stars: Int64
             public var currency: String
@@ -1250,6 +1334,9 @@ public extension Api {
                 self.currency = currency
                 self.amount = amount
                 self.spendPurposePeer = spendPurposePeer
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputStorePaymentStarsTopup", [("flags", self.flags as Any), ("stars", self.stars as Any), ("currency", self.currency as Any), ("amount", self.amount as Any), ("spendPurposePeer", self.spendPurposePeer as Any)])
             }
         }
         case inputStorePaymentAuthCode(Cons_inputStorePaymentAuthCode)
