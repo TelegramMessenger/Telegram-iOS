@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -860,22 +861,27 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                 return context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peerId)
                 )
-                |> mapToSignal { participants -> Signal<[(EngineLegacyGroupParticipant, EnginePeer?)]?, NoError> in
+                |> mapToSignal { participants -> Signal<[(EngineLegacyGroupParticipant, EnginePeer?, EnginePeer.Presence?)]?, NoError> in
                     guard case let .known(participants) = participants else {
                         return .single(nil)
                     }
                     
                     return context.engine.data.subscribe(
-                        EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0.peerId) })
+                        EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0.peerId) }),
+                        EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Presence(id: $0.peerId) })
                     )
-                    |> map { peers -> [(EngineLegacyGroupParticipant, EnginePeer?)]? in
-                        var result: [(EngineLegacyGroupParticipant, EnginePeer?)] = []
+                    |> map { peers, presences -> [(EngineLegacyGroupParticipant, EnginePeer?, EnginePeer.Presence?)]? in
+                        var result: [(EngineLegacyGroupParticipant, EnginePeer?, EnginePeer.Presence?)] = []
                         for participant in participants {
                             var peer: EnginePeer?
+                            var presence: EnginePeer.Presence?
                             if let peerValue = peers[participant.peerId] {
                                 peer = peerValue
                             }
-                            result.append((participant, peer))
+                            if let presenceValue = presences[participant.peerId] {
+                                presence = presenceValue
+                            }
+                            result.append((participant, peer, presence))
                         }
                         return result
                     }
@@ -887,7 +893,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                     
                     var result: [RenderedChannelParticipant] = []
                     var creatorPeer: EnginePeer?
-                    for (participant, peer) in participants {
+                    for (participant, peer, _) in participants {
                         if let peer {
                             switch participant {
                             case .creator:
@@ -900,16 +906,20 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                     guard let creator = creatorPeer else {
                         return nil
                     }
-                    for (participant, peer) in participants {
+                    for (participant, peer, presence) in participants {
                         if let peer {
+                            var presences: [PeerId: PeerPresence] = [:]
+                            if let presence {
+                                presences[peer.id] = presence._asPresence()
+                            }
                             switch participant {
-                            case .creator:
-                                result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer._asPeer()))
-                            case .admin:
+                            case let .creator(_, rank):
+                                result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: rank), peer: peer._asPeer(), presences: presences))
+                            case let .admin(_, _, _, rank):
                                 var peers: [EnginePeer.Id: EnginePeer] = [:]
                                 peers[creator.id] = creator
                                 peers[peer.id] = peer
-                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: peer._asPeer(), peers: peers.mapValues({ $0._asPeer() })))
+                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: rank, subscriptionUntilDate: nil), peer: peer._asPeer(), peers: peers.mapValues({ $0._asPeer() }), presences: presences))
                             case .member:
                                 break
                             }
