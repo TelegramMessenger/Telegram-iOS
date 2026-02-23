@@ -15828,3 +15828,7 @@ Error: %8$@";
 
 "Channel.AdminLog.EditRankOwn" = "Edit Member Tag";
 "Channel.AdminLog.EditRank" = "Edit Member Tags";
+
+"Channel.AdminLog.MessageRankNameNew" = "changed member tag for %1$@:\n%2$@";
+"Channel.AdminLog.MessageRankUsernameNew" = "changed member tag for %1$@ (%2$@):\n%3$@";
+"Channel.AdminLog.MessageRankNew" = "changed member tag:\n%1$@";

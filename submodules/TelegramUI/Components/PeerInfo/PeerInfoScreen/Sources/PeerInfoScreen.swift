@@ -4268,15 +4268,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         switch action {
         case .editRank:
             let rank: String?
+            let role: ChatRankInfoScreenRole
             switch member {
             case let .channelMember(participant, _):
                 rank = participant.participant.rank
-            case let .legacyGroupMember(_, _, _, _, _, rankValue):
+                switch participant.participant {
+                case .creator:
+                    role = .creator
+                case let .member(_, _, adminInfo, _, _, _):
+                    role = adminInfo != nil ? .admin : .member
+                }
+            case let .legacyGroupMember(_, roleValue, _, _, _, rankValue):
                 rank = rankValue
+                switch roleValue {
+                case .creator:
+                    role = .creator
+                case .admin:
+                    role = .admin
+                case .member:
+                    role = .member
+                }
             default:
                 rank = nil
+                role = .member
             }
-            let controller = self.context.sharedContext.makeChatCustomRankSetupScreen(context: self.context, peerId: peer.id, participantId: member.id, rank: rank)
+            let controller = self.context.sharedContext.makeChatCustomRankSetupScreen(context: self.context, peerId: peer.id, participantId: member.id, rank: rank, role: role)
             self.controller?.push(controller)
         case .promote:
             if case let .channelMember(channelMember, _) = member {

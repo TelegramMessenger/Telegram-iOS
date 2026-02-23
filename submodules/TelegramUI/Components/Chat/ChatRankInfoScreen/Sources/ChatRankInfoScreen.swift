@@ -122,7 +122,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
             let textString: String
             let linkColor: UIColor
             var linkHasBackground = true
-            let additionalTextString: String? = "Only admins can assign member tags in this group."
+            let additionalTextString: String? = component.canChange ? nil : "Only admins can assign member tags in this group."
             var adminPreviewTag = "Admin Tag"
             var adminPreviewRole: ChatRankInfoScreenRole = .admin
             
@@ -379,7 +379,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
             var buttonTitle: [AnyComponentWithIdentity<Empty>] = []
             if canEdit {
                 buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
-                    text: "Add My Tag",
+                    text: "Set My Tag",
                     badge: 0,
                     textColor: theme.list.itemCheckColors.foregroundColor,
                     badgeBackground: theme.list.itemCheckColors.foregroundColor,

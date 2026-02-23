@@ -5275,19 +5275,46 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self, let chatPeer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel else {
                 return
             }
+            var canChange = false
+            let chatParticipant = Promise<ChannelParticipant?>()
+            if let defaultBannedRights = chatPeer.defaultBannedRights {
+                canChange = !defaultBannedRights.flags.contains(.banEditRank)
+                
+                if canChange {
+                    chatParticipant.set(self.context.engine.peers.fetchChannelParticipant(peerId: chatPeer.id, participantId: self.context.account.peerId))
+                }
+            }
             let controller = self.context.sharedContext.makeChatRankInfoScreen(
                 context: self.context,
                 chatPeer: EnginePeer(chatPeer),
                 userPeer: peer,
                 role: role,
                 rank: rank,
-                canChange: false, //!(chatPeer.defaultBannedRights?.flags.contains(.editRank) ?? true),
+                canChange: canChange,
                 completion: { [weak self] in
                     guard let self else {
                         return
                     }
-                    let controller = self.context.sharedContext.makeChatCustomRankSetupScreen(context: self.context, peerId: chatPeer.id, participantId: self.context.account.peerId, rank: nil)
-                    self.push(controller)
+                    let _ = (chatParticipant.get()
+                    |> deliverOnMainQueue).start(next: { [weak self] participant in
+                        guard let self else {
+                            return
+                        }
+                        var rank: String? = nil
+                        var role: ChatRankInfoScreenRole = .member
+                        switch participant {
+                        case let .creator(_, _, rankValue):
+                            rank = rankValue
+                            role = .creator
+                        case let .member(_, _, adminInfo, _, rankValue, _):
+                            rank = rankValue
+                            role = adminInfo != nil ? .admin : .member
+                        default:
+                            break
+                        }
+                        let controller = self.context.sharedContext.makeChatCustomRankSetupScreen(context: self.context, peerId: chatPeer.id, participantId: self.context.account.peerId, rank: rank, role: role)
+                        self.push(controller)
+                    })
                 }
             )
             self.push(controller)
