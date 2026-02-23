@@ -68,7 +68,7 @@ final class DeleteAccountFooterItemNode: ItemListControllerFooterItemNode {
         self.clipNode = ASDisplayNode()
         self.clipNode.clipsToBounds = true
         
-        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0, isShimmering: true)
+        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 52.0, cornerRadius: 26.0, isShimmering: true)
         
         self.secondaryButtonNode = HighlightableButtonNode()
         

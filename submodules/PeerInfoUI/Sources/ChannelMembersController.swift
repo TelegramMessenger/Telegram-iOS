@@ -313,7 +313,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
             
                 let label: ItemListPeerItemLabel
                 if let labelString {
-                    label = .text(labelString, .standard, labelColor ?? presentationData.theme.list.itemSecondaryTextColor, true)
+                    label = .text(labelString, .standard, labelColor ?? presentationData.theme.list.itemSecondaryTextColor, labelColor != nil)
                 } else {
                     label = .none
                 }

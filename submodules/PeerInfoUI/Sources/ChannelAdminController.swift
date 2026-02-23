@@ -1242,17 +1242,6 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
         let adminPresence = peerInfoData.2
         let canEdit = canEditAdminRights(accountPeerId: context.account.peerId, channelPeer: channelPeer!, initialParticipant: initialParticipant)
         
-        let leftNavigationButton: ItemListNavigationButton
-        if canEdit {
-            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
-        } else {
-            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                dismissImpl?()
-            })
-        }
-                
         let rightButtonActionImpl = {
             if invite && !state.adminRights {
                 updateState { current in
@@ -1628,15 +1617,8 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             }
         }
         
-        var rightNavigationButton: ItemListNavigationButton?
-        if state.updating {
-            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-        } else if canEdit {
-            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                rightButtonActionImpl()
-            })
-        }
-        
+        //TODO:localize
+        var footerButtonTitle: String = "Save Changes"
         var footerItem: ItemListControllerFooterItem?
         
         var isCreator = false
@@ -1647,7 +1629,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
         }
         
         let title: String
-        if initialParticipant?.adminInfo == nil && !isCreator {
+        if initialParticipant?.adminInfo == nil && !(isCreator && adminId == context.account.peerId) {
             var isGroup: Bool = false
             var peerTitle: String = ""
             if case let .legacyGroup(peer) = channelPeer {
@@ -1662,8 +1644,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 
             if case let .user(admin) = adminPeer, admin.botInfo != nil && invite {
                 title = presentationData.strings.Bot_AddToChat_Add_Title
-                rightNavigationButton = nil
-                footerItem = ChannelAdminAddBotFooterItem(theme: presentationData.theme, title: state.adminRights ? presentationData.strings.Bot_AddToChat_Add_AddAsAdmin : presentationData.strings.Bot_AddToChat_Add_AddAsMember, action: {
+                footerItem = ChannelParticipantFooterItem(theme: presentationData.theme, title: state.adminRights ? presentationData.strings.Bot_AddToChat_Add_AddAsAdmin : presentationData.strings.Bot_AddToChat_Add_AddAsMember, displayProgress: state.updating, action: {
                     if state.adminRights {
                         let text = isGroup ? presentationData.strings.Bot_AddToChat_Add_AdminAlertTextGroup(peerTitle).string : presentationData.strings.Bot_AddToChat_Add_AdminAlertTextChannel(peerTitle).string
 
@@ -1686,12 +1667,25 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 })
             } else {
                 title = presentationData.strings.Channel_Management_AddModerator
+                footerButtonTitle = "Add Admin"
+                //TODO:localize
             }
         } else {
-            title = isCreator ? presentationData.strings.Channel_Owner_Title : presentationData.strings.Channel_Moderator_Title
+            switch initialParticipant {
+            case .creator:
+                title = presentationData.strings.Channel_Owner_Title
+            default:
+                title = presentationData.strings.Channel_Moderator_Title
+            }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        if footerItem == nil {
+            footerItem = ChannelParticipantFooterItem(theme: presentationData.theme, title: footerButtonTitle, displayProgress: state.updating, action: {
+                rightButtonActionImpl()
+            })
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelPeer: channelPeer, adminPeer: adminPeer, adminPresence: adminPresence, initialParticipant: initialParticipant, invite: invite, canEdit: canEdit), style: .blocks, focusItemTag: nil, ensureVisibleItemTag: nil, emptyStateItem: nil, footerItem: footerItem, animateChanges: true)
         
