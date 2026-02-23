@@ -26,6 +26,7 @@ import UndoUI
 import RankChatPreviewItem
 
 private let rankFieldTag = GenericComponentViewTag()
+private let rankMaxLength: Int32 = 16
 
 private final class ChatParticipantRightsContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -115,16 +116,6 @@ private final class ChatParticipantRightsContent: CombinedComponent {
             self.disposable?.dispose()
         }
         
-        func promoteMember() {
-            let controller = channelAdminController(context: self.context, updatedPresentationData: nil, peerId: self.subject.peerId, adminId: self.memberId, initialParticipant: nil, updated: { _ in
-            }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
-            self.controller?.push(controller)
-        }
-        
-        func removeMember() {
-            
-        }
-        
         func complete() {
             var rank = self.rank
             if rank?.isEmpty == true {
@@ -160,8 +151,6 @@ private final class ChatParticipantRightsContent: CombinedComponent {
         let title = Child(MultilineTextComponent.self)
         let peerSection = Child(ListSectionComponent.self)
         let rankSection = Child(ListSectionComponent.self)
-        //let permissionsSection = Child(ListSectionComponent.self)
-        let actionsSection = Child(ListSectionComponent.self)
         let doneButton = Child(ButtonComponent.self)
         
         return { context in
@@ -262,207 +251,113 @@ private final class ChatParticipantRightsContent: CombinedComponent {
                 break
             }
             
-            if let peer = state.peer {
-                var rankPreviewPlaceholder = ""
-                var rankFooterString = ""
-                var rankRole: ChatRankInfoScreenRole = .member
-                switch component.subject {
-                case .admin:
-                    rankFooterString = "Add short tag next to \(peer.compactDisplayTitle)'s name."
-                    rankPreviewPlaceholder = "admin"
-                    rankRole = .admin
-                case .member:
-                    rankFooterString = "Add short tag next to \(peer.compactDisplayTitle)'s name."
-                    rankPreviewPlaceholder = "0️⃣"
-                case .rank:
-                    if peer.id == component.context.account.peerId {
-                        rankFooterString = "Share your role, title, or how you're known in this group. Your tag is visible to all members."
-                    } else {
-                        rankFooterString = "Add short tag next to \(peer.compactDisplayTitle)'s name."
-                    }
-                    rankPreviewPlaceholder = "0️⃣"
-                }
-                
-                let rankValue = state.rank ?? ""
-                let messageItem = RankChatPreviewItem.MessageItem(
-                    peer: peer,
-                    text: "Reinhardt, we need to find you some new tunes.",
-                    entities: nil,
-                    media: [],
-                    rank: rankValue.isEmpty ? rankPreviewPlaceholder : rankValue,
-                    rankRole: rankRole
-                )
-                
-                var rankSectionItems: [AnyComponentWithIdentity<Empty>] = []
-                rankSectionItems.append(
-                    AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
-                        itemGenerator: RankChatPreviewItem(
-                            context: component.context,
-                            theme: environment.theme,
-                            componentTheme: theme,
-                            strings: strings,
-                            sectionId: 0,
-                            fontSize: presentationData.chatFontSize,
-                            chatBubbleCorners: presentationData.chatBubbleCorners,
-                            wallpaper: presentationData.chatWallpaper,
-                            dateTimeFormat: environment.dateTimeFormat,
-                            nameDisplayOrder: presentationData.nameDisplayOrder,
-                            messageItems: [messageItem]
-                        ),
-                        params: listItemParams
-                    )))
-                )
-                rankSectionItems.append(
-                    AnyComponentWithIdentity(id: 1, component: AnyComponent(ListTextFieldItemComponent(
-                        style: .glass,
-                        theme: theme,
-                        initialText: state.initialRank ?? "",
-                        resetText: nil,
-                        placeholder: "Add tag",
-                        characterLimit: 16,
-                        autocapitalizationType: .sentences,
-                        autocorrectionType: .default,
-                        returnKeyType: .done,
-                        contentInsets: .zero,
-                        updated: { [weak state] value in
-                            guard let state else {
-                                return
-                            }
-                            state.rank = value
-                            state.updated(transition: .easeInOut(duration: 0.2))
-                        },
-                        onReturn: {},
-                        tag: rankFieldTag
-                    )))
-                )
-                
-                let rankSection = rankSection.update(
-                    component: ListSectionComponent(
-                        theme: theme,
-                        style: .glass,
-                        header: nil,
-                        footer: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: rankFooterString,
-                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                                textColor: theme.list.freeTextColor
-                            )),
-                            maximumNumberOfLines: 0
-                        )),
-                        items: rankSectionItems
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
-                    transition: context.transition
-                )
-                context.add(rankSection
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + rankSection.size.height / 2.0))
-                )
-                contentHeight += rankSection.size.height
+            let peer: EnginePeer
+            if let current = state.peer {
+                peer = current
+            } else {
+                peer = EnginePeer.user(TelegramUser(id: EnginePeer.Id(0), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil))
             }
             
+            var rankPreviewPlaceholder = ""
+            var rankFooterString = ""
+            var rankRole: ChatRankInfoScreenRole = .member
             switch component.subject {
-            case .member:
-                contentHeight += 24.0
-                
-//                var permissionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
-//                permissionsSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
-//                    theme: theme,
-//                    style: .glass,
-//                    title: AnyComponent(VStack([
-//                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-//                            text: .plain(NSAttributedString(
-//                                string: "Permissions",
-//                                font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize),
-//                                textColor: theme.list.itemPrimaryTextColor
-//                            )),
-//                            maximumNumberOfLines: 1
-//                        ))),
-//                    ], alignment: .left, spacing: 2.0)),
-//                    accessory: .arrow,
-//                    action: { _ in
-//                        
-//                    }
-//                ))))
-//                let permissionsSection = permissionsSection.update(
-//                    component: ListSectionComponent(
-//                        theme: theme,
-//                        style: .glass,
-//                        header: AnyComponent(MultilineTextComponent(
-//                            text: .plain(NSAttributedString(
-//                                string: "What can this member do".uppercased(),
-//                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-//                                textColor: environment.theme.list.freeTextColor
-//                            )),
-//                            maximumNumberOfLines: 0
-//                        )),
-//                        footer: nil,
-//                        items: permissionsSectionItems
-//                    ),
-//                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
-//                    transition: context.transition
-//                )
-//                context.add(permissionsSection
-//                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + permissionsSection.size.height / 2.0))
-//                )
-//                contentHeight += permissionsSection.size.height
-//                contentHeight += 24.0
-                
-                var actionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
-                actionsSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
-                    theme: theme,
-                    style: .glass,
-                    title: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "Promote Member",
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize),
-                            textColor: theme.list.itemAccentColor
-                        )),
-                        maximumNumberOfLines: 1
-                    )),
-                    titleAlignment: .center,
-                    accessory: .none,
-                    action: { [weak state] _ in
-                        state?.promoteMember()
-                    }
-                ))))
-                actionsSectionItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ListActionItemComponent(
-                    theme: theme,
-                    style: .glass,
-                    title: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "Remove Member",
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize),
-                            textColor: theme.list.itemDestructiveColor
-                        )),
-                        maximumNumberOfLines: 1
-                    )),
-                    titleAlignment: .center,
-                    accessory: .none,
-                    action: { [weak state] _ in
-                        state?.removeMember()
-                    }
-                ))))
-                let actionsSection = actionsSection.update(
-                    component: ListSectionComponent(
-                        theme: theme,
-                        style: .glass,
-                        header: nil,
-                        footer: nil,
-                        items: actionsSectionItems
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
-                    transition: context.transition
-                )
-                context.add(actionsSection
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + actionsSection.size.height / 2.0))
-                )
-                contentHeight += actionsSection.size.height
             case .admin:
-                break
-            default:
-                break
+                rankFooterString = "Add short tag next to \(peer.compactDisplayTitle)'s name."
+                rankPreviewPlaceholder = "admin"
+                rankRole = .admin
+            case .member:
+                rankFooterString = "Add short tag next to \(peer.compactDisplayTitle)'s name."
+                rankPreviewPlaceholder = "0️⃣"
+            case .rank:
+                if peer.id == component.context.account.peerId {
+                    rankFooterString = "Share your role, title, or how you're known in this group. Your tag is visible to all members."
+                } else {
+                    rankFooterString = "Add short tag next to \(peer.compactDisplayTitle)'s name."
+                }
+                rankPreviewPlaceholder = "0️⃣"
             }
             
+            let rankValue = state.rank ?? ""
+            let messageItem = RankChatPreviewItem.MessageItem(
+                peer: peer,
+                text: "Reinhardt, we need to find you some new tunes.",
+                entities: nil,
+                media: [],
+                rank: rankValue.isEmpty ? rankPreviewPlaceholder : rankValue,
+                rankRole: rankRole
+            )
+            
+            var rankSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            rankSectionItems.append(
+                AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
+                    itemGenerator: RankChatPreviewItem(
+                        context: component.context,
+                        theme: environment.theme,
+                        componentTheme: theme,
+                        strings: strings,
+                        sectionId: 0,
+                        fontSize: presentationData.chatFontSize,
+                        chatBubbleCorners: presentationData.chatBubbleCorners,
+                        wallpaper: presentationData.chatWallpaper,
+                        dateTimeFormat: environment.dateTimeFormat,
+                        nameDisplayOrder: presentationData.nameDisplayOrder,
+                        messageItems: [messageItem]
+                    ),
+                    params: listItemParams
+                )))
+            )
+            rankSectionItems.append(
+                AnyComponentWithIdentity(id: 1, component: AnyComponent(ListTextFieldItemComponent(
+                    style: .glass,
+                    theme: theme,
+                    initialText: state.initialRank ?? "",
+                    resetText: nil,
+                    placeholder: "Add tag",
+                    characterLimit: Int(rankMaxLength),
+                    autocapitalizationType: .sentences,
+                    autocorrectionType: .default,
+                    returnKeyType: .done,
+                    contentInsets: .zero,
+                    updated: { [weak state] value in
+                        guard let state else {
+                            return
+                        }
+                        state.rank = value
+                        state.updated(transition: .easeInOut(duration: 0.2))
+                    },
+                    onReturn: { [weak state] in
+                        guard let state else {
+                            return
+                        }
+                        state.complete()
+                    },
+                    tag: rankFieldTag
+                )))
+            )
+            
+            let rankSection = rankSection.update(
+                component: ListSectionComponent(
+                    theme: theme,
+                    style: .glass,
+                    header: nil,
+                    footer: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: rankFooterString,
+                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                            textColor: theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    )),
+                    items: rankSectionItems
+                ),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                transition: context.transition
+            )
+            context.add(rankSection
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + rankSection.size.height / 2.0))
+            )
+            contentHeight += rankSection.size.height
             
             contentHeight += 24.0
             
@@ -500,7 +395,6 @@ private final class ChatParticipantRightsContent: CombinedComponent {
                             return
                         }
                         state.complete()
-                        component.cancel(true)
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - buttonInsets.left - buttonInsets.right, height: 52.0),
@@ -510,7 +404,13 @@ private final class ChatParticipantRightsContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + doneButton.size.height / 2.0))
             )
             contentHeight += doneButton.size.height
-            contentHeight += buttonInsets.bottom
+            
+            if environment.inputHeight > 0.0 {
+                contentHeight += 15.0
+                contentHeight += max(environment.inputHeight, environment.safeInsets.bottom)
+            } else {
+                contentHeight += buttonInsets.bottom
+            }
           
             return CGSize(width: context.availableSize.width, height: contentHeight)
         }
@@ -565,7 +465,7 @@ private final class ChatParticipantRightsComponent: CombinedComponent {
                     )),
                     style: .glass,
                     backgroundColor: .color(environment.theme.list.modalBlocksBackgroundColor),
-                    followContentSizeChanges: true,
+                    followContentSizeChanges: false,
                     clipsContent: true,
                     isScrollEnabled: false,
                     animateOut: animateOut
@@ -663,7 +563,7 @@ public class ChatParticipantRightsScreen: ViewControllerComponentContainer {
         super.viewDidAppear(animated)
         
         if let view = self.node.hostView.findTaggedView(tag: rankFieldTag) as? ListTextFieldItemComponent.View {
-            Queue.mainQueue().after(0.15) {
+            Queue.mainQueue().after(0.01) {
                 view.activateInput()
                 view.selectAll()
             }

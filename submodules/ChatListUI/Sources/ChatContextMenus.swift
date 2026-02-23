@@ -505,7 +505,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                         }
                                         
                                         joinChannelDisposable.set((createSignal
-                                                                   |> deliverOnMainQueue).start(next: { _ in
+                                        |> deliverOnMainQueue).start(next: { _ in
                                         }, error: { _ in
                                             if let chatListController = chatListController {
                                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }

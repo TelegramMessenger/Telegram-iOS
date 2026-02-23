@@ -4317,10 +4317,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PasskeysScreen(context: context, displaySkip: displaySkip, initialPasskeysData: nil, passkeysDataUpdated: { _ in }, completion: completion, cancel: dismiss)
     }
     
-    public func makeChatParticipantRightsScreen(context: AccountContext, peerId: EnginePeer.Id, participantId: EnginePeer.Id, rank: String?) -> ViewController {
-        return ChatParticipantRightsScreen(context: context, subject: .member(peerId: peerId, participantId: participantId, rank: rank))
-    }
-    
     public func makeChatCustomRankSetupScreen(context: AccountContext, peerId: EnginePeer.Id, participantId: EnginePeer.Id, rank: String?) -> ViewController {
         return ChatParticipantRightsScreen(context: context, subject: .rank(peerId: peerId, participantId: participantId, rank: rank))
     }

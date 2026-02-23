@@ -208,7 +208,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
         self.iconView.contentMode = .scaleAspectFit
         self.iconView.clipsToBounds = true
         self.iconView.layer.cornerRadius = 2.5
-        self.iconView.tintColor = self.theme.navigationBar.primaryTextColor
+        self.iconView.tintColor = theme.navigationBar.primaryTextColor
                                 
         super.init()
         
@@ -242,7 +242,7 @@ final class MinimizedHeaderNode: ASDisplayNode {
         self.validLayout = (size, insets, isExpanded)
                         
         if self.closeIcon == nil {
-            self.closeIcon = generateCloseButtonImage()
+            self.closeIcon = generateCloseButtonImage()?.withRenderingMode(.alwaysTemplate)
         }
         
         let headerHeight: CGFloat = 56.0

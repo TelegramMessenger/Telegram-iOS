@@ -836,7 +836,10 @@ func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationD
         for member in memberList {
             let isAccountPeer = member.id == context.account.peerId
             items[.peerMembers]!.append(PeerInfoScreenMemberItem(id: member.id, context: .account(context), enclosingPeer: peer, member: member, isAccount: false, action: isAccountPeer ? { _ in
-                interaction.performMemberAction(member, .editRank)
+                let actions = availableActionsForMemberOfPeer(accountPeerId: context.account.peerId, peer: peer, member: member)
+                if actions.contains(.editRank) {
+                    interaction.performMemberAction(member, .editRank)
+                }
             } : { action in
                 switch action {
                 case .open:

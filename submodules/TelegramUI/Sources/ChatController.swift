@@ -2551,11 +2551,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return buffer.baseAddress!.assumingMemoryBound(to: UInt8.self).pointee
                 }
                 
+                //TODO:localize
                 switch buttonType {
                 case 0:
-                    let _ = strongSelf.context.engine.peers.toggleMessageCopyProtection(peerId: message.id.peerId, enabled: true, requestMessageId: message.id).startStandalone()
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: "Disable Sharing", text: "Are you sure you want to keep sharing disabled?", actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .defaultAction, title: "Yes", action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            let _ = self.context.engine.peers.toggleMessageCopyProtection(peerId: message.id.peerId, enabled: true, requestMessageId: message.id).startStandalone()
+                        })
+                    ], parseMarkdown: true), in: .window(.root))
                 case 1:
-                    let _ = strongSelf.context.engine.peers.toggleMessageCopyProtection(peerId: message.id.peerId, enabled: false, requestMessageId: message.id).startStandalone()
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: "Enable Sharing", text: "Are you sure you want to enable sharing?", actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .defaultAction, title: "Yes", action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            let _ = self.context.engine.peers.toggleMessageCopyProtection(peerId: message.id.peerId, enabled: false, requestMessageId: message.id).startStandalone()
+                        })
+                    ], parseMarkdown: true), in: .window(.root))
                 default:
                     break
                 }

@@ -1528,7 +1528,6 @@ public protocol SharedAccountContext: AnyObject {
     func makeLoginEmailSetupController(context: AccountContext, blocking: Bool, emailPattern: String?, canAutoDismissIfNeeded: Bool, navigationController: NavigationController?, completion: @escaping () -> Void, dismiss: @escaping () -> Void) -> ViewController
     func makePasskeySetupController(context: AccountContext, displaySkip: Bool, navigationController: NavigationController?, completion: @escaping () -> Void, dismiss: @escaping () -> Void) -> ViewController
     
-    func makeChatParticipantRightsScreen(context: AccountContext, peerId: EnginePeer.Id, participantId: EnginePeer.Id, rank: String?) -> ViewController
     func makeChatCustomRankSetupScreen(context: AccountContext, peerId: EnginePeer.Id, participantId: EnginePeer.Id, rank: String?) -> ViewController
         
     func makePeerCopyProtectionInfoScreen(context: AccountContext, completion: @escaping () -> Void) -> ViewController

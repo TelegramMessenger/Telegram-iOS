@@ -5242,6 +5242,36 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         }
                         strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    }, completed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        Queue.mainQueue().after(0.5) {
+                            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                            |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                                guard let self, let peer = peer?._asPeer() else {
+                                    return
+                                }
+                                var canEditRank = false
+                                if let channel = peer as? TelegramChannel, channel.hasPermission(.editRank) {
+                                    canEditRank = true
+                                } else if let group = peer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
+                                    canEditRank = true
+                                }
+                                //TODO:localize
+                                if canEditRank {
+                                    let context = self.context
+                                    let controller = UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: "You joined the group", cancel: "Add Tag", destructive: false), elevatedLayout: true, action: { [weak self] action in
+                                        if let self, case .undo = action {
+                                            let tagController = context.sharedContext.makeChatCustomRankSetupScreen(context: context, peerId: peerId, participantId: context.account.peerId, rank: nil)
+                                            self.push(tagController)
+                                        }
+                                        return true
+                                    })
+                                    self.present(controller, in: .current)
+                                }
+                            })
+                        }
                     })
                 }))
             case .savedMessagesChats:

@@ -31,6 +31,7 @@ enum PeerMembersListAction {
     case restrict
     case remove
     case openStories(sourceView: UIView)
+    case openContextMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?)
 }
 
 private enum PeerMembersListEntryStableId: Hashable {
@@ -94,6 +95,8 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     addMemberAction()
                 })
             case let .member(_, _, member):
+                var labelColor = presentationData.theme.list.itemSecondaryTextColor
+                var labelBackground = false
                 let label: String?
                 if let rank = member.rank {
                     label = rank
@@ -106,6 +109,17 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     case .member:
                         label = nil
                     }
+                }
+            
+                switch member.role {
+                case .creator:
+                    labelBackground = true
+                    labelColor = UIColor(rgb: 0x956ac8)
+                case .admin:
+                    labelBackground = true
+                    labelColor = UIColor(rgb: 0x49a355)
+                default:
+                    break
                 }
                 
                 let actions = availableActionsForMemberOfPeer(accountPeerId: context.account.peerId, peer: enclosingPeer, member: member)
@@ -150,6 +164,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                 return ContactsPeerItem(
                     presentationData: ItemListPresentationData(presentationData),
                     style: .plain,
+                    systemStyle: .glass,
                     sectionId: 0,
                     sortOrder: presentationData.nameSortOrder,
                     displayOrder: presentationData.nameDisplayOrder,
@@ -157,7 +172,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     peerMode: .memberList,
                     peer: .peer(peer: EnginePeer(member.peer), chatPeer: EnginePeer(member.peer)),
                     status: status,
-                    rightLabelText: label,
+                    rightLabelText: label.flatMap { .init(text: $0, color: labelColor, hasBackground: labelBackground) },
                     enabled: true,
                     selection: .none,
                     editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
@@ -400,51 +415,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 gesture?.cancel()
                 return
             }
-            
-            let actions = availableActionsForMemberOfPeer(accountPeerId: self.context.account.peerId, peer: enclosingPeer, member: member)
-            
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            var items: [ContextMenuItem] = []
-            let action = self.action
-            
-            if actions.contains(.promote) && enclosingPeer is TelegramChannel {
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.GroupInfo_ActionPromote, icon: { _ in
-                    return nil
-                }, action: { c, _ in
-                    c?.dismiss(completion: {
-                        action(member, .promote)
-                    })
-                })))
-            }
-            if actions.contains(.restrict) {
-                if enclosingPeer is TelegramChannel {
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.GroupInfo_ActionRestrict, icon: { _ in
-                        return nil
-                    }, action: { c, _ in
-                        c?.dismiss(completion: {
-                            action(member, .restrict)
-                        })
-                    })))
-                }
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Delete, textColor: .destructive, icon: { _ in
-                    return nil
-                }, action: { c, _ in
-                    c?.dismiss(completion: {
-                        action(member, .remove)
-                    })
-                })))
-            }
-            
-            if items.isEmpty {
-                gesture?.cancel()
-                return
-            }
-            
-            let dismissPromise = ValuePromise<Bool>(false)
-            let source = PeerInfoMemberExtractedContentSource(sourceNode: node, keepInPlace: false, blurBackground: true, centerVertically: false, shouldBeDismissed: dismissPromise.get())
-            
-            let contextController = makeContextController(presentationData: presentationData, source: .extracted(source), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-            self.parentController?.presentInGlobalOverlay(contextController)
+
+            self.action(member, .openContextMenu(sourceNode: node, gesture: gesture))
         })
         self.enclosingPeer = enclosingPeer
         self.currentEntries = entries

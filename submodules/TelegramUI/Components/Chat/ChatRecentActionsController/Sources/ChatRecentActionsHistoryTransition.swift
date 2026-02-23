@@ -777,6 +777,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 (.banEmbedLinks, self.presentationData.strings.Channel_AdminLog_BanEmbedLinks),
                                 (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
                                 (.banAddMembers, self.presentationData.strings.Channel_AdminLog_AddMembers),
+                                (.banEditRank, self.presentationData.strings.Channel_AdminLog_EditRankOwn),
                                 (.banPinMessages, self.presentationData.strings.Channel_AdminLog_PinMessages),
                                 (.banManageTopics, self.presentationData.strings.Channel_AdminLog_ManageTopics),
                                 (.banChangeInfo, self.presentationData.strings.Channel_AdminLog_ChangeInfo)
@@ -1139,6 +1140,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     (.banEmbedLinks, self.presentationData.strings.Channel_AdminLog_BanEmbedLinks),
                     (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
                     (.banAddMembers, self.presentationData.strings.Channel_AdminLog_AddMembers),
+                    (.banEditRank, self.presentationData.strings.Channel_AdminLog_EditRank),
                     (.banPinMessages, self.presentationData.strings.Channel_AdminLog_PinMessages),
                     (.banManageTopics, self.presentationData.strings.Channel_AdminLog_ManageTopics),
                     (.banChangeInfo, self.presentationData.strings.Channel_AdminLog_ChangeInfo)

@@ -23,7 +23,7 @@ private final class ChannelMembersControllerArguments {
     let addMember: () -> Void
     let setPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
     let removePeer: (EnginePeer.Id) -> Void
-    let openPeer: (EnginePeer, String?) -> Void
+    let openParticipant: (RenderedChannelParticipant) -> Void
     let inviteViaLink: () -> Void
     let updateHideMembers: (Bool) -> Void
     let displayHideMembersTip: (HideMembersDisabledReason) -> Void
@@ -33,7 +33,7 @@ private final class ChannelMembersControllerArguments {
         addMember: @escaping () -> Void,
         setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void,
         removePeer: @escaping (EnginePeer.Id) -> Void,
-        openPeer: @escaping (EnginePeer, String?) -> Void,
+        openParticipant: @escaping (RenderedChannelParticipant) -> Void,
         inviteViaLink: @escaping () -> Void,
         updateHideMembers: @escaping (Bool) -> Void,
         displayHideMembersTip: @escaping (HideMembersDisabledReason) -> Void
@@ -42,7 +42,7 @@ private final class ChannelMembersControllerArguments {
         self.addMember = addMember
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
-        self.openPeer = openPeer
+        self.openParticipant = openParticipant
         self.inviteViaLink = inviteViaLink
         self.updateHideMembers = updateHideMembers
         self.displayHideMembersTip = displayHideMembersTip
@@ -319,7 +319,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                 }
             
                 return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: participant.presences[participant.peer.id].flatMap(EnginePeer.Presence.init), text: text, label: label, editing: editing, switchValue: nil, enabled: enabled, selectable: participant.peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
-                    arguments.openPeer(EnginePeer(participant.peer), participant.participant.rank)
+                    arguments.openParticipant(participant)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
@@ -680,8 +680,9 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                 return $0.withUpdatedRemovingPeerId(nil)
             }
         }))
-    }, openPeer: { peer, rank in
-        let controller = context.sharedContext.makeChatParticipantRightsScreen(context: context, peerId: peerId, participantId: peer.id, rank: rank)
+    }, openParticipant: { participant in
+        let controller = channelBannedMemberController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, memberId: participant.peer.id, editMember: true, initialParticipant: participant.participant, updated: { rights in
+        }, upgradedToSupergroup: { _, _ in })
         pushControllerImpl?(controller)
     }, inviteViaLink: {
         if let controller = getControllerImpl?() {

@@ -1448,6 +1448,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.performMemberAction(member: member, action: .remove)
             case let .openStories(sourceView):
                 strongSelf.performMemberAction(member: member, action: .openStories(sourceView: sourceView))
+            case let .openContextMenu(sourceNode, gesture):
+                strongSelf.openMemberContextMenu(member: member, node: sourceNode, gesture: gesture)
             }
         }
         
@@ -4250,17 +4252,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openPeerInfo(peer: Peer, isMember: Bool) {
-        if peer.id == self.context.account.peerId {
-            let controller = self.context.sharedContext.makeChatParticipantRightsScreen(context: self.context, peerId: self.peerId, participantId: peer.id, rank: "")
-            (self.controller?.navigationController as? NavigationController)?.pushViewController(controller)
-        } else {
-            var mode: PeerInfoControllerMode = .generic
-            if isMember {
-                mode = .group(self.peerId)
-            }
-            if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
-            }
+        var mode: PeerInfoControllerMode = .generic
+        if isMember {
+            mode = .group(self.peerId)
+        }
+        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+            (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
         }
     }
     
