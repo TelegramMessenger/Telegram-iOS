@@ -99,6 +99,7 @@ import GiftCraftScreen
 import ChatParticipantRightsScreen
 import PeerCopyProtectionInfoScreen
 import ChatRankInfoScreen
+import RankChatPreviewItem
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -4330,6 +4331,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeChatRankInfoScreen(context: AccountContext, chatPeer: EnginePeer, userPeer: EnginePeer, role: ChatRankInfoScreenRole, rank: String, canChange: Bool, completion: @escaping () -> Void) -> ViewController {
         return ChatRankInfoScreen(context: context, chatPeer: chatPeer, userPeer: userPeer, role: role, rank: rank, canChange: canChange, completion: completion)
+    }
+    
+    public func makeChatRankPreviewItem(context: AccountContext, peer: EnginePeer, rank: String, rankRole: ChatRankInfoScreenRole, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, sectionId: Int32) -> ListViewItem {
+        let messageItem = RankChatPreviewItem.MessageItem(
+            peer: peer,
+            text: "Reinhardt, we need to find you some new tunes.",
+            entities: nil,
+            media: [],
+            rank: rank,
+            rankRole: rankRole
+        )
+        return RankChatPreviewItem(context: context, systemStyle: .glass, theme: theme, componentTheme: theme, strings: strings, sectionId: sectionId, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, messageItems: [messageItem])
     }
 }
 

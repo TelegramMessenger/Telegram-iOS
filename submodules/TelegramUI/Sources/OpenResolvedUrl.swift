@@ -91,7 +91,7 @@ func openResolvedUrlImpl(
         case let .externalUrl(url):
             context.sharedContext.openExternalUrl(context: context, urlContext: urlContext, url: url, forceExternal: forceExternal, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: dismissInput)
         case let .urlAuth(url):
-            requestMessageActionUrlAuth?(.url(url))
+            requestMessageActionUrlAuth?(.url(url: url, inAppOrigin: nil))
             dismissInput()
             break
         case let .peer(peer, navigation):
@@ -1816,7 +1816,8 @@ func openResolvedUrlImpl(
                 present(alertController, nil)
             })
         case let .oauth(url):
-            let _ = (context.engine.messages.requestMessageActionUrlAuth(subject: .url(url))
+            let subject: MessageActionUrlSubject = .url(url: url, inAppOrigin: nil)
+            let _ = (context.engine.messages.requestMessageActionUrlAuth(subject: subject)
             |> deliverOnMainQueue).start(next: { result in
                 if case .request = result {
                     var dismissImpl: (() -> Void)?
@@ -1825,13 +1826,13 @@ func openResolvedUrlImpl(
                         case let .accept(allowWriteAccess, sharePhoneNumber):
                             let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
                             if accountContext === context {
-                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
+                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
                             } else {
                                 accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                                signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: .url(url))
+                                signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: subject)
                                 |> castError(MessageActionUrlAuthError.self)
                                 |> mapToSignal { result in
-                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
+                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
                                 } |> afterDisposed {
                                     accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
                                 }

@@ -204,7 +204,7 @@ extension ChatControllerImpl {
                         allButtons.insert(button, at: 1)
                     }
                 
-                    if !"".isEmpty, let user = peer as? TelegramUser, user.botInfo == nil {
+                    if let user = peer as? TelegramUser, user.botInfo == nil {
                         if let index = buttons.firstIndex(where: { $0 == .location }) {
                             buttons.insert(.quickReply, at: index + 1)
                         } else {

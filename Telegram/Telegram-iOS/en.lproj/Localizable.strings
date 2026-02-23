@@ -15818,3 +15818,10 @@ Error: %8$@";
 
 "Premium.CopyProtection" = "Disable Sharing";
 "Premium.CopyProtectionInfo" = "Prevent forwarding, saving and copying content in private chats.";
+
+"Channel.EditAdmin.PermissionManageRanks" = "Edit Member Tags";
+
+"Group.EditAdmin.MemberTagTitle" = "Member Tag";
+"Group.EditAdmin.MemberTagInfo" = "Add short tag next to %@'s name.";
+
+"Channel.Owner.Title" = "Owner";

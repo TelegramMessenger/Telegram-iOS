@@ -9089,7 +9089,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.controllerInteraction?.sendEmoji(text, attribute, false)
         },
         requestMessageActionUrlAuth: { [weak self] subject in
-            if case let .url(url) = subject {
+            if case let .url(url, _) = subject {
                 self?.controllerInteraction?.requestMessageActionUrlAuth(url, subject)
             }
         }, joinVoiceChat: { [weak self] peerId, invite, call in

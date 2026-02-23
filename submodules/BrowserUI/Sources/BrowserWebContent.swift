@@ -151,6 +151,12 @@ final class WebView: WKWebView {
         }
         return result
     }
+    
+    func sendEvent(name: String, data: String?) {
+        let script = "window.TelegramGameProxy && window.TelegramGameProxy.receiveEvent && window.TelegramGameProxy.receiveEvent(\"\(name)\", \(data ?? "null"))"
+        self.evaluateJavaScript(script, completionHandler: { _, _ in
+        })
+    }
 }
 
 private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
@@ -399,6 +405,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         switch eventName {
         case "cancellingTouch":
             self.cancelInteractiveTransitionGestures()
+        case "oauth_request":
+            self.webView.sendEvent(name: "oauth_supported", data: nil)
         default:
             break
         }

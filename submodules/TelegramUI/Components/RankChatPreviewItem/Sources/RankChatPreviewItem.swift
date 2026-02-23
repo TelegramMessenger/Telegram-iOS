@@ -47,6 +47,7 @@ public final class RankChatPreviewItem: ListViewItem, ItemListItem, ListItemComp
     }
     
     let context: AccountContext
+    let systemStyle: ItemListSystemStyle
     let theme: PresentationTheme
     let componentTheme: PresentationTheme
     let strings: PresentationStrings
@@ -64,6 +65,7 @@ public final class RankChatPreviewItem: ListViewItem, ItemListItem, ListItemComp
     
     public init(
         context: AccountContext,
+        systemStyle: ItemListSystemStyle = .legacy,
         theme: PresentationTheme,
         componentTheme: PresentationTheme,
         strings: PresentationStrings,
@@ -80,6 +82,7 @@ public final class RankChatPreviewItem: ListViewItem, ItemListItem, ListItemComp
         maskSide: Bool = false
     ) {
         self.context = context
+        self.systemStyle = systemStyle
         self.theme = theme
         self.componentTheme = componentTheme
         self.strings = strings
@@ -430,7 +433,7 @@ final class RankChatPreviewItemNode: ListViewItemNode {
                                 strongSelf.bottomStripeNode.isHidden = hasCorners
                         }
                         
-                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
