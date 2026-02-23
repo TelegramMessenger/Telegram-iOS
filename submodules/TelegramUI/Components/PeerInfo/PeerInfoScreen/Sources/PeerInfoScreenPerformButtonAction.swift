@@ -763,7 +763,7 @@ extension PeerInfoScreenNode {
                         })))
                     }
                     
-                    if let user = data.peer as? TelegramUser, let cachedData = data.cachedData as? CachedUserData, user.botInfo == nil && !user.flags.contains(.isSupport) && user.id != strongSelf.context.account.peerId {
+                    if let user = data.peer as? TelegramUser, let cachedData = data.cachedData as? CachedUserData, user.botInfo == nil && !user.flags.contains(.isSupport) && user.id != strongSelf.context.account.peerId && strongSelf.peerId.namespace != Namespaces.Peer.SecretChat {
                         let copyProtectionEnabled = cachedData.flags.contains(.myCopyProtectionEnabled) || cachedData.flags.contains(.copyProtectionEnabled)
                         //TODO:localize
                         items.append(.action(ContextMenuActionItem(text: !copyProtectionEnabled ? "Disable Sharing" : "Enable Sharing", icon: { theme in
