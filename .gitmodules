@@ -37,4 +37,4 @@ url=../tgcalls.git
 	url = https://github.com/yonaskolb/XcodeGen.git
 [submodule "build-system/bazel-rules/sourcekit-bazel-bsp"]
 	path = build-system/bazel-rules/sourcekit-bazel-bsp
-url=https://github.com/ali-fareed/sourcekit-bazel-bsp.git
+	url = https://github.com/spotify/sourcekit-bazel-bsp.git
