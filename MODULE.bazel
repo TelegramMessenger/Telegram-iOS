@@ -63,7 +63,7 @@ local_path_override(
     path = "./build-input/configuration-repository",
 )
 
-bazel_dep(name = "sourcekit_bazel_bsp", version = "0.3.0")
+bazel_dep(name = "sourcekit_bazel_bsp", version = "0.7.1")
 local_path_override(
     module_name = "sourcekit_bazel_bsp",
     path = "build-system/bazel-rules/sourcekit-bazel-bsp",

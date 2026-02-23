@@ -20,4 +20,5 @@ build --spawn_strategy=standalone
 
 build --strategy=SwiftCompile=worker
 
-common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/
+#common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/
+

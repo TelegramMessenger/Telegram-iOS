@@ -5,6 +5,13 @@ setup_sourcekit_bsp(
     bazel_wrapper = "./build-input/bazel-8.4.2-darwin-arm64",
     files_to_watch = [
         "**/*.swift",
+        "**/*.h",
+        "**/*.m",
+        "**/*.mm",
+        "**/*.c",
+        "**/*.cc",
+        "**/*.cpp",
+        "**/*.hpp",
     ],
     index_flags = [
         "config=index_build",

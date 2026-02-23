@@ -1,4 +1,7 @@
 {
+    "swift.disableSwiftPackageManagerIntegration": true,
+    "swift.autoGenerateLaunchConfigurations": false,
+    "swift.disableAutoResolve": true,
     "search.followSymlinks": false,
     "files.exclude": {
         ".git/**": true
@@ -22,5 +25,5 @@
             ]
         }
     },
-    "swift.sourcekit-lsp.serverPath": "${workspaceFolder}/build-input/sourcekit-lsp",
+    "swift.sourcekit-lsp.serverPath": "${workspace}/build-input/sourcekit-lsp"
 }

@@ -818,7 +818,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         assert(Queue.mainQueue().isCurrent())
-                
+        
         self.setupHistoryNode()
         
         self.interactiveEmojisDisposable = (self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
