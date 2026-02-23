@@ -192,6 +192,21 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             }
         }
         
+        var galleryPresentationCount = 0
+        let updateSearchBarVisibility: (Bool) -> Void = { [weak self] isPresented in
+            guard let self else { return }
+            if isPresented {
+                galleryPresentationCount += 1
+            } else {
+                galleryPresentationCount -= 1
+            }
+            let shouldHide = galleryPresentationCount > 0
+            self.controller?.navigationBar?.setContentNode(shouldHide ? nil : self.searchContentNode, animated: true)
+        }
+        self.currentController?.onGalleryPresentationInContextChanged = updateSearchBarVisibility
+        self.myController?.onGalleryPresentationInContextChanged = updateSearchBarVisibility
+        self.globalController?.onGalleryPresentationInContextChanged = updateSearchBarVisibility
+        
         if controller.mode != .chatOnly {
             navigationBar?.setContentNode(self.searchContentNode, animated: false)
         }
