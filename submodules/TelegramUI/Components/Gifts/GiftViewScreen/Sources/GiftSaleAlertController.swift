@@ -85,7 +85,6 @@ public func giftSaleAlertController(
         priceString = "**\(formatTonAmountText(resellAmount.amount.value, dateTimeFormat: presentationData.dateTimeFormat)) TON**"
     }
     
-    //TODO:localize
     let text = strings.Gift_Sell_Confirm_Text(giftTitle, priceString).string
     content.append(AnyComponentWithIdentity(
         id: "text",

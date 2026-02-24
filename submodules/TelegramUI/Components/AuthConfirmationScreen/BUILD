@@ -34,6 +34,7 @@ swift_library(
         "//submodules/PhoneNumberFormat",
         "//submodules/ContextUI",
         "//submodules/AccountUtils",
+        "//submodules/ActivityIndicator",
         "//submodules/TelegramUI/Components/PeerInfo/AccountPeerContextItem",
     ],
     visibility = [

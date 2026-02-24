@@ -15813,6 +15813,8 @@ Error: %8$@";
 "Notification.CopyProtection.Disabled" = "%1$@ enabled sharing in this chat";
 "Notification.CopyProtection.DisabledYou" = "You enabled sharing in this chat";
 "Notification.CopyProtection.StillEnabled" = "Sharing in this chat is still disabled";
+"Notification.CopyProtection.Request" = "%@ would like to enable sharing in this chat";
+"Notification.CopyProtection.RequestYou" = "You suggested enabling sharing in this chat";
 
 "Gallery.CreateSticker" = "Create Sticker";
 
@@ -15834,3 +15836,86 @@ Error: %8$@";
 "Channel.AdminLog.MessageRankNew" = "changed member tag:\n%1$@";
 
 "TextFormat.Date" = "Date";
+
+"Gift.Craft.UnavailableBlockchain.Title" = "Crafting Unavailable";
+"Gift.Craft.UnavailableBlockchain.Text" = "This gift can be selected as the main gift of crafting.";
+
+"AuthConfirmation.Emoji.Title" = "Tap the emoji shown\non your other device";
+"AuthConfirmation.Emoji.Description" = "Telegram wants to make sure it's really you.";
+
+"Chat.TagPlaceholder" = "Tag";
+
+"Chat.EnableSharingOffer.Reject" = "Reject";
+"Chat.EnableSharingOffer.Accept" = "Accept";
+
+"Chat.EnableSharingOffer.AcceptConfirmation.Title" = "Enable Sharing";
+"Chat.EnableSharingOffer.AcceptConfirmation.Text" = "Are you sure you want to enable sharing?";
+"Chat.EnableSharingOffer.AcceptConfirmation.Accept" = "Enable";
+
+"Chat.EnableSharingOffer.RejectConfirmation.Title" = "Disable Sharing";
+"Chat.EnableSharingOffer.RejectConfirmation.Text" = "Are you sure you want to keep sharing disabled?";
+"Chat.EnableSharingOffer.RejectConfirmation.Reject" = "Keep Disabled";
+
+"Chat.TagUpdated.Added" = "Tag added";
+"Chat.TagUpdated.Removed" = "Tag removed";
+
+"Conversation.FormatDate.Title" = "Date";
+"Conversation.FormatDate.AddDate" = "Add Date";
+"Conversation.FormatDate.EditDate" = "Edit Date";
+"Conversation.FormatDate.RemoveDate" = "Remove Date";
+
+"Conversation.CopyProtectionInfoPrivate" = "**%@** disabled copying and forwarding in this chat.";
+"Conversation.CopyProtectionInfoPrivateYou" = "You disabled copying and forwarding in this chat.";
+
+"Chat.JoinedGroup.Text" = "You joined the group";
+"Chat.JoinedGroup.AddTag" = "Add Tag";
+
+"GroupPermission.NoEditRank" = "no tag";
+
+"Channel.BanUser.PermissionEditRank" = "Edit Member Tag";
+"Channel.BanUser.PermissionEditOwnRank" = "Edit Own Tags";
+
+"Channel.Management.AddAdmin" = "Add Admin";
+"Channel.Management.SaveChanges" = "Save Changes";
+
+"Preview.Gif.AddCaption" = "Add Caption";
+"Preview.Gif.Edit" = "Edit";
+
+"GroupPermission.Member" = "Member";
+"GroupPermission.SaveChanges" = "Save Changes";
+"GroupPermission.AddException" = "Add Exception";
+
+"GroupInfo.ActionSend" = "Send Message";
+"GroupInfo.ActionEditRank" = "Edit Member Tag";
+"GroupInfo.ActionRemove" = "Remove";
+
+"PeerInfo.EnableSharing" = "Enable Sharing";
+"PeerInfo.DisableSharing" = "Disable Sharing";
+
+"Chat.Context.Date.Copy" = "Copy Date";
+"Chat.Context.Date.AddToCalendar" = "Add to Calendar";
+"Chat.Context.Date.SetReminder" = "Set a Reminder";
+
+"Conversation.DateCopied" = "Date copied to clipboard";
+"Conversation.DateReminderSet" = "You have set a reminder in [Saved Messages]().";
+
+"RankInfo.Member.Title" = "Member Tag";
+"RankInfo.Member.Text" = "This gray tag %1$@ is **%2$@'s** member tag. **%3$@** is a member of **%4$@**.";
+"RankInfo.Admin.Title" = "Admin Tag";
+"RankInfo.Admin.Text" = "This green tag %1$@ is **%2$@'s** admin tag. **%3$@** is an administrator of **%4$@**.";
+"RankInfo.Owner.Title" = "Owner Tag";
+"RankInfo.Owner.Text" = "This purple tag %1$@ is **%2$@'s** owner tag. **%3$@** is the owner of **%4$@**.";
+"RankInfo.ChangeInfo" = "Only admins can assign member tags in this group.";
+"RankInfo.MemberTag" = "Admin Tag";
+"RankInfo.AdminTag" = "Admin Tag";
+"RankInfo.OwnerTag" = "Owner Tag";
+"RankInfo.SetMyTag" = "Set My Tag";
+
+"EditRank.Title" = "Member Tag";
+"EditRank.Placeholder" = "Add Tag";
+"EditRank.Info" = "Add short tag next to %@'s name.";
+"EditRank.InfoYou" = "Share your role, title, or how you're known in this group. Your tag is visible to all members.";
+"EditRank.AddLater" = "Add Later";
+"EditRank.AddTag" = "Add Tag";
+"EditRank.EditTag" = "Edit Tag";
+"EditRank.RemoveTag" = "Remove Tag";

@@ -845,7 +845,7 @@ public enum PremiumPerk: CaseIterable {
         case .todo:
             return "Premium/Perk/Todo"
         case .copyProtection:
-            return "Premium/Perk/CopyProtection"
+            return "Premium/Perk/NoForward"
         case .businessLocation:
             return "Premium/BusinessPerk/Location"
         case .businessHours:

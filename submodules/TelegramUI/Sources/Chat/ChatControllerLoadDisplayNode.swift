@@ -3702,11 +3702,20 @@ extension ChatControllerImpl {
             })
             
             var date: Int32?
+            var suggestedDate: Int32?
             if let text {
                 text.enumerateAttributes(in: NSMakeRange(0, text.length)) { attributes, _, _ in
                     if let dateAttribute = attributes[ChatTextInputAttributes.date] as? ChatTextInputTextDateAttribute {
                         date = dateAttribute.date
                     }
+                }
+                if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.date]).rawValue) {
+                    detector.enumerateMatches(in: text.string, options: [], range: NSMakeRange(0, text.length), using: { result, _, _ in
+                        guard let result, result.resultType == .date, let date = result.date?.timeIntervalSince1970, date > 0.0 else {
+                            return
+                        }
+                        suggestedDate = Int32(date)
+                    })
                 }
             }
             
@@ -3714,8 +3723,7 @@ extension ChatControllerImpl {
                 context: self.context,
                 mode: .format,
                 currentTime: date,
-                currentRepeatPeriod: nil,
-                minimalTime: nil,
+                suggestedTime: suggestedDate,
                 isDark: false,
                 completion: { [weak self] result in
                     guard let self, let inputMode = inputMode, let selectionRange = selectionRange else {

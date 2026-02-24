@@ -1617,8 +1617,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             }
         }
         
-        //TODO:localize
-        var footerButtonTitle: String = "Save Changes"
+        var footerButtonTitle: String = presentationData.strings.Channel_Management_SaveChanges
         var footerItem: ItemListControllerFooterItem?
         
         var isCreator = false
@@ -1667,8 +1666,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 })
             } else {
                 title = presentationData.strings.Channel_Management_AddModerator
-                footerButtonTitle = "Add Admin"
-                //TODO:localize
+                footerButtonTitle = presentationData.strings.Channel_Management_AddAdmin
             }
         } else {
             switch initialParticipant {

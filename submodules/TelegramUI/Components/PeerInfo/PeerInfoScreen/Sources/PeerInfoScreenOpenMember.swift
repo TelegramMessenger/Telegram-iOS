@@ -19,9 +19,8 @@ extension PeerInfoScreenNode {
         
         let actions = availableActionsForMemberOfPeer(accountPeerId: self.context.account.peerId, peer: enclosingPeer, member: member)
         
-        //TODO:localize
         if member.id != self.context.account.peerId {
-            items.append(.action(ContextMenuActionItem(text: "Send Message", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.GroupInfo_ActionSend, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss {
                     guard let self, let navigationController = self.controller?.navigationController as? NavigationController else {
                         return
@@ -32,7 +31,7 @@ extension PeerInfoScreenNode {
         }
         
         if actions.contains(.editRank) {
-            items.append(.action(ContextMenuActionItem(text: "Edit Member Tag", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tag"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.GroupInfo_ActionEditRank, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tag"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss {
                     guard let self else {
                         return
@@ -43,7 +42,7 @@ extension PeerInfoScreenNode {
         }
         
         if actions.contains(.promote) && enclosingPeer is TelegramChannel {
-            items.append(.action(ContextMenuActionItem(text: "Promote", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Promote"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.GroupInfo_ActionPromote, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Promote"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss {
                     guard let self else {
                         return
@@ -55,7 +54,7 @@ extension PeerInfoScreenNode {
         
         if actions.contains(.restrict) {
             if enclosingPeer is TelegramChannel {
-                items.append(.action(ContextMenuActionItem(text: "Restrict", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.GroupInfo_ActionRestrict, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                     c?.dismiss {
                         guard let self else {
                             return
@@ -65,7 +64,7 @@ extension PeerInfoScreenNode {
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.GroupInfo_ActionRemove, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
                 c?.dismiss {
                     guard let self else {
                         return

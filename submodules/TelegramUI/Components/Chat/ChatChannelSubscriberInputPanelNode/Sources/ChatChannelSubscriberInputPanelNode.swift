@@ -263,10 +263,9 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         } else if let group = peer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
                             canEditRank = true
                         }
-                        //TODO:localize
                         if canEditRank {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: "You joined the group", cancel: "Add Tag", destructive: false), elevatedLayout: true, action: { action in
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: presentationData.strings.Chat_JoinedGroup_Text, cancel: presentationData.strings.Chat_JoinedGroup_AddTag, destructive: false), elevatedLayout: true, action: { action in
                                 if case .undo = action {
                                     let tagController = context.sharedContext.makeChatCustomRankSetupScreen(context: context, peerId: peer.id, participantId: context.account.peerId, rank: nil, role: .member)
                                     self.interfaceInteraction?.getNavigationController()?.pushViewController(tagController)

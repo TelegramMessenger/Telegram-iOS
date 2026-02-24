@@ -159,6 +159,7 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
     
     private var displayLink: SharedDisplayLinkDriver.Link?
     
+    private var containerView = UIView()
     private var particleSet: ParticleSet?
     private var particleLayers: [CheckLayer] = []
     private var particleMap: [Int64: CheckLayer] = [:]
@@ -174,6 +175,10 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
         self.displayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] delta in
             self?.update(deltaTime: CGFloat(delta))
         })
+        self.displayLink?.isPaused = true
+                
+        self.containerView.frame = CGRect(origin: .zero, size: frame.size)
+        self.addSubview(self.containerView)
     }
 
     required init?(coder: NSCoder) {
@@ -218,7 +223,7 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
                     particleLayer.theme = CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false)
                     particleLayer.bounds = CGRect(origin: CGPoint(), size: CGSize(width: 22.0, height: 22.0))
                     self.particleLayers.append(particleLayer)
-                    self.layer.addSublayer(particleLayer)
+                    self.containerView.layer.addSublayer(particleLayer)
                 }
                 self.particleMap[particle.id] = particleLayer
             }
@@ -251,14 +256,16 @@ final class TodoChecksView: UIView, PhoneDemoDecorationView {
         
         self.displayLink?.isPaused = !visible
     
-//        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
-//        transition.updateAlpha(layer: self.containerView.layer, alpha: visible ? 1.0 : 0.0, completion: { [weak self] finished in
-//            if let strongSelf = self, finished && !visible && !strongSelf.visible {
-//                for view in strongSelf.containerView.subviews {
-//                    view.removeFromSuperview()
-//                }
-//            }
-//        })
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+        transition.updateAlpha(layer: self.containerView.layer, alpha: visible ? 1.0 : 0.0, completion: { [weak self] finished in
+            if let strongSelf = self, finished && !visible && !strongSelf.visible {
+                for particleLayer in strongSelf.particleLayers {
+                    particleLayer.removeFromSuperlayer()
+                }
+                strongSelf.particleLayers.removeAll()
+                strongSelf.particleMap.removeAll()
+            }
+        })
     }
     
     func resetAnimation() {

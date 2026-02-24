@@ -5258,10 +5258,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 } else if let group = peer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
                                     canEditRank = true
                                 }
-                                //TODO:localize
                                 if canEditRank {
                                     let context = self.context
-                                    let controller = UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: "You joined the group", cancel: "Add Tag", destructive: false), elevatedLayout: true, action: { [weak self] action in
+                                    let controller = UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: self.presentationData.strings.Chat_JoinedGroup_Text, cancel: self.presentationData.strings.Chat_JoinedGroup_AddTag, destructive: false), elevatedLayout: true, action: { [weak self] action in
                                         if let self, case .undo = action {
                                             let tagController = context.sharedContext.makeChatCustomRankSetupScreen(context: context, peerId: peerId, participantId: context.account.peerId, rank: nil, role: .member)
                                             self.push(tagController)

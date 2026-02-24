@@ -24,6 +24,7 @@ import ContextUI
 import AccountUtils
 import GlassBackgroundComponent
 import AccountPeerContextItem
+import ActivityIndicator
 
 private final class AuthConfirmationSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -65,6 +66,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         
         var displayEmoji = false
         var matchCodes: [String]?
+        var selectedMatchCode: String?
         
         init(context: AccountContext, subject: MessageActionUrlAuthResult) {
             self.context = context
@@ -265,11 +267,13 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                     state.displayPhoneNumberConfirmation(commit: { sharePhoneNumber in
                         component.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode))
                         state.inProgress = true
+                        state.selectedMatchCode = matchCode
                         state.updated()
                     })
                 } else {
                     component.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: false, matchCode: matchCode))
                     state.inProgress = true
+                    state.selectedMatchCode = matchCode
                     state.updated()
                 }
             }
@@ -277,12 +281,11 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             var contentHeight: CGFloat = 32.0
             
             if state.displayEmoji, let matchCodes = state.matchCodes {
-                //TODO:localize
                 contentHeight += 36.0
                 
                 let emojiTitle = emojiTitle.update(
                     component: MultilineTextComponent(
-                        text: .markdown(text: "Tap the emoji shown\non your other device", attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.controlAccentColor), link: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
+                        text: .markdown(text: strings.AuthConfirmation_Emoji_Title, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.controlAccentColor), link: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 2,
                         lineSpacing: 0.2
@@ -300,7 +303,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 
                 let emojiDescription = emojiDescription.update(
                     component: MultilineTextComponent(
-                        text: .markdown(text: "Telegram wants to make sure it's really you.", attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
+                        text: .markdown(text: strings.AuthConfirmation_Emoji_Description, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 3,
                         lineSpacing: 0.2
@@ -322,18 +325,30 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 let totalWidth = CGFloat(matchCodes.count) * emojiSize.width + CGFloat(matchCodes.count - 1) * emojiSpacing
                 var emojiOriginX = context.availableSize.width / 2.0 - totalWidth / 2.0
                 for code in matchCodes {
+                    var items: [AnyComponentWithIdentity<Empty>] = []
+                    items.append(
+                        AnyComponentWithIdentity(id: "background", component: AnyComponent(
+                            FilledRoundedRectangleComponent(color: theme.list.itemBlocksBackgroundColor, cornerRadius: .minEdge, smoothCorners: false)
+                        ))
+                    )
+                    if state.selectedMatchCode == code {
+                        items.append(
+                            AnyComponentWithIdentity(id: "progress", component: AnyComponent(
+                                ActivityIndicatorComponent(color: theme.list.itemAccentColor)
+                            ))
+                        )
+                    }
+                    items.append(
+                        AnyComponentWithIdentity(id: "icon", component: AnyComponent(
+                            Text(text: code, font: Font.regular(32.0), color: .black)
+                        ))
+                    )
+                    
                     let emoji = emojis[code].update(
                         component: AnyComponent(
                             PlainButtonComponent(
                                 content: AnyComponent(
-                                    ZStack([
-                                        AnyComponentWithIdentity(id: "background", component: AnyComponent(
-                                            FilledRoundedRectangleComponent(color: theme.list.itemBlocksBackgroundColor, cornerRadius: .minEdge, smoothCorners: false)
-                                        )),
-                                        AnyComponentWithIdentity(id: "icon", component: AnyComponent(
-                                            Text(text: code, font: Font.regular(32.0), color: .black)
-                                        ))
-                                    ])
+                                    ZStack(items)
                                 ),
                                 minSize: emojiSize,
                                 action: {
@@ -837,5 +852,70 @@ private final class AuthConfirmationReferenceContentSource: ContextReferenceCont
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class ActivityIndicatorComponent: Component {
+    let color: UIColor
+    
+    init(
+        color: UIColor
+    ) {
+        self.color = color
+    }
+
+    static func ==(lhs: ActivityIndicatorComponent, rhs: ActivityIndicatorComponent) -> Bool {
+        if lhs.color != rhs.color {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let background = UIView()
+        private let activityIndicator: ActivityIndicator
+        
+        private var component: ActivityIndicatorComponent?
+        
+        override init(frame: CGRect) {
+            self.activityIndicator = ActivityIndicator(type: .custom(.white, 64.0, 2.0, true))
+            
+            super.init(frame: frame)
+            
+            
+            self.addSubview(self.background)
+            self.addSubview(self.activityIndicator.view)
+        }
+        
+        required public init(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: ActivityIndicatorComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            let size = CGSize(width: 64.0, height: 64.0)
+            
+            self.background.backgroundColor = component.color.withMultipliedAlpha(0.1)
+            self.background.layer.cornerRadius = 32.0
+            self.background.clipsToBounds = true
+            
+            if self.component == nil {
+                self.activityIndicator.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
+            self.component = component
+            
+            self.background.frame = CGRect(origin: .zero, size: size)
+            self.activityIndicator.frame = CGRect(origin: .zero, size: size)
+            self.activityIndicator.type = .custom(component.color, 64.0, 2.0, true)
+            
+            return size
+        }
+    }
+    
+    public func makeView() -> View {
+        return View()
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

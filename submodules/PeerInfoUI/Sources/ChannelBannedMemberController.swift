@@ -637,7 +637,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
         }
         let memberPresence = peersMap.1
         
-        var footerButtonTitle: String = "Save Changes"
+        var footerButtonTitle: String = presentationData.strings.GroupPermission_SaveChanges
 
         let rightButtonActionImpl = {
             let _ = (peerView.get()
@@ -819,16 +819,15 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
             })
         }
 
-        //TODO:localize
         let title: String
         if editMember {
-            title = "Member"
+            title = presentationData.strings.GroupPermission_Member
         } else {
             if let initialParticipant = initialParticipant, case let .member(_, _, _, banInfo, _, _) = initialParticipant, banInfo != nil {
                 title = presentationData.strings.GroupPermission_Title
             } else {
                 title = presentationData.strings.GroupPermission_NewTitle
-                footerButtonTitle = "Add Exception"
+                footerButtonTitle = presentationData.strings.GroupPermission_AddException
             }
         }
         

@@ -2551,12 +2551,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return buffer.baseAddress!.assumingMemoryBound(to: UInt8.self).pointee
                 }
                 
-                //TODO:localize
                 switch buttonType {
                 case 0:
-                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: "Disable Sharing", text: "Are you sure you want to keep sharing disabled?", actions: [
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Chat_EnableSharingOffer_RejectConfirmation_Title, text: strongSelf.presentationData.strings.Chat_EnableSharingOffer_RejectConfirmation_Text, actions: [
                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
-                        TextAlertAction(type: .defaultAction, title: "Yes", action: { [weak self] in
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Chat_EnableSharingOffer_RejectConfirmation_Reject, action: { [weak self] in
                             guard let self else {
                                 return
                             }
@@ -2564,9 +2563,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     ], parseMarkdown: true), in: .window(.root))
                 case 1:
-                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: "Enable Sharing", text: "Are you sure you want to enable sharing?", actions: [
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Chat_EnableSharingOffer_AcceptConfirmation_Title, text: strongSelf.presentationData.strings.Chat_EnableSharingOffer_AcceptConfirmation_Text, actions: [
                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
-                        TextAlertAction(type: .defaultAction, title: "Yes", action: { [weak self] in
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Chat_EnableSharingOffer_AcceptConfirmation_Accept, action: { [weak self] in
                             guard let self else {
                                 return
                             }

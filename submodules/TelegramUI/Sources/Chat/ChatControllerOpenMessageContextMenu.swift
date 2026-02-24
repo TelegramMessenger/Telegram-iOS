@@ -89,14 +89,13 @@ extension ChatControllerImpl {
                         }
                     }
                     if self.presentationInterfaceState.myCopyProtectionEnabled && !isAction && !isAd {
-                        tip = .messageCopyProtection(text: "You disabled copying and forwarding in this chat.")
+                        tip = .messageCopyProtection(text: self.presentationData.strings.Conversation_CopyProtectionInfoPrivateYou)
                     } else if self.presentationInterfaceState.copyProtectionEnabled && !isAction && !isAd {
                         if case .scheduledMessages = self.subject {
                         } else {
                             if let peer = self.presentationInterfaceState.renderedPeer?.peer {
                                 if peer is TelegramUser {
-                                    //TODO:localize
-                                    tip = .messageCopyProtection(text: "**\(EnginePeer(peer).compactDisplayTitle)** disabled copying and forwarding in this chat.")
+                                    tip = .messageCopyProtection(text: self.presentationData.strings.Conversation_CopyProtectionInfoPrivate(EnginePeer(peer).compactDisplayTitle).string)
                                 } else {
                                     var isChannel = false
                                     if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
