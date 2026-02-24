@@ -1844,8 +1844,10 @@ func openResolvedUrlImpl(
                                         } else {
                                             text = presentationData.strings.AuthConfirmation_LoginSuccess_Text(domain).string
                                         }
-                                        let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), action: { _ in return true })
-                                        (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                        if let topViewController = navigationController?.topViewController as? ViewController {
+                                            let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), elevatedLayout: topViewController is TabBarController, action: { _ in return true })
+                                            topViewController.present(controller, in: .current)
+                                        }
                                     }
                                 }
                                 
@@ -1887,8 +1889,10 @@ func openResolvedUrlImpl(
                                 dismissImpl?()
                                 
                                 if case let .request(domain, _, _, _, _, _) = result {
-                                    let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), action: { _ in return true })
-                                    (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                    if let topViewController = navigationController?.topViewController as? ViewController {
+                                        let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), elevatedLayout: topViewController is TabBarController, action: { _ in return true })
+                                        topViewController.present(controller, in: .current)
+                                    }
                                 }
                                 
                                 HapticFeedback().error()
@@ -1899,8 +1903,10 @@ func openResolvedUrlImpl(
                             dismissImpl?()
                             
                             if case let .request(domain, _, _, _, _, _) = result {
-                                let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), action: { _ in return true })
-                                (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                if let topViewController = navigationController?.topViewController as? ViewController {
+                                    let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), elevatedLayout: topViewController is TabBarController, action: { _ in return true })
+                                    topViewController.present(controller, in: .current)
+                                }
                             }
                             
                             HapticFeedback().error()
@@ -1909,6 +1915,11 @@ func openResolvedUrlImpl(
                     navigationController?.pushViewController(controller)
                     dismissImpl = { [weak controller] in
                         controller?.dismissAnimated()
+                    }
+                } else {
+                    if let topViewController = navigationController?.topViewController as? ViewController {
+                        let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_TextUnknown, timeout: nil, customUndoText: nil), elevatedLayout: topViewController is TabBarController, action: { _ in return true })
+                        topViewController.present(controller, in: .current)
                     }
                 }
             })

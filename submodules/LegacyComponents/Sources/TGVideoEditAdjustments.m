@@ -429,6 +429,11 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     return ![self cropAppliedForAvatar:forAvatar] && ![self toolsApplied] && ![self hasPainting] && !_sendAsGif && _preset == TGMediaVideoConversionPresetCompressedDefault;
 }
 
+- (bool)isDefaultValuesForGif
+{
+    return ![self cropAppliedForAvatar:false] && ![self toolsApplied] && ![self hasPainting];
+}
+
 - (bool)isCropEqualWith:(id<TGMediaEditAdjustments>)adjusments
 {
     return (_CGRectEqualToRectWithEpsilon(self.cropRect, adjusments.cropRect, [self _cropRectEpsilon]));

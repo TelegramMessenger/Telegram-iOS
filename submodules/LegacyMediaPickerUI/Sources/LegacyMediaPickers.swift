@@ -374,7 +374,7 @@ public struct LegacyAssetPickerEnqueueMessage {
     public var isFile: Bool
 }
 
-public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: Account, signals: [Any]) -> Signal<[LegacyAssetPickerEnqueueMessage], Void> {
+public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: Account, signals: [Any], originalMediaReference: AnyMediaReference? = nil) -> Signal<[LegacyAssetPickerEnqueueMessage], Void> {
     return Signal { subscriber in
         let disposable = SSignal.combineSignals(signals).start(next: { anyValues in
             var messages: [LegacyAssetPickerEnqueueMessage] = []
@@ -934,8 +934,16 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                 fileAttributes.append(.HasLinkedStickers)
                             }
                             
-                            let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], videoCover: videoCover, immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes, alternativeRepresentations: [])
-
+                            let media: Media
+                            let mediaReference: AnyMediaReference
+                            if let adjustments, adjustments.isDefaultValuesForGif(), let originalMediaReference {
+                                media = originalMediaReference.media
+                                mediaReference = originalMediaReference
+                            } else {
+                                media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], videoCover: videoCover, immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes, alternativeRepresentations: [])
+                                mediaReference = .standalone(media: media)
+                            }
+                            
                             if let timer = item.timer, timer > 0 && (timer <= 60 || timer == viewOnceTimeout) {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                             }
@@ -987,7 +995,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     )
                                 }
                             } else {
-                                messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: asFile))
+                                messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: mediaReference, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: asFile))
                             }
                     }
                 }

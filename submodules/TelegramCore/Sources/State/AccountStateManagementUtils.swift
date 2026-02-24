@@ -4329,6 +4329,8 @@ func replayFinalState(
                         if !message.flags.contains(.Incoming), message.forwardInfo == nil {
                             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), let peer = transaction.getPeer(message.id.peerId), peer.isCopyProtectionEnabled {
                                 
+                            } else if message.id.peerId.namespace == Namespaces.Peer.CloudUser, let cachedUserData = transaction.getPeerCachedData(peerId: message.id.peerId) as? CachedUserData, cachedUserData.flags.contains(.copyProtectionEnabled) || cachedUserData.flags.contains(.myCopyProtectionEnabled) {
+                                
                             } else {
                                 inner: for media in message.media {
                                     if let file = media as? TelegramMediaFile {

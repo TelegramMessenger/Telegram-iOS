@@ -64,6 +64,8 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         private let subject: MessageActionUrlAuthResult
         private let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
         
+        private let disposables = DisposableSet()
+        
         var peer: EnginePeer?
         var forcedAccount: (AccountContext, EnginePeer)?
         
@@ -92,9 +94,23 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 self.updated()
             })
             
-            if case let .request(_, _, _, flags, matchCodes, _) = self.subject, let matchCodes, flags.contains(.showMatchCodesFirst) {
-                self.displayEmoji = true
-                self.matchCodes = matchCodes.shuffled()
+            if case let .request(_, _, _, flags, matchCodes, _) = self.subject, let matchCodes {
+                if flags.contains(.showMatchCodesFirst) {
+                    self.displayEmoji = true
+                    self.matchCodes = matchCodes.shuffled()
+                } else {
+                    for code in matchCodes {
+                        var file: TelegramMediaFile?
+                        if let item = context.animatedEmojiStickersValue[code] {
+                            file = item.first?.file._parse()
+                        } else if let item = context.animatedEmojiStickersValue[code.strippedEmoji] {
+                            file = item.first?.file._parse()
+                        }
+                        if let file {
+                            self.disposables.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
+                        }
+                    }
+                }
             }
             
             if case let .request(_, _, _, _, _, userIdHint) = self.subject, let userIdHint, userIdHint != context.account.peerId {
@@ -119,6 +135,8 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         }
         
         deinit {
+            self.disposables.dispose()
+            
             if !self.inProgress {
                 if let (context, _) = self.forcedAccount {
                     context.account.shouldBeServiceTaskMaster.set(.single(.never))

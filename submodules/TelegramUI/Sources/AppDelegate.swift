@@ -2811,13 +2811,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-                if let (peerId, threadId) = peerIdFromNotification(response.notification) {
-                    var messageId: MessageId? = nil
-                    if response.notification.request.content.categoryIdentifier == "c" || response.notification.request.content.categoryIdentifier == "t" {
-                        messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
+                if let dataUrl = response.notification.request.content.userInfo["data_url"] as? String {
+                    if let url = URL(string: dataUrl) {
+                        self.openUrlWhenReady(url: url)
                     }
-                    let storyId = storyIdFromNotification(peerId: peerId, notification: response.notification)
-                    self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId, storyId: storyId)
+                } else {
+                    if let (peerId, threadId) = peerIdFromNotification(response.notification) {
+                        var messageId: MessageId? = nil
+                        if response.notification.request.content.categoryIdentifier == "c" || response.notification.request.content.categoryIdentifier == "t" {
+                            messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
+                        }
+                        let storyId = storyIdFromNotification(peerId: peerId, notification: response.notification)
+                        self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId, storyId: storyId)
+                    }
                 }
                 completionHandler()
             } else if response.actionIdentifier == "reply", let (peerId, threadId) = peerIdFromNotification(response.notification), let accountId = accountId {

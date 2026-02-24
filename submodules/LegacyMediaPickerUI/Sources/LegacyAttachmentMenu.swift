@@ -157,7 +157,19 @@ public func legacyStoryMediaEditor(context: AccountContext, item: TGMediaEditabl
     })
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, mode: LegacyMediaEditorMode, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyMediaEditor(
+    context: AccountContext,
+    peer: Peer,
+    threadTitle: String?,
+    media: AnyMediaReference,
+    mode: LegacyMediaEditorMode,
+    initialCaption: NSAttributedString,
+    snapshots: [UIView],
+    transitionCompletion: (() -> Void)?,
+    getCaptionPanelView: @escaping () -> TGCaptionPanelView?,
+    sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, Bool) -> Void,
+    present: @escaping (ViewController, Any?) -> Void
+) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {

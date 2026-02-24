@@ -31,7 +31,17 @@ extension ChatControllerImpl {
                 guard let self else {
                     return
                 }
-                self.enqueueMediaMessages(fromGallery: false, signals: signals, silentPosting: false, scheduleTime: nil, replyToSubject: nil, parameters: nil, getAnimatedTransitionSource: nil, completion: {})
+                self.enqueueMediaMessages(
+                    fromGallery: false,
+                    signals: signals,
+                    originalMediaReference: file.abstract,
+                    silentPosting: false,
+                    scheduleTime: nil,
+                    replyToSubject: nil,
+                    parameters: nil,
+                    getAnimatedTransitionSource: nil,
+                    completion: {}
+                )
             },
             present: { [weak self] c, a in
                 self?.present(c, in: .window(.root), with: a)
