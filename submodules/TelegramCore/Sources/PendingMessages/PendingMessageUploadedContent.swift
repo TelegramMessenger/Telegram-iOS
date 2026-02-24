@@ -24,12 +24,19 @@ struct PendingMessageUploadedContentAndReuploadInfo {
 }
 
 struct PendingMessageUploadedContentProgress {
+    enum Phase {
+        case processing
+        case uploading
+    }
+    
     let progress: Float
     let mediaProgress: [MediaId: Float]
+    let phase: Phase
     
-    init(progress: Float, mediaProgress: [MediaId: Float] = [:]) {
+    init(progress: Float, mediaProgress: [MediaId: Float] = [:], phase: Phase = .uploading) {
         self.progress = progress
         self.mediaProgress = mediaProgress
+        self.phase = phase
     }
 }
 
@@ -1138,7 +1145,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         |> mapToSignal { content, fileAndThumbnailResult, resourceStatus -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
             guard let content = content else {
                 if let resourceStatus = resourceStatus, case let .Fetching(_, progress) = resourceStatus {
-                    return .single(.progress(PendingMessageUploadedContentProgress(progress: progress * 0.33)))
+                    return .single(.progress(PendingMessageUploadedContentProgress(progress: progress * 0.33, phase: .processing)))
                 }
                 return .complete()
             }

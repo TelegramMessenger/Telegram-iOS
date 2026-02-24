@@ -15922,3 +15922,12 @@ Error: %8$@";
 "EditRank.AddTag" = "Add Tag";
 "EditRank.EditTag" = "Edit Tag";
 "EditRank.RemoveTag" = "Remove Tag";
+
+"BackgroundTasks.UploadingStories_1" = "Uploading Story";
+"BackgroundTasks.UploadingStories_any" = "Uploading %d Stories";
+"BackgroundTasks.StoryOpenAppToContinue" = "Open app to continue";
+"BackgroundTasks.StorySubtitle" = "Running...";
+
+"BackgroundTasks.UploadingMedia_1" = "Sending Message";
+"BackgroundTasks.UploadingMedia_any" = "Sending %d Messages";
+"BackgroundTasks.MediaSubtitle" = "Running...";

@@ -2,42 +2,59 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Select Simulator for Apple Development",
+      "type": "shell",
+      "command": "./scripts/select_simulator.sh",
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Build Telegram",
       "type": "shell",
-      "command": "${workspaceFolder}/build-input/bazel-8.4.2-darwin-arm64",
-      "args": [
-        "build",
-        "Telegram/Telegram",
-        "--features=swift.use_global_module_cache",
-        "--verbose_failures",
-        "--remote_cache_async",
-        "--features=swift.skip_function_bodies_for_derived_files",
-        "--jobs=16",
-        "--define=buildNumber=10000",
-        "--define=telegramVersion=12.2.2",
-        "--disk_cache=${HOME}/telegram-bazel-cache",
-        "-c",
-        "dbg",
-        "--ios_multi_cpus=sim_arm64",
-        "--watchos_cpus=arm64_32",
-        "--features=swift.enable_batch_mode"
-      ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
+      "command": "./scripts/lldb_build.sh",
+      "options": {
+        "env": {
+          "BAZEL_LABEL_TO_RUN": "//Telegram:Telegram",
+          "BAZEL_EXTRA_BUILD_FLAGS": ""
+        }
       },
-      "problemMatcher": [],
-      "runOptions": {
-        "instanceLimit": 1
-      }
+      "group": {
+        "kind": "build"
+      },
+      "problemMatcher": [
+        {
+          "owner": "bazel",
+          "source": "bazel",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}"
+          ],
+          "pattern": {
+            "regexp": "^(.+?):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          }
+        }
+      ]
     },
-    // Hidden never-ending task that handles the launch / debugging bits for Cmd+Shift+D.
-    // The problemMatcher field defines when the task is effectively ready to be debugged
-    // by the attach task in launch.json.
     {
       "label": "_launch_telegram",
       "type": "shell",
-      "command": "./scripts/launch_and_debug.sh",
+      "command": "./scripts/lldb_launch_and_debug.sh",
+      "options": {
+        "env": {
+          "BAZEL_LABEL_TO_RUN": "//Telegram:Telegram",
+          "BAZEL_EXTRA_BUILD_FLAGS": "",
+          "BAZEL_LAUNCH_ARGS": ""
+        }
+      },
       "presentation": {
         "reveal": "always"
       },
@@ -45,56 +62,48 @@
       "isBackground": true,
       "problemMatcher": [
         {
-          "pattern": [
-            {
-              "regexp": "\\b\\B",
-              "file": 1,
-              "location": 2,
-              "message": 3
-            }
+          "owner": "bazel",
+          "source": "bazel",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}"
           ],
+          "pattern": {
+            "regexp": "launcher_error in (.*): (.*)",
+            "kind": "file",
+            "file": 1,
+            "message": 2
+          },
           "background": {
             "activeOnStart": true,
-            "beginsPattern": "^.*Building....*",
-            "endsPattern": "^.*Listening to port 6667 for a connection from .*"
+            "beginsPattern": "^Starting launch task\\.\\.\\.$",
+            "endsPattern": "^ph.telegra.Telegraph: .*"
+          }
+        },
+        {
+          "owner": "bazel",
+          "source": "bazel",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}"
+          ],
+          "pattern": {
+            "regexp": "^(.+?):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^Starting launch task\\.\\.\\.$",
+            "endsPattern": "^ph.telegra.Telegraph: .*"
           }
         }
       ],
       "runOptions": {
         "instanceLimit": 1
-      }
-    },
-    {
-      "label": "Stream SourceKitBazelBSP Logs",
-      "type": "shell",
-      "command": "log stream --process sourcekit-bazel-bsp --debug",
-      "problemMatcher": [],
-      "isBackground": false,
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      }
-    },
-    {
-      "label": "Stop Telegram Debug Session",
-      "type": "shell",
-      "command": "pkill -f 'launch_and_debug.sh' || true; lsof -ti:6667 | xargs kill -9 2>/dev/null || true",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "silent",
-        "close": true
-      }
-    },
-    {
-      "label": "Restart Telegram Debug",
-      "dependsOrder": "sequence",
-      "dependsOn": [
-        "Stop Telegram Debug Session",
-        "_launch_telegram"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always"
       }
     }
   ]

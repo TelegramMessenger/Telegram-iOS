@@ -20,4 +20,20 @@ build --spawn_strategy=standalone
 
 build --strategy=SwiftCompile=worker
 
-common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/
+#common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/
+
+# SourceKit BSP: Swift indexing features
+common --features=swift.index_while_building
+common --features=swift.use_global_index_store
+common --features=swift.use_global_module_cache
+common --features=oso_prefix_is_pwd
+
+# SourceKit BSP: Index build config (used for background indexing)
+common:index_build --experimental_convenience_symlinks=ignore
+common:index_build --show_result=0
+common:index_build --noshow_loading_progress
+common:index_build --noshow_progress
+common:index_build --noannounce_rc
+common:index_build --noshow_timestamps
+common:index_build --curses=no
+common:index_build --color=no

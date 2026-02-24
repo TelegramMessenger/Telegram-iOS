@@ -1,15 +1,34 @@
 load("@sourcekit_bazel_bsp//rules:setup_sourcekit_bsp.bzl", "setup_sourcekit_bsp")
 
 setup_sourcekit_bsp(
-    name = "setup_sourcekit_bsp_telegram_project",
+    name = "setup_sourcekit_bsp",
     bazel_wrapper = "./build-input/bazel-8.4.2-darwin-arm64",
     files_to_watch = [
-        "**/*.swift",
+        "Telegram/**/*.swift",
+        "Telegram/**/*.h",
+        "Telegram/**/*.m",
+        "Telegram/**/*.mm",
+        "Telegram/**/*.c",
+        "Telegram/**/*.cpp",
+        "submodules/**/*.swift",
+        "submodules/**/*.h",
+        "submodules/**/*.m",
+        "submodules/**/*.mm",
+        "submodules/**/*.c",
+        "submodules/**/*.cpp",
+    ],
+    aquery_flags = [
+        "define=telegramVersion=12.5",
+        "define=buildNumber=100000",
     ],
     index_flags = [
         "config=index_build",
+        "define=telegramVersion=12.5",
+        "define=buildNumber=100000",
     ],
+    index_build_batch_size = 10,
     targets = [
         "//Telegram:Telegram",
     ],
+    merge_lsp_config = False,
 )

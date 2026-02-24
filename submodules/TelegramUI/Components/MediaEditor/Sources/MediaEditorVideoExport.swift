@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import ImageTransparency
 import Photos
+import BackgroundTasks
 
 enum ExportWriterStatus {
     case unknown
@@ -278,12 +279,26 @@ public final class MediaEditorVideoExport {
             guard let self else {
                 return
             }
+            /*if case let .video(_, isStory) = subject, isStory {
+                if #available(iOS 26.0, *) {
+                    if BGTaskScheduler.supportedResources.contains(.gpu) {
+                        return
+                    }
+                }
+            }*/
             self.resume()
         })
         let _ = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil, using: { [weak self] _ in
             guard let self else {
                 return
             }
+            /*if case let .video(_, isStory) = subject, isStory {
+                if #available(iOS 26.0, *) {
+                    if BGTaskScheduler.supportedResources.contains(.gpu) {
+                        return
+                    }
+                }
+            }*/
             self.pause()
         })
     }

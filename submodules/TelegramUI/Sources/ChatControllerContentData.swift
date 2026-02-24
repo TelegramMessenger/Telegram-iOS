@@ -2190,10 +2190,9 @@ extension ChatControllerImpl {
                 let chatLocationPeerId = chatLocation.peerId
                 
                 if let chatLocationPeerId = chatLocationPeerId {
-                    hasPendingMessages = context.account.pendingMessageManager.hasPendingMessages
-                    |> mapToSignal { peerIds -> Signal<Bool, NoError> in
-                        let value = peerIds.contains(chatLocationPeerId)
-                        if value {
+                    hasPendingMessages = context.account.pendingMessageManager.pendingMessageCount
+                    |> mapToSignal { pendingMessageCount -> Signal<Bool, NoError> in
+                        if let value = pendingMessageCount[chatLocationPeerId], value != 0 {
                             return .single(true)
                         } else {
                             return .single(false)

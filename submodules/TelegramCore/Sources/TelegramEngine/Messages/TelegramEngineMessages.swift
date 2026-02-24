@@ -1454,6 +1454,20 @@ public extension TelegramEngine {
             return pendingStoryManager.allStoriesUploadProgress
         }
         
+        public func pendingStoryUploads() -> Signal<[Int32: Float], NoError> {
+            guard let pendingStoryManager = self.account.pendingStoryManager else {
+                return .single([:])
+            }
+            return pendingStoryManager.pendingStoryUploads
+        }
+        
+        public func pendingStoryUploadStatuses() -> Signal<[Int32: PendingStoryUploadStatus], NoError> {
+            guard let pendingStoryManager = self.account.pendingStoryManager else {
+                return .single([:])
+            }
+            return pendingStoryManager.pendingStoryUploadStatuses
+        }
+        
         public func storyUploadProgress(stableId: Int32) -> Signal<Float, NoError> {
             guard let pendingStoryManager = self.account.pendingStoryManager else {
                 return .single(0.0)

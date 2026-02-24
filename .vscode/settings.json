@@ -1,4 +1,7 @@
 {
+    "swift.disableSwiftPackageManagerIntegration": true,
+    "swift.autoGenerateLaunchConfigurations": false,
+    "swift.disableAutoResolve": true,
     "search.followSymlinks": false,
     "files.exclude": {
         ".git/**": true
@@ -8,8 +11,6 @@
     },
     "search.exclude": {
         ".git/**": true
-    },
-    "files.associations": {
     },
     "swift.sourcekit-lsp.backgroundIndexing": "on",
     "swift.sourcekit-lsp.trace.server": "messages",
@@ -22,5 +23,5 @@
             ]
         }
     },
-    "swift.sourcekit-lsp.serverPath": "${workspaceFolder}/build-input/sourcekit-lsp",
+    "swift.sourcekit-lsp.serverPath": "${workspaceFolder}/build-input/sourcekit-lsp"
 }

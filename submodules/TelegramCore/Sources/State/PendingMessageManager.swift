@@ -219,9 +219,13 @@ public final class PendingMessageManager {
     
     private let queue = Queue()
     
-    private let _hasPendingMessages = ValuePromise<Set<PeerId>>(Set(), ignoreRepeated: true)
-    public var hasPendingMessages: Signal<Set<PeerId>, NoError> {
-        return self._hasPendingMessages.get()
+    private let _pendingMessageCount = ValuePromise<[PeerId: Int]>([:], ignoreRepeated: true)
+    public var pendingMessageCount: Signal<[PeerId: Int], NoError> {
+        return self._pendingMessageCount.get()
+    }
+    private let _pendingMediaUploads = ValuePromise<[MessageId: Float]>([:], ignoreRepeated: true)
+    public var pendingMediaUploads: Signal<[MessageId: Float], NoError> {
+        return self._pendingMediaUploads.get()
     }
     
     private var messageContexts: [MessageId: PendingMessageContext] = [:]
@@ -253,6 +257,28 @@ public final class PendingMessageManager {
         for (_, disposable) in self.newTopicDisposables {
             disposable.dispose()
         }
+    }
+    
+    private func updatePendingMediaUploads() {
+        assert(self.queue.isCurrent())
+        
+        var pendingMediaUploads: [MessageId: Float] = [:]
+        for (id, context) in self.messageContexts {
+            guard case .media? = context.contentType else {
+                continue
+            }
+            
+            switch context.state {
+            case .waitingForUploadToStart:
+                pendingMediaUploads[id] = context.status?.progress.progress ?? 0.0
+            case .uploading:
+                pendingMediaUploads[id] = context.status?.progress.progress ?? 0.0
+            default:
+                break
+            }
+        }
+        
+        self._pendingMediaUploads.set(pendingMediaUploads)
     }
     
     func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
@@ -344,14 +370,19 @@ public final class PendingMessageManager {
                 })
             }
             
-            var peersWithPendingMessages = Set<PeerId>()
+            var pendingMessageCount: [PeerId: Int] = [:]
             for id in self.pendingMessageIds {
-                peersWithPendingMessages.insert(id.peerId)
+                if let current = pendingMessageCount[id.peerId] {
+                    pendingMessageCount[id.peerId] = current + 1
+                } else {
+                    pendingMessageCount[id.peerId] = 1
+                }
             }
             
             Logger.shared.log("PendingMessageManager", "pending messages: \(self.pendingMessageIds)")
             
-            self._hasPendingMessages.set(peersWithPendingMessages)
+            self._pendingMessageCount.set(pendingMessageCount)
+            self.updatePendingMediaUploads()
         }
     }
     
@@ -624,6 +655,7 @@ public final class PendingMessageManager {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
                     }
                 }
+                strongSelf.updatePendingMediaUploads()
                 
                 Logger.shared.log("PendingMessageManager", "beginSendingMessages messagesToForward.count: \(messagesToForward.count)")
                 
@@ -709,6 +741,7 @@ public final class PendingMessageManager {
         } else {
             self.commitSendingSingleMessage(messageContext: messageContext, messageId: messageId, content: content)
         }
+        self.updatePendingMediaUploads()
     }
     
     private func beginSendingGroupIfPossible(groupId: Int64) {
@@ -845,6 +878,7 @@ public final class PendingMessageManager {
             activityCategory = .global
         }
         self.addContextActivityIfNeeded(messageContext, peerId: PeerActivitySpace(peerId: id.peerId, category: activityCategory))
+        self.updatePendingMediaUploads()
         
         let queue = self.queue
         
@@ -880,6 +914,7 @@ public final class PendingMessageManager {
                             for subscriber in current.statusSubscribers.copyItems() {
                                 subscriber(current.status, current.error)
                             }
+                            strongSelf.updatePendingMediaUploads()
                         }
                     case let .content(content):
                         if let current = strongSelf.messageContexts[id] {
@@ -923,6 +958,7 @@ public final class PendingMessageManager {
                     }
                     
                     self.addContextActivityIfNeeded(context, peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
+                    self.updatePendingMediaUploads()
                     context.uploadDisposable.set((uploadSignal
                     |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self {
@@ -936,6 +972,7 @@ public final class PendingMessageManager {
                                         for subscriber in current.statusSubscribers.copyItems() {
                                             subscriber(context.status, context.error)
                                         }
+                                        strongSelf.updatePendingMediaUploads()
                                     }
                                 case let .content(content):
                                     if let current = strongSelf.messageContexts[contextId] {

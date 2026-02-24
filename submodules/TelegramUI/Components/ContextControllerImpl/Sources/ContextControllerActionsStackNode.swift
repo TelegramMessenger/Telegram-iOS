@@ -1839,6 +1839,13 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         selectionPanGesture.isEnabled = false
     }
     
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let result = super.hitTest(point, with: event) else {
+            return nil
+        }
+        return result
+    }
+    
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began, .changed:

@@ -3,6 +3,21 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
+public enum PendingStoryUploadPhase: Equatable {
+    case processing
+    case uploading
+}
+
+public struct PendingStoryUploadStatus: Equatable {
+    public let progress: Float
+    public let phase: PendingStoryUploadPhase
+    
+    public init(progress: Float, phase: PendingStoryUploadPhase) {
+        self.progress = progress
+        self.phase = phase
+    }
+}
+
 public extension Stories {
     enum PendingTarget: Codable {
         private enum CodingKeys: String, CodingKey {
@@ -280,6 +295,7 @@ final class PendingStoryManager {
         let updated: () -> Void
         
         var progress: Float = 0.0
+        var phase: PendingStoryUploadPhase = .uploading
         var disposable: Disposable?
         
         init(queue: Queue, item: Stories.PendingItem, updated: @escaping () -> Void) {
@@ -306,6 +322,7 @@ final class PendingStoryManager {
         var itemsDisposable: Disposable?
         var currentPendingItemContext: PendingItemContext?
         var queuedPendingItems = Set<PeerId>()
+        var queuedPendingItemStableIds = Set<Int32>()
         
         var storyObserverContexts: [Int32: Bag<(Float) -> Void>] = [:]
         
@@ -318,6 +335,18 @@ final class PendingStoryManager {
         private var allStoriesUploadProgressValue: [PeerId: Float] = [:]
         var allStoriesUploadProgress: Signal<[PeerId: Float], NoError> {
             return self.allStoriesUploadProgressPromise.get()
+        }
+        
+        private let pendingStoryUploadsPromise = Promise<[Int32: Float]>([:])
+        private var pendingStoryUploadsValue: [Int32: Float] = [:]
+        var pendingStoryUploads: Signal<[Int32: Float], NoError> {
+            return self.pendingStoryUploadsPromise.get()
+        }
+        
+        private let pendingStoryUploadStatusesPromise = Promise<[Int32: PendingStoryUploadStatus]>([:])
+        private var pendingStoryUploadStatusesValue: [Int32: PendingStoryUploadStatus] = [:]
+        var pendingStoryUploadStatuses: Signal<[Int32: PendingStoryUploadStatus], NoError> {
+            return self.pendingStoryUploadStatusesPromise.get()
         }
         
         private let hasPendingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -407,6 +436,7 @@ final class PendingStoryManager {
                     return nil
                 }
             })
+            self.queuedPendingItemStableIds = Set(localState.items.map(\.stableId))
             
             if self.currentPendingItemContext == nil, let firstItem = localState.items.first {
                 let queue = self.queue
@@ -465,9 +495,15 @@ final class PendingStoryManager {
                             return
                         }
                         switch event {
-                        case let .progress(progress):
+                        case let .progress(progress, phase):
                             if let currentPendingItemContext = self.currentPendingItemContext, currentPendingItemContext.item.stableId == stableId {
                                 currentPendingItemContext.progress = progress
+                                switch phase {
+                                case .processing:
+                                    currentPendingItemContext.phase = .processing
+                                case .uploading:
+                                    currentPendingItemContext.phase = .uploading
+                                }
                                 currentPendingItemContext.updated()
                             }
                         case let .completed(id):
@@ -489,13 +525,19 @@ final class PendingStoryManager {
                             return
                         }
                         switch event {
-                        case let .progress(progress):
+                        case let .progress(progress, phase):
                             if let currentPendingItemContext = self.currentPendingItemContext, currentPendingItemContext.item.stableId == stableId {
                                 if let uploadInfo = currentPendingItemContext.item.uploadInfo {
                                     let partTotalProgress = 1.0 / Float(uploadInfo.total)
                                     currentPendingItemContext.progress = Float(uploadInfo.index) * partTotalProgress + progress * partTotalProgress
                                 } else {
                                     currentPendingItemContext.progress = progress
+                                }
+                                switch phase {
+                                case .processing:
+                                    currentPendingItemContext.phase = .processing
+                                case .uploading:
+                                    currentPendingItemContext.phase = .uploading
                                 }
                                 currentPendingItemContext.updated()
                             }
@@ -529,6 +571,17 @@ final class PendingStoryManager {
                 }
             }
             
+            var pendingStoryUploads: [Int32: Float] = [:]
+            var pendingStoryUploadStatuses: [Int32: PendingStoryUploadStatus] = [:]
+            for stableId in self.queuedPendingItemStableIds {
+                pendingStoryUploads[stableId] = 0.0
+                pendingStoryUploadStatuses[stableId] = PendingStoryUploadStatus(progress: 0.0, phase: .uploading)
+            }
+            if let currentPendingItemContext = self.currentPendingItemContext {
+                pendingStoryUploads[currentPendingItemContext.item.stableId] = currentPendingItemContext.progress
+                pendingStoryUploadStatuses[currentPendingItemContext.item.stableId] = PendingStoryUploadStatus(progress: currentPendingItemContext.progress, phase: currentPendingItemContext.phase)
+            }
+            
             if self.allStoriesUploadProgressValue != currentProgress {
                 let previousProgress = self.allStoriesUploadProgressValue
                 self.allStoriesUploadProgressValue = currentProgress
@@ -550,6 +603,14 @@ final class PendingStoryManager {
                     self.allStoriesUploadProgressPromise.set(.single(currentProgress))
                 }
             }
+            if self.pendingStoryUploadsValue != pendingStoryUploads {
+                self.pendingStoryUploadsValue = pendingStoryUploads
+                self.pendingStoryUploadsPromise.set(.single(pendingStoryUploads))
+            }
+            if self.pendingStoryUploadStatusesValue != pendingStoryUploadStatuses {
+                self.pendingStoryUploadStatusesValue = pendingStoryUploadStatuses
+                self.pendingStoryUploadStatusesPromise.set(.single(pendingStoryUploadStatuses))
+            }
             
             self.hasPendingPromise.set(self.currentPendingItemContext != nil)
         }
@@ -562,6 +623,18 @@ final class PendingStoryManager {
     public var allStoriesUploadProgress: Signal<[PeerId: Float], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.allStoriesUploadProgress.start(next: subscriber.putNext)
+        }
+    }
+    
+    public var pendingStoryUploads: Signal<[Int32: Float], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.pendingStoryUploads.start(next: subscriber.putNext)
+        }
+    }
+    
+    public var pendingStoryUploadStatuses: Signal<[Int32: PendingStoryUploadStatus], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.pendingStoryUploadStatuses.start(next: subscriber.putNext)
         }
     }
     

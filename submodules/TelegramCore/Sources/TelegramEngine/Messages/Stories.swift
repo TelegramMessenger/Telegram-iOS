@@ -874,6 +874,16 @@ public enum StoryUploadResult {
     case completed(Int32?)
 }
 
+enum PendingStoryUploadInternalPhase {
+    case processing
+    case uploading
+}
+
+enum PendingStoryUploadResult {
+    case progress(Float, PendingStoryUploadInternalPhase)
+    case completed(Int32?)
+}
+
 private func prepareUploadStoryContent(account: Account, media: EngineStoryInputMedia) -> Media {
     switch media {
     case let .image(dimensions, data, _):
@@ -1271,7 +1281,7 @@ func _internal_uploadStoryImpl(
     folders: [Int64],
     randomId: Int64,
     forwardInfo: Stories.PendingForwardInfo?
-) -> Signal<StoryUploadResult, NoError> {
+) -> Signal<PendingStoryUploadResult, NoError> {
     return postbox.transaction { transaction -> (Peer, Peer?)? in
         if let peer = transaction.getPeer(toPeerId) {
             if let forwardInfo = forwardInfo {
@@ -1282,7 +1292,7 @@ func _internal_uploadStoryImpl(
         }
         return nil
     }
-    |> mapToSignal { inputPeerAndForwardInfoPeer -> Signal<StoryUploadResult, NoError> in
+    |> mapToSignal { inputPeerAndForwardInfoPeer -> Signal<PendingStoryUploadResult, NoError> in
         guard let (inputPeer, forwardInfoPeer) = inputPeerAndForwardInfoPeer, let inputPeer = apiInputPeer(inputPeer) else {
             return .single(.completed(nil))
         }
@@ -1295,12 +1305,19 @@ func _internal_uploadStoryImpl(
         let passFetchProgress = media is TelegramMediaFile
         let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, mediaReference: mediaReference, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
         return contentSignal
-        |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
+        |> mapToSignal { result -> Signal<PendingStoryUploadResult, NoError> in
             switch result {
             case let .progress(progress):
-                return .single(.progress(progress.progress))
+                let phase: PendingStoryUploadInternalPhase
+                switch progress.phase {
+                case .processing:
+                    phase = .processing
+                case .uploading:
+                    phase = .uploading
+                }
+                return .single(.progress(progress.progress, phase))
             case let .content(content):
-                return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+                return postbox.transaction { transaction -> Signal<PendingStoryUploadResult, NoError> in
                     let privacyRules = apiInputPrivacyRules(privacy: privacy, transaction: transaction)
                     switch content.content {
                     case let .media(inputMedia, _):
@@ -1374,8 +1391,8 @@ func _internal_uploadStoryImpl(
                         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                             return .single(nil)
                         }
-                        |> mapToSignal { updates -> Signal<StoryUploadResult, NoError> in
-                            return postbox.transaction { transaction -> StoryUploadResult in
+                        |> mapToSignal { updates -> Signal<PendingStoryUploadResult, NoError> in
+                            return postbox.transaction { transaction -> PendingStoryUploadResult in
                                 var currentState: Stories.LocalState
                                 if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
                                     currentState = value
@@ -1491,14 +1508,14 @@ func _internal_uploadBotPreviewImpl(
     entities: [MessageTextEntity],
     embeddedStickers: [TelegramMediaFile],
     randomId: Int64
-) -> Signal<StoryUploadResult, NoError> {
+) -> Signal<PendingStoryUploadResult, NoError> {
     return postbox.transaction { transaction -> Api.InputUser? in
         if let peer = transaction.getPeer(toPeerId) {
             return apiInputUser(peer)
         }
         return nil
     }
-    |> mapToSignal { inputUser -> Signal<StoryUploadResult, NoError> in
+    |> mapToSignal { inputUser -> Signal<PendingStoryUploadResult, NoError> in
         guard let inputUser else {
             return .single(.completed(nil))
         }
@@ -1506,12 +1523,19 @@ func _internal_uploadBotPreviewImpl(
         let passFetchProgress = media is TelegramMediaFile
         let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, mediaReference: nil, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
         return contentSignal
-        |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
+        |> mapToSignal { result -> Signal<PendingStoryUploadResult, NoError> in
             switch result {
             case let .progress(progress):
-                return .single(.progress(progress.progress))
+                let phase: PendingStoryUploadInternalPhase
+                switch progress.phase {
+                case .processing:
+                    phase = .processing
+                case .uploading:
+                    phase = .uploading
+                }
+                return .single(.progress(progress.progress, phase))
             case let .content(content):
-                return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+                return postbox.transaction { transaction -> Signal<PendingStoryUploadResult, NoError> in
                     switch content.content {
                     case let .media(inputMedia, _):
                         return network.request(Api.functions.bots.addPreviewMedia(bot: inputUser, langCode: language ?? "", media: inputMedia))
@@ -1519,14 +1543,14 @@ func _internal_uploadBotPreviewImpl(
                         |> `catch` { _ -> Signal<Api.BotPreviewMedia?, NoError> in
                             return .single(nil)
                         }
-                        |> mapToSignal { resultPreviewMedia -> Signal<StoryUploadResult, NoError> in
+                        |> mapToSignal { resultPreviewMedia -> Signal<PendingStoryUploadResult, NoError> in
                             guard let resultPreviewMedia else {
                                 return .single(.completed(nil))
                             }
                             switch resultPreviewMedia {
                             case let .botPreviewMedia(botPreviewMediaData):
                                 let (date, resultMedia) = (botPreviewMediaData.date, botPreviewMediaData.media)
-                                return postbox.transaction { transaction -> StoryUploadResult in
+                                return postbox.transaction { transaction -> PendingStoryUploadResult in
                                     var currentState: Stories.LocalState
                                     if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
                                         currentState = value
