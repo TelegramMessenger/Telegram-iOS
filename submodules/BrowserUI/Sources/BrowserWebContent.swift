@@ -446,16 +446,16 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                             return
                         }
                         switch authResult {
-                        case let .accept(allowWriteAccess, sharePhoneNumber):
+                        case let .accept(allowWriteAccess, sharePhoneNumber, matchCode):
                             let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
                             if accountContext === context {
-                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
+                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
                             } else {
                                 accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
                                 signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: subject)
                                 |> castError(MessageActionUrlAuthError.self)
                                 |> mapToSignal { result in
-                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
+                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
                                 } |> afterDisposed {
                                     accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
                                 }
@@ -497,6 +497,8 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                                 
                                 let _ = self.context.engine.messages.declineUrlAuth(url: url).start()
                                 self.webView.sendEvent(name: "oauth_result_failed", data: nil)
+                                
+                                HapticFeedback().error()
                             })
                         case .decline:
                             let _ = self.context.engine.messages.declineUrlAuth(url: url).start()

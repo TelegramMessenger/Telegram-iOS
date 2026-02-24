@@ -228,6 +228,7 @@
         
         UIView *scrubberBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _headerView.frame.size.width, 64.0f)];
         scrubberBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        //scrubberBackgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
         [_scrubberPanelView addSubview:scrubberBackgroundView];
         
         _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, _headerView.frame.size.height - 44.0f, _headerView.frame.size.width, 68.0f) cover:false];
@@ -440,33 +441,24 @@
         [_contentWrapperView addSubview:_entitiesView];
     }
         
-    
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
-    
-    SSignal *durationSignal = item.durationSignal;
-    if (durationSignal != nil) {
-        [_videoDurationVar set:[[[durationSignal deliverOn:[SQueue mainQueue]] catch:^SSignal *(__unused id error)
+    [_videoDurationVar set:[[[item.durationSignal deliverOn:[SQueue mainQueue]] catch:^SSignal *(__unused id error)
+    {
+        __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
+        if (strongSelf != nil && [error isKindOfClass:[NSNumber class]])
+            [strongSelf _setDownloadRequired];
+        
+        return nil;
+    }] onNext:^(__unused id next)
+    {
+        __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
+        if (strongSelf != nil)
         {
-            __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-            if (strongSelf != nil && [error isKindOfClass:[NSNumber class]])
-                [strongSelf _setDownloadRequired];
-            
-            return nil;
-        }] onNext:^(__unused id next)
-                                {
-            __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-            if (strongSelf != nil)
-            {
-                strongSelf->_downloaded = true;
-                if (strongSelf->_currentAvailabilityObserver != nil)
-                    strongSelf->_currentAvailabilityObserver(true);
-            }
-        }]];
-    } else {
-        _downloaded = true;
-        if (_currentAvailabilityObserver != nil)
-            _currentAvailabilityObserver(true);
-    }
+            strongSelf->_downloaded = true;
+            if (strongSelf->_currentAvailabilityObserver != nil)
+                strongSelf->_currentAvailabilityObserver(true);
+        }
+    }]];
     
     SSignal *imageSignal = nil;
     if (item.asset != nil)
@@ -474,10 +466,6 @@
         SSignal *assetSignal = [SSignal single:nil];
         if ([item.asset isKindOfClass:[TGMediaAsset class]])
         {
-            if (((TGMediaAsset *)item.asset).type == TGMediaAssetPhotoType) {
-                [_scrubberPanelView setHidden:true];
-            }
-            
             assetSignal = [TGMediaAssetImageSignals imageForAsset:(TGMediaAsset *)item.asset imageType:(item.immediateThumbnailImage != nil) ? TGMediaAssetImageTypeScreen : TGMediaAssetImageTypeFastScreen size:CGSizeMake(1280, 1280)];
         }
         else
@@ -753,7 +741,7 @@
 - (bool)itemIsLivePhoto
 {
     if ([self.item.asset isKindOfClass:[TGMediaAsset class]])
-        return ((TGMediaAsset *)self.item.asset) ;
+        return ((TGMediaAsset *)self.item.asset).subtypes & TGMediaAssetSubtypePhotoLive;
     
     return false;
 }
