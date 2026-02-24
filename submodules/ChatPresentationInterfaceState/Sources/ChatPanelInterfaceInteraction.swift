@@ -148,6 +148,7 @@ public final class ChatPanelInterfaceInteraction {
     public let updateInputLanguage: (@escaping (String?) -> String?) -> Void
     public let unarchiveChat: () -> Void
     public let openLinkEditing: () -> Void
+    public let openDateEditing: () -> Void
     public let displaySlowmodeTooltip: (UIView, CGRect) -> Void
     public let displaySendMessageOptions: (ASDisplayNode, ContextGesture) -> Void
     public let openScheduledMessages: () -> Void
@@ -277,6 +278,7 @@ public final class ChatPanelInterfaceInteraction {
         updateInputLanguage: @escaping ((String?) -> String?) -> Void,
         unarchiveChat: @escaping () -> Void,
         openLinkEditing: @escaping () -> Void,
+        openDateEditing: @escaping () -> Void,
         displaySlowmodeTooltip: @escaping (UIView, CGRect) -> Void,
         displaySendMessageOptions: @escaping (ASDisplayNode, ContextGesture) -> Void,
         openScheduledMessages: @escaping () -> Void,
@@ -405,6 +407,7 @@ public final class ChatPanelInterfaceInteraction {
         self.updateInputLanguage = updateInputLanguage
         self.unarchiveChat = unarchiveChat
         self.openLinkEditing = openLinkEditing
+        self.openDateEditing = openDateEditing
         self.displaySlowmodeTooltip = displaySlowmodeTooltip
         self.displaySendMessageOptions = displaySendMessageOptions
         self.openScheduledMessages = openScheduledMessages
@@ -541,8 +544,8 @@ public final class ChatPanelInterfaceInteraction {
         }, requestStopPollInMessage: { _ in
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
-        }, openLinkEditing: openLinkEditing,
-        displaySlowmodeTooltip: { _, _ in
+        }, openLinkEditing: openLinkEditing, openDateEditing: {
+        }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {
         }, openPeersNearby: {

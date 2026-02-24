@@ -652,6 +652,8 @@ public final class ChatTextInputPanelComponent: Component {
                     },
                     openLinkEditing: {
                     },
+                    openDateEditing: {
+                    },
                     displaySlowmodeTooltip: { _, _ in
                     },
                     displaySendMessageOptions: { [weak self] node, gesture in

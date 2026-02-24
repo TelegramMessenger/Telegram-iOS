@@ -723,6 +723,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 })
                 strongSelf.present(controller, nil)
             }
+        }, openDateEditing: {   
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
             guard let strongSelf = self else {

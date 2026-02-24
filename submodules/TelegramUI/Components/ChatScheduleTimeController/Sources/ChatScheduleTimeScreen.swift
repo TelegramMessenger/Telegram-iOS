@@ -65,7 +65,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
         private let cancel = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
-        private let onlineButton = ComponentView<Empty>()
+        private let secondaryButton = ComponentView<Empty>()
         
         private var datePicker: DatePickerNode?
         
@@ -154,7 +154,17 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             self.environment = environment
             
             if self.component == nil {
-                self.updateMinimumDate(currentTime: component.currentTime, minimalTime: component.minimalTime)
+                if case .format = component.mode {
+                    self.minDate = Date(timeIntervalSince1970: 0.0)
+                    self.maxDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
+                    if let current = component.currentTime {
+                        self.date = Date(timeIntervalSince1970: Double(current))
+                    } else {
+                        self.date = Date()
+                    }
+                } else {
+                    self.updateMinimumDate(currentTime: component.currentTime, minimalTime: component.minimalTime)
+                }
                 self.repeatPeriod = component.currentRepeatPeriod
             }
                         
@@ -208,6 +218,9 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                 title = strings.Conversation_ScheduleMessage_Title
             case .reminders:
                 title = strings.Conversation_SetReminder_Title
+            case .format:
+                //TODO:localize
+                title = "Date"
             }
             let titleSize = self.title.update(
                 transition: transition,
@@ -359,89 +372,94 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             
             contentHeight += 56.0
             
-            transition.setFrame(layer: self.bottomSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: UIScreenPixel)))
-            self.bottomSeparator.backgroundColor = environment.theme.list.itemBlocksSeparatorColor.cgColor
-            if self.bottomSeparator.superlayer == nil {
-                self.layer.addSublayer(self.bottomSeparator)
-            }
-            
-            let repeatTitleSize = self.repeatTitle.update(
-                transition: transition,
-                component: AnyComponent(
-                    Text(text: strings.ScheduleMessage_Repeat, font: Font.regular(17.0), color: environment.theme.actionSheet.primaryTextColor)
-                ),
-                environment: {},
-                containerSize: availableSize
-            )
-            let repeatTitleFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + 16.0), size: repeatTitleSize)
-            if let timeTitleView = self.repeatTitle.view {
-                if timeTitleView.superview == nil {
-                    self.addSubview(timeTitleView)
-                }
-                transition.setFrame(view: timeTitleView, frame: repeatTitleFrame)
-            }
-            
-            let repeatString: String
-            if let repeatPeriod = self.repeatPeriod {
-                switch repeatPeriod {
-                case 86400:
-                    repeatString = strings.ScheduleMessage_RepeatPeriod_Daily
-                case 7 * 86400:
-                    repeatString = strings.ScheduleMessage_RepeatPeriod_Weekly
-                case 14 * 86400:
-                    repeatString = strings.ScheduleMessage_RepeatPeriod_Biweekly
-                case 30 * 86400:
-                    repeatString = strings.ScheduleMessage_RepeatPeriod_Monthly
-                case 91 * 86400:
-                    repeatString = strings.ScheduleMessage_RepeatPeriod_3Months
-                case 182 * 86400:
-                    repeatString = strings.ScheduleMessage_RepeatPeriod_6Months
-                case 365 * 86400:
-                    repeatString = strings.ScheduleMessage_RepeatPeriod_Yearly
-                default:
-                    repeatString = "\(repeatPeriod)s"
-                }
+            var repeatValueFrame = CGRect()
+            if case .format = component.mode {
+                
             } else {
-                repeatString = strings.ScheduleMessage_RepeatPeriod_Never
-            }
-            
-            let repeatValueSize = self.repeatValue.update(
-                transition: transition,
-                component: AnyComponent(
-                    PlainButtonComponent(
-                        content: AnyComponent(
-                            ButtonContentComponent(
-                                theme: environment.theme,
-                                text: repeatString,
-                                isActive: self.isPickingRepeatPeriod,
-                                isLocked: !component.context.isPremium
-                            )
-                        ),
-                        action: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            if self.isPickingTime {
-                                self.isPickingTime = false
-                            } else {
-                                self.isPickingRepeatPeriod = !self.isPickingRepeatPeriod
-                            }
-                            self.state?.updated()
-                        }
-                    )
-                ),
-                environment: {
-                },
-                containerSize: availableSize
-            )
-            let repeatValueFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - repeatValueSize.width, y: contentHeight + 10.0), size: repeatValueSize)
-            if let repeatValueView = self.repeatValue.view {
-                if repeatValueView.superview == nil {
-                    self.addSubview(repeatValueView)
+                transition.setFrame(layer: self.bottomSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: UIScreenPixel)))
+                self.bottomSeparator.backgroundColor = environment.theme.list.itemBlocksSeparatorColor.cgColor
+                if self.bottomSeparator.superlayer == nil {
+                    self.layer.addSublayer(self.bottomSeparator)
                 }
-                transition.setFrame(view: repeatValueView, frame: repeatValueFrame)
+                
+                let repeatTitleSize = self.repeatTitle.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        Text(text: strings.ScheduleMessage_Repeat, font: Font.regular(17.0), color: environment.theme.actionSheet.primaryTextColor)
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                let repeatTitleFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + 16.0), size: repeatTitleSize)
+                if let timeTitleView = self.repeatTitle.view {
+                    if timeTitleView.superview == nil {
+                        self.addSubview(timeTitleView)
+                    }
+                    transition.setFrame(view: timeTitleView, frame: repeatTitleFrame)
+                }
+                
+                let repeatString: String
+                if let repeatPeriod = self.repeatPeriod {
+                    switch repeatPeriod {
+                    case 86400:
+                        repeatString = strings.ScheduleMessage_RepeatPeriod_Daily
+                    case 7 * 86400:
+                        repeatString = strings.ScheduleMessage_RepeatPeriod_Weekly
+                    case 14 * 86400:
+                        repeatString = strings.ScheduleMessage_RepeatPeriod_Biweekly
+                    case 30 * 86400:
+                        repeatString = strings.ScheduleMessage_RepeatPeriod_Monthly
+                    case 91 * 86400:
+                        repeatString = strings.ScheduleMessage_RepeatPeriod_3Months
+                    case 182 * 86400:
+                        repeatString = strings.ScheduleMessage_RepeatPeriod_6Months
+                    case 365 * 86400:
+                        repeatString = strings.ScheduleMessage_RepeatPeriod_Yearly
+                    default:
+                        repeatString = "\(repeatPeriod)s"
+                    }
+                } else {
+                    repeatString = strings.ScheduleMessage_RepeatPeriod_Never
+                }
+                
+                let repeatValueSize = self.repeatValue.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        PlainButtonComponent(
+                            content: AnyComponent(
+                                ButtonContentComponent(
+                                    theme: environment.theme,
+                                    text: repeatString,
+                                    isActive: self.isPickingRepeatPeriod,
+                                    isLocked: !component.context.isPremium
+                                )
+                            ),
+                            action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                if self.isPickingTime {
+                                    self.isPickingTime = false
+                                } else {
+                                    self.isPickingRepeatPeriod = !self.isPickingRepeatPeriod
+                                }
+                                self.state?.updated()
+                            }
+                        )
+                    ),
+                    environment: {
+                    },
+                    containerSize: availableSize
+                )
+                repeatValueFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - repeatValueSize.width, y: contentHeight + 10.0), size: repeatValueSize)
+                if let repeatValueView = self.repeatValue.view {
+                    if repeatValueView.superview == nil {
+                        self.addSubview(repeatValueView)
+                    }
+                    transition.setFrame(view: repeatValueView, frame: repeatValueFrame)
+                }
+                contentHeight += 70.0
             }
-            contentHeight += 70.0
             
             let time = stringForMessageTimestamp(timestamp: Int32(date.timeIntervalSince1970), dateTimeFormat: environment.dateTimeFormat)
             let buttonTitle: String
@@ -462,6 +480,9 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                 } else {
                     buttonTitle = strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).string
                 }
+            case .format:
+                //TODO:localize
+                buttonTitle = component.currentTime != nil ? "Edit Date" : "Add Date"
             }
                 
             let buttonSideInset: CGFloat = 30.0
@@ -504,10 +525,51 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             }
             contentHeight += buttonSize.height
             
-            if case .scheduledMessages(true) = component.mode {
+            if case .format = component.mode, component.currentTime != nil {
                 contentHeight += 8.0
                 
-                let buttonSize = self.onlineButton.update(
+                let buttonSize = self.secondaryButton.update(
+                    transition: transition,
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            style: .glass,
+                            color: environment.theme.list.itemDestructiveColor.withMultipliedAlpha(0.1),
+                            foreground: environment.theme.list.itemDestructiveColor,
+                            pressedColor: environment.theme.list.itemDestructiveColor.withMultipliedAlpha(0.8),
+                        ),
+                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
+                            Text(text: "Remove Date", font: Font.semibold(17.0), color: environment.theme.list.itemDestructiveColor)
+                        )),
+                        isEnabled: true,
+                        displaysProgress: false,
+                        action: { [weak self] in
+                            guard let self, let component = self.component, let controller = self.environment?.controller() as? ChatScheduleTimeScreen else {
+                                return
+                            }
+                            controller.completion(
+                                ChatScheduleTimeScreen.Result(
+                                    time: 0,
+                                    repeatPeriod: nil
+                                )
+                            )
+                            component.dismiss()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - buttonSideInset * 2.0, height: 52.0)
+                )
+                let buttonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: contentHeight), size: buttonSize)
+                if let buttonView = self.secondaryButton.view {
+                    if buttonView.superview == nil {
+                        self.addSubview(buttonView)
+                    }
+                    transition.setFrame(view: buttonView, frame: buttonFrame)
+                }
+                contentHeight += buttonSize.height
+            } else if case .scheduledMessages(true) = component.mode {
+                contentHeight += 8.0
+                
+                let buttonSize = self.secondaryButton.update(
                     transition: transition,
                     component: AnyComponent(ButtonComponent(
                         background: ButtonComponent.Background(
@@ -538,7 +600,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                     containerSize: CGSize(width: availableSize.width - buttonSideInset * 2.0, height: 52.0)
                 )
                 let buttonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: contentHeight), size: buttonSize)
-                if let buttonView = self.onlineButton.view {
+                if let buttonView = self.secondaryButton.view {
                     if buttonView.superview == nil {
                         self.addSubview(buttonView)
                     }
@@ -844,6 +906,7 @@ public class ChatScheduleTimeScreen: ViewControllerComponentContainer {
     public enum Mode: Equatable {
         case scheduledMessages(sendWhenOnlineAvailable: Bool)
         case reminders
+        case format
     }
     
     public struct Result {

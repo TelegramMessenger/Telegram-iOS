@@ -1220,6 +1220,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 })
                 strongSelf.present(controller)
             }
+        }, openDateEditing: {
+            
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
             guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {

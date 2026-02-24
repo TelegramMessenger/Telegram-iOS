@@ -136,6 +136,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
         }, openLinkEditing: {  
+        }, openDateEditing: {   
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {

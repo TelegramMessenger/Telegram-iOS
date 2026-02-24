@@ -128,6 +128,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
         }, openLinkEditing: {
+        }, openDateEditing: {  
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {

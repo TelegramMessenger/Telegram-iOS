@@ -167,6 +167,8 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: value.peerId)))
             } else if key == ChatTextInputAttributes.textUrl, let value = value as? ChatTextInputTextUrlAttribute {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextUrl(url: value.url)))
+            } else if key == ChatTextInputAttributes.date, let value = value as? ChatTextInputTextDateAttribute {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .FormattedDate(format: nil, date: value.date)))
             } else if key == ChatTextInputAttributes.spoiler {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Spoiler))
             } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {

@@ -39,6 +39,8 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
             string.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: peerId), range: range)
         case let .TextUrl(url):
             string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
+        case let .FormattedDate(_, date):
+            string.addAttribute(ChatTextInputAttributes.date, value: ChatTextInputTextDateAttribute(date: date), range: range)
         case .Code:
             string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
         case .Strikethrough:
