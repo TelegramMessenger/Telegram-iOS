@@ -135,6 +135,8 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
+        var labelColor = presentationData.theme.list.itemSecondaryTextColor
+        var labelBackground = false
         let label: String?
         if let rank = item.member.rank {
             label = rank
@@ -147,6 +149,17 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             case .member:
                 label = nil
             }
+        }
+        
+        switch item.member.role {
+        case .creator:
+            labelBackground = true
+            labelColor = UIColor(rgb: 0x956ac8)
+        case .admin:
+            labelBackground = true
+            labelColor = UIColor(rgb: 0x49a355)
+        default:
+            break
         }
         
         let actions = availableActionsForMemberOfPeer(accountPeerId: item.context.accountPeerId, peer: item.enclosingPeer, member: item.member)
@@ -175,7 +188,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         
         let itemLabel: ItemListPeerItemLabel
         if let label = label {
-            itemLabel = .text(label, .standard)
+            itemLabel = .text(label, .standard, labelColor, labelBackground)
         } else if let badge = item.badge {
             itemLabel = .badge(badge)
         } else {

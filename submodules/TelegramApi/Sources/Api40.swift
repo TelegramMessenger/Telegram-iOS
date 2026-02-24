@@ -3157,14 +3157,17 @@ public extension Api.functions.channels {
     }
 }
 public extension Api.functions.channels {
-    static func editAdmin(channel: Api.InputChannel, userId: Api.InputUser, adminRights: Api.ChatAdminRights, rank: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func editAdmin(flags: Int32, channel: Api.InputChannel, userId: Api.InputUser, adminRights: Api.ChatAdminRights, rank: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(-751007486)
+        buffer.appendInt32(-1701270168)
+        serializeInt32(flags, buffer: buffer, boxed: false)
         channel.serialize(buffer, true)
         userId.serialize(buffer, true)
         adminRights.serialize(buffer, true)
-        serializeString(rank, buffer: buffer, boxed: false)
-        return (FunctionDescription(name: "channels.editAdmin", parameters: [("channel", String(describing: channel)), ("userId", String(describing: userId)), ("adminRights", String(describing: adminRights)), ("rank", String(describing: rank))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        if Int(flags) & Int(1 << 0) != 0 {
+            serializeString(rank!, buffer: buffer, boxed: false)
+        }
+        return (FunctionDescription(name: "channels.editAdmin", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("userId", String(describing: userId)), ("adminRights", String(describing: adminRights)), ("rank", String(describing: rank))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {

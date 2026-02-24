@@ -102,6 +102,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _, _, _, _, _, _ in
             return false
+        }, editSticker: { _ in
         }, unblockPeer: {
         }, pinMessage: { _, _ in
         }, unpinMessage: { _, _, _ in
@@ -127,6 +128,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateInputLanguage: { _ in
         }, unarchiveChat: {
         }, openLinkEditing: {
+        }, openDateEditing: {  
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {

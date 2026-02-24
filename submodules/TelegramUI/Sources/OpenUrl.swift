@@ -504,7 +504,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 case "passport", "oauth", "resolve":
                     if isOAuthUrl(parsedUrl) {
-                        handleResolvedUrl(.oauth(url: url))
+                        switch urlContext {
+                        case .external:
+                            handleResolvedUrl(.oauth(url: url))
+                        default:
+                            break
+                        }
                         return
                     } else if let secureId = parseSecureIdUrl(parsedUrl) {
                         if case .chat = urlContext {

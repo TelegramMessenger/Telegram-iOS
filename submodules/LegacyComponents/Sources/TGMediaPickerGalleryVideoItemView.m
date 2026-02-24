@@ -284,7 +284,7 @@
     if (_volumeOverlayFixView != nil)
         return;
     
-    UIWindow *keyWindow = self.window; //[UIApplication sharedApplication].keyWindow;
+    UIWindow *keyWindow = self.window;
     UIView *rootView = keyWindow.rootViewController.view;
     
     if (iosMajorVersion() < 13) {
@@ -427,10 +427,6 @@
     
     if (itemChanged) {
         [self _playerCleanup];
-     
-//        if (!item.asFile) {
-//            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startStrictWithNext:nil file:__FILE_NAME__ line:__LINE__]];
-//        }
     }
     
     _scrubberView.allowsTrimming = false;
@@ -1544,7 +1540,7 @@
     }
 }
 
-- (void)toggleSendAsGif
+- (void)toggleSendAsGif:(bool)showTooltip
 {
     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
     CGSize videoFrameSize = _videoDimensions;
@@ -1571,24 +1567,26 @@
     
     if (sendAsGif)
     {
-        if (UIInterfaceOrientationIsPortrait([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]))
-        {
-            UIView *parentView = [self.delegate itemViewDidRequestInterfaceView:self];
-            
-            _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, parentView.frame.size.width, parentView.frame.size.height)];
-            [parentView addSubview:_tooltipContainerView];
-            
-            NSMutableArray *actions = [[NSMutableArray alloc] init];
-            NSString *text = [self itemIsLivePhoto] ? TGLocalized(@"MediaPicker.LivePhotoDescription") : TGLocalized(@"MediaPicker.VideoMuteDescription");
-            [actions addObject:@{@"title":text}];
-            _tooltipContainerView.menuView.forceArrowOnTop = false;
-            _tooltipContainerView.menuView.multiline = true;
-            [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:nil];
-            _tooltipContainerView.menuView.buttonHighlightDisabled = true;
-            [_tooltipContainerView.menuView sizeToFit];
-        
-            CGRect iconViewFrame = CGRectMake(12, self.frame.size.height - 192.0 - _safeAreaInset.bottom, 40, 40);
-            [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
+        if (showTooltip) {
+            if (UIInterfaceOrientationIsPortrait([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]))
+            {
+                UIView *parentView = [self.delegate itemViewDidRequestInterfaceView:self];
+                
+                _tooltipContainerView = [[TGMenuContainerView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, parentView.frame.size.width, parentView.frame.size.height)];
+                [parentView addSubview:_tooltipContainerView];
+                
+                NSMutableArray *actions = [[NSMutableArray alloc] init];
+                NSString *text = [self itemIsLivePhoto] ? TGLocalized(@"MediaPicker.LivePhotoDescription") : TGLocalized(@"MediaPicker.VideoMuteDescription");
+                [actions addObject:@{@"title":text}];
+                _tooltipContainerView.menuView.forceArrowOnTop = false;
+                _tooltipContainerView.menuView.multiline = true;
+                [_tooltipContainerView.menuView setButtonsAndActions:actions watcherHandle:nil];
+                _tooltipContainerView.menuView.buttonHighlightDisabled = true;
+                [_tooltipContainerView.menuView sizeToFit];
+                
+                CGRect iconViewFrame = CGRectMake(12, self.frame.size.height - 192.0 - _safeAreaInset.bottom, 40, 40);
+                [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
+            }
         }
         
         if (!self.isPlaying)

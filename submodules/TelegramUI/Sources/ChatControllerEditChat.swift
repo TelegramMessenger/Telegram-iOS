@@ -15,7 +15,7 @@ extension ChatControllerImpl {
     func editChat() {
         if case let .customChatContents(customChatContents) = self.subject, case let .quickReplyMessageInput(currentValue, shortcutType) = customChatContents.kind, case .generic = shortcutType {
             var completion: ((String?) -> Void)?
-            let alertController = quickReplyNameAlertController(
+            let (alertController, displayError) = quickReplyNameAlertController(
                 context: self.context,
                 text: self.presentationData.strings.QuickReply_EditShortcutTitle,
                 subtext: self.presentationData.strings.QuickReply_EditShortcutText,
@@ -27,12 +27,12 @@ extension ChatControllerImpl {
             )
             completion = { [weak self, weak alertController] value in
                 guard let self else {
-                    alertController?.dismissAnimated()
+                    alertController?.dismiss(animated: true, completion: nil)
                     return
                 }
                 if let value, !value.isEmpty {
                     if value == currentValue {
-                        alertController?.dismissAnimated()
+                        alertController?.dismiss(animated: true, completion: nil)
                         return
                     }
                     
@@ -40,14 +40,12 @@ extension ChatControllerImpl {
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] shortcutMessageList in
                         guard let self else {
-                            alertController?.dismissAnimated()
+                            alertController?.dismiss(animated: true, completion: nil)
                             return
                         }
                         
                         if shortcutMessageList.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
-                            if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
-                                contentNode.setErrorText(errorText: self.presentationData.strings.QuickReply_ShortcutExistsInlineError)
-                            }
+                            displayError(self.presentationData.strings.QuickReply_ShortcutExistsInlineError)
                         } else {
                             let _ = self.chatTitleView?.update(
                                 context: self.context,
@@ -61,8 +59,7 @@ extension ChatControllerImpl {
                                 transition: .immediate
                             )
                             
-                            alertController?.view.endEditing(true)
-                            alertController?.dismissAnimated()
+                            alertController?.dismiss(animated: true, completion: nil)
                             
                             if case let .customChatContents(customChatContents) = self.subject {
                                 customChatContents.quickReplyUpdateShortcut(value: value)

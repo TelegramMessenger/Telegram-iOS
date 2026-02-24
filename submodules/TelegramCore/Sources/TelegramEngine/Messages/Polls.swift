@@ -163,6 +163,7 @@ func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager
 
 final class CachedPollOptionResult: Codable {
     let peerIds: [PeerId]
+    let dates: [Int32]
     let count: Int32
     
     public static func key(pollId: MediaId, optionOpaqueIdentifier: Data) -> ValueBoxKey {
@@ -173,8 +174,9 @@ final class CachedPollOptionResult: Codable {
         return key
     }
     
-    public init(peerIds: [PeerId], count: Int32) {
+    public init(peerIds: [PeerId], dates: [Int32], count: Int32) {
         self.peerIds = peerIds
+        self.dates = dates
         self.count = count
     }
     
@@ -182,6 +184,7 @@ final class CachedPollOptionResult: Codable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.peerIds = (try container.decode([Int64].self, forKey: "peerIds")).map(PeerId.init)
+        self.dates = try container.decode([Int32].self, forKey: "dates")
         self.count = try container.decode(Int32.self, forKey: "count")
     }
     
@@ -189,6 +192,7 @@ final class CachedPollOptionResult: Codable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+        try container.encode(self.dates, forKey: "dates")
         try container.encode(self.count, forKey: "count")
     }
 }
@@ -204,7 +208,7 @@ private final class PollResultsOptionContext {
     private var hasLoadedOnce: Bool = false
     private var canLoadMore: Bool = true
     private var nextOffset: String?
-    private var results: [RenderedPeer] = []
+    private var results: [PollResultsOptionState.Voter] = []
     private var count: Int
     private var populateCache: Bool = true
     
@@ -219,13 +223,13 @@ private final class PollResultsOptionContext {
         self.count = count
         
         self.isLoadingMore = true
-        self.disposable.set((account.postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool)? in
+        self.disposable.set((account.postbox.transaction { transaction -> (peers: [PollResultsOptionState.Voter], canLoadMore: Bool)? in
             let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)))?.get(CachedPollOptionResult.self)
             if let cachedResult = cachedResult, Int(cachedResult.count) == count {
-                var result: [RenderedPeer] = []
-                for peerId in cachedResult.peerIds {
+                var result: [PollResultsOptionState.Voter] = []
+                for (peerId, date) in zip(cachedResult.peerIds, cachedResult.dates) {
                     if let peer = transaction.getPeer(peerId) {
-                        result.append(RenderedPeer(peer: peer))
+                        result.append(.init(peer: RenderedPeer(peer: peer), date: date))
                     } else {
                         return nil
                     }
@@ -268,7 +272,7 @@ private final class PollResultsOptionContext {
         self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
             return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
         }
-        |> mapToSignal { inputPeer -> Signal<([RenderedPeer], Int, String?), NoError> in
+        |> mapToSignal { inputPeer -> Signal<([PollResultsOptionState.Voter], Int, String?), NoError> in
             if let inputPeer = inputPeer {
                 var flags: Int32 = 1 << 0
                 if let _ = nextOffset {
@@ -279,8 +283,8 @@ private final class PollResultsOptionContext {
                 |> `catch` { _ -> Signal<Api.messages.VotesList?, NoError> in
                     return .single(nil)
                 }
-                |> mapToSignal { result -> Signal<([RenderedPeer], Int, String?), NoError> in
-                    return account.postbox.transaction { transaction -> ([RenderedPeer], Int, String?) in
+                |> mapToSignal { result -> Signal<([PollResultsOptionState.Voter], Int, String?), NoError> in
+                    return account.postbox.transaction { transaction -> ([PollResultsOptionState.Voter], Int, String?) in
                         guard let result = result else {
                             return ([], 0, nil)
                         }
@@ -289,26 +293,36 @@ private final class PollResultsOptionContext {
                             let (count, votes, chats, users, nextOffset) = (votesListData.count, votesListData.votes, votesListData.chats, votesListData.users, votesListData.nextOffset)
                             let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                            var resultPeers: [RenderedPeer] = []
+                            var resultPeers: [PollResultsOptionState.Voter] = []
                             for vote in votes {
                                 let peerId: PeerId
+                                let date: Int32
                                 switch vote {
                                 case let .messagePeerVote(messagePeerVoteData):
                                     let peerIdValue = messagePeerVoteData.peer
                                     peerId = peerIdValue.peerId
+                                    date = messagePeerVoteData.date
                                 case let .messagePeerVoteInputOption(messagePeerVoteInputOptionData):
                                     let peerIdValue = messagePeerVoteInputOptionData.peer
                                     peerId = peerIdValue.peerId
+                                    date = messagePeerVoteInputOptionData.date
                                 case let .messagePeerVoteMultiple(messagePeerVoteMultipleData):
                                     let peerIdValue = messagePeerVoteMultipleData.peer
                                     peerId = peerIdValue.peerId
+                                    date = messagePeerVoteMultipleData.date
                                 }
                                 if let peer = transaction.getPeer(peerId) {
-                                    resultPeers.append(RenderedPeer(peer: peer))
+                                    resultPeers.append(.init(peer: RenderedPeer(peer: peer), date: date))
                                 }
                             }
                             if populateCache {
-                                if let entry = CodableEntry(CachedPollOptionResult(peerIds: resultPeers.map { $0.peerId }, count: count)) {
+                                var peerIds: [PeerId] = []
+                                var dates: [Int32] = []
+                                for peer in resultPeers {
+                                    peerIds.append(peer.peer.peerId)
+                                    dates.append(peer.date)
+                                }
+                                if let entry = CodableEntry(CachedPollOptionResult(peerIds: peerIds, dates: dates, count: count)) {
                                     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)), entry: entry)
                                 }
                             }
@@ -330,11 +344,11 @@ private final class PollResultsOptionContext {
                 strongSelf.populateCache = false
                 strongSelf.results.removeAll()
             }
-            var existingIds = Set(strongSelf.results.map { $0.peerId })
+            var existingIds = Set(strongSelf.results.map { $0.peer.peerId })
             for peer in peers {
-                if !existingIds.contains(peer.peerId) {
+                if !existingIds.contains(peer.peer.peerId) {
                     strongSelf.results.append(peer)
-                    existingIds.insert(peer.peerId)
+                    existingIds.insert(peer.peer.peerId)
                 }
             }
             strongSelf.isLoadingMore = false
@@ -357,7 +371,17 @@ private final class PollResultsOptionContext {
 }
 
 public struct PollResultsOptionState: Equatable {
-    public var peers: [RenderedPeer]
+    public struct Voter: Equatable {
+        public var peer: RenderedPeer
+        public var date: Int32
+        
+        public init(peer: RenderedPeer, date: Int32) {
+            self.peer = peer
+            self.date = date
+        }
+    }
+    
+    public var peers: [Voter]
     public var isLoadingMore: Bool
     public var hasLoadedOnce: Bool
     public var canLoadMore: Bool

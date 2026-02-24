@@ -4,9 +4,9 @@ import TelegramCore
 import SwiftSignalKit
 
 public enum CachedChannelAdminRank: Codable, Equatable {
-    case owner
-    case admin
-    case custom(String)
+    case creator(String?)
+    case admin(String?)
+    case member(String?)
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
@@ -14,13 +14,13 @@ public enum CachedChannelAdminRank: Codable, Equatable {
         let value: Int32 = try container.decode(Int32.self, forKey: "v")
         switch value {
         case 0:
-            self = .owner
+            self = .creator(try container.decodeIfPresent(String.self, forKey: "s"))
         case 1:
-            self = .admin
+            self = .admin(try container.decodeIfPresent(String.self, forKey: "s"))
         case 2:
-            self = .custom(try container.decode(String.self, forKey: "s"))
+            self = .member(try container.decodeIfPresent(String.self, forKey: "s"))
         default:
-            self = .admin
+            self = .member(nil)
         }
     }
     
@@ -28,13 +28,15 @@ public enum CachedChannelAdminRank: Codable, Equatable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         switch self {
-        case .owner:
+        case let .creator(rank):
             try container.encode(0 as Int32, forKey: "v")
-        case .admin:
+            try container.encodeIfPresent(rank, forKey: "s")
+        case let .admin(rank):
             try container.encode(1 as Int32, forKey: "v")
-        case let .custom(rank):
+            try container.encodeIfPresent(rank, forKey: "s")
+        case let .member(rank):
             try container.encode(2 as Int32, forKey: "v")
-            try container.encode(rank, forKey: "s")
+            try container.encodeIfPresent(rank, forKey: "s")
         }
     }
 }

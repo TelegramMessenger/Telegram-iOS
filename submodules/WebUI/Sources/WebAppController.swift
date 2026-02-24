@@ -1157,7 +1157,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         let isLoading = json["is_progress_visible"] as? Bool
                         let isEnabled = json["is_active"] as? Bool
                         let hasShimmer = json["has_shine_effect"] as? Bool
-                        let state = AttachmentMainButtonState(text: text, font: .bold, background: .color(backgroundColor), textColor: textColor, isVisible: isVisible, progress: (isLoading ?? false) ? .center : .none, isEnabled: isEnabled ?? true, hasShimmer: hasShimmer ?? false)
+                        
+                        var iconCustomEmojiId: Int64?
+                        if let stringValue = json["icon_custom_emoji_id"] as? String, let intValue = Int64(stringValue) {
+                            iconCustomEmojiId = intValue
+                        }
+                        
+                        let state = AttachmentMainButtonState(
+                            text: text,
+                            font: .bold,
+                            background: .color(backgroundColor),
+                            textColor: textColor,
+                            isVisible: isVisible,
+                            progress: (isLoading ?? false) ? .center : .none,
+                            isEnabled: isEnabled ?? true,
+                            hasShimmer: hasShimmer ?? false,
+                            iconCustomEmojiId: iconCustomEmojiId
+                        )
                         self.mainButtonState = state
                     }
                 }
@@ -1181,7 +1197,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         let hasShimmer = json["has_shine_effect"] as? Bool
                         let position = json["position"] as? String
                         
-                        let state = AttachmentMainButtonState(text: text, font: .bold, background: .color(backgroundColor), textColor: textColor, isVisible: isVisible, progress: (isLoading ?? false) ? .center : .none, isEnabled: isEnabled ?? true, hasShimmer: hasShimmer ?? false, position: position.flatMap { AttachmentMainButtonState.Position(rawValue: $0) })
+                        var iconCustomEmojiId: Int64?
+                        if let stringValue = json["icon_custom_emoji_id"] as? String, let intValue = Int64(stringValue) {
+                            iconCustomEmojiId = intValue
+                        }
+                        
+                        let state = AttachmentMainButtonState(
+                            text: text,
+                            font: .bold,
+                            background: .color(backgroundColor),
+                            textColor: textColor,
+                            isVisible: isVisible,
+                            progress: (isLoading ?? false) ? .center : .none,
+                            isEnabled: isEnabled ?? true,
+                            hasShimmer: hasShimmer ?? false,
+                            iconCustomEmojiId: iconCustomEmojiId,
+                            position: position.flatMap { AttachmentMainButtonState.Position(rawValue: $0) }
+                        )
                         self.secondaryButtonState = state
                     }
                 }

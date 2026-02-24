@@ -766,6 +766,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 transition: ComponentTransition(transition),
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
+                        style: .glass,
                         color: presentationData.theme.list.itemCheckColors.fillColor,
                         foreground: presentationData.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: presentationData.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
@@ -779,7 +780,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: width - sideInset * 2.0, height: 50.0)
+                containerSize: CGSize(width: width - sideInset * 2.0, height: 52.0)
             )
             let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: height), size: actionButtonSize)
             if let actionButtonView = actionButton.view {

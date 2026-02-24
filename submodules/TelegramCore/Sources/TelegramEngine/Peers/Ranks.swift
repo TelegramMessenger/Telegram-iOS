@@ -15,43 +15,64 @@ public enum UpdateChatRankError {
 func _internal_updateChatRank(account: Account, peerId: PeerId, userId: PeerId, rank: String?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, UpdateChatRankError> {
     return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, UpdateChatRankError> in
         if let user = transaction.getPeer(userId), let inputUser = apiInputPeer(user), let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.editChatParticipantRank(peer: inputPeer, participant: inputUser, rank: rank ?? ""))
-            |> mapError { error -> UpdateChatRankError in
-                if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
-                    return .chatAdminRequired
-                } else if error.errorDescription == "CHAT_CREATOR_REQUIRED" {
-                    return .chatCreatorRequired
-                } else if error.errorDescription == "USER_NOT_PARTICIPANT" {
-                    return .notParticipant
-                } else if error.errorDescription == "RANK_CHANGE_FORBIDDEN" {
-                    return .changeForbidden
-                } else {
-                    return .generic
-                }
+            let currentParticipant: Signal<ChannelParticipant?, NoError>
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                currentParticipant = _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: userId)
+            } else {
+                currentParticipant = .single(nil)
             }
-            |> mapToSignal { updates -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, UpdateChatRankError> in
-                account.stateManager.addUpdates(updates)
-                
-                if peerId.namespace == Namespaces.Peer.CloudGroup {
+            return currentParticipant
+            |> castError(UpdateChatRankError.self)
+            |> mapToSignal { currentParticipant in
+                return account.network.request(Api.functions.messages.editChatParticipantRank(peer: inputPeer, participant: inputUser, rank: rank ?? ""))
+                |> mapError { error -> UpdateChatRankError in
+                    if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
+                        return .chatAdminRequired
+                    } else if error.errorDescription == "CHAT_CREATOR_REQUIRED" {
+                        return .chatCreatorRequired
+                    } else if error.errorDescription == "USER_NOT_PARTICIPANT" {
+                        return .notParticipant
+                    } else if error.errorDescription == "RANK_CHANGE_FORBIDDEN" {
+                        return .changeForbidden
+                    } else {
+                        return .generic
+                    }
+                }
+                |> mapToSignal { updates -> Signal<(ChannelParticipant?, RenderedChannelParticipant)?, UpdateChatRankError> in
+                    account.stateManager.addUpdates(updates)
+                    
                     return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant)? in
-                        transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
-                            if let current = current as? CachedGroupData, let participants = current.participants {
-                                var updatedParticipants = participants.participants
-                                if let index = updatedParticipants.firstIndex(where: { $0.peerId == userId }) {
-                                    updatedParticipants[index] = updatedParticipants[index].withUpdated(rank: rank)
+                        if peerId.namespace == Namespaces.Peer.CloudGroup {
+                            transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
+                                if let current = current as? CachedGroupData, let participants = current.participants {
+                                    var updatedParticipants = participants.participants
+                                    if let index = updatedParticipants.firstIndex(where: { $0.peerId == userId }) {
+                                        updatedParticipants[index] = updatedParticipants[index].withUpdated(rank: rank)
+                                    }
+                                    return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version + 2))
+                                } else {
+                                    return current
                                 }
-                                return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version + 2))
-                            } else {
-                                return current
+                            })
+                            return nil
+                        } else {
+                            let updatedParticipant = currentParticipant?.withUpdated(rank: rank) ?? .member(id: userId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: rank, subscriptionUntilDate: nil)
+                            
+                            var peers: [PeerId: Peer] = [:]
+                            var presences: [PeerId: PeerPresence] = [:]
+                            peers[user.id] = user
+                            if let presence = transaction.getPeerPresence(peerId: user.id) {
+                                presences[user.id] = presence
                             }
-                        })
-                        return nil
+                            if case let .member(_, _, maybeAdminInfo, _, _, _) = updatedParticipant, let adminInfo = maybeAdminInfo {
+                                if let peer = transaction.getPeer(adminInfo.promotedBy) {
+                                    peers[peer.id] = peer
+                                }
+                            }
+                            return (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: user, peers: peers, presences: presences))
+                        }
                     }
                     |> castError(UpdateChatRankError.self)
-                } else {
-                    let participant: ChannelParticipant = .member(id: userId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil, rank: rank, subscriptionUntilDate: nil)
-                    let timestamp = Int32(Date().timeIntervalSince1970)
-                    return .single((participant, RenderedChannelParticipant(participant: participant, peer: user, presences: [userId: TelegramUserPresence(status: .present(until: timestamp + 60), lastActivity: timestamp)])))
                 }
             }
         } else {

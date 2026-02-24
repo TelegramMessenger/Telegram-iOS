@@ -2237,6 +2237,7 @@ struct PeerInfoMemberActions: OptionSet {
     static let restrict = PeerInfoMemberActions(rawValue: 1 << 0)
     static let promote = PeerInfoMemberActions(rawValue: 1 << 1)
     static let logout = PeerInfoMemberActions(rawValue: 1 << 2)
+    static let editRank = PeerInfoMemberActions(rawValue: 1 << 3)
 }
 
 func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member: PeerInfoMember) -> PeerInfoMemberActions {
@@ -2244,13 +2245,24 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
     
     if peer == nil {
         result.insert(.logout)
-    } else if member.id != accountPeerId {
+    } else if member.id == accountPeerId {
+        if let channel = peer as? TelegramChannel {
+            if channel.hasPermission(.editRank) {
+                result.insert(.editRank)
+            }
+        } else if let group = peer as? TelegramGroup {
+            if !group.hasBannedPermission(.banEditRank) {
+                result.insert(.editRank)
+            }
+        }
+    } else {
         if let channel = peer as? TelegramChannel {
             if channel.flags.contains(.isCreator) {
                 if !channel.flags.contains(.isGigagroup) {
                     result.insert(.restrict)
                 }
                 result.insert(.promote)
+                result.insert(.editRank)
             } else {
                 switch member {
                 case let .channelMember(channelMember, _):
@@ -2266,6 +2278,9 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                                 if channel.hasPermission(.addAdmins) {
                                     result.insert(.promote)
                                 }
+                                if channel.hasPermission(.editRank) {
+                                    result.insert(.editRank)
+                                }
                             }
                         } else {
                             if channel.hasPermission(.banMembers) && !channel.flags.contains(.isGigagroup) {
@@ -2273,6 +2288,9 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                             }
                             if channel.hasPermission(.addAdmins) {
                                 result.insert(.promote)
+                            }
+                            if channel.hasPermission(.editRank) {
+                                result.insert(.editRank)
                             }
                         }
                     }
@@ -2287,12 +2305,14 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
             case .creator:
                 result.insert(.restrict)
                 result.insert(.promote)
+                result.insert(.editRank)
             case .admin:
                 switch member {
                 case let .legacyGroupMember(_, _, invitedBy, _, _, _):
                     result.insert(.restrict)
                     if invitedBy == accountPeerId {
                         result.insert(.promote)
+                        result.insert(.editRank)
                     }
                 case .channelMember:
                     break
@@ -2304,6 +2324,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                 case let .legacyGroupMember(_, _, invitedBy, _, _, _):
                     if invitedBy == accountPeerId {
                         result.insert(.restrict)
+                        result.insert(.editRank)
                     }
                 case .channelMember:
                     break

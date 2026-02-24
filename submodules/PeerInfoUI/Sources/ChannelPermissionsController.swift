@@ -501,7 +501,7 @@ private struct ChannelPermissionsControllerState: Equatable {
     var expandedPermissions = Set<TelegramChatBannedRightsFlags>()
 }
 
-func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags, isForum: Bool) -> String {
+func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags, isForum: Bool, defaultPermissions: Bool = false) -> String {
     if right.contains(.banSendText) {
         return strings.Channel_BanUser_PermissionSendMessages
     } else if right.contains(.banSendMedia) {
@@ -534,6 +534,13 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
         return strings.Channel_BanUser_PermissionSendVoiceMessage
     } else if right.contains(.banSendInstantVideos) {
         return strings.Channel_BanUser_PermissionSendVideoMessage
+    } else if right.contains(.banEditRank) {
+        //TODO:localize
+        if defaultPermissions {
+            return "Edit Own Tags"
+        } else {
+            return "Edit Member Tag"
+        }
     } else {
         return ""
     }
@@ -570,6 +577,9 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
         return strings.GroupPermission_NoPinMessages
     } else if right.contains(.banManageTopics) {
         return strings.GroupPermission_NoManageTopics
+    } else if right.contains(.banEditRank) {
+        //TODO:localize
+        return "no tag"
     } else {
         return ""
     }
@@ -590,7 +600,8 @@ private let internal_allPossibleGroupPermissionList: [(TelegramChatBannedRightsF
     (.banAddMembers, .banMembers),
     (.banPinMessages, .pinMessages),
     (.banManageTopics, .manageTopics),
-    (.banChangeInfo, .changeInfo)
+    (.banChangeInfo, .changeInfo),
+    (.banEditRank, .editRank)
 ]
 
 public func allGroupPermissionList(peer: EnginePeer, expandMedia: Bool) -> [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] {
@@ -610,6 +621,7 @@ public func allGroupPermissionList(peer: EnginePeer, expandMedia: Bool) -> [(Tel
             (.banSendMedia, .banMembers),
             (.banAddMembers, .banMembers),
             (.banPinMessages, .pinMessages),
+            (.banEditRank, .editRank),
             (.banChangeInfo, .changeInfo)
         ]
     }
@@ -707,11 +719,11 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
                 for (subRight, _) in banSendMediaSubList() {
                     let subRightEnabled = true
                     
-                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: channel.isForum), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight), isEnabled: enabled && subRightEnabled))
+                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: channel.isForum, defaultPermissions: true), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight), isEnabled: enabled && subRightEnabled))
                 }
             }
             
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: channel.isForum), isSelected, rights, enabled, subItems, state.expandedPermissions.contains(rights)))
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: channel.isForum, defaultPermissions: true), isSelected, rights, enabled, subItems, state.expandedPermissions.contains(rights)))
             rightIndex += 1
         }
         
@@ -791,11 +803,11 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
                 for (subRight, _) in banSendMediaSubList() {
                     let subRightEnabled = true
                     
-                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: false), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight), isEnabled: subRightEnabled))
+                    subItems.append(SubPermission(title: stringForGroupPermission(strings: presentationData.strings, right: subRight, isForum: false, defaultPermissions: true), flags: subRight, isSelected: !effectiveRightsFlags.contains(subRight), isEnabled: subRightEnabled))
                 }
             }
             
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false), isSelected, rights, true, subItems, state.expandedPermissions.contains(rights)))
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false, defaultPermissions: true), isSelected, rights, true, subItems, state.expandedPermissions.contains(rights)))
             rightIndex += 1
         }
         

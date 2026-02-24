@@ -206,6 +206,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case globalPostsSearch = 83
     case giftAuctionTips = 84
     case giftCraftingTips = 85
+    case copyProtectionTips = 86
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -578,6 +579,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func giftCraftingTips() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.giftCraftingTips.key)
+    }
+    
+    static func copyProtectionTips() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.copyProtectionTips.key)
     }
 }
 
@@ -2541,6 +2546,33 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.giftCraftingTips(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getCopyProtectionTips(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.copyProtectionTips())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementCopyProtectionTips(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.copyProtectionTips())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.copyProtectionTips(), entry)
             }
             
             return Int(previousValue)

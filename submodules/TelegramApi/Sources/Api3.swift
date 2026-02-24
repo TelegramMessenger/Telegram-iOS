@@ -787,6 +787,19 @@ public extension Api {
                 return ("channelAdminLogEventActionExportedInviteRevoke", [("invite", self.invite as Any)])
             }
         }
+        public class Cons_channelAdminLogEventActionParticipantEditRank: TypeConstructorDescription {
+            public var userId: Int64
+            public var prevRank: String
+            public var newRank: String
+            public init(userId: Int64, prevRank: String, newRank: String) {
+                self.userId = userId
+                self.prevRank = prevRank
+                self.newRank = newRank
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("channelAdminLogEventActionParticipantEditRank", [("userId", self.userId as Any), ("prevRank", self.prevRank as Any), ("newRank", self.newRank as Any)])
+            }
+        }
         public class Cons_channelAdminLogEventActionParticipantInvite: TypeConstructorDescription {
             public var participant: Api.ChannelParticipant
             public init(participant: Api.ChannelParticipant) {
@@ -1044,6 +1057,7 @@ public extension Api {
         case channelAdminLogEventActionExportedInviteDelete(Cons_channelAdminLogEventActionExportedInviteDelete)
         case channelAdminLogEventActionExportedInviteEdit(Cons_channelAdminLogEventActionExportedInviteEdit)
         case channelAdminLogEventActionExportedInviteRevoke(Cons_channelAdminLogEventActionExportedInviteRevoke)
+        case channelAdminLogEventActionParticipantEditRank(Cons_channelAdminLogEventActionParticipantEditRank)
         case channelAdminLogEventActionParticipantInvite(Cons_channelAdminLogEventActionParticipantInvite)
         case channelAdminLogEventActionParticipantJoin
         case channelAdminLogEventActionParticipantJoinByInvite(Cons_channelAdminLogEventActionParticipantJoinByInvite)
@@ -1249,6 +1263,14 @@ public extension Api {
                     buffer.appendInt32(1091179342)
                 }
                 _data.invite.serialize(buffer, true)
+                break
+            case .channelAdminLogEventActionParticipantEditRank(let _data):
+                if boxed {
+                    buffer.appendInt32(1476834540)
+                }
+                serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeString(_data.prevRank, buffer: buffer, boxed: false)
+                serializeString(_data.newRank, buffer: buffer, boxed: false)
                 break
             case .channelAdminLogEventActionParticipantInvite(let _data):
                 if boxed {
@@ -1471,6 +1493,8 @@ public extension Api {
                 return ("channelAdminLogEventActionExportedInviteEdit", [("prevInvite", _data.prevInvite as Any), ("newInvite", _data.newInvite as Any)])
             case .channelAdminLogEventActionExportedInviteRevoke(let _data):
                 return ("channelAdminLogEventActionExportedInviteRevoke", [("invite", _data.invite as Any)])
+            case .channelAdminLogEventActionParticipantEditRank(let _data):
+                return ("channelAdminLogEventActionParticipantEditRank", [("userId", _data.userId as Any), ("prevRank", _data.prevRank as Any), ("newRank", _data.newRank as Any)])
             case .channelAdminLogEventActionParticipantInvite(let _data):
                 return ("channelAdminLogEventActionParticipantInvite", [("participant", _data.participant as Any)])
             case .channelAdminLogEventActionParticipantJoin:
@@ -1921,6 +1945,23 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionExportedInviteRevoke(Cons_channelAdminLogEventActionExportedInviteRevoke(invite: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionParticipantEditRank(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantEditRank(Cons_channelAdminLogEventActionParticipantEditRank(userId: _1!, prevRank: _2!, newRank: _3!))
             }
             else {
                 return nil

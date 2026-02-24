@@ -78,6 +78,7 @@ final class PeerInfoInteraction {
     let openWorkingHoursContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBusinessLocationContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBirthdayContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let openMemberContextMenu: (PeerInfoMember, ASDisplayNode, ContextGesture?) -> Void
     let editingOpenAffiliateProgram: () -> Void
     let editingOpenVerifyAccounts: () -> Void
     let editingToggleAutoTranslate: (Bool) -> Void
@@ -154,6 +155,7 @@ final class PeerInfoInteraction {
         openWorkingHoursContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBusinessLocationContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBirthdayContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        openMemberContextMenu: @escaping (PeerInfoMember, ASDisplayNode, ContextGesture?) -> Void,
         editingOpenAffiliateProgram: @escaping () -> Void,
         editingOpenVerifyAccounts: @escaping () -> Void,
         editingToggleAutoTranslate: @escaping (Bool) -> Void,
@@ -229,6 +231,7 @@ final class PeerInfoInteraction {
         self.openWorkingHoursContextMenu = openWorkingHoursContextMenu
         self.openBusinessLocationContextMenu = openBusinessLocationContextMenu
         self.openBirthdayContextMenu = openBirthdayContextMenu
+        self.openMemberContextMenu = openMemberContextMenu
         self.editingOpenAffiliateProgram = editingOpenAffiliateProgram
         self.editingOpenVerifyAccounts = editingOpenVerifyAccounts
         self.editingToggleAutoTranslate = editingToggleAutoTranslate

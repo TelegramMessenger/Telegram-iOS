@@ -315,6 +315,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func scanIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListScanIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Scan"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func addBoostsIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddBoostsIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Premium/Gift"), color: theme.list.itemAccentColor)

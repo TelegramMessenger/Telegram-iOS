@@ -15813,3 +15813,24 @@ Error: %8$@";
 "Notification.CopyProtection.Disabled" = "%1$@ enabled sharing in this chat";
 "Notification.CopyProtection.DisabledYou" = "You enabled sharing in this chat";
 "Notification.CopyProtection.StillEnabled" = "Sharing in this chat is still disabled";
+
+"Gallery.CreateSticker" = "Create Sticker";
+
+"Premium.CopyProtection" = "Disable Sharing";
+"Premium.CopyProtectionInfo" = "Prevent forwarding, saving and copying content in private chats.";
+
+"Channel.EditAdmin.PermissionManageRanks" = "Edit Member Tags";
+
+"Group.EditAdmin.MemberTagTitle" = "Member Tag";
+"Group.EditAdmin.MemberTagInfo" = "Add short tag next to %@'s name.";
+
+"Channel.Owner.Title" = "Owner";
+
+"Channel.AdminLog.EditRankOwn" = "Edit Member Tag";
+"Channel.AdminLog.EditRank" = "Edit Member Tags";
+
+"Channel.AdminLog.MessageRankNameNew" = "changed member tag for %1$@:\n%2$@";
+"Channel.AdminLog.MessageRankUsernameNew" = "changed member tag for %1$@ (%2$@):\n%3$@";
+"Channel.AdminLog.MessageRankNew" = "changed member tag:\n%1$@";
+
+"TextFormat.Date" = "Date";

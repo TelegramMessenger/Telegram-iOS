@@ -14,6 +14,7 @@ import ChatControllerInteraction
 import EventKit
 import EventKitUI
 import ChatScheduleTimeController
+import TextFormat
 
 extension ChatControllerImpl: EKEventEditViewDelegate {
     func openDateContextMenu(date: Int32, params: ChatControllerInteraction.LongTapParams) -> Void {
@@ -54,7 +55,8 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
                     return
                 }
                 
-                UIPasteboard.general.string = "\(date)"
+                let fullDate = stringForEntityFormattedDate(timestamp: date, format: .full(timeFormat: .short, dateFormat: .long, dayOfWeek: false), strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
+                UIPasteboard.general.string = fullDate
 
                 self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Date copied to clipboard."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }))

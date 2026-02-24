@@ -1109,6 +1109,26 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.copyProtection] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.copyProtection,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["pm_noforwards"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_CopyProtection,
+                                text: strings.Premium_CopyProtectionInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 let index: Int = 0
                 var items: [DemoPagerComponent.Item] = []
                 if let item = availableItems.first(where: { $0.value.content.id == component.subject as AnyHashable }) {
@@ -1199,6 +1219,8 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_MessageEffectsInfo
             case .todo:
                 text = strings.Premium_TodoInfo
+            case .copyProtection:
+                text = strings.Premium_CopyProtectionInfo
             default:
                 text = ""
             }
@@ -1473,6 +1495,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case folderTags
         case messageEffects
         case todo
+        case copyProtection
         
         case businessLocation
         case businessHours
@@ -1533,6 +1556,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .messageEffects
             case .todo:
                 return .todo
+            case .copyProtection:
+                return .copyProtection
             case .businessLocation:
                 return .businessLocation
             case .businessHours:

@@ -22,6 +22,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",
         "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
         "//submodules/Components/SheetComponent",
         "//submodules/PresentationDataUtils",

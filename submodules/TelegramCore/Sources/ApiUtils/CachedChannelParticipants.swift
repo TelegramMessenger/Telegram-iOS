@@ -92,6 +92,15 @@ public enum ChannelParticipant: PostboxCoding, Equatable {
         }
     }
     
+    public func withUpdated(rank: String?) -> ChannelParticipant {
+        switch self {
+        case let .creator(id, adminInfo, _):
+            return .creator(id: id, adminInfo: adminInfo, rank: rank)
+        case let .member(id, invitedAt, adminInfo, banInfo, _, subscriptionUntilDate):
+            return .member(id: id, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: banInfo, rank: rank, subscriptionUntilDate: subscriptionUntilDate)
+        }
+    }
+    
     public static func ==(lhs: ChannelParticipant, rhs: ChannelParticipant) -> Bool {
         switch lhs {
             case let .member(lhsId, lhsInvitedAt, lhsAdminInfo, lhsBanInfo, lhsRank, lhsSubscriptionUntilDate):

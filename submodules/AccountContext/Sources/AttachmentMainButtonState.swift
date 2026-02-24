@@ -42,6 +42,7 @@ public struct AttachmentMainButtonState {
     public let isEnabled: Bool
     public let hasShimmer: Bool
     public let iconName: String?
+    public let iconCustomEmojiId: Int64?
     public let smallSpacing: Bool
     public let position: Position?
     
@@ -56,6 +57,7 @@ public struct AttachmentMainButtonState {
         isEnabled: Bool,
         hasShimmer: Bool,
         iconName: String? = nil,
+        iconCustomEmojiId: Int64? = nil,
         smallSpacing: Bool = false,
         position: Position? = nil
     ) {
@@ -69,6 +71,7 @@ public struct AttachmentMainButtonState {
         self.isEnabled = isEnabled
         self.hasShimmer = hasShimmer
         self.iconName = iconName
+        self.iconCustomEmojiId = iconCustomEmojiId
         self.smallSpacing = smallSpacing
         self.position = position
     }

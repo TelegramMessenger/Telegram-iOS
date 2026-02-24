@@ -133,7 +133,7 @@ private enum LegacyAssetVideoData {
 private enum LegacyAssetItem {
     case image(data: LegacyAssetImageData, thumbnail: UIImage?, caption: NSAttributedString?, stickers: [FileMediaReference])
     case file(data: LegacyAssetImageData, thumbnail: UIImage?, mimeType: String, name: String, caption: NSAttributedString?)
-    case video(data: LegacyAssetVideoData, thumbnail: UIImage?, cover: UIImage?, adjustments: TGVideoEditAdjustments?, caption: NSAttributedString?, asFile: Bool, asAnimation: Bool, stickers: [FileMediaReference])
+    case video(data: LegacyAssetVideoData, thumbnail: UIImage?, cover: UIImage?, adjustments: TGVideoEditAdjustments?, caption: NSAttributedString?, asFile: Bool, asAnimation: Bool, stickers: [FileMediaReference], isLivePhoto: Bool)
 }
 
 private final class LegacyAssetItemWrapper: NSObject {
@@ -183,7 +183,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, Str
                 let url: String? = (dict["url"] as? String) ?? (dict["url"] as? URL)?.path
                 if let url = url {
                     let dimensions = image.size
-                    result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: 4.0), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: false, asAnimation: true, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
+                    result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: 4.0), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: false, asAnimation: true, stickers: stickers, isLivePhoto: false), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
                 }
             } else {
                 result["item" as NSString] = LegacyAssetItemWrapper(item: .image(data: .image(image), thumbnail: thumbnail, caption: caption, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue,  spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, forceHd: forceHd, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
@@ -230,7 +230,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, Str
                     let dimensions = (dict["dimensions"]! as AnyObject).cgSizeValue!
                     let duration = (dict["duration"]! as AnyObject).doubleValue!
                     
-                    result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: tempFileUrl.path, dimensions: dimensions, duration: duration), thumbnail: thumbnail, cover: nil, adjustments: nil, caption: caption, asFile: false, asAnimation: true, stickers: []), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
+                    result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: tempFileUrl.path, dimensions: dimensions, duration: duration), thumbnail: thumbnail, cover: nil, adjustments: nil, caption: caption, asFile: false, asAnimation: true, stickers: [], isLivePhoto: false), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
                     return result
                 }
                 
@@ -248,13 +248,13 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, Str
             
             if let asset = dict["asset"] as? TGMediaAsset {
                 var result: [AnyHashable: Any] = [:]
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .asset(asset), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .asset(asset), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false, stickers: stickers, isLivePhoto: false), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
                 return result
             } else if let url = (dict["url"] as? String) ?? (dict["url"] as? URL)?.absoluteString {
                 let dimensions = (dict["dimensions"]! as AnyObject).cgSizeValue!
                 let duration = (dict["duration"]! as AnyObject).doubleValue!
                 var result: [AnyHashable: Any] = [:]
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false, stickers: stickers, isLivePhoto: false), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
                 return result
             }
         } else if (dict["type"] as! NSString) == "cameraVideo" {
@@ -265,13 +265,18 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, Str
                 asFile = true
             }
             
+            var isLivePhoto = false
+            if let value = dict["livePhoto"] as? Bool {
+                isLivePhoto = value
+            }
+            
             let url: String? = (dict["url"] as? String) ?? (dict["url"] as? URL)?.path
             
             if let url = url, let previewImage = dict["previewImage"] as? UIImage {
                 let dimensions = previewImage.pixelSize()
                 let duration = (dict["duration"]! as AnyObject).doubleValue!
                 var result: [AnyHashable: Any] = [:]
-                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false, stickers: stickers), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .video(data: .tempFile(path: url, dimensions: dimensions, duration: duration), thumbnail: thumbnail, cover: cover, adjustments: dict["adjustments"] as? TGVideoEditAdjustments, caption: caption, asFile: asFile, asAnimation: false, stickers: stickers, isLivePhoto: isLivePhoto), timer: (dict["timer"] as? NSNumber)?.intValue, spoiler: (dict["spoiler"] as? NSNumber)?.boolValue, price: price, groupedId: (dict["groupedId"] as? NSNumber)?.int64Value, uniqueId: uniqueId)
                 return result
             }
         }
@@ -770,7 +775,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                 default:
                                     break
                             }
-                        case let .video(data, thumbnail, cover, adjustments, caption, asFile, asAnimation, stickers):
+                        case let .video(data, thumbnail, cover, adjustments, caption, asFile, asAnimation, stickers, isLivePhoto):
                             var finalDimensions: CGSize
                             var finalDuration: Double
                             switch data {
@@ -816,9 +821,10 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                             var videoCover: TelegramMediaImage?
                             if let cover {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                let coverSize = cover.size.aspectFitted(CGSize(width: 320.0, height: 320.0))
+                                let maxSide: CGFloat = isLivePhoto ? 1280.0 : 640.0
+                                let coverSize = cover.size.aspectFitted(CGSize(width: maxSide, height: maxSide))
                                 let coverImage = TGScaleImageToPixelSize(cover, coverSize)!
-                                if let coverData = coverImage.jpegData(compressionQuality: 0.6) {
+                                if let coverData = coverImage.jpegData(compressionQuality: isLivePhoto ? 0.87 : 0.6) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: coverData)
                                     videoCover = TelegramMediaImage(
                                         imageId: MediaId(namespace: 0, id: 0),
@@ -891,7 +897,11 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                 fileAttributes.append(.Animated)
                             }
                             if !asFile {
-                                fileAttributes.append(.Video(duration: finalDuration, size: PixelDimensions(finalDimensions), flags: [.supportsStreaming], preloadSize: nil, coverTime: nil, videoCodec: nil))
+                                var flags: TelegramMediaVideoFlags = [.supportsStreaming]
+                                if isLivePhoto {
+                                    flags.insert(.isLivePhoto)
+                                }
+                                fileAttributes.append(.Video(duration: finalDuration, size: PixelDimensions(finalDimensions), flags: flags, preloadSize: nil, coverTime: nil, videoCodec: nil))
                                 if let adjustments = adjustments {
                                     if adjustments.sendAsGif {
                                         fileAttributes.append(.Animated)
@@ -910,7 +920,6 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     }
                                 }
                             }
-                            
                             
                             var attributes: [MessageAttribute] = []
                             

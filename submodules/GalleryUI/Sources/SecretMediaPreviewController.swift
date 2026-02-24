@@ -538,7 +538,7 @@ public final class SecretMediaPreviewController: ViewController {
                             self.dismiss(forceAway: false)
                         }
                     }
-                }, present: { _, _ in }) else {
+                }, sendSticker: nil, present: { _, _ in }) else {
                     self._ready.set(.single(true))
                     return
                 }

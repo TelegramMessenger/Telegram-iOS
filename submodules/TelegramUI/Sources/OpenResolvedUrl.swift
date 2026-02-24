@@ -44,6 +44,7 @@ import ContactListUI
 import DeviceAccess
 import ProxyServerPreviewScreen
 import AuthConfirmationScreen
+import OpenInExternalAppUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -70,7 +71,7 @@ func openResolvedUrlImpl(
     forceUpdate: Bool,
     openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer) -> Void,
     sendFile: ((FileMediaReference) -> Void)?,
-    sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+    sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
     requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)? = nil,
     joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?,
@@ -91,7 +92,7 @@ func openResolvedUrlImpl(
         case let .externalUrl(url):
             context.sharedContext.openExternalUrl(context: context, urlContext: urlContext, url: url, forceExternal: forceExternal, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: dismissInput)
         case let .urlAuth(url):
-            requestMessageActionUrlAuth?(.url(url))
+            requestMessageActionUrlAuth?(.url(url: url, inAppOrigin: nil))
             dismissInput()
             break
         case let .peer(peer, navigation):
@@ -1816,51 +1817,95 @@ func openResolvedUrlImpl(
                 present(alertController, nil)
             })
         case let .oauth(url):
-            let _ = (context.engine.messages.requestMessageActionUrlAuth(subject: .url(url))
+            let subject: MessageActionUrlSubject = .url(url: url, inAppOrigin: nil)
+            let _ = (context.engine.messages.requestMessageActionUrlAuth(subject: subject)
             |> deliverOnMainQueue).start(next: { result in
                 if case .request = result {
                     var dismissImpl: (() -> Void)?
-                    let controller = AuthConfirmationScreen(context: context, subject: result, completion: { accountContext, accountPeer, allowWriteAccess, sharePhoneNumber in
-                        let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
-                        if accountContext === context {
-                            signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
-                        } else {
-                            accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                            signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: .url(url))
-                            |> castError(MessageActionUrlAuthError.self)
-                            |> mapToSignal { result in
-                                return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: .url(url), allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber)
-                            } |> afterDisposed {
-                                accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
-                            }
-                        }
-                        
-                        let _ = (signal
-                        |> deliverOnMainQueue).start(next: { _ in
-                            dismissImpl?()
-                            
-                            Queue.mainQueue().after(0.3) {
-                                let text: String
-                                if case let .request(domain, _, _, flags, _, _) = result {
-                                    if flags.contains(.requestPhoneNumber) && !sharePhoneNumber {
-                                        text = presentationData.strings.AuthConfirmation_LoginSuccess_TextNoNumber(domain).string
-                                    } else {
-                                        text = presentationData.strings.AuthConfirmation_LoginSuccess_Text(domain).string
-                                    }
-                                    let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), action: { _ in return true })
-                                    (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                    let controller = AuthConfirmationScreen(context: context, subject: result, completion: { accountContext, accountPeer, authResult in
+                        switch authResult {
+                        case let .accept(allowWriteAccess, sharePhoneNumber, matchCode):
+                            let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
+                            if accountContext === context {
+                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
+                            } else {
+                                accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
+                                signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: subject)
+                                |> castError(MessageActionUrlAuthError.self)
+                                |> mapToSignal { result in
+                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
+                                } |> afterDisposed {
+                                    accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
                                 }
                             }
-                        }, error: { _ in
-                            if case let .request(domain, _, _, _, _, _) = result {
-                                let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, cancel: nil, destructive: false), action: { _ in return true })
-                                (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
-                            }
-                        })
+                            
+                            let _ = (signal
+                            |> deliverOnMainQueue).start(next: { acceptResult in
+                                dismissImpl?()
+                                
+                                Queue.mainQueue().after(0.3) {
+                                    let text: String
+                                    if case let .request(domain, _, _, flags, _, _) = result {
+                                        if flags.contains(.requestPhoneNumber) && !sharePhoneNumber {
+                                            text = presentationData.strings.AuthConfirmation_LoginSuccess_TextNoNumber(domain).string
+                                        } else {
+                                            text = presentationData.strings.AuthConfirmation_LoginSuccess_Text(domain).string
+                                        }
+                                        let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), action: { _ in return true })
+                                        (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                    }
+                                }
+                                
+                                if case let .accepted(url) = acceptResult, let url {
+                                    var browserIdentifier = "safari"
+                                    if case let .request(_, _, clientData, _, _, _) = result, let browser = clientData?.browser {
+                                        if browser.hasPrefix("Safari") {
+                                            browserIdentifier = "safari"
+                                        } else if browser.hasPrefix("Opera") {
+                                            browserIdentifier = "operaTouch"
+                                        } else if browser.hasPrefix("Microsoft Edge") {
+                                            browserIdentifier = "edge"
+                                        } else if browser.hasPrefix("Chrome") {
+                                            browserIdentifier = "chrome"
+                                        } else if browser.hasPrefix("Firefox") {
+                                            browserIdentifier = "firefox"
+                                        } else if browser.hasPrefix("Yandex") {
+                                            browserIdentifier = "yandex"
+                                        } else if browser.hasPrefix("UC Browser") {
+                                            browserIdentifier = "ucbrowser"
+                                        } else if browser.hasPrefix("Firefox Focus") {
+                                            browserIdentifier = "firefoxFocus"
+                                        } else if browser.hasPrefix("DuckDuckGo") {
+                                            browserIdentifier = "duckDuckGo"
+                                        } else if browser.hasPrefix("Alook") {
+                                            browserIdentifier = "alook"
+                                        }
+                                    }
+                                    
+                                    let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
+                                    if let match = openInOptions.first(where: { $0.identifier == browserIdentifier }), case let .openUrl(openUrl) = match.action() {
+                                        context.sharedContext.openExternalUrl(context: context, urlContext: .external, url: openUrl, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                                    } else {
+                                        context.sharedContext.openExternalUrl(context: context, urlContext: .external, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                                    }
+                                }
+                            }, error: { _ in
+                                dismissImpl?()
+                                
+                                if case let .request(domain, _, _, _, _, _) = result {
+                                    let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), action: { _ in return true })
+                                    (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                }
+                                
+                                HapticFeedback().error()
+                            })
+                        case .decline:
+                            let _ = context.engine.messages.declineUrlAuth(url: url).start()
+                        }
                     })
                     navigationController?.pushViewController(controller)
-                    dismissImpl = {
-                        controller.dismissAnimated()
+                    dismissImpl = { [weak controller] in
+                        controller?.dismissAnimated()
                     }
                 }
             })

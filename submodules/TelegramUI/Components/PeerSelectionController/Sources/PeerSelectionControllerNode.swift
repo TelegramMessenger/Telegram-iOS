@@ -653,6 +653,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _, _, _, _, _, _ in
             return false
+        }, editSticker: { _ in
         }, unblockPeer: {
         }, pinMessage: { _, _ in
         }, unpinMessage: { _, _, _ in
@@ -722,6 +723,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 })
                 strongSelf.present(controller, nil)
             }
+        }, openDateEditing: {   
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
             guard let strongSelf = self else {

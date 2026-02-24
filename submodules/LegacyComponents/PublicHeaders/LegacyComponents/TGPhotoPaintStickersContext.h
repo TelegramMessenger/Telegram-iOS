@@ -24,6 +24,15 @@
 
 @end
 
+@protocol TGLivePhotoButton <NSObject>
+
+@property (nonatomic, readonly) UIView * _Nonnull view;
+
+@property (nonatomic, copy) void(^ _Nullable modeUpdated)(TGMediaLivePhotoMode mode);
+
+- (void)setLivePhotoMode:(TGMediaLivePhotoMode)mode;
+
+@end
 
 @protocol TGCaptionPanelView <NSObject>
 
@@ -33,6 +42,7 @@
 
 - (NSAttributedString * _Nonnull)caption;
 - (void)setCaption:(NSAttributedString * _Nullable)caption;
+- (void)activateInput;
 - (bool)dismissInput;
 
 - (void)animateView:(UIView * _Nonnull)view frame:(CGRect)frame;
@@ -126,6 +136,7 @@
 @protocol TGPhotoPaintStickersContext <NSObject>
 
 @property (nonatomic, copy) id<TGCaptionPanelView> _Nullable(^ _Nullable captionPanelView)(void);
+@property (nonatomic, copy) id<TGLivePhotoButton> _Nullable(^ _Nullable livePhotoButton)(void);
 
 @property (nonatomic, copy) void (^ _Nullable editCover)(CGSize dimensions, void(^_Nonnull completion)(UIImage * _Nonnull));
 

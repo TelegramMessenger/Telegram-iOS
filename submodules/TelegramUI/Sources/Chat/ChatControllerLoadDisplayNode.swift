@@ -411,6 +411,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedAutoremoveTimeout(contentData.state.autoremoveTimeout)
             presentationInterfaceState = presentationInterfaceState.updatedCurrentSendAsPeerId(contentData.state.currentSendAsPeerId)
             presentationInterfaceState = presentationInterfaceState.updatedCopyProtectionEnabled(contentData.state.copyProtectionEnabled)
+            presentationInterfaceState = presentationInterfaceState.updatedMyCopyProtectionEnabled(contentData.state.myCopyProtectionEnabled)
             presentationInterfaceState = presentationInterfaceState.updatedHasSearchTags(contentData.state.hasSearchTags)
             presentationInterfaceState = presentationInterfaceState.updatedIsPremiumRequiredForMessaging(contentData.state.isPremiumRequiredForMessaging)
             presentationInterfaceState = presentationInterfaceState.updatedSendPaidMessageStars(contentData.state.sendPaidMessageStars)
@@ -3017,6 +3018,10 @@ extension ChatControllerImpl {
             } else {
                 return false
             }
+        }, editSticker: { [weak self] file in
+            if let self {
+                self.openStickerEditing(file: file)
+            }
         }, unblockPeer: { [weak self] in
             self?.unblockPeer()
         }, pinMessage: { [weak self] messageId, contextController in
@@ -3680,6 +3685,62 @@ extension ChatControllerImpl {
                 
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInputMode({ _ in return .none }) })
             }
+        }, openDateEditing: { [weak self] in
+            guard let self else {
+                return
+            }
+            var selectionRange: Range<Int>?
+            var text: NSAttributedString?
+            var inputMode: ChatInputMode?
+            self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                selectionRange = state.interfaceState.effectiveInputState.selectionRange
+                if let selectionRange = selectionRange {
+                    text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count))
+                }
+                inputMode = state.inputMode
+                return state
+            })
+            
+            var date: Int32?
+            if let text {
+                text.enumerateAttributes(in: NSMakeRange(0, text.length)) { attributes, _, _ in
+                    if let dateAttribute = attributes[ChatTextInputAttributes.date] as? ChatTextInputTextDateAttribute {
+                        date = dateAttribute.date
+                    }
+                }
+            }
+            
+            let controller = ChatScheduleTimeScreen(
+                context: self.context,
+                mode: .format,
+                currentTime: date,
+                currentRepeatPeriod: nil,
+                minimalTime: nil,
+                isDark: false,
+                completion: { [weak self] result in
+                    guard let self, let inputMode = inputMode, let selectionRange = selectionRange else {
+                        return
+                    }
+                    if result.time != 0 {
+                        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputAddDateAttribute(current, selectionRange: selectionRange, date: result.time), inputMode)
+                        }
+                    } else {
+                        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            return (chatTextInputRemoveDateAttribute(current, selectionRange: selectionRange), inputMode)
+                        }
+                    }
+                    
+                    self.updateChatPresentationInterfaceState(animated: false, interactive: true, {
+                        return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
+                            $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: $0.effectiveInputState.inputText, selectionRange: selectionRange.endIndex ..< selectionRange.endIndex))
+                        })
+                    })
+                }
+            )
+            self.push(controller)
+            
+            self.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInputMode({ _ in return .none }) })
         }, displaySlowmodeTooltip: { [weak self] sourceView, nodeRect in
             guard let strongSelf = self, let slowmodeState = strongSelf.presentationInterfaceState.slowmodeState else {
                 return

@@ -10,7 +10,7 @@
 {
     TGObserverProxy *_keyboardWillChangeFrameProxy;
     bool _editing;
-    
+        
     UIGestureRecognizer *_dismissTapRecognizer;
     
     CGRect _currentFrame;
@@ -109,6 +109,22 @@
     _backgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
     //[parentView addSubview:_backgroundView];
     [parentView addSubview:_inputPanelView];
+    
+    if (_stickersContext && _stickersContext.livePhotoButton != nil) {
+        id<TGLivePhotoButton> livePhotoButton = nil;
+        livePhotoButton = _stickersContext.livePhotoButton();
+        livePhotoButton.modeUpdated = ^(TGMediaLivePhotoMode mode) {
+            __strong TGPhotoCaptionInputMixin *strongSelf = weakSelf;
+            if (strongSelf.livePhotoModeUpdated != nil) {
+                strongSelf.livePhotoModeUpdated(mode);
+            }
+        };
+        
+        _livePhotoButton = livePhotoButton;
+        
+        _livePhotoButtonView = livePhotoButton.view;
+        [parentView addSubview:_livePhotoButtonView];
+    }
 }
 
 - (void)onAnimateOut {
@@ -150,6 +166,14 @@
     [_inputPanel setCaption:caption];
 }
 
+- (void)setLivePhotoHidden:(bool)hidden {
+    _livePhotoButtonView.hidden = hidden;
+}
+
+- (void)setLivePhotoMode:(NSUInteger)mode {
+    [_livePhotoButton setLivePhotoMode:(TGMediaLivePhotoMode)mode];
+}
+
 - (void)setTimeout:(int32_t)timeout isVideo:(bool)isVideo isCaptionAbove:(bool)isCaptionAbove {
     _currentIsCaptionAbove = isCaptionAbove;
     [_inputPanel setTimeout:timeout isVideo:isVideo isCaptionAbove:isCaptionAbove];
@@ -158,6 +182,10 @@
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)__unused animated
 {
     _inputPanelView.hidden = hidden;
+}
+
+- (void)activateInput {
+    [_inputPanel activateInput];
 }
 
 - (void)beginEditing
@@ -309,6 +337,9 @@
     if (_keyboardHeight > 0.0) {
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
+    
+    CGRect livePhotoButtonFrame = CGRectMake(edgeInsets.left + 16.0, edgeInsets.top + 160.0 + 32.0 - _keyboardHeight, 160.0, 18.0);
+    _livePhotoButtonView.frame = livePhotoButtonFrame;
     
     CGRect panelFrame = CGRectMake(edgeInsets.left, panelY, frame.size.width, panelHeight);
     CGRect backgroundFrame = CGRectMake(edgeInsets.left, panelY, frame.size.width, backgroundHeight);

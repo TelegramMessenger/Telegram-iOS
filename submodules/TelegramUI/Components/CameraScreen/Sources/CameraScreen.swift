@@ -171,6 +171,7 @@ private final class CameraScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let mode: CameraScreenImpl.Mode
     let cameraState: CameraState
     let cameraAuthorizationStatus: AccessType
     let microphoneAuthorizationStatus: AccessType
@@ -190,6 +191,7 @@ private final class CameraScreenComponent: CombinedComponent {
     
     init(
         context: AccountContext,
+        mode: CameraScreenImpl.Mode,
         cameraState: CameraState,
         cameraAuthorizationStatus: AccessType,
         microphoneAuthorizationStatus: AccessType,
@@ -208,6 +210,7 @@ private final class CameraScreenComponent: CombinedComponent {
         openResolvedPeer: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.cameraState = cameraState
         self.cameraAuthorizationStatus = cameraAuthorizationStatus
         self.microphoneAuthorizationStatus = microphoneAuthorizationStatus
@@ -228,6 +231,9 @@ private final class CameraScreenComponent: CombinedComponent {
     
     static func ==(lhs: CameraScreenComponent, rhs: CameraScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
         if lhs.cameraState != rhs.cameraState {
@@ -318,7 +324,7 @@ private final class CameraScreenComponent: CombinedComponent {
         
         fileprivate var sendAsPeerId: EnginePeer.Id?
         fileprivate var isCustomTarget = false
-        fileprivate var canLivestream = true
+        fileprivate var canLivestream = false
         
         private var privacy: EngineStoryPrivacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
         private var allowComments = true
@@ -345,6 +351,7 @@ private final class CameraScreenComponent: CombinedComponent {
         
         init(
             context: AccountContext,
+            mode: CameraScreenImpl.Mode,
             present: @escaping (ViewController) -> Void,
             completion: ActionSlot<Signal<CameraScreenImpl.Result, NoError>>,
             animateShutter: @escaping () -> Void = {},
@@ -378,6 +385,10 @@ private final class CameraScreenComponent: CombinedComponent {
             
             Queue.concurrentDefaultQueue().async {
                 self.setupRecentAssetSubscription()
+            }
+            
+            if case .story = mode {
+                self.canLivestream = true
             }
             
             if let controller = getController() {
@@ -1299,6 +1310,7 @@ private final class CameraScreenComponent: CombinedComponent {
     func makeState() -> State {
         return State(
             context: self.context,
+            mode: self.mode,
             present: self.present,
             completion: self.completion,
             animateShutter: self.animateShutter,
@@ -3707,6 +3719,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 component: AnyComponent(
                     CameraScreenComponent(
                         context: self.context,
+                        mode: controller.mode,
                         cameraState: self.cameraState,
                         cameraAuthorizationStatus: self.cameraAuthorizationStatus,
                         microphoneAuthorizationStatus: self.microphoneAuthorizationStatus,

@@ -129,9 +129,10 @@ class ChatImageGalleryItem: GalleryItem {
     let displayInfoOnTop: Bool
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction, Message) -> Void
+    let sendSticker: ((FileMediaReference) -> Void)?
     let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, mediaIndex: Int? = nil, location: MessageHistoryEntryLocation?, translateToLanguage: String? = nil, peerIsCopyProtected: Bool = false, isSecret: Bool = false, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, mediaIndex: Int? = nil, location: MessageHistoryEntryLocation?, translateToLanguage: String? = nil, peerIsCopyProtected: Bool = false, isSecret: Bool = false, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, sendSticker: ((FileMediaReference) -> Void)?, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -143,11 +144,12 @@ class ChatImageGalleryItem: GalleryItem {
         self.displayInfoOnTop = displayInfoOnTop
         self.performAction = performAction
         self.openActionOptions = openActionOptions
+        self.sendSticker = sendSticker
         self.present = present
     }
     
     func node(synchronous: Bool) -> GalleryItemNode {
-        let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
+        let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, sendSticker: self.sendSticker, present: self.present)
         
         node.setMessage(self.message, displayInfo: !self.displayInfoOnTop, translateToLanguage: self.translateToLanguage, peerIsCopyProtected: self.peerIsCopyProtected, isSecret: self.isSecret, location: self.location)
         for media in self.message.media {
@@ -224,6 +226,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private var isSecret: Bool = false
     private let presentationData: PresentationData
     
+    private var sendSticker: ((FileMediaReference) -> Void)?
+    
     private let imageNode: TransformImageNode
     private var recognizedContentNode: RecognizedContentContainer?
     
@@ -266,9 +270,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, sendSticker: ((FileMediaReference) -> Void)?, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
+        self.sendSticker = sendSticker
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
@@ -718,6 +723,31 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 })))
                 
                 if !message.isCopyProtected() && !self.peerIsCopyProtected && message.paidContent == nil, let media = self.contextAndMedia?.1 {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_CreateSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                        f(.default)
+                        guard let self else {
+                            return
+                        }
+                        let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
+                        |> deliverOnMainQueue).start(next: { [weak self] (value, isImage) in
+                            guard let self, case let .data(data) = value, data.complete, isImage, let image = UIImage(contentsOfFile: data.path) else {
+                                return
+                            }
+                            let controller = context.sharedContext.makeStickerEditorScreen(context: context, source: image, mode: .generic(canSend: self.sendSticker != nil), transitionArguments: (self.imageNode.view, self.imageNode.bounds, self.imageNode.image), completion: { [weak self] file, _, commit in
+                                self?.sendSticker?(.standalone(media: file))
+                                commit()
+                            }, cancelled: {})
+                            guard let galleryController = self.galleryController(), let navigationController = self.baseNavigationController() else {
+                                return
+                            }
+                            (navigationController.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                            self.imageNode.isHidden = true
+                            Queue.mainQueue().after(0.5, {
+                                galleryController.dismiss()
+                            })
+                        })
+                    })))
+                    
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
                         f(.default)
                         

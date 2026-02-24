@@ -1273,6 +1273,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 UIPasteboard.general.string = diceEmoji
                             } else {
                                 let copyTextWithEntities = {
+                                    var messageText = message.text
                                     var messageEntities: [MessageTextEntity]?
                                     var restrictedText: String?
                                     for attribute in message.attributes {
@@ -1281,6 +1282,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         }
                                         if let attribute = attribute as? RestrictedContentMessageAttribute {
                                             restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                                        }
+                                        if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                                            messageText = attribute.text
                                         }
                                     }
                                     
@@ -1296,7 +1300,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         } else if let translateToLang, let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translateToLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                                             storeMessageTextInPasteboard(translation.text, entities: translation.entities)
                                         } else {
-                                            storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                                            storeMessageTextInPasteboard(messageText, entities: messageEntities)
                                         }
                                     }
                                     
@@ -1309,8 +1313,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                     for media in message.media {
                                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                                             let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
-                                                     |> take(1)
-                                                     |> deliverOnMainQueue).startStandalone(next: { data in
+                                            |> take(1)
+                                            |> deliverOnMainQueue).startStandalone(next: { data in
                                                 if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                                     if let image = UIImage(data: imageData) {
                                                         if !messageText.isEmpty {
@@ -1800,6 +1804,22 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        var editStickerFile: TelegramMediaFile?
+        for media in messages[0].media {
+            if let file = media as? TelegramMediaFile, file.isSticker && !file.isPremiumSticker {
+                editStickerFile = file
+                break
+            }
+        }
+        if let editStickerFile {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Stickers_EditSticker, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                interfaceInteraction.editSticker(editStickerFile)
+            })))
+        }
+        
         if data.messageActions.options.contains(.viewStickerPack) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.StickerPack_ViewPack, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
@@ -2284,10 +2304,11 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         TelegramEngine.EngineData.Item.Configuration.Limits(),
         EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
         EngineDataMap(Set(messageIds).map(TelegramEngine.EngineData.Item.Messages.Message.init)),
+        EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.CopyProtectionEnabled.init)),
         TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId)
     )
     |> take(keepUpdated ? Int.max : 1)
-    |> map { limitsConfiguration, peerMap, messageMap, accountPeer -> ChatAvailableMessageActions in
+    |> map { limitsConfiguration, peerMap, messageMap, copyProtectionMap, accountPeer -> ChatAvailableMessageActions in
         let isPremium: Bool
         if let accountPeer {
             isPremium = accountPeer.isPremium
@@ -2328,6 +2349,13 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
             }
         }
         
+        func isPeerCopyProtected(_ peerId: PeerId) -> Bool? {
+            if let copyProtection = copyProtectionMap[peerId] {
+                return copyProtection
+            } else {
+                return nil
+            }
+        }
         
         for id in messageIds {
             let isScheduled = id.namespace == Namespaces.Message.ScheduledCloud
@@ -2357,6 +2385,11 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                 if message.isCopyProtected() || message.containsSecretMedia {
                     isCopyProtected = true
                 }
+                
+                if isPeerCopyProtected(message.id.peerId) == true {
+                    isCopyProtected = true
+                }
+                
                 for media in message.media {
                     if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
                         isShareProtected = true

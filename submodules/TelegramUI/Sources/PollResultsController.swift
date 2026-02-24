@@ -9,6 +9,7 @@ import Display
 import ItemListPeerItem
 import ItemListPeerActionItem
 import TextFormat
+import TelegramStringFormatting
 
 private let collapsedResultCount: Int = 10
 private let collapsedInitialLimit: Int = 10
@@ -70,7 +71,7 @@ private enum PollResultsItemTag: ItemListItemTag, Equatable {
 
 private enum PollResultsEntry: ItemListNodeEntry {
     case text(String, [MessageTextEntity])
-    case optionPeer(optionId: Int, index: Int, peer: EngineRenderedPeer, optionText: String, optionTextEntities: [MessageTextEntity], optionAdditionalText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
+    case optionPeer(optionId: Int, index: Int, peer: EngineRenderedPeer, timestamp: Int32?, optionText: String, optionTextEntities: [MessageTextEntity], optionAdditionalText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
     case optionExpand(optionId: Int, opaqueIdentifier: Data, text: String, enabled: Bool)
     case solutionHeader(String)
     case solutionText(String, [MessageTextEntity])
@@ -79,7 +80,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case .text:
             return PollResultsSection.text.rawValue
-        case let .optionPeer(optionId, _, _, _, _, _, _, _, _, _, _):
+        case let .optionPeer(optionId, _, _, _, _, _, _, _, _, _, _, _):
             return PollResultsSection.option(optionId).rawValue
         case let .optionExpand(optionId, _, _, _):
             return PollResultsSection.option(optionId).rawValue
@@ -92,7 +93,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case .text:
             return .text
-        case let .optionPeer(optionId, index, _, _, _, _, _, _, _, _, _):
+        case let .optionPeer(optionId, index, _, _, _, _, _, _, _, _, _, _):
             return .optionPeer(optionId, index)
         case let .optionExpand(optionId, _, _, _):
             return .optionExpand(optionId)
@@ -132,7 +133,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             default:
                 return true
             }
-        case let .optionPeer(lhsOptionId, lhsIndex, _, _, _, _, _, _, _, _, _):
+        case let .optionPeer(lhsOptionId, lhsIndex, _, _, _, _, _, _, _, _, _, _):
             switch rhs {
             case .text:
                 return false
@@ -140,7 +141,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
                 return false
             case .solutionText:
                 return false
-            case let .optionPeer(rhsOptionId, rhsIndex, _, _, _, _, _, _, _, _, _):
+            case let .optionPeer(rhsOptionId, rhsIndex, _, _, _, _, _, _, _, _, _, _):
                 if lhsOptionId == rhsOptionId {
                     return lhsIndex < rhsIndex
                 } else {
@@ -161,7 +162,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
                 return false
             case .solutionText:
                 return false
-            case let .optionPeer(rhsOptionId, _, _, _, _, _, _, _, _, _, _):
+            case let .optionPeer(rhsOptionId, _, _, _, _, _, _, _, _, _, _, _):
                 if lhsOptionId == rhsOptionId {
                     return false
                 } else {
@@ -226,7 +227,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             let _ = entities
             //TODO:release
             return ItemListMultilineTextItem(presentationData: presentationData, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
-        case let .optionPeer(optionId, _, peer, optionText, optionTextEntities, optionAdditionalText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
+        case let .optionPeer(optionId, _, peer, timestamp, optionText, optionTextEntities, optionAdditionalText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
             let font = Font.regular(13.0)
             var entityFiles: [EngineMedia.Id: TelegramMediaFile] = [:]
             for (id, media) in arguments.message.associatedMedia {
@@ -269,13 +270,28 @@ private enum PollResultsEntry: ItemListNodeEntry {
             let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, context: arguments.context, text: attributedText, additionalText: optionAdditionalText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : presentationData.strings.MessagePoll_VotedCount(optionCount), id: Int64(optionId), action: optionExpanded ? {
                 arguments.collapseOption(opaqueIdentifier)
             } : nil)
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
+            
+            
+            let label: ItemListPeerItemLabel
+            if let timestamp {
+                let (timeString, dateString) = formatTimeAndDate(timestamp: timestamp, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                let labelString = NSMutableAttributedString()
+                if let dateString {
+                    labelString.append(NSAttributedString(string: "\(dateString)\n", font: Font.regular(presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0), textColor: presentationData.theme.list.itemSecondaryTextColor))
+                }
+                labelString.append(NSAttributedString(string: "\(timeString)", font: Font.regular(presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
+                label = .attributedText(labelString)
+            } else {
+                label = .none
+            }
+             
+            return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
                 arguments.openPeer(peer)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
             }, noInsets: true, tag: isFirstInOption ? PollResultsItemTag.firstOptionPeer(opaqueIdentifier: opaqueIdentifier) : nil, header: header, shimmering: shimmeringAlternation.flatMap { ItemListPeerItemShimmering(alternationIndex: $0) })
         case let .optionExpand(_, opaqueIdentifier, text, enabled):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: enabled ? {
+            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: enabled ? {
                 arguments.expandOption(opaqueIdentifier)
             } : nil)
         }
@@ -336,7 +352,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, me
                 for peerIndex in 0 ..< displayCount {
                     let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
                     let peer = EngineRenderedPeer(peer: EnginePeer(fakeUser))
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionTextEntities: optionTextHeaderEntities, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, timestamp: nil, optionText: optionTextHeader, optionTextEntities: optionTextHeaderEntities, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
                 }
                 if displayCount < Int(voterCount) {
                     let remainingCount = Int(voterCount) - displayCount
@@ -378,7 +394,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, me
                     if peerIndex >= displayCount {
                         break inner
                     }
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: EngineRenderedPeer(peer), optionText: optionTextHeader, optionTextEntities: optionTextHeaderEntities, optionAdditionalText: optionAdditionalTextHeader, optionCount: Int32(count), optionExpanded: optionExpandedAtCount != nil, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: EngineRenderedPeer(peer.peer), timestamp: peer.date, optionText: optionTextHeader, optionTextEntities: optionTextHeaderEntities, optionAdditionalText: optionAdditionalTextHeader, optionCount: Int32(count), optionExpanded: optionExpandedAtCount != nil, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
                     peerIndex += 1
                 }
                 
@@ -401,7 +417,6 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -448,10 +463,6 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
         resultsContext.state
     )
     |> map { presentationData, state, resultsState -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Close), style: .regular, enabled: true, action: {
-            dismissImpl?()
-        })
-        
         var isEmpty = false
         for (_, optionState) in resultsState.options {
             if !optionState.hasLoadedOnce {
@@ -474,7 +485,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
             var isFirstOption = true
             loop: for i in 0 ..< entries.count {
                 switch entries[i] {
-                case let .optionPeer(_, _, _, _, _, _, _, _, opaqueIdentifier, _, _):
+                case let .optionPeer(_, _, _, _, _, _, _, _, _, opaqueIdentifier, _, _):
                     if opaqueIdentifier == focusOnOptionWithOpaqueIdentifier {
                         if !isFirstOption {
                             initialScrollToItem = ListViewScrollToItem(index: i, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
@@ -488,7 +499,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
             }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .textWithSubtitle(presentationData.strings.PollResults_Title, presentationData.strings.MessagePoll_VotedCount(totalVoters)), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .textWithSubtitle(presentationData.strings.PollResults_Title, presentationData.strings.MessagePoll_VotedCount(totalVoters)), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: nil, emptyStateItem: nil, initialScrollToItem: initialScrollToItem, crossfadeState: previousWasEmptyValue != nil && previousWasEmptyValue == true && isEmpty == false, animateChanges: false)
         
         return (controllerState, (listState, arguments))
@@ -502,10 +513,32 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     pushControllerImpl = { [weak controller] c in
         controller?.push(c)
     }
-    dismissImpl = { [weak controller] in
-        controller?.dismiss()
-    }
     controller.acceptsFocusWhenInOverlay = true
     
     return controller
+}
+
+private func formatTimeAndDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> (time: String, date: String?) {
+    
+    var t: time_t = time_t(timestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    let timestampNow = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+    var now: time_t = time_t(timestampNow)
+    var timeinfoNow: tm = tm()
+    localtime_r(&now, &timeinfoNow)
+    
+    let timeString = stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)
+    let dateString: String?
+    
+    let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+    if dayDifference == 0 {
+        dateString = ""
+    } else if dayDifference == -1 {
+        dateString = strings.Weekday_Yesterday.lowercased()
+    } else {
+        dateString = stringForShortDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)
+    }
+    return (time: timeString, date: dateString)
 }

@@ -96,6 +96,10 @@ import GiftDemoScreen
 import ChatTextLinkEditUI
 import CocoonInfoScreen
 import GiftCraftScreen
+import ChatParticipantRightsScreen
+import PeerCopyProtectionInfoScreen
+import ChatRankInfoScreen
+import RankChatPreviewItem
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2232,7 +2236,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return resolveUrlImpl(context: context, peerId: peerId, url: url, skipUrlAuth: skipUrlAuth)
     }
     
-    public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, forceExternal: Bool, forceUpdate: Bool, openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?, progress: Promise<Bool>?, completion: (() -> Void)?) {
+    public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, forceExternal: Bool, forceUpdate: Bool, openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?, sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?, progress: Promise<Bool>?, completion: (() -> Void)?) {
         openResolvedUrlImpl(resolvedUrl, context: context, urlContext: urlContext, navigationController: navigationController, forceExternal: forceExternal, forceUpdate: forceUpdate, openPeer: openPeer, sendFile: sendFile, sendSticker: sendSticker, sendEmoji: sendEmoji, requestMessageActionUrlAuth: requestMessageActionUrlAuth, joinVoiceChat: joinVoiceChat, present: present, dismissInput: dismissInput, contentContext: contentContext, progress: progress, completion: completion)
     }
     
@@ -2341,113 +2345,249 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return presentAddMembersImpl(context: context, updatedPresentationData: updatedPresentationData, parentController: parentController, groupPeer: groupPeer, selectAddMemberDisposable: selectAddMemberDisposable, addMemberDisposable: addMemberDisposable)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: ((UIView?, CGPoint?) -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool, rank: String?, rankRole: ChatRankInfoScreenRole?) -> ListViewItem {
         let controllerInteraction: ChatControllerInteraction
 
-        controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _, _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
-            }, updateMessageReaction: { _, _, _, _ in }, activateMessagePinch: { _ in
-            }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in
-            }, navigateToThreadMessage: { _, _, _ in
-            }, tapMessage: { message in
+        controllerInteraction = ChatControllerInteraction(
+            openMessage: { _, _ in
+                return false
+            },
+            openPeer: { _, _, _, _ in },
+            openPeerMention: { _, _ in },
+            openMessageContextMenu: { _, _, _, _, _, _ in },
+            openMessageReactionContextMenu: { _, _, _, _ in
+            },
+            updateMessageReaction: { _, _, _, _ in },
+            activateMessagePinch: { _ in
+            },
+            openMessageContextActions: { _, _, _, _ in },
+            navigateToMessage: { _, _, _ in },
+            navigateToMessageStandalone: { _ in
+            },
+            navigateToThreadMessage: { _, _, _ in
+            },
+            tapMessage: { message in
                 tapMessage?(message)
-        }, clickThroughMessage: { view, location in
-            clickThroughMessage?(view, location)
-        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
-            return false
-        }, requestMessageActionCallback: { _, _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in
-        }, presentControllerInCurrent: { _, _ in
-        }, navigationController: {
-            return nil
-        }, chatControllerNode: {
-            return nil
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, openConferenceCall: { _ in                
-        }, longTap: { _, _ in
-        }, todoItemLongTap: { _, _ in
-        }, openCheckoutOrReceipt: { _, _ in
-        }, openSearch: {
-        }, setupReply: { _ in
-        }, canSetupReply: { _ in
-            return .none
-        }, canSendMessages: {
-            return false
-        }, navigateToFirstDateMessage: { _, _ in
-        }, requestRedeliveryOfFailedMessages: { _ in
-        }, addContact: { _ in
-        }, rateCall: { _, _, _ in
-        }, requestSelectMessagePollOptions: { _, _ in
-        }, requestOpenMessagePollResults: { _, _ in
-        }, openAppStorePage: {
-        }, displayMessageTooltip: { _, _, _, _, _ in
-        }, seekToTimecode: { _, _, _ in
-        }, scheduleCurrentMessage: { _ in
-        }, sendScheduledMessagesNow: { _ in
-        }, editScheduledMessagesTime: { _ in
-        }, performTextSelectionAction: { _, _, _, _ in
-        }, displayImportedMessageTooltip: { _ in
-        }, displaySwipeToReplyHint: {
-        }, dismissReplyMarkupMessage: { _ in
-        }, openMessagePollResults: { _, _ in
-        }, openPollCreation: { _ in
-        }, displayPollSolution: { _, _ in
-        }, displayPsa: { _, _ in
-        }, displayDiceTooltip: { _ in
-        }, animateDiceSuccess: { _, _ in
-        }, displayPremiumStickerTooltip: { _, _ in
-        }, displayEmojiPackTooltip: { _, _ in
-        }, openPeerContextMenu: { _, _, _, _, _ in
-        }, openMessageReplies: { _, _, _ in
-        }, openReplyThreadOriginalMessage: { _ in
-        }, openMessageStats: { _ in
-        }, editMessageMedia: { _, _ in
-        }, copyText: { _ in
-        }, displayUndo: { _ in
-        }, isAnimatingMessage: { _ in
-            return false
-        }, getMessageTransitionNode: {
-            return nil
-        }, updateChoosingSticker: { _ in
-        }, commitEmojiInteraction: { _, _, _, _ in
-        }, openLargeEmojiInfo: { _, _, _ in
-        }, openJoinLink: { _ in
-        }, openWebView: { _, _, _, _ in
-        }, activateAdAction: { _, _, _, _ in
-        }, adContextAction: { _, _, _ in
-        }, removeAd: { _ in
-        }, openRequestedPeerSelection: { _, _, _, _ in
-        }, saveMediaToFiles: { _ in
-        }, openNoAdsDemo: {
-        }, openAdsInfo: {
-        }, displayGiveawayParticipationStatus: { _ in
-        }, openPremiumStatusInfo: { _, _, _, _ in
-        }, openRecommendedChannelContextMenu: { _, _, _ in
-        }, openGroupBoostInfo: { _, _ in
-        }, openStickerEditor: {
-        }, openAgeRestrictedMessageMedia: { _, _ in
-        }, playMessageEffect: { _ in
-        }, editMessageFactCheck: { _ in
-        }, sendGift: { _ in
-        }, openUniqueGift: { _ in
-        }, openMessageFeeException: {
-        }, requestMessageUpdate: { _, _ in
-        }, cancelInteractiveKeyboardGestures: {
-        }, dismissTextInput: {
-        }, scrollToMessageId: { _ in
-        }, navigateToStory: { _, _ in
-        }, attemptedNavigationToPrivateQuote: { _ in
-        }, forceUpdateWarpContents: {
-        }, playShakeAnimation: {
-        }, displayQuickShare: { _, _ ,_ in
-        }, updateChatLocationThread: { _, _ in
-        }, requestToggleTodoMessageItem: { _, _, _ in
-        }, displayTodoToggleUnavailable: { _ in
-        }, openStarsPurchase: { _ in
-        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
+            },
+            clickThroughMessage: { view, location in
+                clickThroughMessage?(view, location)
+            },
+            toggleMessagesSelection: { _, _ in },
+            sendCurrentMessage: { _, _ in },
+            sendMessage: { _ in },
+            sendSticker: { _, _, _, _, _, _, _, _, _ in return false },
+            sendEmoji: { _, _, _ in },
+            sendGif: { _, _, _, _, _ in return false },
+            sendBotContextResultAsGif: { _, _, _, _, _, _ in
+                return false
+            },
+            editGif: { _, _ in
+            },
+            requestMessageActionCallback: { _, _, _, _, _ in },
+            requestMessageActionUrlAuth: { _, _ in },
+            activateSwitchInline: { _, _, _ in },
+            openUrl: { _ in },
+            shareCurrentLocation: {},
+            shareAccountContact: {},
+            sendBotCommand: { _, _ in },
+            openInstantPage: { _, _ in  },
+            openWallpaper: { _ in  },
+            openTheme: { _ in  },
+            openHashtag: { _, _ in },
+            updateInputState: { _ in },
+            updateInputMode: { _ in },
+            openMessageShareMenu: { _ in
+            },
+            presentController: { _, _ in
+            },
+            presentControllerInCurrent: { _, _ in
+            },
+            navigationController: {
+                return nil
+            },
+            chatControllerNode: {
+                return nil
+            },
+            presentGlobalOverlayController: { _, _ in },
+            callPeer: { _, _ in },
+            openConferenceCall: { _ in                
+            },
+            longTap: { _, _ in
+            },
+            todoItemLongTap: { _, _ in
+            },
+            openCheckoutOrReceipt: { _, _ in
+            },
+            openSearch: {
+            },
+            setupReply: { _ in
+            },
+            canSetupReply: { _ in
+                return .none
+            },
+            canSendMessages: {
+                return false
+            },
+            navigateToFirstDateMessage: { _, _ in
+            },
+            requestRedeliveryOfFailedMessages: { _ in
+            },
+            addContact: { _ in
+            },
+            rateCall: { _, _, _ in
+            },
+            requestSelectMessagePollOptions: { _, _ in
+            },
+            requestOpenMessagePollResults: { _, _ in
+            },
+            openAppStorePage: {
+            },
+            displayMessageTooltip: { _, _, _, _, _ in
+            },
+            seekToTimecode: { _, _, _ in
+            },
+            scheduleCurrentMessage: { _ in
+            },
+            sendScheduledMessagesNow: { _ in
+            },
+            editScheduledMessagesTime: { _ in
+            },
+            performTextSelectionAction: { _, _, _, _ in
+            },
+            displayImportedMessageTooltip: { _ in
+            },
+            displaySwipeToReplyHint: {
+            },
+            dismissReplyMarkupMessage: { _ in
+            },
+            openMessagePollResults: { _, _ in
+            },
+            openPollCreation: { _ in
+            },
+            displayPollSolution: { _, _ in
+            },
+            displayPsa: { _, _ in
+            },
+            displayDiceTooltip: { _ in
+            },
+            animateDiceSuccess: { _, _ in
+            },
+            displayPremiumStickerTooltip: { _, _ in
+            },
+            displayEmojiPackTooltip: { _, _ in
+            },
+            openPeerContextMenu: { _, _, _, _, _ in
+            },
+            openMessageReplies: { _, _, _ in
+            },
+            openReplyThreadOriginalMessage: { _ in
+            },
+            openMessageStats: { _ in
+            },
+            editMessageMedia: { _, _ in
+            },
+            copyText: { _ in
+            },
+            displayUndo: { _ in
+            },
+            isAnimatingMessage: { _ in
+                return false
+            },
+            getMessageTransitionNode: {
+                return nil
+            },
+            updateChoosingSticker: { _ in
+            },
+            commitEmojiInteraction: { _, _, _, _ in
+            },
+            openLargeEmojiInfo: { _, _, _ in
+            },
+            openJoinLink: { _ in
+            },
+            openWebView: { _, _, _, _ in
+            },
+            activateAdAction: { _, _, _, _ in
+            },
+            adContextAction: { _, _, _ in
+            },
+            removeAd: { _ in
+            },
+            openRequestedPeerSelection: { _, _, _, _ in
+            },
+            saveMediaToFiles: { _ in
+            },
+            openNoAdsDemo: {
+            },
+            openAdsInfo: {
+            },
+            displayGiveawayParticipationStatus: { _ in
+            },
+            openPremiumStatusInfo: { _, _, _, _ in
+            },
+            openRecommendedChannelContextMenu: { _, _, _ in
+            },
+            openGroupBoostInfo: { _, _ in
+            },
+            openStickerEditor: {
+            },
+            openAgeRestrictedMessageMedia: { _, _ in
+            },
+            playMessageEffect: { _ in
+            },
+            editMessageFactCheck: { _ in
+            },
+            sendGift: { _ in
+            },
+            openUniqueGift: { _ in
+            },
+            openMessageFeeException: {
+            },
+            requestMessageUpdate: { _, _ in
+            },
+            cancelInteractiveKeyboardGestures: {
+            },
+            dismissTextInput: {
+            },
+            scrollToMessageId: { _ in
+            },
+            navigateToStory: { _, _ in
+            },
+            attemptedNavigationToPrivateQuote: { _ in
+            },
+            forceUpdateWarpContents: {
+            },
+            playShakeAnimation: {
+            },
+            displayQuickShare: { _, _ ,_ in
+            },
+            updateChatLocationThread: { _, _ in
+            },
+            requestToggleTodoMessageItem: { _, _, _ in
+            },
+            displayTodoToggleUnavailable: { _ in
+            },
+            openStarsPurchase: { _ in
+            },
+            openRankInfo: { _, _, _ in
+            },
+            automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+            pollActionState: ChatInterfacePollActionState(),
+            stickerSettings: ChatInterfaceStickerSettings(),
+            presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode)
+        )
         
         var entryAttributes = ChatMessageEntryAttributes()
         entryAttributes.isCentered = isCentered
+        if let rank {
+            switch rankRole {
+            case .creator:
+                entryAttributes.rank = .creator(rank)
+            case .admin:
+                entryAttributes.rank = .admin(rank)
+            default:
+                entryAttributes.rank = .member(rank)
+            }
+        }
         
         let content: ChatMessageItemContent
         let chatLocation: ChatLocation
@@ -2459,7 +2599,46 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             chatLocation = .peer(id: messages.first!.id.peerId)
         }
         
-        return ChatMessageItemImpl(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: isPreview), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, availableMessageEffects: nil, savedMessageTags: nil, defaultReaction: nil, areStarReactionsEnabled: false, isPremium: false, accountPeer: accountPeer.flatMap(EnginePeer.init), forceInlineReactions: true, isStandalone: isStandalone), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
+        return ChatMessageItemImpl(
+            presentationData: ChatPresentationData(
+                theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper),
+                fontSize: fontSize,
+                strings: strings,
+                dateTimeFormat: dateTimeFormat,
+                nameDisplayOrder: nameOrder,
+                disableAnimations: false,
+                largeEmoji: false,
+                chatBubbleCorners: chatBubbleCorners,
+                animatedEmojiScale: 1.0,
+                isPreview: isPreview
+            ),
+            context: context,
+            chatLocation: chatLocation,
+            associatedData: ChatMessageItemAssociatedData(
+                automaticDownloadPeerType: .contact,
+                automaticDownloadPeerId: nil,
+                automaticDownloadNetworkType: .cellular,
+                isRecentActions: false,
+                subject: nil,
+                contactsPeerIds: Set(),
+                animatedEmojiStickers: [:],
+                forcedResourceStatus: forcedResourceStatus,
+                availableReactions: availableReactions,
+                availableMessageEffects: nil,
+                savedMessageTags: nil,
+                defaultReaction: nil,
+                areStarReactionsEnabled: false,
+                isPremium: false,
+                accountPeer: accountPeer.flatMap(EnginePeer.init),
+                forceInlineReactions: true,
+                isStandalone: isStandalone,
+                showTextAsPlaceholder: rank != nil
+            ),
+            controllerInteraction: controllerInteraction,
+            content: content,
+            disableDate: true,
+            additionalContent: nil
+        )
     }
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
@@ -2547,16 +2726,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController {
-        return makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, bannedSendMedia: bannedSendMedia, presentGallery: presentGallery, presentFiles: presentFiles, send: send)
+    public func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, presentDocumentScanner: (() -> Void)?, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController {
+        return makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, bannedSendMedia: bannedSendMedia, presentGallery: presentGallery, presentFiles: presentFiles, presentDocumentScanner: presentDocumentScanner, send: send)
     }
     
-    public func makeGalleryCaptionPanelView(context: AccountContext, chatLocation: ChatLocation, isScheduledMessages: Bool, isFile: Bool, customEmojiAvailable: Bool, present: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) -> NSObject? {
+    public func makeGalleryCaptionPanelView(context: AccountContext, chatLocation: ChatLocation, isScheduledMessages: Bool, isFile: Bool, hasTimer: Bool, customEmojiAvailable: Bool, present: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) -> NSObject? {
         let inputPanelNode = LegacyMessageInputPanelNode(
             context: context,
             chatLocation: chatLocation,
             isScheduledMessages: isScheduledMessages,
             isFile: isFile,
+            hasTimer: hasTimer,
             present: present,
             presentInGlobalOverlay: presentInGlobalOverlay,
             makeEntityInputView: {
@@ -2762,6 +2942,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .animatedEmoji
         case .todo:
             mappedSource = .todo
+        case .copyProtection:
+            mappedSource = .copyProtection
         case let .auth(price):
             mappedSource = .auth(price)
         case let .premiumGift(file):
@@ -2842,6 +3024,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .messageEffects
         case .todo:
             mappedSubject = .todo
+        case .copyProtection:
+            mappedSubject = .copyProtection
         case .business:
             mappedSubject = .business
             buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton
@@ -3498,7 +3682,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], actionTitle: String?, isEditing: Bool, expandIfNeeded: Bool, parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, actionPerformed: ((Bool) -> Void)?) -> ViewController {
+    public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], actionTitle: String?, isEditing: Bool, expandIfNeeded: Bool, parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?, actionPerformed: ((Bool) -> Void)?) -> ViewController {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, actionTitle: actionTitle, isEditing: isEditing, expandIfNeeded: expandIfNeeded, parentNavigationController: parentNavigationController, sendSticker: sendSticker, actionPerformed: { actions in
             if let (_, _, action) = actions.first {
                 switch action {
@@ -3558,19 +3742,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return editorController
     }
     
-    public func makeStickerEditorScreen(context: AccountContext, source: Any?, intro: Bool, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController {
+    public func makeStickerEditorScreen(context: AccountContext, source: Any?, mode: StickerEditorMode, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController {
         let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
-        var mode: MediaEditorScreenImpl.Mode.StickerEditorMode
+        var mappedMode: MediaEditorScreenImpl.Mode.StickerEditorMode
         var fromCamera = false
         if let (file, emoji) = source as? (TelegramMediaFile, [String]) {
             subject = .single(.sticker(file, emoji))
-            mode = .editing
         } else if let asset = source as? PHAsset {
             subject = .single(.asset(asset))
-            mode = .addingToPack
         } else if let image = source as? UIImage {
             subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
-            mode = .addingToPack
         } else if let source = source as? Signal<CameraScreenImpl.Result, NoError> {
             subject = source
             |> map { value -> MediaEditorScreenImpl.Subject? in
@@ -3584,17 +3765,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             fromCamera = true
-            mode = .addingToPack
         } else {
             subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
-            mode = .addingToPack
         }
-        if intro {
-            mode = .businessIntro
+        switch mode {
+        case let .generic(canSend):
+            mappedMode = .generic(canSend: canSend)
+        case .addingToPack:
+            mappedMode = .addingToPack
+        case .editing:
+            mappedMode = .editing
+        case .businessIntro:
+            mappedMode = .businessIntro
         }
         let editorController = MediaEditorScreenImpl(
             context: context,
-            mode: .stickerEditor(mode: mode),
+            mode: .stickerEditor(mode: mappedMode),
             subject: subject,
             transitionIn: fromCamera ? .camera : transitionArguments.flatMap { .gallery(
                 MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(
@@ -4129,6 +4315,30 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makePasskeySetupController(context: AccountContext, displaySkip: Bool, navigationController: NavigationController?, completion: @escaping () -> Void, dismiss: @escaping () -> Void) -> ViewController {
         return PasskeysScreen(context: context, displaySkip: displaySkip, initialPasskeysData: nil, passkeysDataUpdated: { _ in }, completion: completion, cancel: dismiss)
+    }
+    
+    public func makeChatCustomRankSetupScreen(context: AccountContext, peerId: EnginePeer.Id, participantId: EnginePeer.Id, rank: String?, role: ChatRankInfoScreenRole) -> ViewController {
+        return ChatParticipantRightsScreen(context: context, subject: .rank(peerId: peerId, participantId: participantId, rank: rank, role: role))
+    }
+    
+    public func makePeerCopyProtectionInfoScreen(context: AccountContext, completion: @escaping () -> Void) -> ViewController {
+        return PeerCopyProtectionInfoScreen(context: context, completion: completion)
+    }
+    
+    public func makeChatRankInfoScreen(context: AccountContext, chatPeer: EnginePeer, userPeer: EnginePeer, role: ChatRankInfoScreenRole, rank: String, canChange: Bool, completion: @escaping () -> Void) -> ViewController {
+        return ChatRankInfoScreen(context: context, chatPeer: chatPeer, userPeer: userPeer, role: role, rank: rank, canChange: canChange, completion: completion)
+    }
+    
+    public func makeChatRankPreviewItem(context: AccountContext, peer: EnginePeer, rank: String, rankRole: ChatRankInfoScreenRole, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, sectionId: Int32) -> ListViewItem {
+        let messageItem = RankChatPreviewItem.MessageItem(
+            peer: peer,
+            text: "Reinhardt, we need to find you some new tunes.",
+            entities: nil,
+            media: [],
+            rank: rank,
+            rankRole: rankRole
+        )
+        return RankChatPreviewItem(context: context, systemStyle: .glass, theme: theme, componentTheme: theme, strings: strings, sectionId: sectionId, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, messageItems: [messageItem])
     }
 }
 

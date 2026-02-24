@@ -939,7 +939,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                     
-                            strongSelf.updateIsTranslating(isTranslating)
+                            let showTextAsPlaceholder = item.associatedData.showTextAsPlaceholder
+                            if showTextAsPlaceholder {
+                                isTranslating = true
+                            }
+                            strongSelf.updateIsTranslating(isTranslating, showTextAsPlaceholder: showTextAsPlaceholder)
                             
                             if let statusSizeAndApply {
                                 let statusNode = statusSizeAndApply.1(strongSelf.statusNode == nil ? .None : animation)
@@ -1297,24 +1301,37 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         return super.hitTest(point, with: event)
     }
     
-    private func updateIsTranslating(_ isTranslating: Bool) {
+    private func updateIsTranslating(_ isTranslating: Bool, showTextAsPlaceholder: Bool) {
         guard let item = self.item else {
             return
         }
-        let rects = self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? [] 
+        var rects = self.textNode.textNode.rangeRects(in: NSRange(location: 0, length: self.textNode.textNode.cachedLayout?.attributedString?.length ?? 0))?.rects ?? []
         if isTranslating, !rects.isEmpty {
+            if showTextAsPlaceholder {
+                self.textNode.textNode.isHidden = true
+            }
             let shimmeringNode: ShimmeringLinkNode
             if let current = self.shimmeringNode {
                 shimmeringNode = current
             } else {
                 let color: UIColor
                 let isIncoming = item.message.effectivelyIncoming(item.context.account.peerId)
-                if item.presentationData.theme.theme.overallDarkAppearance {
-                    color = isIncoming ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor.withAlphaComponent(0.1) : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor.withAlphaComponent(0.1)
+                let messageTheme = item.presentationData.theme.theme.chat.message
+                if showTextAsPlaceholder {
+                    rects = rects.map { $0.insetBy(dx: 0.0, dy: 6.0 + UIScreenPixel) }
+                    if rects.count == 2 {
+                        rects[0].origin.y += 1.0
+                        rects[1].origin.y -= 1.0
+                    }
+                    color = isIncoming ? messageTheme.incoming.secondaryTextColor.withMultipliedAlpha(0.25) : messageTheme.outgoing.secondaryTextColor.withMultipliedAlpha(0.25)
                 } else {
-                    color = isIncoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor.withAlphaComponent(0.1) : item.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor.withAlphaComponent(0.1)
+                    if item.presentationData.theme.theme.overallDarkAppearance {
+                        color = isIncoming ? messageTheme.incoming.primaryTextColor.withAlphaComponent(0.1) : messageTheme.outgoing.primaryTextColor.withAlphaComponent(0.1)
+                    } else {
+                        color = isIncoming ? messageTheme.incoming.accentTextColor.withAlphaComponent(0.1) : messageTheme.outgoing.secondaryTextColor.withAlphaComponent(0.1)
+                    }
                 }
-                shimmeringNode = ShimmeringLinkNode(color: color)
+                shimmeringNode = ShimmeringLinkNode(color: color, isSkeleton: showTextAsPlaceholder)
                 shimmeringNode.updateRects(rects)
                 shimmeringNode.frame = self.textNode.textNode.frame
                 shimmeringNode.updateLayout(self.textNode.textNode.frame.size)

@@ -85,9 +85,9 @@
 
 - (TGPhotoEditorTab)toolbarTabs
 {
-    if ([self.asset isKindOfClass:[TGMediaAsset class]] && ((TGMediaAsset *)self.asset).subtypes & TGMediaAssetSubtypePhotoLive) {
+    if ([self.asset isKindOfClass:[TGCameraCapturedVideo class]] && ((TGCameraCapturedVideo *)self.asset).isAnimation) {
         return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
-    } else if ([self.asset isKindOfClass:[TGCameraCapturedVideo class]] && ((TGCameraCapturedVideo *)self.asset).isAnimation) {
+    } else if ([self.asset isKindOfClass:[TGMediaAsset class]] && ((TGMediaAsset *)self.asset).type == TGMediaAssetPhotoType) {
         return TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
     } else {
         return TGPhotoEditorCropTab | TGPhotoEditorToolsTab | TGPhotoEditorPaintTab | TGPhotoEditorQualityTab;
@@ -150,6 +150,7 @@
                 
             default:
             {
+                //backingItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
                 backingItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
             }
                 break;

@@ -26,6 +26,7 @@ import TopMessageReactions
 import GlassBackgroundComponent
 import LiquidLens
 import TabSelectionRecognizer
+import EmojiTextAttachmentView
 
 private let legacyButtonSize = CGSize(width: 88.0, height: 49.0)
 private let glassButtonSize = CGSize(width: 72.0, height: 62.0)
@@ -521,6 +522,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
     
     private let backgroundAnimationNode: ASImageNode
     private var iconNode: ASImageNode?
+    private var iconLayer: InlineStickerItemLayer?
     fileprivate let textNode: ImmediateTextNode
     private var badgeNode: BadgeNode?
     private let statusNode: SemanticStatusNode
@@ -530,6 +532,8 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
     private var borderView: UIView?
     private var borderMaskView: UIView?
     private var borderShimmerView: ShimmerEffectForegroundView?
+    
+    private var context: AccountContext?
     
     override init(pointerStyle: PointerStyle? = nil) {
         self.state = AttachmentMainButtonState.initial
@@ -606,7 +610,10 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         self.progressNode = progressNode
         
         self.textNode.alpha = 0.0
-        self.textNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
+        self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+        
+        self.iconLayer?.opacity = 0.0
+        self.iconLayer?.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         
         self.shimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.borderShimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -625,6 +632,9 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         
         self.textNode.alpha = 1.0
         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.iconLayer?.opacity = 1.0
+        self.iconLayer?.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         self.shimmerView?.layer.removeAllAnimations()
         self.shimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -664,8 +674,8 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
                 
                 self.updateShimmerParameters()
                 
-                if let size = self.size, let style = self.panelStyle {
-                    self.updateLayout(size: size, style: style, state: state, transition: .immediate)
+                if let size = self.size, let context = self.context, let style = self.panelStyle {
+                    self.updateLayout(size: size, context: context, style: style, state: state, transition: .immediate)
                 }
             }
         } else if self.shimmerView != nil {
@@ -735,8 +745,9 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    func updateLayout(size: CGSize, style: AttachmentPanel.Style, state: AttachmentMainButtonState, animateBackground: Bool = false, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, context: AccountContext, style: AttachmentPanel.Style, state: AttachmentMainButtonState, animateBackground: Bool = false, transition: ContainedViewLayoutTransition) {
         let previousState = self.state
+        self.context = context
         self.state = state
         self.panelStyle = style
         self.size = size
@@ -851,6 +862,47 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         } else if let iconNode = self.iconNode {
             self.iconNode = nil
             iconNode.removeFromSupernode()
+        }
+        
+        if let iconCustomEmojiId = state.iconCustomEmojiId {
+            let iconLayer: InlineStickerItemLayer
+            if let current = self.iconLayer {
+                iconLayer = current
+            } else {
+                iconLayer = InlineStickerItemLayer(
+                    context: context,
+                    userLocation: .other,
+                    attemptSynchronousLoad: false,
+                    emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: iconCustomEmojiId, file: nil),
+                    file: nil,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                    pointSize: CGSize(width: 48.0, height: 48.0),
+                    dynamicColor: state.textColor
+                )
+                self.layer.addSublayer(iconLayer)
+                self.iconLayer = iconLayer
+                
+                if transition.isAnimated {
+                    iconLayer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                    iconLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            let iconSize = CGSize(width: 24.0, height: 24.0)
+            textFrame.origin.x += (iconSize.width + 6.0) / 2.0
+            iconLayer.frame = CGRect(origin: CGPoint(x: textFrame.minX - iconSize.width - 6.0, y: textFrame.minY + floorToScreenPixels((textFrame.height - iconSize.height) * 0.5)), size: iconSize)
+        } else if let iconLayer = self.iconLayer {
+            self.iconLayer = nil
+            
+            if transition.isAnimated {
+                iconLayer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                iconLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    iconLayer.removeFromSuperlayer()
+                })
+            } else {
+                iconLayer.removeFromSuperlayer()
+            }
         }
         
         if self.textNode.frame.width.isZero {
@@ -1097,6 +1149,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _, _, _, _, _, _ in
             return false
+        }, editSticker: { _ in
         }, unblockPeer: {
         }, pinMessage: { _, _ in
         }, unpinMessage: { _, _, _ in
@@ -1167,6 +1220,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 })
                 strongSelf.present(controller)
             }
+        }, openDateEditing: {
+            
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
             guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
@@ -2339,7 +2394,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             
             if let mainButtonFrame {
                 if !self.dismissed {
-                    self.mainButtonNode.updateLayout(size: buttonSize, style: self.panelStyle, state: self.mainButtonState, animateBackground: self.mainButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
+                    self.mainButtonNode.updateLayout(size: buttonSize, context: self.context, style: self.panelStyle, state: self.mainButtonState, animateBackground: self.mainButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
                 }
                 if self.mainButtonNode.frame.width.isZero {
                     self.mainButtonNode.frame = mainButtonFrame
@@ -2352,7 +2407,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             }
             if let secondaryButtonFrame {
                 if !self.dismissed {
-                    self.secondaryButtonNode.updateLayout(size: buttonSize, style: self.panelStyle, state: self.secondaryButtonState, animateBackground: self.secondaryButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
+                    self.secondaryButtonNode.updateLayout(size: buttonSize, context: self.context, style: self.panelStyle, state: self.secondaryButtonState, animateBackground: self.secondaryButtonState.background.colorValue == self.backgroundNode.color && transition.isAnimated, transition: transition)
                 }
                 if self.secondaryButtonNode.frame.width.isZero {
                     self.secondaryButtonNode.frame = secondaryButtonFrame

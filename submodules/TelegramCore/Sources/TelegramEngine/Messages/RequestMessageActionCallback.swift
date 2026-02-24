@@ -206,30 +206,33 @@ public enum MessageActionUrlAuthError {
 
 public enum MessageActionUrlSubject {
     case message(id: MessageId, buttonId: Int32)
-    case url(String)
+    case url(url: String, inAppOrigin: String?)
 }
 
 func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageActionUrlSubject) -> Signal<MessageActionUrlAuthResult, NoError> {
     let request: Signal<Api.UrlAuthResult?, MTRpcError>
     var flags: Int32 = 0
     switch subject {
-        case let .message(messageId, buttonId):
-            flags |= (1 << 1)
-            request = account.postbox.loadedPeerWithId(messageId.peerId)
-            |> take(1)
-            |> castError(MTRpcError.self)
-            |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
-                if let inputPeer = apiInputPeer(peer) {
-                    return account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, inAppOrigin: nil))
-                    |> map(Optional.init)
-                } else {
-                    return .single(nil)
-                }
+    case let .message(messageId, buttonId):
+        flags |= (1 << 1)
+        request = account.postbox.loadedPeerWithId(messageId.peerId)
+        |> take(1)
+        |> castError(MTRpcError.self)
+        |> mapToSignal { peer -> Signal<Api.UrlAuthResult?, MTRpcError> in
+            if let inputPeer = apiInputPeer(peer) {
+                return account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: inputPeer, msgId: messageId.id, buttonId: buttonId, url: nil, inAppOrigin: nil))
+                |> map(Optional.init)
+            } else {
+                return .single(nil)
             }
-        case let .url(url):
-            flags |= (1 << 2)
-            request = account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, inAppOrigin: nil))
-            |> map(Optional.init)
+        }
+    case let .url(url, inAppOrigin):
+        flags |= (1 << 2)
+        if let _ = inAppOrigin {
+            flags |= (1 << 3)
+        }
+        request = account.network.request(Api.functions.messages.requestUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, inAppOrigin: inAppOrigin))
+        |> map(Optional.init)
     }
     
     return request
@@ -303,7 +306,7 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
                     return .single(nil)
                 }
             }
-        case let .url(url):
+        case let .url(url, _):
             flags |= (1 << 2)
             request = account.network.request(Api.functions.messages.acceptUrlAuth(flags: flags, peer: nil, msgId: nil, buttonId: nil, url: url, matchCode: matchCode))
             |> map(Optional.init)

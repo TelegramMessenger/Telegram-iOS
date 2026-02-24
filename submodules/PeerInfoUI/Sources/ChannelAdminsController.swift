@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -279,10 +280,15 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
             case let .adminPeerItem(_, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, hasAction):
                 let peerText: String
                 var action: (() -> Void)?
+            
+                var labelString: String?
+                var labelColor: UIColor?
                 switch participant.participant {
-                    case .creator:
-                        peerText = strings.Channel_Management_LabelOwner
-                    case let .member(_, _, adminInfo, _, _, _):
+                    case let .creator(_, _, rank):
+                        peerText = ""
+                        labelString = rank ?? strings.Conversation_Owner
+                        labelColor = UIColor(rgb: 0x956ac8)
+                    case let .member(_, _, adminInfo, _, rank, _):
                         if let adminInfo = adminInfo {
                             if let peer = participant.peers[adminInfo.promotedBy] {
                                 if peer.id == participant.peer.id {
@@ -293,8 +299,11 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                             } else {
                                 peerText = ""
                             }
+                            labelString = rank ?? strings.Conversation_Admin
+                            labelColor = UIColor(rgb: 0x49a355)
                         } else {
                             peerText = ""
+                            labelString = rank
                         }
                 }
                 if hasAction {
@@ -302,7 +311,15 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         arguments.openAdmin(participant.participant)
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: nil, text: .text(peerText, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
+            
+                let label: ItemListPeerItemLabel
+                if let labelString {
+                    label = .text(labelString, .standard, labelColor ?? presentationData.theme.list.itemSecondaryTextColor, true)
+                } else {
+                    label = .none
+                }
+            
+                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: participant.presences[participant.peer.id].flatMap { EnginePeer.Presence($0) }, text: peerText.isEmpty ? .presence : .text(peerText, .secondary), label: label, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.removeAdmin(peerId)
@@ -844,22 +861,27 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                 return context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peerId)
                 )
-                |> mapToSignal { participants -> Signal<[(EngineLegacyGroupParticipant, EnginePeer?)]?, NoError> in
+                |> mapToSignal { participants -> Signal<[(EngineLegacyGroupParticipant, EnginePeer?, EnginePeer.Presence?)]?, NoError> in
                     guard case let .known(participants) = participants else {
                         return .single(nil)
                     }
                     
                     return context.engine.data.subscribe(
-                        EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0.peerId) })
+                        EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0.peerId) }),
+                        EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Presence(id: $0.peerId) })
                     )
-                    |> map { peers -> [(EngineLegacyGroupParticipant, EnginePeer?)]? in
-                        var result: [(EngineLegacyGroupParticipant, EnginePeer?)] = []
+                    |> map { peers, presences -> [(EngineLegacyGroupParticipant, EnginePeer?, EnginePeer.Presence?)]? in
+                        var result: [(EngineLegacyGroupParticipant, EnginePeer?, EnginePeer.Presence?)] = []
                         for participant in participants {
                             var peer: EnginePeer?
+                            var presence: EnginePeer.Presence?
                             if let peerValue = peers[participant.peerId] {
                                 peer = peerValue
                             }
-                            result.append((participant, peer))
+                            if let presenceValue = presences[participant.peerId] {
+                                presence = presenceValue
+                            }
+                            result.append((participant, peer, presence))
                         }
                         return result
                     }
@@ -871,7 +893,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                     
                     var result: [RenderedChannelParticipant] = []
                     var creatorPeer: EnginePeer?
-                    for (participant, peer) in participants {
+                    for (participant, peer, _) in participants {
                         if let peer {
                             switch participant {
                             case .creator:
@@ -884,16 +906,20 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                     guard let creator = creatorPeer else {
                         return nil
                     }
-                    for (participant, peer) in participants {
+                    for (participant, peer, presence) in participants {
                         if let peer {
+                            var presences: [PeerId: PeerPresence] = [:]
+                            if let presence {
+                                presences[peer.id] = presence._asPresence()
+                            }
                             switch participant {
-                            case .creator:
-                                result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer._asPeer()))
-                            case .admin:
+                            case let .creator(_, rank):
+                                result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: rank), peer: peer._asPeer(), presences: presences))
+                            case let .admin(_, _, _, rank):
                                 var peers: [EnginePeer.Id: EnginePeer] = [:]
                                 peers[creator.id] = creator
                                 peers[peer.id] = peer
-                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil, subscriptionUntilDate: nil), peer: peer._asPeer(), peers: peers.mapValues({ $0._asPeer() })))
+                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: rank, subscriptionUntilDate: nil), peer: peer._asPeer(), peers: peers.mapValues({ $0._asPeer() }), presences: presences))
                             case .member:
                                 break
                             }

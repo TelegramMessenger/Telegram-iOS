@@ -560,6 +560,7 @@ public final class MediaEditor {
                 cropOrientation: nil,
                 gradientColors: nil,
                 videoTrimRange: nil,
+                videoBounce: false,
                 videoIsMuted: false,
                 videoIsFullHd: false,
                 videoIsMirrored: false,

@@ -401,6 +401,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageWallpaperBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiftBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiftOfferBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageDisableCopyProtectionBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiveawayBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleItemNode",
         "//submodules/TelegramUI/Components/Chat/ChatRecentActionsController",
@@ -516,6 +517,10 @@ swift_library(
         "//submodules/TelegramUI/Components/ProxyServerPreviewScreen",
         "//submodules/TelegramUI/Components/ContextControllerImpl",
         "//submodules/TelegramUI/Components/AuthConfirmationScreen",
+        "//submodules/TelegramUI/Components/ChatParticipantRightsScreen",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerCopyProtectionInfoScreen",
+        "//submodules/TelegramUI/Components/Chat/ChatRankInfoScreen",
+        "//submodules/TelegramUI/Components/RankChatPreviewItem",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

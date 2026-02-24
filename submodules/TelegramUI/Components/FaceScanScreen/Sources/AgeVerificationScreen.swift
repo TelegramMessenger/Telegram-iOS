@@ -69,11 +69,10 @@ private final class SheetContent: CombinedComponent {
     }
         
     static var body: Body {
-        let icon = Child(ZStack<Empty>.self)
         let closeButton = Child(GlassBarButtonComponent.self)
+        let icon = Child(ZStack<Empty>.self)
         let title = Child(Text.self)
         let text = Child(BalancedTextComponent.self)
-        
         let button = Child(ButtonComponent.self)
         
         return { context in

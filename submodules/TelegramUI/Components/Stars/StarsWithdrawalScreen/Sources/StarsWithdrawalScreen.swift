@@ -954,6 +954,7 @@ private final class SheetContent: CombinedComponent {
                             if let minAmount, amount < minAmount, (!allowZero || amount != .zero) {
                                 controller.presentMinAmountTooltip(minAmount.value, currency: state.currency)
                             } else {
+                                var dismiss = true
                                 switch state.mode {
                                 case let .withdraw(_, completion):
                                     completion(amount.value)
@@ -964,6 +965,7 @@ private final class SheetContent: CombinedComponent {
                                 case let .reaction(_, completion):
                                     completion(amount.value)
                                 case let .starGiftResell(_, _, completion):
+                                    dismiss = false
                                     completion(CurrencyAmount(amount: amount, currency: state.currency))
                                 case let .paidMessages(_, _, _, _, completion):
                                     completion(amount.value)
@@ -1022,7 +1024,9 @@ private final class SheetContent: CombinedComponent {
                                     completion(CurrencyAmount(amount: amount, currency: state.currency), state.duration)
                                 }
                                 
-                                controller.dismissAnimated()
+                                if dismiss {
+                                    controller.dismissAnimated()
+                                }
                             }
                         }
                     }
@@ -1467,6 +1471,17 @@ public final class StarsWithdrawScreen: ViewControllerComponentContainer {
         
         if let view = self.node.hostView.findTaggedView(tag: amountTag) as? AmountFieldComponent.View {
             view.animateError()
+        }
+    }
+    
+    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        if flag {
+            self.dismissAnimated()
+            Queue.mainQueue().after(0.3, {
+                completion?()
+            })
+        } else {
+            super.dismiss(animated: false, completion: completion)
         }
     }
         

@@ -174,8 +174,6 @@ final class ChannelAppearanceScreenComponent: Component {
         private let topOverscrollLayer = SimpleLayer()
         private let scrollView: ScrollView
         private let actionButton = ComponentView<Empty>()
-        private let bottomPanelBackgroundView: BlurredBackgroundView
-        private let bottomPanelSeparator: SimpleLayer
         
         private let navigationTitle = ComponentView<Empty>()
         
@@ -242,9 +240,6 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             self.scrollView.alwaysBounceVertical = true
             
-            self.bottomPanelBackgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
-            self.bottomPanelSeparator = SimpleLayer()
-            
             super.init(frame: frame)
             
             self.scrollView.delegate = self
@@ -253,9 +248,6 @@ final class ChannelAppearanceScreenComponent: Component {
             self.scrollView.layer.addSublayer(self.topOverscrollLayer)
             
             self.addSubview(self.edgeEffectView)
-            
-            self.addSubview(self.bottomPanelBackgroundView)
-            self.layer.addSublayer(self.bottomPanelSeparator)
         }
         
         required init?(coder: NSCoder) {
@@ -348,13 +340,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 transition.setAlpha(view: navigationTitleView, alpha: navigationAlpha)
             }
             
-            transition.setAlpha(view: self.edgeEffectView, alpha: navigationAlpha)
-            
-            let bottomNavigationAlphaDistance: CGFloat = 16.0
-            let bottomNavigationAlpha: CGFloat = max(0.0, min(1.0, (self.scrollView.contentSize.height - self.scrollView.bounds.maxY) / bottomNavigationAlphaDistance))
-            
-            transition.setAlpha(view: self.bottomPanelBackgroundView, alpha: bottomNavigationAlpha)
-            transition.setAlpha(layer: self.bottomPanelSeparator, alpha: bottomNavigationAlpha)
+            //transition.setAlpha(view: self.edgeEffectView, alpha: navigationAlpha)
         }
         
         private func resolveState() -> ResolvedState? {
@@ -1006,11 +992,6 @@ final class ChannelAppearanceScreenComponent: Component {
                 requiredBoostSubject = .nameColors(colors: resolvedState.nameColor)
             }
             self.requiredBoostSubject = requiredBoostSubject
-            
-            let edgeEffectHeight: CGFloat = environment.navigationHeight + 8.0
-            let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
-            transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
-            self.edgeEffectView.update(content: environment.theme.list.blocksBackgroundColor, blur: true, rect: edgeEffectFrame, edge: .top, edgeSize: min(30, edgeEffectFrame.height), transition: transition)
             
             let headerColor: UIColor
             if let profileColor {
@@ -1843,13 +1824,10 @@ final class ChannelAppearanceScreenComponent: Component {
                 transition.setAlpha(view: buttonView, alpha: 1.0)
             }
             
-            let bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: buttonY - 8.0), size: CGSize(width: availableSize.width, height: availableSize.height - buttonY + 8.0))
-            transition.setFrame(view: self.bottomPanelBackgroundView, frame: bottomPanelFrame)
-            self.bottomPanelBackgroundView.updateColor(color: environment.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-            self.bottomPanelBackgroundView.update(size: bottomPanelFrame.size, transition: transition.containedViewLayoutTransition)
-            
-            self.bottomPanelSeparator.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
-            transition.setFrame(layer: self.bottomPanelSeparator, frame: CGRect(origin: CGPoint(x: bottomPanelFrame.minX, y: bottomPanelFrame.minY), size: CGSize(width: bottomPanelFrame.width, height: UIScreenPixel)))
+            let edgeEffectHeight: CGFloat = availableSize.height - buttonY + 36.0
+            let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - edgeEffectHeight), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+            self.edgeEffectView.update(content: environment.theme.list.blocksBackgroundColor, alpha: 1.0, rect: edgeEffectFrame, edge: .bottom, edgeSize: edgeEffectFrame.height, transition: transition)
             
             let previousBounds = self.scrollView.bounds
             
@@ -1859,10 +1837,6 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
-            }
-            let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: availableSize.height - bottomPanelFrame.minY, right: 0.0)
-            if self.scrollView.verticalScrollIndicatorInsets != scrollInsets {
-                self.scrollView.verticalScrollIndicatorInsets = scrollInsets
             }
                         
             if !previousBounds.isEmpty, !transition.animation.isImmediate {

@@ -126,7 +126,9 @@ public final class ChatSendContactMessageContextPreview: UIView, ChatSendMessage
                 accountPeer: nil,
                 isCentered: false,
                 isPreview: true,
-                isStandalone: true
+                isStandalone: true,
+                rank: nil,
+                rankRole: nil
             )
             items.append(item)
         }
@@ -279,7 +281,9 @@ public final class ChatSendAudioMessageContextPreview: UIView, ChatSendMessageCo
             accountPeer: nil,
             isCentered: false,
             isPreview: true,
-            isStandalone: true
+            isStandalone: true,
+            rank: nil,
+            rankRole: nil
         )
         let items = [item]
         
@@ -421,6 +425,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
         }, clickThroughMessage: { _, _ in
         }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
+        }, editGif: { _, _ in
         }, requestMessageActionCallback: { _, _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
         }, presentControllerInCurrent: { _, _ in
@@ -505,7 +510,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
         }, requestToggleTodoMessageItem: { _, _, _ in
         }, displayTodoToggleUnavailable: { _ in
         }, openStarsPurchase: { _ in
-        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+        }, openRankInfo: { _, _, _ in }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: self.context, backgroundNode: self.wallpaperBackgroundNode))
         
         let associatedData = ChatMessageItemAssociatedData(

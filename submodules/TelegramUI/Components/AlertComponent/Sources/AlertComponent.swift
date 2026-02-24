@@ -809,6 +809,8 @@ open class AlertScreen: ViewControllerComponentContainer, KeyShortcutResponder {
         if !self.processedDidDisappear {
             self.processedDidDisappear = true
             
+            self.view.window?.endEditing(true)
+            
             if let componentView = self.node.hostView.componentView as? AlertScreenComponent.View {
                 let dismissedByTapOutside = componentView.dismissedByTapOutside
                 componentView.animateOut(completion: { [weak self] in

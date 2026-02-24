@@ -551,6 +551,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     public func onAnimateOut() {
     }
     
+    public func activateInput() {
+    }
+    
     public func dismissInput() -> Bool {
         self.ensureUnfocused()
         return true

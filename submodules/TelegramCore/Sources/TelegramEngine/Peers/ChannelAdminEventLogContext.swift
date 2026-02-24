@@ -180,6 +180,7 @@ public final class ChannelAdminEventLogContext {
                                 clipIndex = i - 1
                             }
                         }
+                        clipIndex = max(0, clipIndex)
                         if clipIndex < events.count {
                             events.removeSubrange(clipIndex ..< events.count)
                         }

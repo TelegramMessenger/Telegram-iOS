@@ -184,7 +184,12 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                         }
                         updatedParticipant = .member(id: adminId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: adminInfo, banInfo: nil, rank: rank, subscriptionUntilDate: nil)
                     }
-                    return account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(Api.ChatAdminRights.Cons_chatAdminRights(flags: 0)), rank: rank ?? ""))
+                    
+                    var flags: Int32 = 0
+                    if let _ = rank {
+                        flags = (1 << 0)
+                    }
+                    return account.network.request(Api.functions.channels.editAdmin(flags: flags, channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(Api.ChatAdminRights.Cons_chatAdminRights(flags: 0)), rank: rank ?? ""))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], UpdateChannelAdminRightsError> in
                         if error.errorDescription == "USER_NOT_PARTICIPANT" {
@@ -196,7 +201,7 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                                 return .addMemberError(error)
                             }
                             |> then(
-                                account.network.request(Api.functions.channels.editAdmin(channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(Api.ChatAdminRights.Cons_chatAdminRights(flags: 0)), rank: rank ?? ""))
+                                account.network.request(Api.functions.channels.editAdmin(flags: flags, channel: inputChannel, userId: inputUser, adminRights: rights?.apiAdminRights ?? .chatAdminRights(Api.ChatAdminRights.Cons_chatAdminRights(flags: 0)), rank: rank ?? ""))
                                 |> mapError { error -> UpdateChannelAdminRightsError in
                                     return .generic
                                 }

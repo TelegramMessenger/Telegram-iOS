@@ -141,7 +141,7 @@ private final class StickerPackContainer: ASDisplayNode {
     private let decideNextAction: (StickerPackContainer, StickerPackAction) -> StickerPackNextAction
     private let requestDismiss: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
-    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     private let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
     private let backgroundNode: ASImageNode
     private let previewIconFile: TelegramMediaFile?
@@ -211,7 +211,7 @@ private final class StickerPackContainer: ASDisplayNode {
         requestDismiss: @escaping () -> Void,
         expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void,
         presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void,
-        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+        sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
         longPressEmoji: ((String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void)?,
         openMention: @escaping (String) -> Void,
@@ -536,7 +536,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                     menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Stickers_EditSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         f(.default)
                                         if let self {
-                                            self.openEditSticker(item.file._parse())
+                                            self.openEditSticker(item.file._parse(), isEditing: true)
                                         }
                                     })))
                                     if !strongSelf.isEditing {
@@ -575,6 +575,13 @@ private final class StickerPackContainer: ASDisplayNode {
                                                 }))
                                             ]
                                             c?.pushItems(items: .single(ContextController.Items(content: .list(contextItems))))
+                                        }
+                                    })))
+                                } else {
+                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Stickers_EditSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                        f(.default)
+                                        if let self {
+                                            self.openEditSticker(item.file._parse(), isEditing: false)
                                         }
                                     })))
                                 }
@@ -1270,7 +1277,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 let editorController = context.sharedContext.makeStickerEditorScreen(
                     context: context,
                     source: result,
-                    intro: false,
+                    mode: .addingToPack,
                     transitionArguments: transitionView.flatMap { ($0, transitionRect, transitionImage) },
                     completion: { file, emoji, commit in
                         dismissImpl?()
@@ -1354,7 +1361,7 @@ private final class StickerPackContainer: ASDisplayNode {
         navigationController?.pushViewController(controller)
     }
     
-    private func openEditSticker(_ initialFile: TelegramMediaFile) {
+    private func openEditSticker(_ initialFile: TelegramMediaFile, isEditing: Bool) {
         guard let (info, items, _) = self.currentStickerPack else {
             return
         }
@@ -1375,30 +1382,35 @@ private final class StickerPackContainer: ASDisplayNode {
         let controller = context.sharedContext.makeStickerEditorScreen(
             context: context,
             source: (initialFile, emoji),
-            intro: false,
+            mode: isEditing ? .editing : .generic(canSend: self.sendSticker != nil),
             transitionArguments: nil,
             completion: { file, emoji, commit in
-                let sticker = ImportSticker(
-                    resource: .standalone(resource: file.resource),
-                    emojis: emoji,
-                    dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
-                    duration: file.duration,
-                    mimeType: file.mimeType,
-                    keywords: ""
-                )
-                let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                
-                let _ = (context.engine.stickers.replaceSticker(previousSticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: initialFile), sticker: sticker)
-                |> deliverOnMainQueue).start(completed: {
+                if isEditing {
+                    let sticker = ImportSticker(
+                        resource: .standalone(resource: file.resource),
+                        emojis: emoji,
+                        dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                        duration: file.duration,
+                        mimeType: file.mimeType,
+                        keywords: ""
+                    )
+                    let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+                    
+                    let _ = (context.engine.stickers.replaceSticker(previousSticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: initialFile), sticker: sticker)
+                    |> deliverOnMainQueue).start(completed: {
+                        commit()
+                        
+                        let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], previewIconFile: nil, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                        (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
+                        
+                        Queue.mainQueue().after(0.1) {
+                            packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerUpdated, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                        }
+                    })
+                } else {
                     commit()
-                    
-                    let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], previewIconFile: nil, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
-                    (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
-                    
-                    Queue.mainQueue().after(0.1) {
-                        packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerUpdated, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
-                    }
-                })
+                    let _ = self.sendSticker?(.standalone(media: file), nil, nil)
+                }
             },
             cancelled: {}
         )
@@ -2298,7 +2310,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     private let modalProgressUpdated: (CGFloat, ContainedViewLayoutTransition) -> Void
     private let dismissed: () -> Void
     private let presentInGlobalOverlay: (ViewController, Any?) -> Void
-    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    private let sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     private let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
     private let longPressEmoji: ((String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void)?
     fileprivate let openMention: (String) -> Void
@@ -2333,7 +2345,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void,
         dismissed: @escaping () -> Void,
         presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void,
-        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
+        sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
         longPressEmoji: ((String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void)?,
         openMention: @escaping (String) -> Void)
@@ -2773,7 +2785,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
     
     private let initialSelectedStickerPackIndex: Int
     fileprivate weak var parentNavigationController: NavigationController?
-    fileprivate let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    fileprivate let sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?
     private let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
     
     fileprivate var controllerNode: StickerPackScreenNode {
@@ -2817,7 +2829,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
         expandIfNeeded: Bool = false,
         ignoreCache: Bool = false,
         parentNavigationController: NavigationController? = nil,
-        sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
+        sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)? = nil,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
         actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil
     ) {
@@ -3070,7 +3082,7 @@ public func StickerPackScreen(
     expandIfNeeded: Bool = false,
     ignoreCache: Bool = false,
     parentNavigationController: NavigationController? = nil,
-    sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
+    sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)? = nil,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
     actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil,
     dismissed: (() -> Void)? = nil,

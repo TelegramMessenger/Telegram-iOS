@@ -68,6 +68,7 @@ final class QuickReplyEmptyStateComponent: Component {
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
+                        style: .glass,
                         color: component.theme.list.itemCheckColors.fillColor,
                         foreground: component.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
@@ -92,7 +93,7 @@ final class QuickReplyEmptyStateComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: min(availableSize.width - 16.0 * 2.0, 280.0), height: 50.0)
+                containerSize: CGSize(width: min(availableSize.width - 16.0 * 2.0, 280.0), height: 52.0)
             )
             let buttonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) * 0.5), y: availableSize.height - component.insets.bottom - 14.0 - buttonSize.height), size: buttonSize)
             if let buttonView = self.button.view {

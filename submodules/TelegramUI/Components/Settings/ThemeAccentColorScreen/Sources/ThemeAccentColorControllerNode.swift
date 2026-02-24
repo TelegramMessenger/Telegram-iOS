@@ -1099,7 +1099,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
                     return state
                 }, animated: true)
             }, clickThroughMessage: { _, _ in
-            }, backgroundNode: self.backgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false)
+            }, backgroundNode: self.backgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil)
             return item
         }
         

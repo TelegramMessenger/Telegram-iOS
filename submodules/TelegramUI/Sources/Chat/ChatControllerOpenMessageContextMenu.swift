@@ -88,18 +88,21 @@ extension ChatControllerImpl {
                             break
                         }
                     }
-                    if self.presentationInterfaceState.copyProtectionEnabled && !isAction && !isAd {
+                    if self.presentationInterfaceState.myCopyProtectionEnabled && !isAction && !isAd {
+                        tip = .messageCopyProtection(text: "You disabled copying and forwarding in this chat.")
+                    } else if self.presentationInterfaceState.copyProtectionEnabled && !isAction && !isAd {
                         if case .scheduledMessages = self.subject {
                         } else {
                             if let peer = self.presentationInterfaceState.renderedPeer?.peer {
                                 if peer is TelegramUser {
-                                    
+                                    //TODO:localize
+                                    tip = .messageCopyProtection(text: "**\(EnginePeer(peer).compactDisplayTitle)** disabled copying and forwarding in this chat.")
                                 } else {
                                     var isChannel = false
                                     if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
                                         isChannel = true
                                     }
-                                    tip = .messageCopyProtection(isChannel: isChannel)
+                                    tip = .messageCopyProtection(text: isChannel ? self.presentationData.strings.Conversation_CopyProtectionInfoChannel : self.presentationData.strings.Conversation_CopyProtectionInfoGroup)
                                 }
                             }
                         }
@@ -331,7 +334,7 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let isSecret = self.presentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
+                let isSecret = self.presentationInterfaceState.copyProtectionEnabled || self.presentationInterfaceState.myCopyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
                 let controller = makeContextController(presentationData: self.presentationData, source: source, items: actionsSignal, recognizer: recognizer, gesture: gesture, disableScreenshots: isSecret, hideReactionPanelTail: hideReactionPanelTail)
                 controller.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)

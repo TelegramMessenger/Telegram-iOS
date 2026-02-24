@@ -132,6 +132,7 @@ final class LiveStreamMediaSource {
             cropOrientation: nil,
             gradientColors: nil,
             videoTrimRange: nil,
+            videoBounce: false,
             videoIsMuted: false,
             videoIsFullHd: false,
             videoIsMirrored: false,

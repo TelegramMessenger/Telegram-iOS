@@ -295,6 +295,8 @@ final class PeekControllerNode: ViewControllerTracingNode, PeekControllerNodePro
         } else {
             self.hapticFeedback.impact()
         }
+        
+        self.actionsStackNode.updatePanSelection(isEnabled: true)
     }
     
     func animateOut(to rect: CGRect, completion: @escaping () -> Void) {

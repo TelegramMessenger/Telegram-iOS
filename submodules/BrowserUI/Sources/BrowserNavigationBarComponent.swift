@@ -120,7 +120,7 @@ final class BrowserNavigationBarComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
-            self.addSubview(self.edgeEffectView)
+            //self.addSubview(self.edgeEffectView)
             
             self.addSubview(self.containerView)
             self.activateButton.addTarget(self, action: #selector(self.activatePressed), for: .touchUpInside)

@@ -1511,6 +1511,7 @@ final class AvatarEditorScreenComponent: Component {
                         cropOrientation: nil,
                         gradientColors: nil,
                         videoTrimRange: nil,
+                        videoBounce: false,
                         videoIsMuted: false,
                         videoIsFullHd: false,
                         videoIsMirrored: false,

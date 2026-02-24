@@ -514,6 +514,7 @@ public final class ListActionItemComponent: Component {
                 containerSize: CGSize(width: availableSize.width - contentLeftInset - contentRightInset, height: availableSize.height)
             )
             
+            let originalContentLeftInset = contentLeftInset
             if case .center = component.titleAlignment {
                 contentLeftInset = floor((availableSize.width - titleSize.width) / 2.0)
             }
@@ -919,7 +920,7 @@ public final class ListActionItemComponent: Component {
                 transition.setFrame(view: titleView, frame: titleFrame)
             }
             
-            self.separatorInset = contentLeftInset
+            self.separatorInset = originalContentLeftInset
             
             if let backgroundComponent = component.background {
                 var backgroundTransition = transition

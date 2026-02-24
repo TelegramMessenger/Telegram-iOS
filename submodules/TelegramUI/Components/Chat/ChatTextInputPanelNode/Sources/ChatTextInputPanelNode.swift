@@ -4838,6 +4838,11 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                         strongSelf.formatAttributesLink(strongSelf)
                     }
                 },
+                UIAction(title: self.strings?.TextFormat_Date ?? "Date", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesDate(strongSelf)
+                    }
+                },
                 UIAction(title: self.strings?.TextFormat_Strikethrough ?? "Strikethrough", image: nil) { [weak self] (action) in
                     if let strongSelf = self {
                         strongSelf.formatAttributesStrikethrough(strongSelf)
@@ -4922,6 +4927,11 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     @objc public func formatAttributesLink(_ sender: Any) {
         self.inputMenu.back()
         self.interfaceInteraction?.openLinkEditing()
+    }
+    
+    @objc public func formatAttributesDate(_ sender: Any) {
+        self.inputMenu.back()
+        self.interfaceInteraction?.openDateEditing()
     }
     
     @objc public func formatAttributesStrikethrough(_ sender: Any) {

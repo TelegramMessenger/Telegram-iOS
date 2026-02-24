@@ -596,7 +596,7 @@ public enum ContextControllerTip: Equatable {
     case textSelection
     case quoteSelection
     case messageViewsPrivacy
-    case messageCopyProtection(isChannel: Bool)
+    case messageCopyProtection(text: String)
     case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?, file: TelegramMediaFile?, action: (() -> Void)?)
     case notificationTopicExceptions(text: String, action: (() -> Void)?)
     case starsReactions(topCount: Int)
@@ -623,8 +623,8 @@ public enum ContextControllerTip: Equatable {
             } else {
                 return false
             }
-        case let .messageCopyProtection(isChannel):
-            if case .messageCopyProtection(isChannel) = rhs {
+        case let .messageCopyProtection(text):
+            if case .messageCopyProtection(text) = rhs {
                 return true
             } else {
                 return false

@@ -192,12 +192,12 @@ private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], ins
 
 public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     public final class Interaction {
-        let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+        let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool
         let presentController: (ViewController, Any?) -> Void
         let getNavigationController: () -> NavigationController?
         
         public init(
-            sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
+            sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView?, CGRect?, CALayer?, [ItemCollectionId]) -> Bool,
             presentController: @escaping (ViewController, Any?) -> Void,
             getNavigationController: @escaping () -> NavigationController?
         ) {

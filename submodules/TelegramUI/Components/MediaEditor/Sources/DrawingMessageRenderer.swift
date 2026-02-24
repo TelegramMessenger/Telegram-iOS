@@ -233,7 +233,7 @@ public final class DrawingMessageRenderer {
             } else {
                 avatarHeaderItem = nil
             }
-            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false)]
+            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false, rank: nil, rankRole: nil)]
         
             let inset: CGFloat = 16.0
             var leftInset: CGFloat = 37.0

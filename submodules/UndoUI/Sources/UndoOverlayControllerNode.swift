@@ -2000,8 +2000,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             }
         }
         
-        var panelFrame = CGRect(origin: CGPoint(x: leftMargin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
-        var panelWrapperFrame = CGRect(origin: CGPoint(x: leftMargin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
+        var panelWidth = layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right
+        if self.appearance?.isNarrow == true {
+            panelWidth = 180.0
+        }
+        
+        var panelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - panelWidth) / 2.0), y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
+        var panelWrapperFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - panelWidth) / 2.0), y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
         
         if case .top = self.placementPosition {
             var topInset = insets.top
@@ -2014,7 +2019,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         transition.updateFrame(node: self.panelNode, frame: panelFrame)
         transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
-        self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight)
+        self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: panelWidth, height: contentHeight)
         
         var buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - leftMargin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
         var undoButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - leftMargin * 2.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + leftMargin, height: contentHeight))

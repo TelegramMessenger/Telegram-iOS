@@ -173,6 +173,18 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         case firstNameFirst
         case lastNameFirst
     }
+    
+    public struct LabelText {
+        let text: String
+        let color: UIColor
+        let hasBackground: Bool
+        
+        public init(text: String, color: UIColor, hasBackground: Bool) {
+            self.text = text
+            self.color = color
+            self.hasBackground = hasBackground
+        }
+    }
 
     let presentationData: ItemListPresentationData
     let style: ItemListStyle
@@ -186,7 +198,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     public let peer: ContactsPeerItemPeer
     let status: ContactsPeerItemStatus
     let badge: ContactsPeerItemBadge?
-    let rightLabelText: String?
+    let rightLabelText: LabelText?
     let requiresPremiumForMessaging: Bool
     let enabled: Bool
     let selection: ContactsPeerItemSelection
@@ -233,7 +245,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         peer: ContactsPeerItemPeer,
         status: ContactsPeerItemStatus,
         badge: ContactsPeerItemBadge? = nil,
-        rightLabelText: String? = nil,
+        rightLabelText: LabelText? = nil,
         requiresPremiumForMessaging: Bool = false,
         enabled: Bool,
         selection: ContactsPeerItemSelection,
@@ -471,6 +483,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var actionButtonNodes: [HighlightableButtonNode]?
     private var moreButtonNode: MoreButtonNode?
     private var arrowButtonNode: HighlightableButtonNode?
+    private let labelBadgeNode: ASImageNode
     private var rightLabelTextNode: TextNode?
     
     private var adButton: HighlightableButtonNode?
@@ -587,6 +600,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.titleNode = TextNode()
         self.statusNode = TextNodeWithEntities()
         
+        self.labelBadgeNode = ASImageNode()
+        self.labelBadgeNode.displayWithoutProcessing = true
+        self.labelBadgeNode.displaysAsynchronously = false
+        self.labelBadgeNode.isLayerBacked = true
+        
         super.init(layerBacked: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
@@ -642,6 +660,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             if let rightLabelTextNode = strongSelf.rightLabelTextNode {
                 transition.updateTransform(node: rightLabelTextNode, transform: CGAffineTransformMakeTranslation(isExtracted ? -24.0 : 0.0, 0.0))
             }
+            transition.updateTransform(node: strongSelf.labelBadgeNode, transform: CGAffineTransformMakeTranslation(isExtracted ? -24.0 : 0.0, 0.0))
             
             transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? 12.0 : 0.0, y: 0.0))
             transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
@@ -753,6 +772,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.layoutParams?.0
         
+        let currentHasBadge = self.labelBadgeNode.image != nil
+        
         return { [weak self] item, params, first, last, firstWithHeader, neighbors in
             var updatedTheme: PresentationTheme?
             
@@ -807,7 +828,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             var rightLabelTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             if let rightLabelText = item.rightLabelText {
-                let rightLabelTextLayoutAndApplyValue = makeRightLabelTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: rightLabelText, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 20.0, height: 100.0)))
+                let rightLabelTextLayoutAndApplyValue = makeRightLabelTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: rightLabelText.text, font: statusFont, textColor: rightLabelText.color), maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 20.0, height: 100.0)))
                 rightLabelTextLayoutAndApply = rightLabelTextLayoutAndApplyValue
                 rightInset -= 6.0 + rightLabelTextLayoutAndApplyValue.0.size.width
             }
@@ -1206,6 +1227,21 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 peerRevealOptions = mappedOptions
             } else {
                 peerRevealOptions = []
+            }
+            
+            var badgeColor: UIColor?
+            if let rightLabelText = item.rightLabelText, rightLabelText.hasBackground {
+                badgeColor = rightLabelText.color.withMultipliedAlpha(0.1)
+            }
+            
+            var updatedLabelBadgeImage: UIImage?
+            let badgeDiameter: CGFloat = 20.0
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                if let badgeColor = badgeColor {
+                    updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
+                }
+            } else if let badgeColor = badgeColor, !currentHasBadge {
+                updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
             }
             
             return (nodeLayout, { [weak self] in
@@ -1808,6 +1844,21 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             
+                            if let updateBadgeImage = updatedLabelBadgeImage {
+                                if strongSelf.labelBadgeNode.supernode == nil {
+                                    if let rightLabelTextNode = strongSelf.rightLabelTextNode {
+                                        strongSelf.offsetContainerNode.insertSubnode(strongSelf.labelBadgeNode, belowSubnode: rightLabelTextNode)
+                                    } else {
+                                        strongSelf.offsetContainerNode.addSubnode(strongSelf.labelBadgeNode)
+                                    }
+                                }
+                                strongSelf.labelBadgeNode.image = updateBadgeImage
+                            }
+                            if badgeColor == nil && strongSelf.labelBadgeNode.supernode != nil {
+                                strongSelf.labelBadgeNode.image = nil
+                                strongSelf.labelBadgeNode.removeFromSupernode()
+                            }
+                            
                             if let (rightLabelTextLayout, rightLabelTextApply) = rightLabelTextLayoutAndApply {
                                 let rightLabelTextNode = rightLabelTextApply()
                                 var rightLabelTextTransition = transition
@@ -1818,10 +1869,24 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     rightLabelTextTransition = .immediate
                                 }
                                 
-                                var rightLabelTextFrame = CGRect(x: revealOffset + params.width - params.rightInset - 8.0 - rightLabelTextLayout.size.width, y: floor((nodeLayout.contentSize.height - rightLabelTextLayout.size.height) / 2.0), width: rightLabelTextLayout.size.width, height: rightLabelTextLayout.size.height)
+                                let rightInset: CGFloat
+                                switch item.systemStyle {
+                                case .glass:
+                                    rightInset = 16.0
+                                case .legacy:
+                                    rightInset = 8.0
+                                }
+                                
+                                var rightLabelTextFrame = CGRect(x: revealOffset + params.width - params.rightInset - rightInset - rightLabelTextLayout.size.width, y: floor((nodeLayout.contentSize.height - rightLabelTextLayout.size.height) / 2.0), width: rightLabelTextLayout.size.width, height: rightLabelTextLayout.size.height)
+                                if strongSelf.labelBadgeNode.image != nil {
+                                    rightLabelTextFrame.origin.x -= 6.0
+                                }
                                 if let arrowButtonImage = arrowButtonImage {
                                     rightLabelTextFrame.origin.x -= arrowButtonImage.size.width + 6.0
                                 }
+                                
+                                let badgeWidth = max(badgeDiameter, rightLabelTextLayout.size.width + 12.0)
+                                strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(rightLabelTextFrame.midX - badgeWidth * 0.5), y: floorToScreenPixels(rightLabelTextFrame.midY - badgeDiameter * 0.5)), size: CGSize(width: badgeWidth, height: badgeDiameter))
                                 
                                 rightLabelTextNode.bounds = CGRect(origin: CGPoint(), size: rightLabelTextFrame.size)
                                 rightLabelTextTransition.updatePosition(node: rightLabelTextNode, position: rightLabelTextFrame.center)

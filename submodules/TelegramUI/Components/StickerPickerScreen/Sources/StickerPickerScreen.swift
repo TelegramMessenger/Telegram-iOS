@@ -178,6 +178,8 @@ private final class StickerSelectionComponent: Component {
                     }
                     return false
                 },
+                editGif: { _, _ in
+                },
                 updateChoosingSticker: { _ in },
                 switchToTextInput: {},
                 dismissTextInput: {},

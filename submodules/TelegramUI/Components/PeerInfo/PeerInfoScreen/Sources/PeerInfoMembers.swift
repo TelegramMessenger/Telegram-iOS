@@ -144,6 +144,8 @@ private final class PeerInfoMembersContextImpl {
     private var removingMemberIds: [PeerId: Disposable] = [:]
     private var membersHidden: Bool?
     
+    private var participantsVersion: Int32?
+    
     private let stateValue = Promise<PeerInfoMembersState>()
     var state: Signal<PeerInfoMembersState, NoError> {
         return self.stateValue.get()
@@ -227,6 +229,13 @@ private final class PeerInfoMembersContextImpl {
                 guard let strongSelf = self, let cachedData = view.cachedData as? CachedGroupData, let participantsData = cachedData.participants else {
                     return
                 }
+                
+                if let currentVersion = strongSelf.participantsVersion, currentVersion > participantsData.version {
+                    return
+                }
+                
+                strongSelf.participantsVersion = participantsData.version
+                
                 var unsortedMembers: [PeerInfoMember] = []
                 for participant in participantsData.participants {
                     if let peer = view.peers[participant.peerId] {

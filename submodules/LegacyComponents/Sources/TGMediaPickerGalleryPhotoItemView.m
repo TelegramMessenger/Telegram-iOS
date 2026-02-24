@@ -9,6 +9,7 @@
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
 
 #import <LegacyComponents/TGPhotoEditorUtils.h>
+#import <LegacyComponents/TGPhotoEditorInterfaceAssets.h>
 
 #import <LegacyComponents/TGModernGalleryZoomableScrollView.h>
 #import <LegacyComponents/TGMessageImageViewOverlayView.h>
@@ -26,8 +27,36 @@
 #import <LegacyComponents/TGMenuView.h>
 
 #import "TGPaintFaceDetector.h"
+#import <AVFoundation/AVFoundation.h>
+#import <math.h>
 
-@interface TGMediaPickerGalleryPhotoItemView ()
+@interface TGMediaPickerGalleryLivePhotoVideoView : UIView
+
+@property (nonatomic, strong) AVPlayer *player;
+
+@end
+
+@implementation TGMediaPickerGalleryLivePhotoVideoView
+
++ (Class)layerClass
+{
+    return [AVPlayerLayer class];
+}
+
+- (AVPlayer *)player
+{
+    return ((AVPlayerLayer *)self.layer).player;
+}
+
+- (void)setPlayer:(AVPlayer *)player
+{
+    ((AVPlayerLayer *)self.layer).player = player;
+    ((AVPlayerLayer *)self.layer).videoGravity = AVLayerVideoGravityResizeAspectFill;
+}
+
+@end
+
+@interface TGMediaPickerGalleryPhotoItemView () <UIGestureRecognizerDelegate>
 {
     TGMediaPickerGalleryFetchResultItem *_fetchItem;
     SMetaDisposable *_facesDisposable;
@@ -46,8 +75,26 @@
     
     SMetaDisposable *_adjustmentsDisposable;
     SMetaDisposable *_attributesDisposable;
+    SMetaDisposable *_liveVideoItemDisposable;
     
     TGMenuContainerView *_tooltipContainerView;
+    
+    TGMediaLivePhotoMode _livePhotoMode;
+    
+    TGMediaPickerGalleryLivePhotoVideoView *_livePhotoVideoView;
+    AVPlayer *_livePhotoPlayer;
+    id _livePhotoDidPlayToEndObserver;
+    UILongPressGestureRecognizer *_livePhotoPressGestureRecognizer;
+    
+    bool _livePhotoIsLoadingPlayer;
+    bool _livePhotoPlaybackLooping;
+    bool _livePhotoIsHolding;
+    bool _livePhotoPendingPlayback;
+    bool _livePhotoPendingPlaybackLooping;
+        
+    CADisplayLink *_livePhotoBounceDisplayLink;
+    bool _livePhotoBounceManualReverse;
+    bool _livePhotoBouncePlayingBackwards;
 }
 
 @property (nonatomic, strong) TGMediaPickerGalleryPhotoItem *item;
@@ -98,15 +145,21 @@
         _fileInfoLabel.textColor = [UIColor whiteColor];
         
         _adjustmentsDisposable = [[SMetaDisposable alloc] init];
+        _liveVideoItemDisposable = [[SMetaDisposable alloc] init];
+        
+        _livePhotoMode = TGMediaLivePhotoModeOff;
     }
     return self;
 }
 
 - (void)dealloc
 {
+    [self stopAndCleanupLivePhotoPlayback];
+    
     [_adjustmentsDisposable dispose];
     [_attributesDisposable dispose];
     [_facesDisposable dispose];
+    [_liveVideoItemDisposable dispose];
 }
 
 - (void)setHiddenAsBeingEdited:(bool)hidden
@@ -120,6 +173,9 @@
     _imageView.hidden = false;
     [_imageView reset];
     [self setProgressVisible:false value:0.0f animated:false];
+    
+    [self stopAndCleanupLivePhotoPlayback];
+    _livePhotoMode = TGMediaLivePhotoModeOff;
 }
 
 - (id<TGModernGalleryItem>)item {
@@ -138,6 +194,9 @@
     }
     
     [super setItem:item synchronously:synchronously];
+    
+    [self stopAndCleanupLivePhotoPlayback];
+    _livePhotoMode = TGMediaLivePhotoModeOff;
     
     if (_entitiesView == nil) {
         _entitiesView = [item.stickersContext drawingEntitiesViewWithSize:item.asset.originalSize];
@@ -246,6 +305,7 @@
             }
             
             [strongSelf reset];
+            [strongSelf layoutLivePhotoVideoView];
 
         }]];
         
@@ -280,6 +340,11 @@
             } file:__FILE_NAME__ line:__LINE__]];
         }
     }
+}
+
+- (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
+{
+    _safeAreaInset = safeAreaInset;
 }
 
 - (void)_setTemporaryRepView:(UIView *)view
@@ -350,6 +415,18 @@
         id<TGModernGalleryItemViewDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(itemViewDidRequestInterfaceShowHide:)])
             [delegate itemViewDidRequestInterfaceShowHide:self];
+    }
+}
+
+- (void)livePhotoModeButtonPressed
+{
+    TGMediaLivePhotoMode nextMode = (TGMediaLivePhotoMode)((_livePhotoMode + 1) % 4);
+    
+    
+    if (self.item.editingContext != nil)
+    {
+        id<TGMediaEditableItem> item = ((id<TGModernGalleryEditableItem>)self.item).editableMediaItem;
+        [self.item.editingContext setLivePhotoMode:nextMode forItem:item];
     }
 }
 
@@ -448,6 +525,7 @@
     [super setFrame:frame];
     
     [self layoutEntities];
+    [self layoutLivePhotoVideoView];
 }
 
 - (void)layoutEntities {
@@ -507,6 +585,348 @@
     
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
     _entitiesView.center = TGPaintAddPoints(boundsCenter, offset);
+}
+
+- (bool)isCurrentAssetLivePhoto
+{
+    if (![self.item.asset isKindOfClass:[TGMediaAsset class]])
+        return false;
+    
+    return (((TGMediaAsset *)self.item.asset).subtypes & TGMediaAssetSubtypePhotoLive) != 0;
+}
+
+- (void)layoutLivePhotoVideoView
+{
+    if (_livePhotoVideoView != nil)
+        _livePhotoVideoView.frame = _imageView.bounds;
+}
+
+- (void)setLivePhotoMode:(TGMediaLivePhotoMode)mode
+{
+    if (_livePhotoMode == mode)
+        return;
+    
+    _livePhotoMode = mode;
+    
+    if (_livePhotoMode == TGMediaLivePhotoModeLive)
+    {
+        [self ensureLivePhotoPressRecognizer];
+        [self ensureLivePhotoPlayer];
+        [self playLivePhotoVideoLooping:false fromStart:true];
+    }
+    else if (_livePhotoMode == TGMediaLivePhotoModeLoop)
+    {
+        [self stopLivePhotoBounceIfNeeded];
+        [self removeLivePhotoPressRecognizer];
+        [self ensureLivePhotoPlayer];
+        [self playLivePhotoVideoLooping:true fromStart:true];
+    }
+    else if (_livePhotoMode == TGMediaLivePhotoModeBounce)
+    {
+        [self removeLivePhotoPressRecognizer];
+        [self ensureLivePhotoPlayer];
+        [self playLivePhotoVideoLooping:false fromStart:true];
+    }
+    else
+    {
+        [self stopLivePhotoBounceIfNeeded];
+        [self stopAndHideLivePhotoVideo:true];
+        [self removeLivePhotoPressRecognizer];
+    }
+}
+
+- (void)ensureLivePhotoPlayer
+{
+    if (_livePhotoPlayer != nil || _livePhotoIsLoadingPlayer || ![self isCurrentAssetLivePhoto])
+        return;
+    
+    _livePhotoIsLoadingPlayer = true;
+    
+    __weak TGMediaPickerGalleryPhotoItemView *weakSelf = self;
+    [_liveVideoItemDisposable setDisposable:[[[TGMediaAssetImageSignals playerItemForVideoAsset:(TGMediaAsset *)self.item.asset] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(AVPlayerItem *playerItem)
+    {
+        __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
+        if (strongSelf == nil || ![playerItem isKindOfClass:[AVPlayerItem class]])
+            return;
+        
+        strongSelf->_livePhotoIsLoadingPlayer = false;
+        
+        [strongSelf removeLivePhotoPlaybackObserver];
+        
+        strongSelf->_livePhotoPlayer = [AVPlayer playerWithPlayerItem:playerItem];
+        strongSelf->_livePhotoPlayer.actionAtItemEnd = AVPlayerActionAtItemEndPause;
+        strongSelf->_livePhotoPlayer.muted = true;
+        
+        [strongSelf ensureLivePhotoVideoView];
+        strongSelf->_livePhotoVideoView.player = strongSelf->_livePhotoPlayer;
+        
+        __weak TGMediaPickerGalleryPhotoItemView *observerWeakSelf = strongSelf;
+        strongSelf->_livePhotoDidPlayToEndObserver = [[NSNotificationCenter defaultCenter] addObserverForName:AVPlayerItemDidPlayToEndTimeNotification object:playerItem queue:[NSOperationQueue mainQueue] usingBlock:^(__unused NSNotification *note)
+        {
+            __strong TGMediaPickerGalleryPhotoItemView *observerStrongSelf = observerWeakSelf;
+            [observerStrongSelf livePhotoPlayerItemDidPlayToEnd];
+        }];
+        
+        if (strongSelf->_livePhotoPendingPlayback)
+        {
+            bool shouldLoop = strongSelf->_livePhotoPendingPlaybackLooping;
+            strongSelf->_livePhotoPendingPlayback = false;
+            [strongSelf playLivePhotoVideoLooping:shouldLoop fromStart:true];
+        }
+    } file:__FILE_NAME__ line:__LINE__]];
+}
+
+- (void)ensureLivePhotoVideoView
+{
+    if (_livePhotoVideoView != nil)
+        return;
+    
+    _livePhotoVideoView = [[TGMediaPickerGalleryLivePhotoVideoView alloc] initWithFrame:_imageView.bounds];
+    _livePhotoVideoView.alpha = 0.0f;
+    _livePhotoVideoView.userInteractionEnabled = false;
+    [_imageView insertSubview:_livePhotoVideoView aboveSubview:_contentView];
+}
+
+- (void)ensureLivePhotoPressRecognizer
+{
+    if (_livePhotoPressGestureRecognizer != nil)
+        return;
+    
+    _livePhotoPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLivePhotoPress:)];
+    _livePhotoPressGestureRecognizer.minimumPressDuration = 0.2f;
+    _livePhotoPressGestureRecognizer.cancelsTouchesInView = false;
+    _livePhotoPressGestureRecognizer.delegate = self;
+    [self.scrollView addGestureRecognizer:_livePhotoPressGestureRecognizer];
+}
+
+- (void)removeLivePhotoPressRecognizer
+{
+    if (_livePhotoPressGestureRecognizer == nil)
+        return;
+    
+    [self.scrollView removeGestureRecognizer:_livePhotoPressGestureRecognizer];
+    _livePhotoPressGestureRecognizer = nil;
+    _livePhotoIsHolding = false;
+}
+
+- (void)handleLivePhotoPress:(UILongPressGestureRecognizer *)gestureRecognizer
+{
+    if (_livePhotoMode != TGMediaLivePhotoModeLive || !self.gesturesEnabled)
+        return;
+    
+    switch (gestureRecognizer.state)
+    {
+        case UIGestureRecognizerStateBegan:
+            _livePhotoIsHolding = true;
+            [self playLivePhotoVideoLooping:true fromStart:true];
+            break;
+        
+        case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateCancelled:
+        case UIGestureRecognizerStateFailed:
+            _livePhotoIsHolding = false;
+            [self stopAndHideLivePhotoVideo:true];
+            break;
+        
+        default:
+            break;
+    }
+}
+
+- (void)playLivePhotoVideoLooping:(bool)looping fromStart:(bool)fromStart
+{
+    if (_livePhotoMode == TGMediaLivePhotoModeOff || ![self isCurrentAssetLivePhoto])
+        return;
+    
+    [self ensureLivePhotoPlayer];
+    [self ensureLivePhotoVideoView];
+    
+    if (_livePhotoPlayer == nil)
+    {
+        _livePhotoPendingPlayback = true;
+        _livePhotoPendingPlaybackLooping = looping;
+        return;
+    }
+    
+    _livePhotoPlaybackLooping = looping;
+    _livePhotoPendingPlayback = false;
+    
+    void (^playBlock)(void) = ^
+    {
+        _livePhotoVideoView.alpha = 1.0f;
+        [_livePhotoPlayer play];
+    };
+    
+    if (fromStart)
+    {
+        [_livePhotoPlayer seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(__unused BOOL finished)
+        {
+            playBlock();
+        }];
+    }
+    else
+    {
+        playBlock();
+    }
+}
+
+- (void)livePhotoPlayerItemDidPlayToEnd
+{
+    if (_livePhotoMode == TGMediaLivePhotoModeLoop)
+    {
+        [self playLivePhotoVideoLooping:true fromStart:true];
+    }
+    else if (_livePhotoMode == TGMediaLivePhotoModeBounce)
+    {
+        [self startLivePhotoBounceReversePlayback];
+    }
+    else if (_livePhotoPlaybackLooping && _livePhotoIsHolding)
+    {
+        [self playLivePhotoVideoLooping:true fromStart:true];
+    }
+    else
+    {
+        [self stopAndHideLivePhotoVideo:true];
+    }
+}
+
+- (void)stopAndHideLivePhotoVideo:(bool)animated
+{
+    [self stopLivePhotoBounceIfNeeded];
+    
+    _livePhotoPlaybackLooping = false;
+    _livePhotoPendingPlayback = false;
+    _livePhotoPendingPlaybackLooping = false;
+    
+    [_livePhotoPlayer pause];
+    
+    if (_livePhotoPlayer != nil)
+        [_livePhotoPlayer seekToTime:kCMTimeZero toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+    
+    if (_livePhotoVideoView == nil)
+        return;
+    
+    if (animated)
+    {
+        [UIView animateWithDuration:0.2f animations:^
+        {
+            _livePhotoVideoView.alpha = 0.0f;
+        }];
+    }
+    else
+    {
+        _livePhotoVideoView.alpha = 0.0f;
+    }
+}
+
+- (void)removeLivePhotoPlaybackObserver
+{
+    if (_livePhotoDidPlayToEndObserver != nil)
+    {
+        [[NSNotificationCenter defaultCenter] removeObserver:_livePhotoDidPlayToEndObserver];
+        _livePhotoDidPlayToEndObserver = nil;
+    }
+}
+
+- (void)stopAndCleanupLivePhotoPlayback
+{
+    [self removeLivePhotoPressRecognizer];
+    [self stopAndHideLivePhotoVideo:false];
+    
+    [self removeLivePhotoPlaybackObserver];
+    [_liveVideoItemDisposable setDisposable:nil];
+    
+    _livePhotoPlayer = nil;
+    [_livePhotoVideoView removeFromSuperview];
+    _livePhotoVideoView = nil;
+    _livePhotoIsLoadingPlayer = false;
+}
+
+- (void)startLivePhotoBounceReversePlayback
+{
+    if (_livePhotoPlayer == nil || _livePhotoMode != TGMediaLivePhotoModeBounce || _livePhotoBouncePlayingBackwards)
+        return;
+        
+    AVPlayerItem *item = _livePhotoPlayer.currentItem;
+    if (item == nil)
+        return;
+    
+    _livePhotoBounceManualReverse = false;
+    _livePhotoBouncePlayingBackwards = true;
+    
+    if ([item canPlayReverse])
+    {
+        //_livePhotoPlayer.rate = -1.0f;
+        [self startLivePhotoBounceMonitor];
+        [_livePhotoPlayer playImmediatelyAtRate:-1.0];
+        return;
+    }
+    
+    _livePhotoBounceManualReverse = true;
+    [_livePhotoPlayer pause];
+    [self startLivePhotoBounceMonitor];
+}
+
+- (void)startLivePhotoBounceMonitor
+{
+    _livePhotoBounceDisplayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(livePhotoBounceTick:)];
+    _livePhotoBounceDisplayLink.preferredFramesPerSecond = 30;
+    
+    [_livePhotoBounceDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+}
+
+- (void)stopLivePhotoBounceIfNeeded
+{
+    _livePhotoBouncePlayingBackwards = false;
+    
+    [_livePhotoBounceDisplayLink invalidate];
+    _livePhotoBounceDisplayLink = nil;
+    _livePhotoBounceManualReverse = false;
+    
+    if (_livePhotoPlayer.rate < 0.0f)
+        [_livePhotoPlayer pause];
+}
+
+- (void)livePhotoBounceTick:(CADisplayLink *)displayLink
+{
+    if (_livePhotoPlayer == nil || _livePhotoMode != TGMediaLivePhotoModeBounce)
+    {
+        [self stopLivePhotoBounceIfNeeded];
+        return;
+    }
+    
+    CMTime currentTime = _livePhotoPlayer.currentTime;
+    Float64 currentSeconds = CMTimeGetSeconds(currentTime);
+    if (!isfinite(currentSeconds))
+        return;
+    
+    if (_livePhotoBounceManualReverse)
+    {
+        CGFloat step = MAX(1.0f / 45.0f, displayLink.duration);
+        Float64 targetSeconds = MAX(0.0, currentSeconds - step);
+        CMTime targetTime = CMTimeMakeWithSeconds(targetSeconds, NSEC_PER_SEC);
+        [_livePhotoPlayer seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+        currentSeconds = targetSeconds;
+    }
+    
+    bool reachedStart = currentSeconds <= 0.02;
+    if (!_livePhotoBounceManualReverse && _livePhotoPlayer.rate > -FLT_EPSILON && currentSeconds <= 0.12)
+        reachedStart = true;
+    
+    if (reachedStart)
+    {
+        _livePhotoBouncePlayingBackwards = false;
+        [self stopLivePhotoBounceIfNeeded];
+        [self playLivePhotoVideoLooping:false fromStart:false];
+    }
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)__unused otherGestureRecognizer
+{
+    if (gestureRecognizer == _livePhotoPressGestureRecognizer)
+        return true;
+    
+    return false;
 }
 
 @end

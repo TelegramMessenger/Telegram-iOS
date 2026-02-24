@@ -349,6 +349,14 @@
     }
 }
 
+- (void)beginEditingCaption {
+    [_interfaceView beginEditingCaption];
+}
+
+- (void)setupGifEditing {
+    [_interfaceView setupGifEditing];
+}
+
 - (void)presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)item tab:(TGPhotoEditorTab)tab
 {
     [self presentPhotoEditorForItem:item tab:tab snapshots:@[] fromRect:CGRectZero];

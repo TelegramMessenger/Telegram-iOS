@@ -1011,6 +1011,8 @@ private final class GiftSetupScreenComponent: Component {
                     sendBotContextResultAsGif: { _, _ , _, _, _, _ in
                         return false
                     },
+                    editGif: { _, _ in
+                    },
                     updateChoosingSticker: { _ in
                     },
                     switchToTextInput: { [weak self] in
