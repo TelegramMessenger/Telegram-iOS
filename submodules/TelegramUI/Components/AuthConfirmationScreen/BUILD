@@ -36,6 +36,8 @@ swift_library(
         "//submodules/AccountUtils",
         "//submodules/ActivityIndicator",
         "//submodules/TelegramUI/Components/PeerInfo/AccountPeerContextItem",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/LottieComponentResourceContent",
     ],
     visibility = [
         "//visibility:public",

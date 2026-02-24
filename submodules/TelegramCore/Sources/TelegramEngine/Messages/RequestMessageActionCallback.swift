@@ -178,6 +178,7 @@ public enum MessageActionUrlAuthResult {
         
         public static let requestWriteAccess = Flags(rawValue: 1 << 0)
         public static let requestPhoneNumber = Flags(rawValue: 1 << 1)
+        public static let showMatchCodesFirst = Flags(rawValue: 1 << 2)
     }
     
     public struct ClientData  : Equatable {
@@ -244,25 +245,29 @@ func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageAct
             return .default
         }
         switch result {
-            case .urlAuthResultDefault:
-                return .default
-            case let .urlAuthResultAccepted(urlAuthResultAcceptedData):
-                let url = urlAuthResultAcceptedData.url
-                return .accepted(url: url)
-            case let .urlAuthResultRequest(urlAuthResultRequestData):
-                let (apiFlags, bot, domain) = (urlAuthResultRequestData.flags, urlAuthResultRequestData.bot, urlAuthResultRequestData.domain)
-                var clientData: MessageActionUrlAuthResult.ClientData?
-                if let browser = urlAuthResultRequestData.browser, let platform = urlAuthResultRequestData.platform, let ip = urlAuthResultRequestData.ip, let region = urlAuthResultRequestData.region {
-                    clientData = MessageActionUrlAuthResult.ClientData(browser: browser, platform: platform, ip: ip, region: region)
-                }
-                var flags: MessageActionUrlAuthResult.Flags = []
-                if (apiFlags & (1 << 0)) != 0 {
-                    flags.insert(.requestWriteAccess)
-                }
-                if (apiFlags & (1 << 1)) != 0 {
-                    flags.insert(.requestPhoneNumber)
-                }
-                return .request(domain: domain, bot: TelegramUser(user: bot), clientData: clientData, flags: flags, matchCodes: urlAuthResultRequestData.matchCodes, userIdHint: urlAuthResultRequestData.userIdHint.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) })
+        case .urlAuthResultDefault:
+            return .default
+        case let .urlAuthResultAccepted(urlAuthResultAcceptedData):
+            let url = urlAuthResultAcceptedData.url
+            return .accepted(url: url)
+        case let .urlAuthResultRequest(urlAuthResultRequestData):
+            let (apiFlags, bot, domain) = (urlAuthResultRequestData.flags, urlAuthResultRequestData.bot, urlAuthResultRequestData.domain)
+            var clientData: MessageActionUrlAuthResult.ClientData?
+            if let browser = urlAuthResultRequestData.browser, let platform = urlAuthResultRequestData.platform, let ip = urlAuthResultRequestData.ip, let region = urlAuthResultRequestData.region {
+                clientData = MessageActionUrlAuthResult.ClientData(browser: browser, platform: platform, ip: ip, region: region)
+            }
+            var flags: MessageActionUrlAuthResult.Flags = []
+            if (apiFlags & (1 << 0)) != 0 {
+                flags.insert(.requestWriteAccess)
+            }
+            if (apiFlags & (1 << 1)) != 0 {
+                flags.insert(.requestPhoneNumber)
+            }
+        
+            if (apiFlags & (1 << 5)) != 0 {
+                flags.insert(.showMatchCodesFirst)
+            }
+            return .request(domain: domain, bot: TelegramUser(user: bot), clientData: clientData, flags: flags, matchCodes: urlAuthResultRequestData.matchCodes, userIdHint: urlAuthResultRequestData.userIdHint.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) })
         }
     }
 }
@@ -325,5 +330,15 @@ func _internal_acceptMessageActionUrlAuth(account: Account, subject: MessageActi
             default:
                 return .default
         }
+    }
+}
+
+func _internal_checkUrlAuthMatchCode(account: Account, url: String, matchCode: String) -> Signal<Bool, NoError> {
+    return account.network.request(Api.functions.messages.checkUrlAuthMatchCode(url: url, matchCode: matchCode))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> map { result in
+        return result == .boolTrue
     }
 }
