@@ -9,6 +9,7 @@ import TelegramCallsUI
 import AccountContext
 import UniversalMediaPlayer
 import TelegramAudio
+import TelegramPresentationData
 
 private struct AccountTasks {
     let stateSynchronization: Bool
@@ -66,6 +67,7 @@ public final class SharedWakeupManager {
     private let acquireIdleExtension: () -> Disposable?
     
     private var enableBackgroundTasks: Bool = false
+    private let presentationData: () -> PresentationData?
     
     private var inForeground: Bool = false
     private var hasActiveAudioSession: Bool = false
@@ -106,13 +108,14 @@ public final class SharedWakeupManager {
     private var backgroundStoryProcessingTaskLaunched: Bool = false
     private var backgroundStoryProcessingTaskCancellationRequestedByApp: Bool = false
     
-    public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
+    public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>, presentationData: @escaping () -> PresentationData?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.beginBackgroundTask = beginBackgroundTask
         self.endBackgroundTask = endBackgroundTask
         self.backgroundTimeRemaining = backgroundTimeRemaining
         self.acquireIdleExtension = acquireIdleExtension
+        self.presentationData = presentationData
         
         self.accountSettingsDisposable = (activeAccounts
         |> mapToSignal { activeAccounts -> Signal<Bool, NoError> in
@@ -495,6 +498,9 @@ public final class SharedWakeupManager {
         guard self.backgroundProcessingTaskId == nil else {
             return
         }
+        guard let presentationData = self.presentationData() else {
+            return
+        }
         
         let baseAppBundleId = Bundle.main.bundleIdentifier!
         let uploadTaskId = "\(baseAppBundleId).upload.message\(self.nextBackgroundProcessingTaskId)"
@@ -629,14 +635,9 @@ public final class SharedWakeupManager {
                     task.progress.totalUnitCount = totalUnitCount
                     task.progress.completedUnitCount = completedUnitCount
                     
-                    let title: String
-                    if self.pendingMediaUploadsByKey.count == 1 {
-                        title = "Uploading 1 Item"
-                    } else {
-                        title = "Uploading \(self.pendingMediaUploadsByKey.count) Items"
-                    }
+                    let title: String = presentationData.strings.BackgroundTasks_UploadingMedia(Int32(self.pendingMediaUploadsByKey.count))
                     if task.title != title {
-                        task.updateTitle(title, subtitle: "Running...")
+                        task.updateTitle(title, subtitle: presentationData.strings.BackgroundTasks_MediaSubtitle)
                     }
                     
                     try await Task.sleep(for: .seconds(1.0))
@@ -644,17 +645,12 @@ public final class SharedWakeupManager {
             }
         })
         
-        let title: String
-        if self.pendingMediaUploadsByKey.count == 1 {
-            title = "Uploading 1 Item"
-        } else {
-            title = "Uploading \(self.pendingMediaUploadsByKey.count) Items"
-        }
+        let title: String = presentationData.strings.BackgroundTasks_UploadingMedia(Int32(self.pendingMediaUploadsByKey.count))
         
         let request = BGContinuedProcessingTaskRequest(
             identifier: uploadTaskId,
             title: title,
-            subtitle: "Running..."
+            subtitle: presentationData.strings.BackgroundTasks_MediaSubtitle
         )
         request.strategy = .fail
         
@@ -676,6 +672,9 @@ public final class SharedWakeupManager {
             return
         }
         guard self.backgroundStoryProcessingTaskId == nil else {
+            return
+        }
+        guard let presentationData = self.presentationData() else {
             return
         }
         
@@ -814,18 +813,12 @@ public final class SharedWakeupManager {
                     task.progress.totalUnitCount = totalUnitCount
                     task.progress.completedUnitCount = completedUnitCount
                     
-                    //TODO:localize
-                    let title: String
-                    if self.pendingStoryUploadsByKey.count == 1 {
-                        title = "Uploading 1 Story"
-                    } else {
-                        title = "Uploading \(self.pendingStoryUploadsByKey.count) Stories"
-                    }
+                    let title: String = presentationData.strings.BackgroundTasks_UploadingStories(Int32(self.pendingStoryUploadsByKey.count))
                     let subtitle: String
                     if self.pendingStoryUploadStatusesByKey.values.contains(where: { $0.phase == .processing }) {
-                        subtitle = "Open the app to continue"
+                        subtitle = presentationData.strings.BackgroundTasks_StoryOpenAppToContinue
                     } else {
-                        subtitle = "Running..."
+                        subtitle = presentationData.strings.BackgroundTasks_StorySubtitle
                     }
                     if currentDisplayedTitle != title || currentDisplayedSubtitle != subtitle {
                         task.updateTitle(title, subtitle: subtitle)
@@ -838,17 +831,12 @@ public final class SharedWakeupManager {
             }
         })
         
-        let title: String
-        if self.pendingStoryUploadsByKey.count == 1 {
-            title = "Uploading 1 Story"
-        } else {
-            title = "Uploading \(self.pendingStoryUploadsByKey.count) Stories"
-        }
+        let title: String = presentationData.strings.BackgroundTasks_UploadingStories(Int32(self.pendingStoryUploadsByKey.count))
         let subtitle: String
         if self.pendingStoryUploadStatusesByKey.values.contains(where: { $0.phase == .processing }) {
-            subtitle = "Open the app to continue"
+            subtitle = presentationData.strings.BackgroundTasks_StoryOpenAppToContinue
         } else {
-            subtitle = "Running..."
+            subtitle = presentationData.strings.BackgroundTasks_StorySubtitle
         }
         
         let request = BGContinuedProcessingTaskRequest(
