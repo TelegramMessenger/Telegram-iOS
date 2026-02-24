@@ -15928,7 +15928,20 @@ Error: %8$@";
 "BackgroundTasks.UploadingStories_any" = "Uploading %d Stories";
 "BackgroundTasks.StoryOpenAppToContinue" = "Open app to continue";
 "BackgroundTasks.StorySubtitle" = "Running...";
+"BackgroundTasks.StoryFinished" = "Finished";
 
 "BackgroundTasks.UploadingMedia_1" = "Sending Message";
 "BackgroundTasks.UploadingMedia_any" = "Sending %d Messages";
 "BackgroundTasks.MediaSubtitle" = "Running...";
+"BackgroundTasks.MediaFinished" = "Finished";
+
+"DisableSharing.Title" = "Disable Sharing";
+"DisableSharing.Screenshot.Title" = "No Screenshots";
+"DisableSharing.Screenshot.Text" = "Disable screenshots and screen recordings in this chat.";
+
+"DisableSharing.Forwarding.Title" = "No Forwarding";
+"DisableSharing.Forwarding.Text" = "Disable message forwarding to other chats.";
+
+"DisableSharing.Saving.Title" = "No Saving";
+"DisableSharing.Saving.Text" = "Disable copying text and saving photos and videos to Photos.";
+"DisableSharing.Confirm" = "Disable Sharing";
