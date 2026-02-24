@@ -45,10 +45,9 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
             source = .extracted(ChatMessageLinkContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode))
 //                }
         
-        //TODO:localize
         var items: [ContextMenuItem] = []
         items.append(
-            .action(ContextMenuActionItem(text: "Copy Date", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Date_Copy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                 f(.default)
 
                 guard let self else {
@@ -58,11 +57,11 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
                 let fullDate = stringForEntityFormattedDate(timestamp: date, format: .full(timeFormat: .short, dateFormat: .long, dayOfWeek: false), strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
                 UIPasteboard.general.string = fullDate
 
-                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Date copied to clipboard."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.Conversation_DateCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }))
         )
         items.append(
-            .action(ContextMenuActionItem(text: "Add to Calendar", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
+            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Date_AddToCalendar, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  _, f in
                 f(.default)
 
                 guard let self else {
@@ -85,7 +84,7 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
             }))
         )
         items.append(
-            .action(ContextMenuActionItem(text: "Set a Reminder", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+            .action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Context_Date_SetReminder, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                 f(.default)
 
                 guard let self else {
@@ -109,7 +108,7 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
                         let forwardMessage: EnqueueMessage = .forward(source: message.id, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil)
                         let _ = forwardMessage
                         let _ = enqueueMessages(account: self.context.account, peerId: self.context.account.peerId, messages: [forwardMessage]).start()
-                        self.present(UndoOverlayController(presentationData: self.presentationData, content: .forward(savedMessages: true, text: "You have set a reminder in [Saved Messages]()."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        self.present(UndoOverlayController(presentationData: self.presentationData, content: .forward(savedMessages: true, text: self.presentationData.strings.Conversation_DateReminderSet), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     }
                 )
                 self.push(controller)

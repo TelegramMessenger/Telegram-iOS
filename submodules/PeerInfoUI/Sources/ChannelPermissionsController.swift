@@ -535,11 +535,10 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
     } else if right.contains(.banSendInstantVideos) {
         return strings.Channel_BanUser_PermissionSendVideoMessage
     } else if right.contains(.banEditRank) {
-        //TODO:localize
         if defaultPermissions {
-            return "Edit Own Tags"
+            return strings.Channel_BanUser_PermissionEditOwnRank
         } else {
-            return "Edit Member Tag"
+            return strings.Channel_BanUser_PermissionEditRank
         }
     } else {
         return ""
@@ -578,8 +577,7 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
     } else if right.contains(.banManageTopics) {
         return strings.GroupPermission_NoManageTopics
     } else if right.contains(.banEditRank) {
-        //TODO:localize
-        return "no tag"
+        return strings.GroupPermission_NoEditRank
     } else {
         return ""
     }

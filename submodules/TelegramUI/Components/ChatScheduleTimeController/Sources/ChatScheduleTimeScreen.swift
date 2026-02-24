@@ -35,6 +35,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
     let mode: ChatScheduleTimeScreen.Mode
     let currentTime: Int32?
     let currentRepeatPeriod: Int32?
+    let suggestedTime: Int32?
     let minimalTime: Int32?
     let externalState: ExternalState
     let dismiss: () -> Void
@@ -44,6 +45,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
         mode: ChatScheduleTimeScreen.Mode,
         currentTime: Int32?,
         currentRepeatPeriod: Int32?,
+        suggestedTime: Int32?,
         minimalTime: Int32?,
         externalState: ExternalState,
         dismiss: @escaping () -> Void
@@ -52,6 +54,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
         self.mode = mode
         self.currentTime = currentTime
         self.currentRepeatPeriod = currentRepeatPeriod
+        self.suggestedTime = suggestedTime
         self.minimalTime = minimalTime
         self.externalState = externalState
         self.dismiss = dismiss
@@ -157,8 +160,10 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                 if case .format = component.mode {
                     self.minDate = Date(timeIntervalSince1970: 0.0)
                     self.maxDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
-                    if let current = component.currentTime {
-                        self.date = Date(timeIntervalSince1970: Double(current))
+                    if let currentTime = component.currentTime {
+                        self.date = Date(timeIntervalSince1970: Double(currentTime))
+                    } else if let suggestedTime = component.suggestedTime {
+                        self.date = Date(timeIntervalSince1970: Double(suggestedTime))
                     } else {
                         self.date = Date()
                     }
@@ -219,8 +224,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             case .reminders:
                 title = strings.Conversation_SetReminder_Title
             case .format:
-                //TODO:localize
-                title = "Date"
+                title = strings.Conversation_FormatDate_Title
             }
             let titleSize = self.title.update(
                 transition: transition,
@@ -481,8 +485,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                     buttonTitle = strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).string
                 }
             case .format:
-                //TODO:localize
-                buttonTitle = component.currentTime != nil ? "Edit Date" : "Add Date"
+                buttonTitle = component.currentTime != nil ? strings.Conversation_FormatDate_EditDate : strings.Conversation_FormatDate_AddDate
             }
                 
             let buttonSideInset: CGFloat = 30.0
@@ -538,7 +541,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                             pressedColor: environment.theme.list.itemDestructiveColor.withMultipliedAlpha(0.8),
                         ),
                         content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                            Text(text: "Remove Date", font: Font.semibold(17.0), color: environment.theme.list.itemDestructiveColor)
+                            Text(text: strings.Conversation_FormatDate_RemoveDate, font: Font.semibold(17.0), color: environment.theme.list.itemDestructiveColor)
                         )),
                         isEnabled: true,
                         displaysProgress: false,
@@ -754,6 +757,7 @@ private final class ChatScheduleTimeScreenComponent: Component {
     let mode: ChatScheduleTimeScreen.Mode
     let currentTime: Int32?
     let currentRepeatPeriod: Int32?
+    let suggestedTime: Int32?
     let minimalTime: Int32?
     
     init(
@@ -761,12 +765,14 @@ private final class ChatScheduleTimeScreenComponent: Component {
         mode: ChatScheduleTimeScreen.Mode,
         currentTime: Int32?,
         currentRepeatPeriod: Int32?,
+        suggestedTime: Int32?,
         minimalTime: Int32?
     ) {
         self.context = context
         self.mode = mode
         self.currentTime = currentTime
         self.currentRepeatPeriod = currentRepeatPeriod
+        self.suggestedTime = suggestedTime
         self.minimalTime = minimalTime
     }
     
@@ -838,6 +844,7 @@ private final class ChatScheduleTimeScreenComponent: Component {
                         mode: component.mode,
                         currentTime: component.currentTime,
                         currentRepeatPeriod: component.currentRepeatPeriod,
+                        suggestedTime: component.suggestedTime,
                         minimalTime: component.minimalTime,
                         externalState: self.contentExternalState,
                         dismiss: { [weak self] in
@@ -920,8 +927,9 @@ public class ChatScheduleTimeScreen: ViewControllerComponentContainer {
         context: AccountContext,
         mode: Mode,
         currentTime: Int32?,
-        currentRepeatPeriod: Int32?,
-        minimalTime: Int32?,
+        currentRepeatPeriod: Int32? = nil,
+        suggestedTime: Int32? = nil,
+        minimalTime: Int32? = nil,
         isDark: Bool,
         completion: @escaping (Result) -> Void
     ) {
@@ -932,6 +940,7 @@ public class ChatScheduleTimeScreen: ViewControllerComponentContainer {
             mode: mode,
             currentTime: currentTime,
             currentRepeatPeriod: currentRepeatPeriod,
+            suggestedTime: suggestedTime,
             minimalTime: minimalTime
         ), navigationBarAppearance: .none, theme: isDark ? .dark : .default)
         

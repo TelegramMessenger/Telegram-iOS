@@ -1716,7 +1716,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             priceString = formatTonAmountText(amount.amount.value, dateTimeFormat: dateTimeFormat) + " TON"
                         }
                         
-                        let timeString = "[TODO]"
+                        let timeString = ""
                         
                         var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
                         attributes[1] = boldAttributes
@@ -1755,7 +1755,6 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(strings.Notification_GroupCreatorChangeApplied(authorName, targetName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id), (1, groupCreatorChange.targetPeerId)]))
                 }
             case let .copyProtectionToggle(previousValue, newValue):
-                //TODO:localize
                 if previousValue == newValue && newValue {
                     attributedString = NSAttributedString(string: strings.Notification_CopyProtection_StillEnabled, font: titleFont, textColor: primaryTextColor)
                 } else if message.author?.id == accountPeerId {
@@ -1775,12 +1774,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
             case .copyProtectionRequest:
-                //TODO:localize
                 let peerName = message.peers[message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                 if message.author?.id == accountPeerId {
-                    attributedString = NSAttributedString(string: "You suggested enabling sharing in this chat", font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Notification_CopyProtection_RequestYou, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    attributedString = NSAttributedString(string: "\(peerName) would like to enable sharing in this chat", font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Notification_CopyProtection_Request(peerName).string, font: titleFont, textColor: primaryTextColor)
                 }
             case .unknown:
                 attributedString = nil

@@ -864,6 +864,26 @@ public class PremiumLimitsListScreen: ViewController {
                     )
                 )
                 
+                availableItems[.copyProtection] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.copyProtection,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["pm_noforwards"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_CopyProtection,
+                                text: strings.Premium_CopyProtectionInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 availableItems[.business] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.business,

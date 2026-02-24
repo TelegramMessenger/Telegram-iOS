@@ -1103,17 +1103,40 @@ private final class GiftViewSheetContent: CombinedComponent {
             controller.present(alertController, in: .window(.root))
         }
         
+        func presentGiftUnavailableForCraftingFirst(gift: StarGift.UniqueGift) {
+            guard let controller = self.getController() as? GiftViewScreen else {
+                return
+            }
+            let context = self.context
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let alertController = textAlertController(
+                context: context,
+                title: presentationData.strings.Gift_Craft_UnavailableBlockchain_Title,
+                text: presentationData.strings.Gift_Craft_UnavailableBlockchain_Text,
+                actions: [
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                ],
+                actionLayout: .vertical
+            )
+            controller.present(alertController, in: .window(.root))
+        }
+        
         func craftGift() {
             guard let arguments = self.subject.arguments, let controller = self.getController() as? GiftViewScreen, case let .unique(gift) = arguments.gift else {
                 return
             }
             
+            controller.dismissAllTooltips()
+            
             guard gift.hostPeerId == nil else {
                 self.presentActionLockedForHostedGift(gift: gift)
                 return
             }
-            
-            controller.dismissAllTooltips()
+                        
+            guard gift.giftAddress == nil else {
+                self.presentGiftUnavailableForCraftingFirst(gift: gift)
+                return
+            }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             

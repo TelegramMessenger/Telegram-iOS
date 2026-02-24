@@ -2285,8 +2285,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Add Caption", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Preview_Gif_AddCaption, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCaption"), color: theme.actionSheet.primaryTextColor)
             }, action: { [weak self] _, f in
                 f(.default)
@@ -2295,7 +2294,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             })))
             
-            items.append(.action(ContextMenuActionItem(text: "Edit", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Preview_Gif_Edit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.actionSheet.primaryTextColor)
             }, action: { [weak self] _, f in
                 f(.default)

@@ -155,7 +155,7 @@ private final class ChatParticipantRightsContent: CombinedComponent {
             let titleString: String
             switch component.subject {
             case .rank:
-                titleString = "Member Tag"
+                titleString = strings.EditRank_Title
             }
             
             let title = title.update(
@@ -189,9 +189,9 @@ private final class ChatParticipantRightsContent: CombinedComponent {
             switch component.subject {
             case let .rank(_, _, _, role):
                 if peer.id == component.context.account.peerId {
-                    rankFooterString = "Share your role, title, or how you're known in this group. Your tag is visible to all members."
+                    rankFooterString = strings.EditRank_InfoYou
                 } else {
-                    rankFooterString = "Add short tag next to \(peer.compactDisplayTitle)'s name."
+                    rankFooterString = strings.EditRank_Info(peer.compactDisplayTitle).string
                 }
                 switch role {
                 case .creator:
@@ -239,7 +239,7 @@ private final class ChatParticipantRightsContent: CombinedComponent {
                     theme: theme,
                     initialText: state.initialRank ?? "",
                     resetText: nil,
-                    placeholder: "Add tag",
+                    placeholder: strings.EditRank_Placeholder,
                     characterLimit: Int(rankMaxLength),
                     autocapitalizationType: .sentences,
                     autocorrectionType: .default,
@@ -291,13 +291,13 @@ private final class ChatParticipantRightsContent: CombinedComponent {
             switch component.subject {
             case let .rank(_, _, initialRank, _):
                 if (initialRank ?? "").isEmpty && (state.rank ?? "").isEmpty {
-                    buttonTitle = "Add Later"
+                    buttonTitle = strings.EditRank_AddLater
                 } else if (initialRank ?? "").isEmpty && !(state.rank ?? "").isEmpty {
-                    buttonTitle = "Add Tag"
+                    buttonTitle = strings.EditRank_AddTag
                 } else if !(initialRank ?? "").isEmpty && (state.rank ?? "").isEmpty {
-                    buttonTitle = "Remove Tag"
+                    buttonTitle = strings.EditRank_RemoveTag
                 } else {
-                    buttonTitle = "Edit Tag"
+                    buttonTitle = strings.EditRank_EditTag
                 }
             }
             
@@ -503,14 +503,13 @@ public class ChatParticipantRightsScreen: ViewControllerComponentContainer {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if let navigationController = self.navigationController as? NavigationController {
             Queue.mainQueue().after(0.5) {
-                //TODO:localize
                 var title: String?
                 var text: String
                 if let rank {
-                    title = "Tag added"
+                    title = presentationData.strings.Chat_TagUpdated_Added
                     text = rank
                 } else {
-                    text = "Tag removed"
+                    text = presentationData.strings.Chat_TagUpdated_Removed
                 }
                 let toastController = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: title, text: text, cancel: nil, destructive: false), appearance: .init(isNarrow: true), action: { _ in return true})
                 (navigationController.topViewController as? ViewController)?.present(toastController, in: .current)

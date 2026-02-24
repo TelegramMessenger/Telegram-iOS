@@ -2583,8 +2583,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         case let .member(rank):
                             if let rank, !rank.isEmpty {
                                 if rank == "0️⃣" {
-                                    //TODO:localize
-                                    string = "Tag"
+                                    string = item.presentationData.strings.Chat_TagPlaceholder
                                     defaultRankColor = defaultRankColor.withMultipliedAlpha(0.5)
                                 } else {
                                     string = rank.trimmingEmojis
@@ -2924,7 +2923,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         icon: .suggestedPostReject
                     )
                 ]
-                //TODO:localize
                 let (minWidth, buttonsLayout) = actionButtonsLayout(
                     item.context,
                     item.presentationData.theme,
@@ -2934,8 +2932,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     ReplyMarkupMessageAttribute(
                         rows: [
                             ReplyMarkupRow(buttons: [
-                                ReplyMarkupButton(title: "Reject", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonDecline), style: nil),
-                                ReplyMarkupButton(title: "Accept", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonApprove), style: nil)
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_EnableSharingOffer_Reject, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonDecline), style: nil),
+                                ReplyMarkupButton(title: item.presentationData.strings.Chat_EnableSharingOffer_Accept, titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: buttonApprove), style: nil)
                             ])
                         ],
                         flags: [],

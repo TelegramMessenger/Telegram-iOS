@@ -765,8 +765,7 @@ extension PeerInfoScreenNode {
                     
                     if let user = data.peer as? TelegramUser, let cachedData = data.cachedData as? CachedUserData, user.botInfo == nil && !user.flags.contains(.isSupport) && user.id != strongSelf.context.account.peerId && strongSelf.peerId.namespace != Namespaces.Peer.SecretChat {
                         let copyProtectionEnabled = cachedData.flags.contains(.myCopyProtectionEnabled) || cachedData.flags.contains(.copyProtectionEnabled)
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: !copyProtectionEnabled ? "Disable Sharing" : "Enable Sharing", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: !copyProtectionEnabled ? strongSelf.presentationData.strings.PeerInfo_DisableSharing : strongSelf.presentationData.strings.PeerInfo_EnableSharing, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: !copyProtectionEnabled ? "Chat/Context Menu/ForwardDisable" : "Chat/Context Menu/ForwardEnable"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)

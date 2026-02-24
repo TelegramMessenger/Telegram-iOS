@@ -122,39 +122,38 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
             let textString: String
             let linkColor: UIColor
             var linkHasBackground = true
-            let additionalTextString: String? = component.canChange ? nil : "Only admins can assign member tags in this group."
-            var adminPreviewTag = "Admin Tag"
+            let additionalTextString: String? = component.canChange ? nil : strings.RankInfo_ChangeInfo
+            var adminPreviewTag = strings.RankInfo_AdminTag
             var adminPreviewRole: ChatRankInfoScreenRole = .admin
             
-            var canEdit = false
+            let userName = context.component.userPeer.compactDisplayTitle
+            let chatName = context.component.chatPeer.compactDisplayTitle
+            
+            let canEdit = component.canChange
             switch context.component.role {
             case .creator:
                 var rank = !context.component.rank.isEmpty ? context.component.rank : strings.Conversation_Owner
                 rank = rank.replacingOccurrences(of: " ", with: "\u{00A0}")
                 iconColor = UIColor(rgb: 0x956ac8)
                 linkColor = iconColor
-                titleString = "Owner Tag"
-                textString = "This purple tag  [\(rank)]()  is **\(context.component.userPeer.compactDisplayTitle)'s** owner tag. **\(context.component.userPeer.compactDisplayTitle)** is the owner of **\(context.component.chatPeer.compactDisplayTitle)**."
-                adminPreviewTag = "Owner Tag"
+                titleString = strings.RankInfo_Owner_Title
+                textString = strings.RankInfo_Owner_Text(" [\(rank)]() ", userName, userName, chatName).string
+                adminPreviewTag = strings.RankInfo_OwnerTag
                 adminPreviewRole = .creator
             case .admin:
                 var rank = !context.component.rank.isEmpty ? context.component.rank : strings.Conversation_Admin
                 rank = rank.replacingOccurrences(of: " ", with: "\u{00A0}")
                 iconColor = UIColor(rgb: 0x49a355)
                 linkColor = iconColor
-                titleString = "Admin Tag"
-                textString = "This green tag  [\(rank)]()  is **\(context.component.userPeer.compactDisplayTitle)'s** admin tag. **\(context.component.userPeer.compactDisplayTitle)** is an administrator of **\(context.component.chatPeer.compactDisplayTitle)**."
+                titleString = strings.RankInfo_Admin_Title
+                textString = strings.RankInfo_Admin_Text(" [\(rank)]() ", userName, userName, chatName).string
             case .member:
                 let rank = context.component.rank.replacingOccurrences(of: " ", with: "\u{00A0}")
                 iconColor = secondaryTextColor.withMultipliedAlpha(0.85)
                 linkColor = secondaryTextColor
                 linkHasBackground = false
-                titleString = "Member Tag"
-                textString = "This grey tag [\(rank)]() is **\(context.component.userPeer.compactDisplayTitle)'s** member tag. **\(context.component.userPeer.compactDisplayTitle)** is a member of **\(context.component.chatPeer.compactDisplayTitle)**."
-                
-                if component.canChange {
-                    canEdit = true
-                }
+                titleString = strings.RankInfo_Member_Title
+                textString = strings.RankInfo_Member_Text(" [\(rank)]() ", userName, userName, chatName).string
             }
             
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
@@ -241,7 +240,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
                 text: "Reinhardt, we need to find you some new tunes, mkay?",
                 entities: nil,
                 media: [],
-                rank: "Member Tag",
+                rank: strings.RankInfo_MemberTag,
                 rankRole: .member
             )
             
@@ -379,7 +378,7 @@ private final class ChatRankInfoSheetContent: CombinedComponent {
             var buttonTitle: [AnyComponentWithIdentity<Empty>] = []
             if canEdit {
                 buttonTitle.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ButtonTextContentComponent(
-                    text: "Set My Tag",
+                    text: strings.RankInfo_SetMyTag,
                     badge: 0,
                     textColor: theme.list.itemCheckColors.foregroundColor,
                     badgeBackground: theme.list.itemCheckColors.foregroundColor,
