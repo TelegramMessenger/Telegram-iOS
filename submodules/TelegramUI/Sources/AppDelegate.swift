@@ -1521,31 +1521,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }
         
-        /*if UIApplication.shared.isStatusBarHidden {
-            UIApplication.shared.internalSetStatusBarHidden(false, animation: .none)
-        }*/
-        
-        /*if #available(iOS 13.0, *) {
-            BGTaskScheduler.shared.register(forTaskWithIdentifier: baseAppBundleId + ".refresh", using: nil, launchHandler: { task in
-                let _ = (self.sharedContextPromise.get()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-                    
-                    sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
-                        task.setTaskCompleted(success: true)
-                    }, timeout: 29.0)
-                    let _ = (self.context.get()
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { context in
-                        guard let context = context else {
-                            return
-                        }
-                        sharedApplicationContext.notificationManager.beginPollingState(account: context.context.account)
-                    })
-                })
-            })
-        }*/
-        
         self.maybeCheckForUpdates()
 
         #if canImport(AppCenter)
@@ -1557,9 +1532,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         #endif
         
         if #available(iOS 13.0, *) {
-            let taskId = "\(baseAppBundleId).cleanup"
+            let cleanupTaskId = "\(baseAppBundleId).cleanup"
             
-            BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: DispatchQueue.main) { task in
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: cleanupTaskId, using: DispatchQueue.main) { task in
                 Logger.shared.log("App \(self.episodeId)", "Executing cleanup task")
                 
                 let disposable = self.runCacheReindexTasks(lowImpact: true, completion: {
@@ -1575,11 +1550,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
             
             BGTaskScheduler.shared.getPendingTaskRequests(completionHandler: { tasks in
-                if tasks.contains(where: { $0.identifier == taskId }) {
+                if tasks.contains(where: { $0.identifier == cleanupTaskId }) {
                     Logger.shared.log("App \(self.episodeId)", "Already have a cleanup task pending")
                     return
                 }
-                let request = BGProcessingTaskRequest(identifier: taskId)
+                let request = BGProcessingTaskRequest(identifier: cleanupTaskId)
                 request.requiresExternalPower = true
                 request.requiresNetworkConnectivity = false
                 

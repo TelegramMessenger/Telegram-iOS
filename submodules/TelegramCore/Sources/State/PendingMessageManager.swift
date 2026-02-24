@@ -219,9 +219,9 @@ public final class PendingMessageManager {
     
     private let queue = Queue()
     
-    private let _hasPendingMessages = ValuePromise<Set<PeerId>>(Set(), ignoreRepeated: true)
-    public var hasPendingMessages: Signal<Set<PeerId>, NoError> {
-        return self._hasPendingMessages.get()
+    private let _pendingMessageCount = ValuePromise<[PeerId: Int]>([:], ignoreRepeated: true)
+    public var pendingMessageCount: Signal<[PeerId: Int], NoError> {
+        return self._pendingMessageCount.get()
     }
     
     private var messageContexts: [MessageId: PendingMessageContext] = [:]
@@ -344,14 +344,18 @@ public final class PendingMessageManager {
                 })
             }
             
-            var peersWithPendingMessages = Set<PeerId>()
+            var pendingMessageCount: [PeerId: Int] = [:]
             for id in self.pendingMessageIds {
-                peersWithPendingMessages.insert(id.peerId)
+                if let current = pendingMessageCount[id.peerId] {
+                    pendingMessageCount[id.peerId] = current + 1
+                } else {
+                    pendingMessageCount[id.peerId] = 1
+                }
             }
             
             Logger.shared.log("PendingMessageManager", "pending messages: \(self.pendingMessageIds)")
             
-            self._hasPendingMessages.set(peersWithPendingMessages)
+            self._pendingMessageCount.set(pendingMessageCount)
         }
     }
     

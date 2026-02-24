@@ -1,4 +1,5 @@
 import Foundation
+import BackgroundTasks
 import AVFAudio
 import UIKit
 import SwiftSignalKit
@@ -74,6 +75,10 @@ public final class SharedWakeupManager {
     private var silenceAudioRenderer: MediaPlayerAudioRenderer?
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
+    
+    private var pendingMessageTotalCount: Int?
+    private var nextBackgroundProcessingTaskId: Int = 0
+    private var backgroundProcessingTaskId: String?
     
     public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
         assert(Queue.mainQueue().isCurrent())
@@ -312,15 +317,12 @@ public final class SharedWakeupManager {
         var hasTasksForBackgroundExtension = false
         
         var hasActiveCalls = false
-        var hasPendingMessages = false
+        var pendingMessageCount = 0
         for (_, _, tasks) in self.accountsAndTasks {
             if tasks.activeCalls {
                 hasActiveCalls = true
-                break
             }
-            if tasks.importantTasks.contains(.pendingMessages) {
-                hasPendingMessages = true
-            }
+            pendingMessageCount += tasks.importantTasks.pendingMessageCount
         }
         
         var endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?
@@ -417,20 +419,135 @@ public final class SharedWakeupManager {
                 self.isInBackgroundExtension = false
             }
         }
-        self.updateAccounts(hasTasks: hasTasksForBackgroundExtension, endTaskAfterTransactionsComplete: endTaskAfterTransactionsComplete)
         
-        if hasPendingMessages {
+        let baseAppBundleId = Bundle.main.bundleIdentifier!
+        
+        if pendingMessageCount != 0 && !self.inForeground {
             if self.keepIdleDisposable == nil {
                 self.keepIdleDisposable = self.acquireIdleExtension()
+            }
+            if #available(iOS 26.0, *), self.backgroundProcessingTaskId == nil {
+                let uploadTaskId = "\(baseAppBundleId).upload.\(self.nextBackgroundProcessingTaskId)"
+                self.nextBackgroundProcessingTaskId += 1
+                if let current = self.backgroundProcessingTaskId {
+                    BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: current)
+                }
+                self.backgroundProcessingTaskId = uploadTaskId
+                
+                BGTaskScheduler.shared.register(forTaskWithIdentifier: uploadTaskId, using: nil, launchHandler: { [weak self] task in
+                    guard let task = task as? BGContinuedProcessingTask else {
+                        return
+                    }
+                    guard let self else {
+                        task.setTaskCompleted(success: true)
+                        return
+                    }
+                    
+                    var wasExpired = false
+                    
+                    task.expirationHandler = { [weak self] in
+                        wasExpired = true
+                        
+                        Queue.mainQueue().async {
+                            guard let self else {
+                                return
+                            }
+                            if self.backgroundProcessingTaskId == task.identifier {
+                                self.backgroundProcessingTaskId = nil
+                                self.checkTasks()
+                            }
+                        }
+                    }
+                    
+                    Task { @MainActor [weak self] in
+                        guard let self else {
+                            task.setTaskCompleted(success: true)
+                            return
+                        }
+                        
+                        while true {
+                            if wasExpired {
+                                break
+                            }
+                            var pendingMessageCount = 0
+                            for (_, _, tasks) in self.accountsAndTasks {
+                                pendingMessageCount += tasks.importantTasks.pendingMessageCount
+                            }
+                            if pendingMessageCount == 0 {
+                                self.pendingMessageTotalCount = nil
+                                task.setTaskCompleted(success: true)
+                                if self.backgroundProcessingTaskId == task.identifier {
+                                    self.backgroundProcessingTaskId = nil
+                                    self.checkTasks()
+                                }
+                                return
+                            }
+                            
+                            let totalCount: Int
+                            if let value = self.pendingMessageTotalCount {
+                                let maxValue = max(value, pendingMessageCount)
+                                totalCount = maxValue
+                            } else {
+                                totalCount = pendingMessageCount
+                            }
+                            self.pendingMessageTotalCount = totalCount
+                            //task.progress.totalUnitCount = Int64(totalCount)
+                            //task.progress.completedUnitCount = Int64(max(0, totalCount - pendingMessageCount))
+                            
+                            task.progress.totalUnitCount = 200
+                            task.progress.completedUnitCount += 1
+                            
+                            let title: String
+                            if totalCount == 1 {
+                                title = "Sending 1 Message"
+                            } else {
+                                title = "Sending \(totalCount) Messages"
+                            }
+                            if task.title != title {
+                                task.updateTitle(title, subtitle: "Running...")
+                            }
+                            
+                            try await Task.sleep(for: .seconds(1.0))
+                        }
+                    }
+                })
+                
+                let title: String
+                if pendingMessageCount == 1 {
+                    title = "Sending 1 Message"
+                } else {
+                    title = "Sending \(pendingMessageCount) Messages"
+                }
+                
+                let request = BGContinuedProcessingTaskRequest(
+                    identifier: uploadTaskId,
+                    title: title,
+                    subtitle: "Running..."
+                )
+                request.strategy = .fail
+                
+                do {
+                    try BGTaskScheduler.shared.submit(request)
+                } catch let e {
+                    Logger.shared.log("Wakeup", "BGTaskScheduler submit error: \(e)")
+                }
             }
         } else {
             if let keepIdleDisposable = self.keepIdleDisposable {
                 self.keepIdleDisposable = nil
                 keepIdleDisposable.dispose()
             }
+            if let backgroundProcessingTaskId = self.backgroundProcessingTaskId {
+                self.backgroundProcessingTaskId = nil
+                
+                self.pendingMessageTotalCount = nil
+                BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: backgroundProcessingTaskId)
+            }
         }
         
-        if !self.inForeground && hasPendingMessages && !self.hasActiveAudioSession {
+        self.updateAccounts(hasTasks: hasTasksForBackgroundExtension, endTaskAfterTransactionsComplete: endTaskAfterTransactionsComplete)
+        
+        /*if !self.inForeground && pendingMessageCount != 0 && !self.hasActiveAudioSession {
             if self.silenceAudioRenderer == nil {
                 let audioSession = AVAudioSession()
                 let _ = try? audioSession.setCategory(.ambient)
@@ -460,11 +577,11 @@ public final class SharedWakeupManager {
         } else if let silenceAudioRenderer = self.silenceAudioRenderer {
             self.silenceAudioRenderer = nil
             silenceAudioRenderer.stop()
-        }
+        }*/
     }
     
     private func updateAccounts(hasTasks: Bool, endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?) {
-        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil {
+        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.backgroundProcessingTaskId != nil || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || self.silenceAudioRenderer != nil {
             Logger.shared.log("Wakeup", "enableBeginTransactions: true (active)")
             
             for (account, primary, tasks) in self.accountsAndTasks {
@@ -475,7 +592,7 @@ public final class SharedWakeupManager {
                 } else {
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                 }
-                account.shouldExplicitelyKeepWorkerConnections.set(.single(tasks.backgroundAudio))
+                account.shouldExplicitelyKeepWorkerConnections.set(.single(tasks.backgroundAudio || tasks.importantTasks.pendingStoryCount != 0 || tasks.importantTasks.pendingMessageCount != 0))
                 account.shouldKeepOnlinePresence.set(.single(primary && self.inForeground))
                 account.shouldKeepBackgroundDownloadConnections.set(.single(tasks.backgroundDownloads))
             }
