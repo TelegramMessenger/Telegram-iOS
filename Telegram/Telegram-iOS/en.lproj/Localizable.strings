@@ -15815,6 +15815,9 @@ Error: %8$@";
 "Notification.CopyProtection.StillEnabled" = "Sharing in this chat is still disabled";
 "Notification.CopyProtection.Request" = "%@ would like to enable sharing in this chat";
 "Notification.CopyProtection.RequestYou" = "You suggested enabling sharing in this chat";
+"Notification.CopyProtection.RequestChat" = "%@ would like to enable sharing in this chat, which includes:";
+"Notification.CopyProtection.RequestChatYou" = "You suggested enabling sharing in this chat, which includes:";
+"Notification.CopyProtection.RequestChatInfo" = "forwarding messages\nsaving photos and videos\ncopying messages\ntaking screenshots";
 
 "Gallery.CreateSticker" = "Create Sticker";
 
@@ -15838,7 +15841,7 @@ Error: %8$@";
 "TextFormat.Date" = "Date";
 
 "Gift.Craft.UnavailableBlockchain.Title" = "Crafting Unavailable";
-"Gift.Craft.UnavailableBlockchain.Text" = "This gift can be selected as the main gift of crafting.";
+"Gift.Craft.UnavailableBlockchain.Text" = "This gift can't be used as the first one in crafting because it has been recorded on the blockchain.";
 
 "AuthConfirmation.Emoji.Title" = "Tap the emoji shown\non your other device";
 "AuthConfirmation.Emoji.Description" = "Telegram wants to make sure it's really you.";

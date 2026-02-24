@@ -131,12 +131,12 @@ public class ChatMessageDisableCopyProtectionBubbleContentNode: ChatMessageBubbl
                 
                 let peerName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                 if incoming {
-                    text = "**\(peerName)** would like to enable sharing in this chat, which includes:"
+                    text = item.presentationData.strings.Notification_CopyProtection_RequestChat(peerName).string
                 } else {
-                    text = "You suggested enabling sharing in this chat, which includes:"
+                    text = item.presentationData.strings.Notification_CopyProtection_RequestChatYou
                 }
                 
-                var infoText = "forwarding messages\nsaving photos and videos\ncopying messages\ntaking screenshots"
+                var infoText = item.presentationData.strings.Notification_CopyProtection_RequestChatInfo
                 infoText = " #   \(infoText.replacingOccurrences(of: "\n", with: "\n #   "))"
                 
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
