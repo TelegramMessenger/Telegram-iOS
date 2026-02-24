@@ -143,6 +143,24 @@ public final class LensTransitionContainer: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.alpha.isZero {
+            return nil
+        }
+        for view in self.contentsView.subviews.reversed() {
+            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+                return result
+            }
+        }
+        
+        let result = self.contentsView.hitTest(point, with: event)
+        if result != self.contentsView {
+            return result
+        } else {
+            return nil
+        }
+    }
+    
     private func setIsFilterActive(isFilterActive: Bool) {
         if isFilterActive {
             if self.contentsView.layer.filters == nil {

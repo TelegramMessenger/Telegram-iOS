@@ -65,6 +65,8 @@ public final class SharedWakeupManager {
     private let backgroundTimeRemaining: () -> Double
     private let acquireIdleExtension: () -> Disposable?
     
+    private var enableBackgroundTasks: Bool = false
+    
     private var inForeground: Bool = false
     private var hasActiveAudioSession: Bool = false
     private var activeExplicitExtensionTimer: SwiftSignalKit.Timer?
@@ -73,6 +75,7 @@ public final class SharedWakeupManager {
     private var allowBackgroundTimeExtensionDeadlineTimer: SwiftSignalKit.Timer?
     private var isInBackgroundExtension: Bool = false
     
+    private var accountSettingsDisposable: Disposable?
     private var inForegroundDisposable: Disposable?
     private var hasActiveAudioSessionDisposable: Disposable?
     private var tasksDisposable: Disposable?
@@ -110,6 +113,29 @@ public final class SharedWakeupManager {
         self.endBackgroundTask = endBackgroundTask
         self.backgroundTimeRemaining = backgroundTimeRemaining
         self.acquireIdleExtension = acquireIdleExtension
+        
+        self.accountSettingsDisposable = (activeAccounts
+        |> mapToSignal { activeAccounts -> Signal<Bool, NoError> in
+            guard let account = activeAccounts.primary else {
+                return .single(false)
+            }
+            return account.postbox.transaction { transaction -> Bool in
+                guard let data = currentAppConfiguration(transaction: transaction).data else {
+                    return false
+                }
+                if data["ios_killswitch_disable_bgtasks"] != nil {
+                    return false
+                }
+                return true
+            }
+        }
+        |> deliverOnMainQueue
+        |> distinctUntilChanged).startStrict(next: { [weak self] isEnabled in
+            guard let self else {
+                return
+            }
+            self.enableBackgroundTasks = isEnabled
+        })
         
         self.inForegroundDisposable = (inForeground
         |> deliverOnMainQueue).startStrict(next: { [weak self] value in
@@ -319,6 +345,7 @@ public final class SharedWakeupManager {
     }
     
     deinit {
+        self.accountSettingsDisposable?.dispose()
         self.inForegroundDisposable?.dispose()
         self.hasActiveAudioSessionDisposable?.dispose()
         self.tasksDisposable?.dispose()
@@ -333,6 +360,10 @@ public final class SharedWakeupManager {
     }
     
     private func updateBackgroundProcessingTaskStateFromPendingMediaUploads() {
+        if !self.enableBackgroundTasks {
+            return
+        }
+        
         let shouldHaveTask = !self.pendingMediaUploadsByKey.isEmpty && !self.inForeground
         let hadTask = self.backgroundProcessingTaskId != nil
         
@@ -359,6 +390,10 @@ public final class SharedWakeupManager {
     }
     
     private func updateBackgroundProcessingTaskStateFromPendingStoryUploads() {
+        if !self.enableBackgroundTasks {
+            return
+        }
+        
         let shouldHaveTask = !self.pendingStoryUploadStatusesByKey.isEmpty && !self.inForeground
         let hadTask = self.backgroundStoryProcessingTaskId != nil
         
@@ -508,6 +543,11 @@ public final class SharedWakeupManager {
                         self.backgroundProcessingTaskId = nil
                         self.backgroundProcessingTaskProgressByKey = [:]
                         self.backgroundProcessingTaskLaunched = false
+                        self.checkTasks()
+                        self.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
+                    } else if !self.backgroundProcessingTaskCancellationRequestedByApp {
+                        Logger.shared.log("Wakeup", "Non-current BG task expired externally, will delete uploading messages: \(task.identifier)")
+                        self.cancelUploadingMessagesForCurrentTask()
                         self.checkTasks()
                         self.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
                     }
@@ -688,6 +728,11 @@ public final class SharedWakeupManager {
                         self.backgroundStoryProcessingTaskLaunched = false
                         self.checkTasks()
                         self.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
+                    } else if !self.backgroundStoryProcessingTaskCancellationRequestedByApp {
+                        Logger.shared.log("Wakeup", "Non-current story BG task expired externally, will cancel uploading stories: \(task.identifier)")
+                        self.cancelUploadingStoriesForCurrentTask()
+                        self.checkTasks()
+                        self.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
                     }
                 }
             }
@@ -769,6 +814,7 @@ public final class SharedWakeupManager {
                     task.progress.totalUnitCount = totalUnitCount
                     task.progress.completedUnitCount = completedUnitCount
                     
+                    //TODO:localize
                     let title: String
                     if self.pendingStoryUploadsByKey.count == 1 {
                         title = "Uploading 1 Story"
@@ -811,9 +857,9 @@ public final class SharedWakeupManager {
             subtitle: subtitle
         )
         request.strategy = .fail
-        if BGTaskScheduler.supportedResources.contains(.gpu) {
+        /*if BGTaskScheduler.supportedResources.contains(.gpu) {
             request.requiredResources = .gpu
-        }
+        }*/
         
         do {
             try BGTaskScheduler.shared.submit(request)
