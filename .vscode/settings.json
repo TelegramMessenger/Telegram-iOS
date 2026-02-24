@@ -12,8 +12,6 @@
     "search.exclude": {
         ".git/**": true
     },
-    "files.associations": {
-    },
     "swift.sourcekit-lsp.backgroundIndexing": "on",
     "swift.sourcekit-lsp.trace.server": "messages",
     "terminal.integrated.profiles.osx": {
@@ -25,5 +23,5 @@
             ]
         }
     },
-    "swift.sourcekit-lsp.serverPath": "${workspace}/build-input/sourcekit-lsp"
+    "swift.sourcekit-lsp.serverPath": "${workspaceFolder}/build-input/sourcekit-lsp"
 }
