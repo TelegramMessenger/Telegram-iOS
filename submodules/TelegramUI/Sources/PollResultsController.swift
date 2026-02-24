@@ -417,7 +417,6 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var dismissImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -464,10 +463,6 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
         resultsContext.state
     )
     |> map { presentationData, state, resultsState -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Close), style: .regular, enabled: true, action: {
-            dismissImpl?()
-        })
-        
         var isEmpty = false
         for (_, optionState) in resultsState.options {
             if !optionState.hasLoadedOnce {
@@ -504,7 +499,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
             }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .textWithSubtitle(presentationData.strings.PollResults_Title, presentationData.strings.MessagePoll_VotedCount(totalVoters)), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .textWithSubtitle(presentationData.strings.PollResults_Title, presentationData.strings.MessagePoll_VotedCount(totalVoters)), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: nil, emptyStateItem: nil, initialScrollToItem: initialScrollToItem, crossfadeState: previousWasEmptyValue != nil && previousWasEmptyValue == true && isEmpty == false, animateChanges: false)
         
         return (controllerState, (listState, arguments))
@@ -517,9 +512,6 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     controller.navigationPresentation = .modal
     pushControllerImpl = { [weak controller] c in
         controller?.push(c)
-    }
-    dismissImpl = { [weak controller] in
-        controller?.dismiss()
     }
     controller.acceptsFocusWhenInOverlay = true
     

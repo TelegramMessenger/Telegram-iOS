@@ -44,6 +44,7 @@ import ContactListUI
 import DeviceAccess
 import ProxyServerPreviewScreen
 import AuthConfirmationScreen
+import OpenInExternalAppUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -1839,7 +1840,7 @@ func openResolvedUrlImpl(
                             }
                             
                             let _ = (signal
-                            |> deliverOnMainQueue).start(next: { _ in
+                            |> deliverOnMainQueue).start(next: { acceptResult in
                                 dismissImpl?()
                                 
                                 Queue.mainQueue().after(0.3) {
@@ -1854,6 +1855,40 @@ func openResolvedUrlImpl(
                                         (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
                                     }
                                 }
+                                
+                                if case let .accepted(url) = acceptResult, let url {
+                                    var browserIdentifier = "safari"
+                                    if case let .request(_, _, clientData, _, _, _) = result, let browser = clientData?.browser {
+                                        if browser.hasPrefix("Safari") {
+                                            browserIdentifier = "safari"
+                                        } else if browser.hasPrefix("Opera") {
+                                            browserIdentifier = "operaTouch"
+                                        } else if browser.hasPrefix("Microsoft Edge") {
+                                            browserIdentifier = "edge"
+                                        } else if browser.hasPrefix("Chrome") {
+                                            browserIdentifier = "chrome"
+                                        } else if browser.hasPrefix("Firefox") {
+                                            browserIdentifier = "firefox"
+                                        } else if browser.hasPrefix("Yandex") {
+                                            browserIdentifier = "yandex"
+                                        } else if browser.hasPrefix("UC Browser") {
+                                            browserIdentifier = "ucbrowser"
+                                        } else if browser.hasPrefix("Firefox Focus") {
+                                            browserIdentifier = "firefoxFocus"
+                                        } else if browser.hasPrefix("DuckDuckGo") {
+                                            browserIdentifier = "duckDuckGo"
+                                        } else if browser.hasPrefix("Alook") {
+                                            browserIdentifier = "alook"
+                                        }
+                                    }
+                                    
+                                    let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
+                                    if let match = openInOptions.first(where: { $0.identifier == browserIdentifier }), case let .openUrl(openUrl) = match.action() {
+                                        context.sharedContext.openExternalUrl(context: context, urlContext: .external, url: openUrl, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                                    } else {
+                                        context.sharedContext.openExternalUrl(context: context, urlContext: .external, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                                    }
+                                }
                             }, error: { _ in
                                 if case let .request(domain, _, _, _, _, _) = result {
                                     let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, cancel: nil, destructive: false), action: { _ in return true })
@@ -1865,8 +1900,8 @@ func openResolvedUrlImpl(
                         }
                     })
                     navigationController?.pushViewController(controller)
-                    dismissImpl = {
-                        controller.dismissAnimated()
+                    dismissImpl = { [weak controller] in
+                        controller?.dismissAnimated()
                     }
                 }
             })
