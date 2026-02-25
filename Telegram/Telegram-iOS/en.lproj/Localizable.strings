@@ -15752,6 +15752,7 @@ Error: %8$@";
 
 "AuthConfirmation.LoginFail.Title" = "Login Failed";
 "AuthConfirmation.LoginFail.Text" = "Please try logging in to [%@]() again.";
+"AuthConfirmation.LoginFail.TextUnknown" = "Please try logging in again.";
 
 "Notification.GroupCreatorChangePending" = "%2$@ will become the new main admin in 7 days if %1$@ does not return.";
 "Notification.GroupCreatorChangeApplied" = "%1$@ has transferred ownership of the group to %2$@.";
@@ -15909,7 +15910,7 @@ Error: %8$@";
 "RankInfo.Owner.Title" = "Owner Tag";
 "RankInfo.Owner.Text" = "This purple tag %1$@ is **%2$@'s** owner tag. **%3$@** is the owner of **%4$@**.";
 "RankInfo.ChangeInfo" = "Only admins can assign member tags in this group.";
-"RankInfo.MemberTag" = "Admin Tag";
+"RankInfo.MemberTag" = "Member Tag";
 "RankInfo.AdminTag" = "Admin Tag";
 "RankInfo.OwnerTag" = "Owner Tag";
 "RankInfo.SetMyTag" = "Set My Tag";
@@ -15927,7 +15928,20 @@ Error: %8$@";
 "BackgroundTasks.UploadingStories_any" = "Uploading %d Stories";
 "BackgroundTasks.StoryOpenAppToContinue" = "Open app to continue";
 "BackgroundTasks.StorySubtitle" = "Running...";
+"BackgroundTasks.StoryFinished" = "Finished";
 
 "BackgroundTasks.UploadingMedia_1" = "Sending Message";
 "BackgroundTasks.UploadingMedia_any" = "Sending %d Messages";
 "BackgroundTasks.MediaSubtitle" = "Running...";
+"BackgroundTasks.MediaFinished" = "Finished";
+
+"DisableSharing.Title" = "Disable Sharing";
+"DisableSharing.Screenshot.Title" = "No Screenshots";
+"DisableSharing.Screenshot.Text" = "Disable screenshots and screen recordings in this chat.";
+
+"DisableSharing.Forwarding.Title" = "No Forwarding";
+"DisableSharing.Forwarding.Text" = "Disable message forwarding to other chats.";
+
+"DisableSharing.Saving.Title" = "No Saving";
+"DisableSharing.Saving.Text" = "Disable copying text and saving photos and videos to Photos.";
+"DisableSharing.Confirm" = "Disable Sharing";

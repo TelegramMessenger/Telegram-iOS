@@ -1223,6 +1223,10 @@ private final class NotificationServiceHandler {
                             content.userInfo["peerId"] = "\(peerId.toInt64())"
                             content.userInfo["accountId"] = "\(recordId.int64)"
 
+                            if let dataUrl = payloadJson["data_url"] as? String {
+                                content.userInfo["data_url"] = dataUrl
+                            }
+                            
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {
                                     content.silent = true

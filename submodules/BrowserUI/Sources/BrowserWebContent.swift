@@ -441,7 +441,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                         return
                     }
                     var dismissImpl: (() -> Void)?
-                    let controller = AuthConfirmationScreen(context: self.context, subject: result, completion: { [weak self] accountContext, accountPeer, authResult in
+                    let controller = AuthConfirmationScreen(context: self.context, requestSubject: subject, subject: result, completion: { [weak self] accountContext, accountPeer, authResult in
                         guard let self else {
                             return
                         }
@@ -503,6 +503,19 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                         case .decline:
                             let _ = self.context.engine.messages.declineUrlAuth(url: url).start()
                             self.webView.sendEvent(name: "oauth_result_failed", data: nil)
+                        case .failed:
+                            guard case let .request(domain, _, _, _, _, _) = result else {
+                                return
+                            }
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, cancel: nil, destructive: false), action: { _ in return true })
+                            if let navigationController = self.getNavigationController() {
+                                (navigationController.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                            }
+                            
+                            let _ = self.context.engine.messages.declineUrlAuth(url: url).start()
+                            self.webView.sendEvent(name: "oauth_result_failed", data: nil)
+                            
+                            HapticFeedback().error()
                         }
                     })
                     dismissImpl = { [weak controller] in

@@ -514,7 +514,7 @@ public final class SharedWakeupManager {
                 return
             }
             guard let self else {
-                task.updateTitle(task.title, subtitle: "Finished")
+                task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_MediaFinished)
                 task.setTaskCompleted(success: true)
                 return
             }
@@ -562,7 +562,7 @@ public final class SharedWakeupManager {
             
             Task { @MainActor [weak self] in
                 guard let self else {
-                    task.updateTitle(task.title, subtitle: "Finished")
+                    task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_MediaFinished)
                     task.setTaskCompleted(success: true)
                     return
                 }
@@ -576,7 +576,7 @@ public final class SharedWakeupManager {
                     
                     if self.backgroundProcessingTaskId != task.identifier || self.pendingMediaUploadsByKey.isEmpty {
                         self.backgroundProcessingTaskProgressByKey = [:]
-                        task.updateTitle(task.title, subtitle: "Finished")
+                        task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_MediaFinished)
                         task.setTaskCompleted(success: true)
                         if self.backgroundProcessingTaskId == task.identifier {
                             self.backgroundProcessingTaskId = nil
@@ -690,7 +690,7 @@ public final class SharedWakeupManager {
                 return
             }
             guard let self else {
-                task.updateTitle(task.title, subtitle: "Finished")
+                task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_StoryFinished)
                 task.setTaskCompleted(success: true)
                 return
             }
@@ -738,7 +738,7 @@ public final class SharedWakeupManager {
             
             Task { @MainActor [weak self] in
                 guard let self else {
-                    task.updateTitle(task.title, subtitle: "Finished")
+                    task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_StoryFinished)
                     task.setTaskCompleted(success: true)
                     return
                 }
@@ -754,7 +754,7 @@ public final class SharedWakeupManager {
                     
                     if self.backgroundStoryProcessingTaskId != task.identifier || self.pendingStoryUploadStatusesByKey.isEmpty {
                         self.backgroundStoryProcessingTaskProgressByKey = [:]
-                        task.updateTitle(task.title, subtitle: "Finished")
+                        task.updateTitle(task.title, subtitle: presentationData.strings.BackgroundTasks_StoryFinished)
                         task.setTaskCompleted(success: true)
                         if self.backgroundStoryProcessingTaskId == task.identifier {
                             self.backgroundStoryProcessingTaskId = nil

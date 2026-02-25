@@ -232,11 +232,14 @@ final class RankChatPreviewItemNode: ListViewItemNode {
                         
             var items: [ListViewItem] = []
             for messageItem in item.messageItems.reversed() {
-                let authorPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0))
+                var userPeer = messageItem.peer._asPeer()
+                
+                let updatedId = PeerId.Id._internalFromInt64Value(userPeer.id.id._internalGetInt64Value() - 7)
+                let authorPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: updatedId)
                 let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0))
                 let groupPeer = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(.init(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil, verificationIconFileId: nil, sendPaidMessageStars: nil, linkedMonoforumId: nil)
                 
-                var userPeer = messageItem.peer._asPeer()
+                
                 if let user = userPeer as? TelegramUser {
                     userPeer = TelegramUser(id: authorPeerId, accessHash: user.accessHash, firstName: user.firstName, lastName: user.lastName, username: "", phone: user.phone, photo: user.photo, botInfo: user.botInfo, restrictionInfo: user.restrictionInfo, flags: user.flags, emojiStatus: user.emojiStatus, usernames: user.usernames, storiesHidden: user.storiesHidden, nameColor: user.nameColor, backgroundEmojiId: user.backgroundEmojiId, profileColor: user.profileColor, profileBackgroundEmojiId: user.profileBackgroundEmojiId, subscriberCount: user.subscriberCount, verificationIconFileId: user.verificationIconFileId)
                 }

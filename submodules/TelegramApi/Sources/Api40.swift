@@ -5323,6 +5323,22 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
+    static func checkUrlAuthMatchCode(url: String, matchCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let buffer = Buffer()
+        buffer.appendInt32(-911967477)
+        serializeString(url, buffer: buffer, boxed: false)
+        serializeString(matchCode, buffer: buffer, boxed: false)
+        return (FunctionDescription(name: "messages.checkUrlAuthMatchCode", parameters: [("url", String(describing: url)), ("matchCode", String(describing: matchCode))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+            let reader = BufferReader(buffer)
+            var result: Api.Bool?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
     static func clearAllDrafts() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
         let buffer = Buffer()
         buffer.appendInt32(2119757468)

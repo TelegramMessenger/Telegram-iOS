@@ -194,7 +194,7 @@ public class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem, ListItem
         if case .settings = mode {
             self.selectable = true
         } else {
-            self.selectable = false
+            self.selectable = action != nil
         }
     }
     

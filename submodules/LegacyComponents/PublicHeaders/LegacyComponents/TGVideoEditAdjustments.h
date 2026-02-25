@@ -41,6 +41,7 @@ typedef enum
 - (bool)trimApplied;
 
 - (bool)isCropAndRotationEqualWith:(id<TGMediaEditAdjustments>)adjustments;
+- (bool)isDefaultValuesForGif;
 
 - (NSDictionary *)dictionary;
 

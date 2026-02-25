@@ -1822,19 +1822,12 @@ func openResolvedUrlImpl(
             |> deliverOnMainQueue).start(next: { result in
                 if case .request = result {
                     var dismissImpl: (() -> Void)?
-                    let controller = AuthConfirmationScreen(context: context, subject: result, completion: { accountContext, accountPeer, authResult in
+                    let controller = AuthConfirmationScreen(context: context, requestSubject: subject, subject: result, completion: { accountContext, accountPeer, authResult in
                         switch authResult {
                         case let .accept(allowWriteAccess, sharePhoneNumber, matchCode):
-                            let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
-                            if accountContext === context {
-                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
-                            } else {
-                                accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                                signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: subject)
-                                |> castError(MessageActionUrlAuthError.self)
-                                |> mapToSignal { result in
-                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
-                                } |> afterDisposed {
+                            let signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
+                            |> afterDisposed {
+                                if accountContext !== context {
                                     accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
                                 }
                             }
@@ -1851,8 +1844,13 @@ func openResolvedUrlImpl(
                                         } else {
                                             text = presentationData.strings.AuthConfirmation_LoginSuccess_Text(domain).string
                                         }
-                                        let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), action: { _ in return true })
-                                        (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                        if var topViewController = navigationController?.topViewController as? ViewController {
+                                            if let tabBarController = topViewController as? TabBarController, let controller = tabBarController.currentController {
+                                                topViewController = controller
+                                            }
+                                            let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: presentationData.strings.AuthConfirmation_LoginSuccess_Title, text: text, cancel: nil, destructive: false), action: { _ in return true })
+                                            topViewController.present(controller, in: .current)
+                                        }
                                     }
                                 }
                                 
@@ -1882,8 +1880,9 @@ func openResolvedUrlImpl(
                                         }
                                     }
                                     
+                                    let isWebUrl = url.hasPrefix("http:") || url.hasPrefix("https:")
                                     let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
-                                    if let match = openInOptions.first(where: { $0.identifier == browserIdentifier }), case let .openUrl(openUrl) = match.action() {
+                                    if isWebUrl, let match = openInOptions.first(where: { $0.identifier == browserIdentifier }), case let .openUrl(openUrl) = match.action() {
                                         context.sharedContext.openExternalUrl(context: context, urlContext: .external, url: openUrl, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                                     } else {
                                         context.sharedContext.openExternalUrl(context: context, urlContext: .external, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
@@ -1892,20 +1891,51 @@ func openResolvedUrlImpl(
                             }, error: { _ in
                                 dismissImpl?()
                                 
-                                if case let .request(domain, _, _, _, _, _) = result {
-                                    let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), action: { _ in return true })
-                                    (navigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                                Queue.mainQueue().after(0.3) {
+                                    if case let .request(domain, _, _, _, _, _) = result {
+                                        if var topViewController = navigationController?.topViewController as? ViewController {
+                                            if let tabBarController = topViewController as? TabBarController, let controller = tabBarController.currentController {
+                                                topViewController = controller
+                                            }
+                                            let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), action: { _ in return true })
+                                            topViewController.present(controller, in: .current)
+                                        }
+                                    }
+                                    
+                                    HapticFeedback().error()
                                 }
-                                
-                                HapticFeedback().error()
                             })
                         case .decline:
                             let _ = context.engine.messages.declineUrlAuth(url: url).start()
+                        case .failed:
+                            dismissImpl?()
+                            
+                            Queue.mainQueue().after(0.3) {
+                                if case let .request(domain, _, _, _, _, _) = result {
+                                    if var topViewController = navigationController?.topViewController as? ViewController {
+                                        if let tabBarController = topViewController as? TabBarController, let controller = tabBarController.currentController {
+                                            topViewController = controller
+                                        }
+                                        let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_Text(domain).string, timeout: nil, customUndoText: nil), action: { _ in return true })
+                                        topViewController.present(controller, in: .current)
+                                    }
+                                }
+                                
+                                HapticFeedback().error()
+                            }
                         }
                     })
                     navigationController?.pushViewController(controller)
                     dismissImpl = { [weak controller] in
                         controller?.dismissAnimated()
+                    }
+                } else {
+                    if var topViewController = navigationController?.topViewController as? ViewController {
+                        if let tabBarController = topViewController as? TabBarController, let controller = tabBarController.currentController {
+                            topViewController = controller
+                        }
+                        let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.AuthConfirmation_LoginFail_Title, text: presentationData.strings.AuthConfirmation_LoginFail_TextUnknown, timeout: nil, customUndoText: nil), action: { _ in return true })
+                        topViewController.present(controller, in: .current)
                     }
                 }
             })

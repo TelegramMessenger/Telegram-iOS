@@ -8452,18 +8452,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    func enqueueMediaMessages(fromGallery: Bool = false, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, replyToSubject: ChatInterfaceState.ReplyMessageSubject? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    func enqueueMediaMessages(
+        fromGallery: Bool = false,
+        signals: [Any]?,
+        originalMediaReference: AnyMediaReference? = nil,
+        silentPosting: Bool,
+        scheduleTime: Int32? = nil,
+        replyToSubject: ChatInterfaceState.ReplyMessageSubject? = nil,
+        parameters: ChatSendMessageActionSheetController.SendParameters? = nil,
+        getAnimatedTransitionSource: ((String) -> UIView?)? = nil,
+        completion: @escaping () -> Void = {}
+    ) {
         if let _ = self.presentationInterfaceState.sendPaidMessageStars {
             self.presentPaidMessageAlertIfNeeded(count: Int32(signals?.count ?? 1), forceDark: fromGallery, completion: { [weak self] postpone in
                 self?.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
             })
         } else {
-            self.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, replyToSubject: replyToSubject, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+            self.commitEnqueueMediaMessages(signals: signals, originalMediaReference: originalMediaReference, silentPosting: silentPosting, scheduleTime: scheduleTime, replyToSubject: replyToSubject, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
         }
     }
     
-    private func commitEnqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, postpone: Bool = false, replyToSubject: ChatInterfaceState.ReplyMessageSubject? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
-        self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!)
+    private func commitEnqueueMediaMessages(
+        signals: [Any]?,
+        originalMediaReference: AnyMediaReference? = nil,
+        silentPosting: Bool,
+        scheduleTime: Int32? = nil,
+        postpone: Bool = false,
+        replyToSubject: ChatInterfaceState.ReplyMessageSubject? = nil,
+        parameters: ChatSendMessageActionSheetController.SendParameters? = nil,
+        getAnimatedTransitionSource: ((String) -> UIView?)? = nil,
+        completion: @escaping () -> Void = {}
+    ) {
+        self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!, originalMediaReference: originalMediaReference)
         |> deliverOnMainQueue).startStrict(next: { [weak self] items in
             guard let strongSelf = self else {
                 return

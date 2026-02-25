@@ -102,8 +102,8 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             if !skipSafari {
                 options.append(OpenInOption(identifier: "safari", application: .safari, action: {
                     var url = url
-                    if url.hasPrefix("http://") || url.hasPrefix("https://") {
-                        url = url.replacingOccurrences(of: "https://", with: "x-safari-https")
+                    if url.hasPrefix("https://") {
+                        url = url.replacingOccurrences(of: "https://", with: "x-safari-https://")
                     }
                     return .openUrl(url: url)
                 }))

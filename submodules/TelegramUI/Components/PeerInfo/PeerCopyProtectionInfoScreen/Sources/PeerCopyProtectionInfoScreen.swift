@@ -100,7 +100,6 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
            
             let theme = environment.theme
             let strings = environment.strings
-            let _ = strings
             
             let sideInset: CGFloat = 30.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 30.0 + environment.safeInsets.left
@@ -131,7 +130,7 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
         
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Disable Sharing", font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: strings.DisableSharing_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -150,9 +149,9 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "screenshot",
                     component: AnyComponent(InfoParagraphComponent(
-                        title: "No Screenshots",
+                        title: strings.DisableSharing_Screenshot_Title,
                         titleColor: textColor,
-                        text: "Disable screenshots and screen recordings in this chat.",
+                        text: strings.DisableSharing_Screenshot_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/CopyProtection/NoScreenshot",
@@ -164,9 +163,9 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "forward",
                     component: AnyComponent(InfoParagraphComponent(
-                        title: "No Forwarding",
+                        title: strings.DisableSharing_Forwarding_Title,
                         titleColor: textColor,
-                        text: "Disable message forwarding to other chats.",
+                        text: strings.DisableSharing_Forwarding_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/CopyProtection/NoForward",
@@ -178,9 +177,9 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "save",
                     component: AnyComponent(InfoParagraphComponent(
-                        title: "No Saving",
+                        title: strings.DisableSharing_Saving_Title,
                         titleColor: textColor,
-                        text: "Disable copying text and saving photos and videos to Photos.",
+                        text: strings.DisableSharing_Saving_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/CopyProtection/NoDownload",
@@ -227,7 +226,7 @@ private final class PeerCopyProtectionInfoSheetContent: CombinedComponent {
             if component.context.isPremium {
                 buttonContent = AnyComponentWithIdentity(id: "disable", component: AnyComponent(
                     ButtonTextContentComponent(
-                        text: "Disable Sharing",
+                        text: strings.DisableSharing_Confirm,
                         badge: 0,
                         textColor: theme.list.itemCheckColors.foregroundColor,
                         badgeBackground: theme.list.itemCheckColors.foregroundColor,
