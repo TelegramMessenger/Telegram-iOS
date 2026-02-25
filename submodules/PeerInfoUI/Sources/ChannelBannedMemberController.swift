@@ -22,14 +22,16 @@ private final class ChannelBannedMemberControllerArguments {
     let toggleIsOptionExpanded: (TelegramChatBannedRightsFlags) -> Void
     let openTimeout: () -> Void
     let delete: () -> Void
+    let openPeer: () -> Void
     
-    init(context: AccountContext, toggleRight: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatBannedRightsFlags) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void, openTimeout: @escaping () -> Void, delete: @escaping () -> Void) {
+    init(context: AccountContext, toggleRight: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatBannedRightsFlags) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void, openTimeout: @escaping () -> Void, delete: @escaping () -> Void, openPeer: @escaping () -> Void) {
         self.context = context
         self.toggleRight = toggleRight
         self.toggleRightWhileDisabled = toggleRightWhileDisabled
         self.toggleIsOptionExpanded = toggleIsOptionExpanded
         self.openTimeout = openTimeout
         self.delete = delete
+        self.openPeer = openPeer
     }
 }
 
@@ -218,6 +220,8 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
             case let .info(_, _, dateTimeFormat, peer, presence):
                 return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
+                }, action: {
+                    arguments.openPeer()
                 })
             case let .rightsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
@@ -609,6 +613,16 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
             })
         ])])
         presentControllerImpl?(actionSheet, nil)
+    }, openPeer: {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: memberId))
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer else {
+                return
+            }
+            if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: updatedPresentationData, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                pushControllerImpl?(controller)
+            }
+        })
     })
     
     var peerDataItems: [TelegramEngine.EngineData.Item.Peer.Peer] = []

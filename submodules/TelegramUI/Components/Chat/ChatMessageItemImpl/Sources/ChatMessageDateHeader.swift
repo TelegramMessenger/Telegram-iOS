@@ -1054,7 +1054,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     }
     
     public func updatePeer(peer: Peer) {
-        if let previousPeer = self.peer, previousPeer.nameColor != peer.nameColor || previousPeer.smallProfileImage != peer.smallProfileImage {
+        if let previousPeer = self.peer, previousPeer.nameColor != peer.nameColor || previousPeer.smallProfileImage != peer.smallProfileImage || previousPeer.displayLetters != peer.displayLetters {
             self.peer = peer
             if peer.smallProfileImage != nil {
                 self.avatarNode.setPeerV2(context: self.context, theme: self.presentationData.theme.theme, peer: EnginePeer(peer), authorOfMessage: self.messageReference, overrideImage: nil, emptyColor: .black, synchronousLoad: false, displayDimensions: CGSize(width: avatarHeaderSize(), height: avatarHeaderSize()))

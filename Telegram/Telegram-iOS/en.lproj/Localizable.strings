@@ -15910,7 +15910,7 @@ Error: %8$@";
 "RankInfo.Owner.Title" = "Owner Tag";
 "RankInfo.Owner.Text" = "This purple tag %1$@ is **%2$@'s** owner tag. **%3$@** is the owner of **%4$@**.";
 "RankInfo.ChangeInfo" = "Only admins can assign member tags in this group.";
-"RankInfo.MemberTag" = "Admin Tag";
+"RankInfo.MemberTag" = "Member Tag";
 "RankInfo.AdminTag" = "Admin Tag";
 "RankInfo.OwnerTag" = "Owner Tag";
 "RankInfo.SetMyTag" = "Set My Tag";

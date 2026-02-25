@@ -31,8 +31,9 @@ private final class ChannelAdminControllerArguments {
     let dismissInput: () -> Void
     let animateError: () -> Void
     let toggleIsOptionExpanded: (RightsItem.Sub) -> Void
+    let openPeer: () -> Void
     
-    init(context: AccountContext, updateAdminRights: @escaping (Bool) -> Void, toggleRight: @escaping (RightsItem, TelegramChatAdminRightsFlags, Bool) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void, toggleIsOptionExpanded: @escaping (RightsItem.Sub) -> Void) {
+    init(context: AccountContext, updateAdminRights: @escaping (Bool) -> Void, toggleRight: @escaping (RightsItem, TelegramChatAdminRightsFlags, Bool) -> Void, toggleRightWhileDisabled: @escaping (TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags) -> Void, transferOwnership: @escaping () -> Void, updateRank: @escaping (String, String) -> Void, updateFocusedOnRank: @escaping (Bool) -> Void, dismissAdmin: @escaping () -> Void, dismissInput: @escaping () -> Void, animateError: @escaping () -> Void, toggleIsOptionExpanded: @escaping (RightsItem.Sub) -> Void, openPeer: @escaping () -> Void) {
         self.context = context
         self.updateAdminRights = updateAdminRights
         self.toggleRight = toggleRight
@@ -44,6 +45,7 @@ private final class ChannelAdminControllerArguments {
         self.dismissInput = dismissInput
         self.animateError = animateError
         self.toggleIsOptionExpanded = toggleIsOptionExpanded
+        self.openPeer = openPeer
     }
 }
 
@@ -367,6 +369,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
             case let .info(_, _, dateTimeFormat, peer, presence):
                 return ItemListAvatarAndNameInfoItem(itemContext: .accountContext(arguments.context), presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
+                }, action: {
+                    arguments.openPeer()
                 })
             case let .rankTitle(_, text, count, limit):
                 var accessoryText: ItemListSectionHeaderAccessoryText?
@@ -1219,6 +1223,16 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             
             return state
         }
+    }, openPeer: {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: adminId))
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer else {
+                return
+            }
+            if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: updatedPresentationData, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                pushControllerImpl?(controller)
+            }
+        })
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
