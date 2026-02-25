@@ -2793,13 +2793,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     private var openUrlInProgress: URL?
-    private func openUrlWhenReady(url: URL) {
+    private func openUrlWhenReady(url: URL, external: Bool = false) {
         self.openUrlInProgress = url
         
         self.openUrlWhenReadyDisposable.set((self.authorizedContext()
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] context in
-            context.openUrl(url)
+            context.openUrl(url, external: external)
             
             Queue.mainQueue().after(1.0, {
                 self?.openUrlInProgress = nil
@@ -2811,9 +2811,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-                if let dataUrl = response.notification.request.content.userInfo["data_url"] as? String {
+                if let dataUrl = response.notification.request.content.userInfo["url"] as? String {
                     if let url = URL(string: dataUrl) {
-                        self.openUrlWhenReady(url: url)
+                        self.openUrlWhenReady(url: url, external: true)
                     }
                 } else {
                     if let (peerId, threadId) = peerIdFromNotification(response.notification) {
