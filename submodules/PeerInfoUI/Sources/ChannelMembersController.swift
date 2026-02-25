@@ -685,9 +685,15 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
         }))
     }, openParticipant: { participant, isGroup in
         if isGroup {
-            let controller = channelBannedMemberController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, memberId: participant.peer.id, editMember: true, initialParticipant: participant.participant, updated: { rights in
-            }, upgradedToSupergroup: { _, _ in })
-            pushControllerImpl?(controller)
+            if let _ = participant.participant.adminInfo {
+                let controller = channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, adminId: participant.participant.peerId, initialParticipant: participant.participant, updated: { _ in
+                }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+                pushControllerImpl?(controller)
+            } else {
+                let controller = channelBannedMemberController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, memberId: participant.peer.id, editMember: true, initialParticipant: participant.participant, updated: { rights in
+                }, upgradedToSupergroup: { _, _ in })
+                pushControllerImpl?(controller)
+            }
         } else {
             if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: participant.peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                 pushControllerImpl?(infoController)

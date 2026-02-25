@@ -2343,7 +2343,13 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     return result
                 }, to: &text, entities: &entities)
             } else {
-                
+                appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageRankNew(newRank), generateEntities: { index in
+                    var result: [MessageTextEntityType] = []
+                    if index == 0 {
+                        result.append(.Bold)
+                    }
+                    return result
+                }, to: &text, entities: &entities)
             }
             var attributes: [MessageAttribute] = []
             if !entities.isEmpty {
