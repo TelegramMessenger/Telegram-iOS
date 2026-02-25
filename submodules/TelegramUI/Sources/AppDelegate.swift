@@ -2793,11 +2793,26 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     private var openUrlInProgress: URL?
-    private func openUrlWhenReady(url: URL, external: Bool = false) {
+    private func openUrlWhenReady(accountId: AccountRecordId? = nil, url: URL, external: Bool = false) {
         self.openUrlInProgress = url
         
-        self.openUrlWhenReadyDisposable.set((self.authorizedContext()
+        let signal = self.sharedContextPromise.get()
         |> take(1)
+        |> deliverOnMainQueue
+        |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
+            if let accountId = accountId {
+                sharedApplicationContext.sharedContext.switchToAccount(id: accountId)
+                return self.authorizedContext()
+                |> filter { context in
+                    context.context.account.id == accountId
+                }
+                |> take(1)
+            } else {
+                return self.authorizedContext()
+                |> take(1)
+            }
+        }
+        self.openUrlWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] context in
             context.openUrl(url, external: external)
             
@@ -2813,7 +2828,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
                 if let dataUrl = response.notification.request.content.userInfo["url"] as? String {
                     if let url = URL(string: dataUrl) {
-                        self.openUrlWhenReady(url: url, external: true)
+                        self.openUrlWhenReady(accountId: accountId, url: url, external: true)
                     }
                 } else {
                     if let (peerId, threadId) = peerIdFromNotification(response.notification) {
@@ -2999,7 +3014,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let _ = (accountIdFromNotification(notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if let context = self.contextValue {
-                if let accountId = accountId, context.context.account.id != accountId {
+                if let accountId = accountId, context.context.account.id != accountId || notification.request.content.userInfo["url"] != nil {
                     completionHandler([.alert])
                 }
             }
