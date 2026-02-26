@@ -31,7 +31,11 @@ extension PeerInfoScreenNode {
         }
         
         if actions.contains(.editRank) {
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.GroupInfo_ActionEditRank, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tag"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            var actionTitle: String = self.presentationData.strings.GroupInfo_ActionEditRank
+            if case .admin = member.role {
+                actionTitle = self.presentationData.strings.GroupInfo_ActionEditAdminRank
+            }
+            items.append(.action(ContextMenuActionItem(text: actionTitle, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tag"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss {
                     guard let self else {
                         return
@@ -42,7 +46,11 @@ extension PeerInfoScreenNode {
         }
         
         if actions.contains(.promote) && enclosingPeer is TelegramChannel {
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.GroupInfo_ActionPromote, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Promote"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            var actionTitle: String = self.presentationData.strings.GroupInfo_ActionPromote
+            if case .admin = member.role {
+                actionTitle = self.presentationData.strings.GroupInfo_ActionEditAdmin
+            }
+            items.append(.action(ContextMenuActionItem(text: actionTitle, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Promote"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss {
                     guard let self else {
                         return

@@ -1307,6 +1307,8 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonAnimationName = "premium_unlock"
                         case .todo:
                             buttonText = strings.Premium_PaidMessages_Proceed
+                        case .copyProtection:
+                            buttonText = strings.Premium_PaidMessages_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }

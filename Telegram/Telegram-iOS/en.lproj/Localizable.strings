@@ -15891,6 +15891,8 @@ Error: %8$@";
 
 "GroupInfo.ActionSend" = "Send Message";
 "GroupInfo.ActionEditRank" = "Edit Member Tag";
+"GroupInfo.ActionEditAdminRank" = "Edit Admin Tag";
+"GroupInfo.ActionEditAdmin" = "Edit Admin Rights";
 "GroupInfo.ActionRemove" = "Remove";
 
 "PeerInfo.EnableSharing" = "Enable Sharing";

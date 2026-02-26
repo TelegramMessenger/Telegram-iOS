@@ -71,6 +71,7 @@ public enum InstalledStickerPacksEntryTag: ItemListItemTag {
     case suggestOptions
     case largeEmoji
     case dynamicOrder
+    case suggestAnimatedEmoji
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? InstalledStickerPacksEntryTag, self == other {
@@ -430,7 +431,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
             case let .suggestAnimatedEmoji(text, value):
                 return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSuggestAnimatedEmoji(value)
-                })
+                }, tag: InstalledStickerPacksEntryTag.suggestAnimatedEmoji)
             case let .suggestAnimatedEmojiInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .packsTitle(_, text):

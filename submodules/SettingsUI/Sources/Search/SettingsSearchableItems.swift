@@ -1422,7 +1422,7 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
     }
     items.append(
         SettingsSearchableItem(
-            id: "appearance/stickers-and-emoji/large",
+            id: "appearance/stickers-and-emoji/large-emoji",
             title: strings.Appearance_LargeEmoji,
             alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_LargeEmoji),
             icon: icon,
@@ -1474,7 +1474,7 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
             icon: icon,
             breadcrumbs: [strings.StickerPacksSettings_Emoji],
             present: { context, _, present in
-                presentStickerSettings(context, present, .emoji, .suggestOptions)
+                presentStickerSettings(context, present, .emoji, .suggestAnimatedEmoji)
             }
         )
     )
@@ -3621,7 +3621,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             }
         ),
         SettingsSearchableItem(
-            id: "data/use-less-data",
+            id: "data/less-data-calls",
             title: strings.CallSettings_UseLessData,
             alternate: synonyms(strings.SettingsSearch_Synonyms_Data_CallsUseLessData),
             icon: icon,
@@ -3754,7 +3754,7 @@ private func proxySearchableItems(context: AccountContext, servers: [ProxyServer
     )
     items.append(
         SettingsSearchableItem(
-            id: "data/use-proxy",
+            id: "data/proxy/use-proxy",
             icon: icon,
             isVisible: false,
             present: { context, _, present in
@@ -4388,17 +4388,7 @@ func settingsSearchableItems(
     let activeWebSessionsContext = webSessionsContext
     |> mapToSignal { webSessionsContext -> Signal<WebSessionsContext?, NoError> in
         if let webSessionsContext = webSessionsContext {
-            return webSessionsContext.state
-            |> map { state -> WebSessionsContext? in
-                if !state.sessions.isEmpty {
-                    return webSessionsContext
-                } else {
-                    return nil
-                }
-            }
-            |> distinctUntilChanged(isEqual: { lhs, rhs in
-                return lhs !== rhs
-            })
+            return .single(webSessionsContext)
         } else {
             return .single(nil)
         }
@@ -4417,6 +4407,7 @@ func settingsSearchableItems(
         activeSessionsContext,
         activeWebSessionsContext
     )
+    |> deliverOnMainQueue
     |> map {
         canAddAccount,
         localizations,
@@ -4615,7 +4606,20 @@ func searchSettingsItems(items: [SettingsSearchableItem], query: String) -> [Set
 }
 
 public func handleSettingsPathUrl(context: AccountContext, path: String, navigationController: NavigationController) {
-    let _ = (settingsSearchableItems(context: context)
+    var activeSessionsContext: Signal<ActiveSessionsContext?, NoError> = .single(nil)
+    var webSessionsContext: Signal<WebSessionsContext?, NoError> = .single(nil)
+    
+    if path.hasPrefix("devices") {
+        activeSessionsContext = .single(context.engine.privacy.activeSessions())
+    } else if path.hasPrefix("privacy/active-websites") {
+        webSessionsContext = .single(context.engine.privacy.webSessions())
+    }
+
+    let _ = (settingsSearchableItems(
+        context: context,
+        activeSessionsContext: activeSessionsContext,
+        webSessionsContext: webSessionsContext
+    )
     |> take(1)
     |> deliverOnMainQueue).start(next: { items in
         guard let item = items.first(where: { $0.id == AnyHashable(path) }) else {

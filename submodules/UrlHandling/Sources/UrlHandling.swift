@@ -270,6 +270,18 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                 return .peer(.id(peerId), .boost)
                             }
                         }
+                    } else if peerName == "oauth" {
+                        var token: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "startapp" {
+                                    token = value
+                                }
+                            }
+                        }
+                        if let token {
+                            return .externalUrl(url: "tg://oauth?token=\(token)")
+                        }
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {

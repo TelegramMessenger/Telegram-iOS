@@ -810,13 +810,23 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     var didFocusOnItem = false
     controller.afterTransactionCompleted = { [weak controller] in
+        guard let controller else {
+            return
+        }
+        
+        if let focusOnItemTag, !didFocusOnItem {
+            controller.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ItemListItemNode, let tag = itemNode.tag, tag.isEqual(to: focusOnItemTag) {
+                    didFocusOnItem = true
+                    itemNode.displayHighlight()
+                }
+            }
+        }
+        
         guard let toggleDirection = animateNextShowHideTagsTransition.swap(nil) else {
             return
         }
         
-        guard let controller else {
-            return
-        }
         var presetItemNodes: [ChatListFilterPresetListItemNode] = []
         controller.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatListFilterPresetListItemNode {
@@ -830,15 +840,6 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 itemNode.animateTagColorIn(delay: delay)
             }
             delay += 0.02
-        }
-        
-        if let focusOnItemTag, !didFocusOnItem {
-            controller.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? ItemListItemNode, let tag = itemNode.tag, tag.isEqual(to: focusOnItemTag) {
-                    didFocusOnItem = true
-                    itemNode.displayHighlight()
-                }
-            }
         }
     }
     
