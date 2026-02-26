@@ -15945,3 +15945,5 @@ Error: %8$@";
 "DisableSharing.Saving.Title" = "No Saving";
 "DisableSharing.Saving.Text" = "Disable copying text and saving photos and videos to Photos.";
 "DisableSharing.Confirm" = "Disable Sharing";
+
+"OAUTH_REQUEST" = "Login request for %1$@, location: %2$@";

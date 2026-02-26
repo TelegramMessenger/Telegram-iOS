@@ -2308,8 +2308,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 guard let self else {
                     return
                 }
-                let paramsString = "{req_id: \"\(requestId)\", result: \(result)}"
-                self.webView?.sendEvent(name: "custom_method_invoked", data: paramsString)
+                var payload: [String: Any] = ["req_id": requestId]
+                if let data = result.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) {
+                    payload["result"] = json
+                } else {
+                    payload["result"] = [:]
+                }
+                guard let jsonData = try? JSONSerialization.data(withJSONObject: payload) else {
+                    return
+                }
+                guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
+                    return
+                }
+                self.webView?.sendEvent(name: "custom_method_invoked", data: jsonDataString)
             })
         }
         

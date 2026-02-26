@@ -1222,10 +1222,6 @@ private final class NotificationServiceHandler {
 
                             content.userInfo["peerId"] = "\(peerId.toInt64())"
                             content.userInfo["accountId"] = "\(recordId.int64)"
-
-                            if let dataUrl = payloadJson["data_url"] as? String {
-                                content.userInfo["data_url"] = dataUrl
-                            }
                             
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {
@@ -1304,6 +1300,35 @@ private final class NotificationServiceHandler {
                             }
                             
                             updateCurrentContent(content)
+                        } else if let aps = payloadJson["aps"] as? [String: Any], let url = payloadJson["url"] as? String {
+                            var content: NotificationContent = NotificationContent(isLockedMessage: nil)
+                            content.userInfo["url"] = url
+                            content.userInfo["peerId"] = "777000"
+                            content.userInfo["accountId"] = "\(recordId.int64)"
+                            if let sound = aps["sound"] as? String {
+                                content.sound = sound
+                            }
+                            if let alert = aps["alert"] as? [String: Any] {
+                                if let topicTitleValue = payloadJson["topic_title"] as? String {
+                                    topicTitle = topicTitleValue
+                                    if let title = alert["title"] as? String {
+                                        content.title = "\(topicTitleValue) (\(title))"
+                                    } else {
+                                        content.title = topicTitleValue
+                                    }
+                                } else {
+                                    content.title = alert["title"] as? String
+                                }
+                                content.subtitle = alert["subtitle"] as? String
+                                content.body = alert["body"] as? String
+                            } else if let alert = aps["alert"] as? String {
+                                content.body = alert
+                            } else {
+                                content.body = "You have a new message"
+                            }
+                            updateCurrentContent(content)
+                            completed()
+                            return
                         }
                     }
 
