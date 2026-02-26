@@ -138,7 +138,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             self.disposables.dispose()
             
             if !self.inProgress {
-                if let (context, _) = self.forcedAccount {
+                if let (context, _) = self.forcedAccount, context !== self.context {
                     context.account.shouldBeServiceTaskMaster.set(.single(.never))
                 }
             }
@@ -218,7 +218,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         guard let self else {
                             return
                         }
-                        if let (context, _) = self.forcedAccount {
+                        if let (context, _) = self.forcedAccount, context !== self.context {
                             context.account.shouldBeServiceTaskMaster.set(.single(.never))
                         }
                         
@@ -237,7 +237,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         guard let self else {
                             return
                         }
-                        if let (context, _) = self.forcedAccount {
+                        if let (context, _) = self.forcedAccount, context !== self.context {
                             context.account.shouldBeServiceTaskMaster.set(.single(.never))
                         }
                         
