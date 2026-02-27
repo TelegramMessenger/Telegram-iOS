@@ -61,7 +61,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
     final class State: ComponentState {
         private let context: AccountContext
         private let requestSubject: MessageActionUrlSubject
-        private let subject: MessageActionUrlAuthResult
+        fileprivate var subject: MessageActionUrlAuthResult
         private let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
         
         private let disposables = DisposableSet()
@@ -126,7 +126,18 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                             self.updated()
                             
                             accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                            let _ = accountContext.engine.messages.requestMessageActionUrlAuth(subject: requestSubject).start()
+                            let _ = (accountContext.engine.messages.requestMessageActionUrlAuth(subject: requestSubject)
+                            |> deliverOnMainQueue).start(next: { [weak self] result in
+                                guard let self, case .request = result else {
+                                    return
+                                }
+                                self.subject = result
+                                if case let .request(_, _, _, flags, _, _) = result, !flags.contains(.showMatchCodesFirst) {
+                                    self.displayEmoji = false
+                                    self.matchCodes = nil
+                                }
+                                self.updated()
+                            })
                             break
                         }
                     }
@@ -245,6 +256,15 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         
                         self.forcedAccount = (accountContext, peer)
                         self.updated()
+                        
+                        let _ = (accountContext.engine.messages.requestMessageActionUrlAuth(subject: self.requestSubject)
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let self, case .request = result else {
+                                return
+                            }
+                            self.subject = result
+                            self.updated()
+                        })
                     }), true))
                 }
                 
@@ -279,7 +299,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
-            let theme = environment.theme
+            let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
             let state = context.state
             if state.controller == nil {
@@ -288,7 +308,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             
             let presentationData = context.component.context.sharedContext.currentPresentationData.with { $0 }
             
-            guard case let .request(domain, bot, clientData, flags, matchCodes, _) = component.subject else {
+            guard case let .request(domain, bot, clientData, flags, matchCodes, _) = state.subject else {
                 fatalError()
             }
 
@@ -451,7 +471,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         )
                     }
                     
-                    let subject = component.subject
+                    let subject = state.subject
                     let emoji = emojis[code].update(
                         component: AnyComponent(
                             PlainButtonComponent(

@@ -1635,6 +1635,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             super.init()
             
+            self.newPerks = [PremiumPerk.copyProtection.identifier]
+            
             let premiumIntroConfiguration: Signal<PremiumIntroConfiguration, NoError>
             let accountPeer: Signal<EnginePeer?, NoError>
             switch screenContext {
