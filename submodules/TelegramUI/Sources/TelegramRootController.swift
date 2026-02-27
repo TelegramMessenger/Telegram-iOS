@@ -169,6 +169,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         return self.accountSettingsController?.twoStepAuthData
     }
     
+    public func getNotificationExceptions() -> Promise<NotificationExceptionsList?>? {
+        return self.accountSettingsController?.notificationExceptions
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let needsRootWallpaperBackgroundNode: Bool
         if case .regular = layout.metrics.widthClass {

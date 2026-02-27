@@ -276,7 +276,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             if let timestamp {
                 let (timeString, dateString) = formatTimeAndDate(timestamp: timestamp, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                 let labelString = NSMutableAttributedString()
-                if let dateString {
+                if let dateString, !dateString.isEmpty {
                     labelString.append(NSAttributedString(string: "\(dateString)\n", font: Font.regular(presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0), textColor: presentationData.theme.list.itemSecondaryTextColor))
                 }
                 labelString.append(NSAttributedString(string: "\(timeString)", font: Font.regular(presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
@@ -534,7 +534,7 @@ private func formatTimeAndDate(timestamp: Int32, strings: PresentationStrings, d
     
     let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
     if dayDifference == 0 {
-        dateString = ""
+        dateString = nil
     } else if dayDifference == -1 {
         dateString = strings.Weekday_Yesterday.lowercased()
     } else {

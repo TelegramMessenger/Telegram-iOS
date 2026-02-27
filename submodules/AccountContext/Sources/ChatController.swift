@@ -981,6 +981,7 @@ public protocol PeerInfoScreen: ViewController {
     var peerId: PeerId { get }
     var privacySettings: Promise<AccountPrivacySettings?> { get }
     var twoStepAuthData: Promise<TwoStepAuthData?> { get }
+    var notificationExceptions: Promise<NotificationExceptionsList?> { get }
     
     func activateEdit()
     func openEmojiStatusSetup()

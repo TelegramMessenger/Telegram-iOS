@@ -295,7 +295,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
             case let .previews(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updatePreviews(value)
-                })
+                }, tag: self.tag)
             case let .sound(_, text, value, sound):
                 return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openSound(sound)

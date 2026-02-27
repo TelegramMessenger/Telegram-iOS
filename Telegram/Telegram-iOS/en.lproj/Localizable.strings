@@ -15957,3 +15957,5 @@ Error: %8$@";
 "GroupInfo.AddRank" = "Add Tag";
 
 "Channel.Management.DismissAdmin" = "Dismiss";
+
+"Attachment.ScanDocument" = "Scan Document";

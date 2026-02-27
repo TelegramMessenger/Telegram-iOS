@@ -1046,6 +1046,7 @@ public protocol TelegramRootControllerInterface: NavigationController {
     
     func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
     func getTwoStepAuthData() -> Promise<TwoStepAuthData?>?
+    func getNotificationExceptions() -> Promise<NotificationExceptionsList?>?
         
     func openContacts()
     func openSettings(edit: Bool)

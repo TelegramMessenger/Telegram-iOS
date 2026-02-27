@@ -6339,6 +6339,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         return self.controllerNode.twoStepAuthData
     }
     
+    public var notificationExceptions: Promise<NotificationExceptionsList?> {
+        return self.controllerNode.notificationExceptions
+    }
+    
     override public var customNavigationData: CustomViewControllerNavigationData? {
         get {
             if !self.isSettings {
