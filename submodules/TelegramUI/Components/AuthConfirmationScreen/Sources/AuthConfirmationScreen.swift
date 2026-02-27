@@ -77,6 +77,8 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         var matchCodes: [String]?
         var selectedMatchCode: String?
         
+        var canSwitchAccount = false
+        
         init(context: AccountContext, requestSubject: MessageActionUrlSubject, subject: MessageActionUrlAuthResult, completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void) {
             self.context = context
             self.requestSubject = requestSubject
@@ -113,34 +115,42 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 }
             }
             
-            if case let .request(_, _, _, _, _, userIdHint) = self.subject, let userIdHint, userIdHint != context.account.peerId {
+            if case let .request(_, _, _, _, _, userIdHint) = self.subject {
+                let isTestEnvironment = context.account.testingEnvironment
                 let _ = (activeAccountsAndPeers(context: self.context, includePrimary: true)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] primary, other in
                     guard let self else {
                         return
                     }
+                    
+                    var accountCount = 0
                     for (accountContext, peer, _) in other {
-                        if peer.id == userIdHint {
-                            self.forcedAccount = (accountContext, peer)
-                            self.updated()
-                            
-                            accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                            let _ = (accountContext.engine.messages.requestMessageActionUrlAuth(subject: requestSubject)
-                            |> deliverOnMainQueue).start(next: { [weak self] result in
-                                guard let self, case .request = result else {
-                                    return
-                                }
-                                self.subject = result
-                                if case let .request(_, _, _, flags, _, _) = result, !flags.contains(.showMatchCodesFirst) {
-                                    self.displayEmoji = false
-                                    self.matchCodes = nil
-                                }
-                                self.updated()
-                            })
-                            break
+                        if accountContext.account.testingEnvironment == isTestEnvironment {
+                            accountCount += 1
+                        }
+                        if let userIdHint, userIdHint != context.account.peerId {
+                            if peer.id == userIdHint {
+                                self.forcedAccount = (accountContext, peer)
+                                
+                                accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
+                                let _ = (accountContext.engine.messages.requestMessageActionUrlAuth(subject: requestSubject)
+                                |> deliverOnMainQueue).start(next: { [weak self] result in
+                                    guard let self, case .request = result else {
+                                        return
+                                    }
+                                    self.subject = result
+                                    if case let .request(_, _, _, flags, _, _) = result, !flags.contains(.showMatchCodesFirst) {
+                                        self.displayEmoji = false
+                                        self.matchCodes = nil
+                                    }
+                                    self.updated()
+                                })
+                            }
                         }
                     }
+                    self.canSwitchAccount = accountCount > 0
+                    self.updated()
                 })
             }
         }
@@ -217,6 +227,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             }
             
             let context = self.context
+            let isTestEnvironment = context.account.testingEnvironment
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let items: Signal<[ContextMenuItem], NoError> = activeAccountsAndPeers(context: self.context, includePrimary: true)
             |> take(1)
@@ -240,7 +251,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 }
                 
                 for (accountContext, peer, _) in other {
-                    guard !existingIds.contains(peer.id) else {
+                    guard !existingIds.contains(peer.id), accountContext.account.testingEnvironment == isTestEnvironment else {
                         continue
                     }
                     items.append(.custom(AccountPeerContextItem(context: accountContext, account: accountContext.account, peer: peer, action: { [weak self] _, f in
@@ -343,7 +354,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         context: state.forcedAccount?.0 ?? component.context,
                         theme: environment.theme,
                         peer: state.forcedAccount?.1 ?? peer,
-                        canSwitch: true,
+                        canSwitch: state.canSwitchAccount,
                         isVisible: true,
                         action: { [weak state] sourceView in
                             state?.presentAccountSwitchMenu(sourceView: sourceView)
@@ -413,9 +424,16 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 contentHeight += emojiTitle.size.height
                 contentHeight += 16.0
                 
+                let emojiDescriptionString: String
+                if flags.contains(.showMatchCodesFirst) {
+                    emojiDescriptionString = strings.AuthConfirmation_Emoji_DescriptionFirst(domain).string
+                } else {
+                    emojiDescriptionString = strings.AuthConfirmation_Emoji_Description
+                }
+                
                 let emojiDescription = emojiDescription.update(
                     component: MultilineTextComponent(
-                        text: .markdown(text: strings.AuthConfirmation_Emoji_Description, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
+                        text: .markdown(text: emojiDescriptionString, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 3,
                         lineSpacing: 0.2

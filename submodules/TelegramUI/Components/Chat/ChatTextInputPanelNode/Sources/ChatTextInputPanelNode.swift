@@ -4837,12 +4837,18 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                     if let strongSelf = self {
                         strongSelf.formatAttributesLink(strongSelf)
                     }
-                },
-                UIAction(title: self.strings?.TextFormat_Date ?? "Date", image: nil) { [weak self] (action) in
+                }
+            ])
+            
+            if hasSpoilers {
+                children.append(UIAction(title: self.strings?.TextFormat_Date ?? "Date", image: nil) { [weak self] (action) in
                     if let strongSelf = self {
                         strongSelf.formatAttributesDate(strongSelf)
                     }
-                },
+                })
+            }
+            
+            children.append(contentsOf: [
                 UIAction(title: self.strings?.TextFormat_Strikethrough ?? "Strikethrough", image: nil) { [weak self] (action) in
                     if let strongSelf = self {
                         strongSelf.formatAttributesStrikethrough(strongSelf)

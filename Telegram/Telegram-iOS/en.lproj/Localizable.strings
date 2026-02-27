@@ -15846,6 +15846,7 @@ Error: %8$@";
 
 "AuthConfirmation.Emoji.Title" = "Tap the emoji shown\non your other device";
 "AuthConfirmation.Emoji.Description" = "Telegram wants to make sure it's really you.";
+"AuthConfirmation.Emoji.DescriptionFirst" = "Telegram wants to make sure it's really you trying to log in to **%@**.";
 
 "Chat.TagPlaceholder" = "Tag";
 
