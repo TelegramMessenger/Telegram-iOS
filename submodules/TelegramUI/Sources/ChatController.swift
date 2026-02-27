@@ -5291,8 +5291,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             } else if let group = chatPeer as? TelegramGroup {
                 switch group.role {
-                case .creator, .admin:
+                case .creator:
                     canEdit = true
+                case .admin:
+                    canEdit = false
                 default:
                     break
                 }
