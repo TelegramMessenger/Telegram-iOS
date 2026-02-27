@@ -15861,6 +15861,7 @@ Error: %8$@";
 "Chat.EnableSharingOffer.RejectConfirmation.Reject" = "Keep Disabled";
 
 "Chat.TagUpdated.Added" = "Tag added";
+"Chat.TagUpdated.Edited" = "Tag edited";
 "Chat.TagUpdated.Removed" = "Tag removed";
 
 "Conversation.FormatDate.Title" = "Date";

@@ -518,15 +518,18 @@ public class ChatParticipantRightsScreen: ViewControllerComponentContainer {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if let navigationController = self.navigationController as? NavigationController {
             Queue.mainQueue().after(0.5) {
+                var hadRank = false
+                if case let .rank(_, _, rank, _) = self.subject, !(rank ?? "").isEmpty {
+                    hadRank = true
+                }
+                
                 var title: String?
                 var text: String?
                 if let rank {
-                    title = presentationData.strings.Chat_TagUpdated_Added
+                    title = hadRank ? presentationData.strings.Chat_TagUpdated_Edited : presentationData.strings.Chat_TagUpdated_Added
                     text = rank
-                } else {
-                    if case let .rank(_, _, rank, _) = self.subject, !(rank ?? "").isEmpty {
-                        text = presentationData.strings.Chat_TagUpdated_Removed
-                    }
+                } else if hadRank {
+                    text = presentationData.strings.Chat_TagUpdated_Removed
                 }
                 if let text {
                     let toastController = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: title, text: text, cancel: nil, destructive: false), appearance: .init(isNarrow: true), action: { _ in return true})
