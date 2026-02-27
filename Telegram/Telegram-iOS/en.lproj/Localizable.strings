@@ -15954,3 +15954,5 @@ Error: %8$@";
 "OAUTH_REQUEST" = "Login request for %1$@, location: %2$@";
 
 "GroupInfo.AddRank" = "Add Tag";
+
+"Channel.Management.DismissAdmin" = "Dismiss";

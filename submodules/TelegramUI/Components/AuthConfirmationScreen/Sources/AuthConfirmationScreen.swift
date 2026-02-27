@@ -399,7 +399,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                     component: MultilineTextComponent(
                         text: .markdown(text: strings.AuthConfirmation_Emoji_Title, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.controlAccentColor), link: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
-                        maximumNumberOfLines: 2,
+                        maximumNumberOfLines: 3,
                         lineSpacing: 0.2
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
