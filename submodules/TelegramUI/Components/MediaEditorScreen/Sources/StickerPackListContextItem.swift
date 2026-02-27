@@ -96,9 +96,9 @@ private final class StickerPackListContextItemNode: ASDisplayNode, ContextMenuCu
         super.init()
         
         self.addSubnode(self.scrollNode)
-        for separatorNode in self.separatorNodes {
-            self.scrollNode.addSubnode(separatorNode)
-        }
+//        for separatorNode in self.separatorNodes {
+//            self.scrollNode.addSubnode(separatorNode)
+//        }
         for actionNode in self.actionNodes {
             self.scrollNode.addSubnode(actionNode)
         }
@@ -171,7 +171,7 @@ private final class StickerPackListContextItemNode: ASDisplayNode, ContextMenuCu
     }
     
     func canBeHighlighted() -> Bool {
-        return self.isActionEnabled
+        return false
     }
     
     func updateIsHighlighted(isHighlighted: Bool) {

@@ -227,11 +227,11 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
             case let .chatsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .suggestHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section, tag: IntentsEntryTag.suggestBy)
             case let .suggestAll(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedOnlyShared(false) }
-                }, tag: IntentsEntryTag.suggestBy)
+                })
             case let .suggestOnlyShared(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedOnlyShared(true) }

@@ -147,7 +147,12 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             case .admin:
                 label = presentationData.strings.GroupInfo_LabelAdmin
             case .member:
-                label = nil
+                if item.member.id == item.context.accountPeerId, let enclosingPeer = item.enclosingPeer as? TelegramChannel, enclosingPeer.hasPermission(.editRank) {
+                    label = presentationData.strings.GroupInfo_AddRank
+                    labelColor = presentationData.theme.list.itemAccentColor
+                } else {
+                    label = nil
+                }
             }
         }
         

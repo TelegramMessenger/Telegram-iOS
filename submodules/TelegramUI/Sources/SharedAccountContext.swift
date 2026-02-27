@@ -3803,6 +3803,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     completion(file, emoji, {
                         commit({})
                     })
+                } else {
+                    commit({})
                 }
             } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
         )

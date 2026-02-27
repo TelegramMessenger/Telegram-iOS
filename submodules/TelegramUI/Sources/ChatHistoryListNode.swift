@@ -2047,12 +2047,18 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 var isCopyProtectionEnabled: Bool = data.initialData?.peer?.isCopyProtectionEnabled ?? false
                 for entry in view.additionalData {
                     if case let .peer(_, maybePeer) = entry, let peer = maybePeer {
-                        isCopyProtectionEnabled = peer.isCopyProtectionEnabled
+                        if !isCopyProtectionEnabled {
+                            isCopyProtectionEnabled = peer.isCopyProtectionEnabled
+                        }
                         if let channel = peer as? TelegramChannel {
                             autoTranslate = channel.flags.contains(.autoTranslateEnabled)
                             if let boostLevel = channel.approximateBoostLevel, boostLevel >= premiumConfiguration.minGroupAudioTranscriptionLevel {
                                 audioTranscriptionProvidedByBoost = true
                             }
+                        }
+                    } else if case let .cachedPeerData(_, cachedData) = entry, let cachedUserData = cachedData as? CachedUserData {
+                        if !isCopyProtectionEnabled {
+                            isCopyProtectionEnabled = cachedUserData.flags.contains(.copyProtectionEnabled) || cachedUserData.flags.contains(.myCopyProtectionEnabled)
                         }
                     }
                 }

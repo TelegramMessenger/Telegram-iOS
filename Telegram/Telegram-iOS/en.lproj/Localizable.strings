@@ -15940,12 +15940,16 @@ Error: %8$@";
 "DisableSharing.Title" = "Disable Sharing";
 "DisableSharing.Screenshot.Title" = "No Screenshots";
 "DisableSharing.Screenshot.Text" = "Disable screenshots and screen recordings in this chat.";
-
 "DisableSharing.Forwarding.Title" = "No Forwarding";
 "DisableSharing.Forwarding.Text" = "Disable message forwarding to other chats.";
-
 "DisableSharing.Saving.Title" = "No Saving";
 "DisableSharing.Saving.Text" = "Disable copying text and saving photos and videos to Photos.";
 "DisableSharing.Confirm" = "Disable Sharing";
 
+"EnableSharing.Title" = "Enable Sharing";
+"EnableSharing.Text" = "You need **%@'s** approval to enable sharing. Send a request?";
+"EnableSharing.SendRequest" = "Send Request";
+
 "OAUTH_REQUEST" = "Login request for %1$@, location: %2$@";
+
+"GroupInfo.AddRank" = "Add Tag";

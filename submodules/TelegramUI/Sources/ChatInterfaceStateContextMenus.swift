@@ -2305,10 +2305,11 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
         EngineDataMap(Set(messageIds).map(TelegramEngine.EngineData.Item.Messages.Message.init)),
         EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.CopyProtectionEnabled.init)),
+        EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.MyCopyProtectionEnabled.init)),
         TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId)
     )
     |> take(keepUpdated ? Int.max : 1)
-    |> map { limitsConfiguration, peerMap, messageMap, copyProtectionMap, accountPeer -> ChatAvailableMessageActions in
+    |> map { limitsConfiguration, peerMap, messageMap, copyProtectionMap, myCopyProtectionMap, accountPeer -> ChatAvailableMessageActions in
         let isPremium: Bool
         if let accountPeer {
             isPremium = accountPeer.isPremium
@@ -2350,8 +2351,10 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         }
         
         func isPeerCopyProtected(_ peerId: PeerId) -> Bool? {
-            if let copyProtection = copyProtectionMap[peerId] {
-                return copyProtection
+            let copyProtection = copyProtectionMap[peerId]
+            let myCopyProtection = myCopyProtectionMap[peerId]
+            if copyProtection == true || myCopyProtection == true {
+                return true
             } else {
                 return nil
             }

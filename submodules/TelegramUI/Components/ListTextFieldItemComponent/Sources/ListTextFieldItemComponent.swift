@@ -37,6 +37,7 @@ public final class ListTextFieldItemComponent: Component {
     public let returnKeyType: UIReturnKeyType
     public let contentInsets: UIEdgeInsets
     public let updated: ((String) -> Void)?
+    public let shouldUpdateText: (String) -> Bool
     public let onReturn: (() -> Void)?
     public let tag: AnyObject?
     
@@ -52,6 +53,7 @@ public final class ListTextFieldItemComponent: Component {
         returnKeyType: UIReturnKeyType = .default,
         contentInsets: UIEdgeInsets = .zero,
         updated: ((String) -> Void)?,
+        shouldUpdateText: @escaping (String) -> Bool = { _ in return true },
         onReturn: (() -> Void)? = nil,
         tag: AnyObject? = nil
     ) {
@@ -66,6 +68,7 @@ public final class ListTextFieldItemComponent: Component {
         self.returnKeyType = returnKeyType
         self.contentInsets = contentInsets
         self.updated = updated
+        self.shouldUpdateText = shouldUpdateText
         self.onReturn = onReturn
         self.tag = tag
     }
@@ -145,6 +148,14 @@ public final class ListTextFieldItemComponent: Component {
         
         required public init?(coder: NSCoder) {
             preconditionFailure()
+        }
+        
+        public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
+            return component.shouldUpdateText(newText)
         }
         
         public func textFieldShouldReturn(_ textField: UITextField) -> Bool {

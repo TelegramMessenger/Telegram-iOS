@@ -1322,6 +1322,12 @@ public class GalleryController: ViewController, StandalonePresentableController,
         self.dismiss(forceAway: false)
     }
     
+    func willDismiss() {
+        if let chatController = self.baseNavigationController?.topViewController as? ChatController {
+            chatController.updatePushedTransition(0.0, transition: .immediate)
+        }
+    }
+    
     func dismiss(forceAway: Bool) {
         var animatedOutNode = true
         var animatedOutInterface = false

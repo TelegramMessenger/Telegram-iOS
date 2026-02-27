@@ -107,7 +107,12 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     case .admin:
                         label = presentationData.strings.GroupInfo_LabelAdmin
                     case .member:
-                        label = nil
+                        if member.id == context.account.peerId, let enclosingPeer = enclosingPeer as? TelegramChannel, enclosingPeer.hasPermission(.editRank) {
+                            label = presentationData.strings.GroupInfo_AddRank
+                            labelColor = presentationData.theme.list.itemAccentColor
+                        } else {
+                            label = nil
+                        }
                     }
                 }
             
@@ -125,7 +130,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                 let actions = availableActionsForMemberOfPeer(accountPeerId: context.account.peerId, peer: enclosingPeer, member: member)
                 
                 var options: [ItemListPeerItemRevealOption] = []
-                if actions.contains(.promote) && enclosingPeer is TelegramChannel{
+                if actions.contains(.promote) && enclosingPeer is TelegramChannel {
                     options.append(ItemListPeerItemRevealOption(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: {
                         action(member, .promote)
                     }))

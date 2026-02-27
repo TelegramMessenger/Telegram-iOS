@@ -733,13 +733,15 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             guard let self, case let .data(data) = value, data.complete, isImage, let image = UIImage(contentsOfFile: data.path) else {
                                 return
                             }
-                            let controller = context.sharedContext.makeStickerEditorScreen(context: context, source: image, mode: .generic(canSend: self.sendSticker != nil), transitionArguments: (self.imageNode.view, self.imageNode.bounds, self.imageNode.image), completion: { [weak self] file, _, commit in
-                                self?.sendSticker?(.standalone(media: file))
+                            let sendSticker = self.sendSticker
+                            let controller = context.sharedContext.makeStickerEditorScreen(context: context, source: image, mode: .generic(canSend: self.sendSticker != nil), transitionArguments: (self.imageNode.view, self.imageNode.bounds, self.imageNode.image), completion: { file, _, commit in
+                                sendSticker?(.standalone(media: file))
                                 commit()
                             }, cancelled: {})
-                            guard let galleryController = self.galleryController(), let navigationController = self.baseNavigationController() else {
+                            guard let galleryController = self.galleryController() as? GalleryController, let navigationController = self.baseNavigationController() else {
                                 return
                             }
+                            galleryController.willDismiss()
                             (navigationController.topViewController as? ViewController)?.present(controller, in: .window(.root))
                             self.imageNode.isHidden = true
                             Queue.mainQueue().after(0.5, {

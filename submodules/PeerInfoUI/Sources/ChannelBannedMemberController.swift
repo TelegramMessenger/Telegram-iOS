@@ -875,7 +875,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
                         return current
                     }
                     
-                    if updateFlags == nil && updateTimeout == nil {
+                    if updateFlags == nil && updateTimeout == nil && !editMember {
                         if case let .member(_, _, _, maybeBanInfo, _, _) = initialParticipant {
                             if maybeBanInfo == nil {
                                 updateFlags = defaultBannedRightsFlags
@@ -1018,7 +1018,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
                                 |> deliverOnMainQueue).start(error: { _ in
                                     
                                 }, completed: {
-                                    if previousRights == nil {
+                                    if previousRights == nil, !editMember {
                                         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                                         presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.GroupPermission_AddSuccess, false)), nil)
                                     }
@@ -1031,20 +1031,6 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
                         }
                         
                         applyRights()
-//                        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
-//                        let actionSheet = ActionSheetController(presentationData: presentationData)
-//                        var items: [ActionSheetItem] = []
-//                        items.append(ActionSheetTextItem(title: presentationData.strings.GroupPermission_ApplyAlertText(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string))
-//                        items.append(ActionSheetButtonItem(title: presentationData.strings.GroupPermission_ApplyAlertAction, color: .accent, font: .default, enabled: true, action: { [weak actionSheet] in
-//                            actionSheet?.dismissAnimated()
-//                            applyRights()
-//                        }))
-//                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-//                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-//                                actionSheet?.dismissAnimated()
-//                            })
-//                        ])])
-//                        presentControllerImpl?(actionSheet, nil)
                     }
                 } else {
                     updateRankDisposable.set((updateRankSignal(peerId)

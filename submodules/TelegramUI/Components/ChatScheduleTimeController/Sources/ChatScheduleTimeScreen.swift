@@ -243,6 +243,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             }
             contentHeight += 62.0
             
+            var added = false
             let datePicker: DatePickerNode
             if let current = self.datePicker {
                 datePicker = current
@@ -251,13 +252,13 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                     datePicker.updateTheme(DatePickerTheme(theme: environment.theme))
                 }
             } else {
+                added = true
                 datePicker = DatePickerNode(
                     theme: DatePickerTheme(theme: environment.theme),
                     strings: strings,
                     dateTimeFormat: environment.dateTimeFormat,
                     hasValueRow: false
                 )
-                datePicker.date = self.date
                 datePicker.valueUpdated = { [weak self] date in
                     if let self {
                         self.date = date
@@ -291,6 +292,10 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             }
             if let maxDate = self.maxDate {
                 datePicker.maximumDate = maxDate
+            }
+            
+            if added {
+                datePicker.date = self.date
             }
             
             let constrainedWidth = min(390.0, availableSize.width)
@@ -378,7 +383,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             
             var repeatValueFrame = CGRect()
             if case .format = component.mode {
-                
+                contentHeight += 8.0
             } else {
                 transition.setFrame(layer: self.bottomSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: UIScreenPixel)))
                 self.bottomSeparator.backgroundColor = environment.theme.list.itemBlocksSeparatorColor.cgColor
@@ -683,18 +688,29 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                                     if component.context.isPremium {
                                         self.repeatPeriod = value
                                     } else {
+                                        var text = strings.ScheduleMessage_PremiumRequired_Text
+                                        let pattern = #"\*\*(.*?)\*\*"#
+                                        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                                            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+                                            text = regex.stringByReplacingMatches(
+                                                in: text,
+                                                options: [],
+                                                range: range,
+                                                withTemplate: "[$1]()"
+                                            )
+                                        }
                                         let toastController = UndoOverlayController(
                                             presentationData: component.context.sharedContext.currentPresentationData.with { $0 },
                                             content: .premiumPaywall(
                                                 title: strings.ScheduleMessage_PremiumRequired_Title,
-                                                text: strings.ScheduleMessage_PremiumRequired_Text,
-                                                customUndoText: strings.ScheduleMessage_PremiumRequired_Add,
+                                                text: text,
+                                                customUndoText: nil,
                                                 timeout: nil,
                                                 linkAction: nil
                                             ),
                                             elevatedLayout: false,
                                             action: { [weak environment] action in
-                                                if case .undo = action {
+                                                if case .info = action {
                                                     let controller = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .nameColor, forceDark: false, dismissed: nil)
                                                     environment?.controller()?.push(controller)
                                                 }

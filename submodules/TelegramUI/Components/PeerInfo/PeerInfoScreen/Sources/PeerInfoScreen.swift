@@ -724,8 +724,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 
-                var items: [ContextMenuItem] = []
+                var isCopyProtected = false
+                if let cachedUserData = strongSelf.data?.cachedData as? CachedUserData, cachedUserData.flags.contains(.copyProtectionEnabled) || cachedUserData.flags.contains(.myCopyProtectionEnabled) {
+                    isCopyProtected = true
+                }
                 
+                var items: [ContextMenuItem] = []
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c?.dismiss(completion: {
                         if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
@@ -777,7 +781,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     })))
                 }
                 
-                if message.isCopyProtected() {
+                if message.isCopyProtected() || isCopyProtected {
                     
                 } else if message.id.peerId.namespace != Namespaces.Peer.SecretChat && message.minAutoremoveOrClearTimeout == nil {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
@@ -882,6 +886,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 if let previewData = previewData {
+                    var isCopyProtected = false
+                    if let cachedUserData = strongSelf.data?.cachedData as? CachedUserData, cachedUserData.flags.contains(.copyProtectionEnabled) || cachedUserData.flags.contains(.myCopyProtectionEnabled) {
+                        isCopyProtected = true
+                    }
+                    
                     let context = strongSelf.context
                     let strings = strongSelf.presentationData.strings
                     let items = strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id], keepUpdated: false)
@@ -929,7 +938,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             })
                         })))
                         
-                        if message.isCopyProtected() {
+                        if message.isCopyProtected() || isCopyProtected {
                             
                         } else if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                             items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
@@ -2805,11 +2814,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }
         
-        if let peer = data.peer, peer.isCopyProtectionEnabled {
-            setLayerDisableScreenshots(self.layer, true)
-        } else {
-            setLayerDisableScreenshots(self.layer, false)
-        }
+        setLayerDisableScreenshots(self.layer, peerInfoIsCopyProtected(data: data))
     }
     
     func scrollToTop() {

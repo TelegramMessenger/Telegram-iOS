@@ -106,9 +106,24 @@ extension ChatControllerImpl: EKEventEditViewDelegate {
                             OutgoingScheduleInfoMessageAttribute(scheduleTime: result.time, repeatPeriod: result.repeatPeriod)
                         ]
                         let forwardMessage: EnqueueMessage = .forward(source: message.id, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil)
-                        let _ = forwardMessage
                         let _ = enqueueMessages(account: self.context.account, peerId: self.context.account.peerId, messages: [forwardMessage]).start()
-                        self.present(UndoOverlayController(presentationData: self.presentationData, content: .forward(savedMessages: true, text: self.presentationData.strings.Conversation_DateReminderSet), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        
+                        let text = self.presentationData.strings.Conversation_DateReminderSet.replacingOccurrences(of: "[", with: "**").replacingOccurrences(of: "]()", with: "**")
+                        self.present(UndoOverlayController(presentationData: self.presentationData, content: .forward(savedMessages: true, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { [weak self] action in
+                            if let self, action == .info {
+                                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                    guard let self, let peer else {
+                                        return
+                                    }
+                                    guard let navigationController = self.navigationController as? NavigationController else {
+                                        return
+                                    }
+                                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
+                                })
+                            }
+                            return false
+                        }), in: .current)
                     }
                 )
                 self.push(controller)

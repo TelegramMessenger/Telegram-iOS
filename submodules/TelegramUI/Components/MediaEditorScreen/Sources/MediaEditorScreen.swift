@@ -7806,13 +7806,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             return true
                         }
                         if pack.count >= 120 {
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.MediaEditor_StickersTooMuch, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
-                                if case .info = action, let self {
-                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: {
-                                        
-                                    })
-                                    self.push(controller)
-                                }
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.MediaEditor_StickersTooMuch, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in
                                 return false
                             })
                             self.hapticFeedback.error()
