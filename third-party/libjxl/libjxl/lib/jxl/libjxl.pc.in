@@ -1,0 +1,13 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=@PKGCONFIG_TARGET_LIBS@
+includedir=@PKGCONFIG_TARGET_INCLUDES@
+
+Name: libjxl
+Description: Loads and saves JPEG XL files
+Version: @JPEGXL_LIBRARY_VERSION@
+Requires.private: @JPEGXL_LIBRARY_REQUIRES@
+Libs: -L${libdir} -ljxl
+Libs.private: -lm
+Cflags: -I${includedir}
+Cflags.private: -DJXL_STATIC_DEFINE

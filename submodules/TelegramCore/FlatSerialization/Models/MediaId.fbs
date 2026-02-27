@@ -1,0 +1,6 @@
+namespace TelegramCore;
+
+struct MediaId {
+    namespace: int;
+    id: int64;
+}

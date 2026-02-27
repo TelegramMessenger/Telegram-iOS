@@ -1,0 +1,101 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Telegram",
+      "type": "shell",
+      "command": "${workspaceFolder}/build-input/bazel-8.4.2-darwin-arm64",
+      "args": [
+        "build",
+        "Telegram/Telegram",
+        "--features=swift.use_global_module_cache",
+        "--verbose_failures",
+        "--remote_cache_async",
+        "--features=swift.skip_function_bodies_for_derived_files",
+        "--jobs=16",
+        "--define=buildNumber=10000",
+        "--define=telegramVersion=12.2.2",
+        "--disk_cache=${HOME}/telegram-bazel-cache",
+        "-c",
+        "dbg",
+        "--ios_multi_cpus=sim_arm64",
+        "--watchos_cpus=arm64_32",
+        "--features=swift.enable_batch_mode"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "runOptions": {
+        "instanceLimit": 1
+      }
+    },
+    // Hidden never-ending task that handles the launch / debugging bits for Cmd+Shift+D.
+    // The problemMatcher field defines when the task is effectively ready to be debugged
+    // by the attach task in launch.json.
+    {
+      "label": "_launch_telegram",
+      "type": "shell",
+      "command": "./scripts/launch_and_debug.sh",
+      "presentation": {
+        "reveal": "always"
+      },
+      "hide": true,
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": "\\b\\B",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^.*Building....*",
+            "endsPattern": "^.*Listening to port 6667 for a connection from .*"
+          }
+        }
+      ],
+      "runOptions": {
+        "instanceLimit": 1
+      }
+    },
+    {
+      "label": "Stream SourceKitBazelBSP Logs",
+      "type": "shell",
+      "command": "log stream --process sourcekit-bazel-bsp --debug",
+      "problemMatcher": [],
+      "isBackground": false,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Stop Telegram Debug Session",
+      "type": "shell",
+      "command": "pkill -f 'launch_and_debug.sh' || true; lsof -ti:6667 | xargs kill -9 2>/dev/null || true",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "close": true
+      }
+    },
+    {
+      "label": "Restart Telegram Debug",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Stop Telegram Debug Session",
+        "_launch_telegram"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}

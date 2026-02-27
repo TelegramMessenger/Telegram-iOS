@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "ton_symbol.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

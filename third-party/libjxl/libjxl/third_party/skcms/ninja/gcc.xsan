@@ -1,0 +1,4 @@
+mode          = .xsan
+extra_cflags  = -fsanitize=address,undefined -fno-sanitize-recover=all
+extra_ldflags = -fsanitize=address,undefined
+include ninja/gcc

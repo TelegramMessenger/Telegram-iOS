@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "Debug Telegram",
+            "type": "lldb-dap",
+            "request": "attach",
+            "preLaunchTask": "_launch_telegram",
+            "debuggerRoot": "${workspaceFolder}",
+            "attachCommands": [
+                "process connect connect://localhost:6667"
+            ],
+            "internalConsoleOptions": "openOnSessionStart",
+            "timeout": 1000
+        },
+        {
+            "name": "Restart Debug Telegram",
+            "type": "lldb-dap",
+            "request": "attach",
+            "preLaunchTask": "Restart Telegram Debug",
+            "debuggerRoot": "${workspaceFolder}",
+            "attachCommands": [
+                "process connect connect://localhost:6667"
+            ],
+            "internalConsoleOptions": "openOnSessionStart",
+            "timeout": 1000
+        },
+    ],
+    "options": {
+        "console": "integratedTerminal",
+    }
+}

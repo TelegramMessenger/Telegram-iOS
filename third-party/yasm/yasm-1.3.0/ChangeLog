@@ -1,0 +1,11 @@
+2014-08-10  gettextize  <bug-gnu-gettext@gnu.org>
+
+	* m4/gettext.m4: Upgrade to gettext-0.18.3.
+	* m4/iconv.m4: Upgrade to gettext-0.18.3.
+	* m4/lib-ld.m4: Upgrade to gettext-0.18.3.
+	* m4/lib-link.m4: Upgrade to gettext-0.18.3.
+	* m4/lib-prefix.m4: Upgrade to gettext-0.18.3.
+	* m4/nls.m4: Upgrade to gettext-0.18.3.
+	* m4/po.m4: Upgrade to gettext-0.18.3.
+	* m4/progtest.m4: Upgrade to gettext-0.18.3.
+

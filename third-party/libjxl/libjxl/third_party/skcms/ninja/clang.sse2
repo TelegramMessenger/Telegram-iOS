@@ -1,0 +1,4 @@
+mode         = .sse2
+extra_cflags = -msse2 -mno-sse3 -mno-ssse3 -mno-sse4.1 -DSKCMS_NO_RUNTIME_CPU_DETECTION
+include ninja/clang
+

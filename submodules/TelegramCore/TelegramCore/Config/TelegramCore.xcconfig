@@ -1,2 +1,0 @@
-SWIFT_INCLUDE_PATHS = $(SRCROOT)/TelegramCore
-MODULEMAP_PRIVATE_FILE = $(SRCROOT)/TelegramCore/module.private.modulemap

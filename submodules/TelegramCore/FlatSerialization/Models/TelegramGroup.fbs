@@ -1,0 +1,48 @@
+include "PeerId.fbs";
+include "TelegramMediaImageRepresentation.fbs";
+include "TelegramChatAdminRights.fbs";
+include "TelegramChatBannedRights.fbs";
+
+namespace TelegramCore;
+
+table TelegramGroupRole_Creator {
+    rank:string (id: 0);
+}
+
+table TelegramGroupRole_Admin {
+    rights:TelegramChatAdminRights (id: 0, required);
+    rank:string (id: 1);
+}
+
+table TelegramGroupRole_Member {}
+
+union TelegramGroupRole_Value {
+    TelegramGroupRole_Creator,
+    TelegramGroupRole_Admin,
+    TelegramGroupRole_Member
+}
+
+table TelegramGroupRole {
+    value:TelegramGroupRole_Value (id: 1, required);
+}
+
+table TelegramGroupToChannelMigrationReference {
+    peerId:int64 (id: 0);
+    accessHash:int64 (id: 1);
+}
+
+table TelegramGroup {
+    id:PeerId (id: 0, required);
+    title:string (id: 1, required);
+    photo:[TelegramMediaImageRepresentation] (id: 2, required);
+    participantCount:int32 (id: 3);
+    role:TelegramGroupRole (id: 4, required);
+    membership:int32 (id: 5);
+    flags:int32 (id: 6);
+    defaultBannedRights:TelegramChatBannedRights (id: 7);
+    migrationReference:TelegramGroupToChannelMigrationReference (id: 8);
+    creationDate:int32 (id: 9);
+    version:int32 (id: 10);
+}
+
+root_type TelegramGroup;

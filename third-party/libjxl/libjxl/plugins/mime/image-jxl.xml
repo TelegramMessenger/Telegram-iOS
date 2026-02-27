@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="image/jxl">
+    <comment>JPEG XL image</comment>
+    <comment xml:lang="fr">image JPEG XL</comment>
+    <comment xml:lang="nl">JPEG XL afbeelding</comment>
+    <magic priority="50">
+      <match type="string" offset="0" value="\xFF\x0A"/>
+      <match type="string" offset="0" value="\0\0\0\x0CJXL \x0D\x0A\x87\x0A"/>
+    </magic>
+    <glob pattern="*.jxl"/>
+  </mime-type>
+</mime-info>

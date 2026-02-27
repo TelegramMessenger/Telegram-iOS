@@ -15,7 +15,7 @@
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASTextKitComponents.h>
-#import <AsyncDisplayKit/ASTextNodeWordKerner.h>
+#import "ASTextNodeWordKerner.h"
 #import <AsyncDisplayKit/ASThread.h>
 
 @implementation ASEditableTextNodeTargetForAction
@@ -83,7 +83,6 @@
 @interface ASPanningOverriddenUITextView : ASTextKitComponentsTextView
 {
   BOOL _shouldBlockPanGesture;
-  BOOL _initializedPrimaryInputLanguage;
 }
 
 @property (nonatomic, copy) bool (^shouldCopy)();
@@ -93,6 +92,7 @@
 @property (nonatomic, copy) void (^backspaceWhileEmpty)();
 
 @property (nonatomic, strong) NSString * _Nullable initialPrimaryLanguage;
+@property (nonatomic) bool initializedPrimaryInputLanguage;
 
 @end
 
@@ -114,7 +114,28 @@
 }
 
 - (void)setContentSize:(CGSize)contentSize {
-  [super setContentSize:contentSize];
+    if (_shouldBlockPanGesture) {
+        return;
+    }
+    [super setContentSize:contentSize];
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset {
+    if (_shouldBlockPanGesture) {
+        return;
+    }
+    [super setContentOffset:contentOffset];
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated {
+    if (_shouldBlockPanGesture) {
+        return;
+    }
+    [super setContentOffset:contentOffset animated:animated];
+}
+
+- (void)setBounds:(CGRect)bounds {
+    [super setBounds:bounds];
 }
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender
@@ -200,6 +221,10 @@
   }
 }
 
+- (UIKeyboardAppearance)keyboardAppearance {
+  return [super keyboardAppearance];
+}
+
 - (UITextInputMode *)textInputMode {
   if (!_initializedPrimaryInputLanguage) {
     _initializedPrimaryInputLanguage = true;
@@ -213,6 +238,10 @@
     }
   }
   return [super textInputMode];
+}
+
+- (void)scrollRectToVisible:(CGRect)rect animated:(BOOL)animated {
+    [super scrollRectToVisible:rect animated:false];
 }
 
 #endif
@@ -347,7 +376,7 @@
     __strong ASEditableTextNode *strongSelf = weakSelf;
     if (strongSelf != nil) {
       if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeShouldCopy:)]) {
-        return [strongSelf->_delegate editableTextNodeShouldCopy:self];
+        return [strongSelf->_delegate editableTextNodeShouldCopy:strongSelf];
       }
     }
     return true;
@@ -356,7 +385,7 @@
     __strong ASEditableTextNode *strongSelf = weakSelf;
     if (strongSelf != nil) {
       if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeShouldPaste:)]) {
-        return [strongSelf->_delegate editableTextNodeShouldPaste:self];
+        return [strongSelf->_delegate editableTextNodeShouldPaste:strongSelf];
       }
     }
     return true;
@@ -442,7 +471,7 @@
     textSize = [displayedComponents sizeForConstrainedWidth:constrainedSize.width];
   }
   
-  CGFloat width = std::ceil(textSize.width + _textContainerInset.left + _textContainerInset.right);
+  CGFloat width = std::ceil(constrainedSize.width);
   CGFloat height = std::ceil(textSize.height + _textContainerInset.top + _textContainerInset.bottom);
   return CGSizeMake(std::fmin(width, constrainedSize.width), std::fmin(height, constrainedSize.height));
 }
@@ -562,6 +591,15 @@
   _textKitComponents.textView.selectedRange = selectedRange;
 }
 
+- (CGRect)selectionRect {
+    UITextRange *range = [_textKitComponents.textView selectedTextRange];
+    if (range != nil) {
+        return [_textKitComponents.textView firstRectForRange:range];
+    } else {
+        return [_textKitComponents.textView bounds];
+    }
+}
+
 #pragma mark - Placeholder
 - (BOOL)isDisplayingPlaceholder
 {
@@ -642,6 +680,15 @@
   }
 }
 
+- (void)setInitialPrimaryLanguage:(NSString *)initialPrimaryLanguage {
+  _initialPrimaryLanguage = initialPrimaryLanguage;
+  ((ASPanningOverriddenUITextView *)_textKitComponents.textView).initialPrimaryLanguage = initialPrimaryLanguage;
+}
+
+- (void)resetInitialPrimaryLanguage {
+  ((ASPanningOverriddenUITextView *)_textKitComponents.textView).initializedPrimaryInputLanguage = false;
+}
+
 - (void)dropAutocorrection {
   _isPreservingSelection = YES; // Used in -textViewDidChangeSelection: to avoid informing our delegate about our preservation.
   _isPreservingText = YES;
@@ -662,6 +709,18 @@
   
   _isPreservingSelection = NO;
   _isPreservingText = NO;
+}
+
+- (bool)isCurrentlyEmoji {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  NSString *value = [[UITextInputMode currentInputMode] primaryLanguage];
+#pragma clang diagnostic pop
+  if ([value isEqualToString:@"emoji"]) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 #pragma mark - Core
@@ -701,10 +760,16 @@
   NSRange range = [self selectedRange];
   range.location = range.location + range.length - 1;
   range.length = 1;
-  [self.textView scrollRangeToVisible:range];
-  
-  CGPoint bottomOffset = CGPointMake(0, self.textView.contentSize.height - self.textView.bounds.size.height);
-  //[self.textView setContentOffset:bottomOffset animated:NO];
+    
+  UITextPosition *caretPosition = [self.textView positionFromPosition:self.textView.beginningOfDocument offset:range.location];
+  if (caretPosition) {
+    CGRect caretRect = [self.textView caretRectForPosition:caretPosition];
+    caretRect.origin.y -= self.textView.contentInset.top;
+    caretRect.size.height += self.textView.contentInset.top + self.textView.contentInset.bottom + 4.0f;
+    [self.textView scrollRectToVisible:caretRect animated:false];
+  }
+    
+  //[self.textView scrollRangeToVisible:range];
 }
 
 #pragma mark - Keyboard
@@ -1014,7 +1079,7 @@
   CGFloat baselineNudge = (lineHeight - fontLineHeight) * 0.6f;
   
   CGRect rect = *lineFragmentRect;
-  rect.size.height = lineHeight;
+  rect.size.height = lineHeight + 2.0f;
   
   CGRect usedRect = *lineFragmentUsedRect;
   usedRect.size.height = MAX(lineHeight, usedRect.size.height);
@@ -1136,6 +1201,14 @@
 - (NSInteger)indexOfAccessibilityElement:(id)element
 {
   return 0;
+}
+
+- (UIMenu *)textView:(UITextView *)textView editMenuForTextInRange:(NSRange)range suggestedActions:(NSArray<UIMenuElement *> *)suggestedActions API_AVAILABLE(ios(16.0)) {
+    if ([_delegate respondsToSelector:@selector(editableTextNodeMenu:forTextRange:suggestedActions:)]) {
+        return [_delegate editableTextNodeMenu:self forTextRange:range suggestedActions:suggestedActions];
+    } else {
+        return [UIMenu menuWithChildren:suggestedActions];
+    }
 }
 
 @end

@@ -3,13 +3,48 @@ import Foundation
 public struct Int128 {
     public var _0: Int64
     public var _1: Int64
+    
+    public init(_0: Int64, _1: Int64) {
+        self._0 = _0
+        self._1 = _1
+    }
 }
 
-public struct Int256 {
+public struct Int256: Equatable, CustomStringConvertible {
     public var _0: Int64
     public var _1: Int64
     public var _2: Int64
     public var _3: Int64
+    
+    public init(_0: Int64, _1: Int64, _2: Int64, _3: Int64) {
+        self._0 = _0
+        self._1 = _1
+        self._2 = _2
+        self._3 = _3
+    }
+    
+    public var description: String {
+        var data = Data(count: 32)
+        data.withUnsafeMutableBytes { buffer in
+            if let baseAddress = buffer.baseAddress {
+                let int64Buffer = baseAddress.assumingMemoryBound(to: Int64.self)
+                int64Buffer[0] = self._0
+                int64Buffer[1] = self._1
+                int64Buffer[2] = self._2
+                int64Buffer[3] = self._3
+            }
+        }
+        
+        let hexString = NSMutableString()
+        data.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+            for i in 0 ..< data.count {
+                hexString.appendFormat("%02x", UInt(bytes.advanced(by: i).pointee))
+            }
+        }
+        
+        return hexString as String
+    }
 }
 
 func serializeInt32(_ value: Int32, buffer: Buffer, boxed: Bool) {
@@ -37,7 +72,7 @@ func serializeString(_ value: String, buffer: Buffer, boxed: Bool) {
     let stringBuffer = Buffer()
     let data = value.data(using: .utf8, allowLossyConversion: true) ?? Data()
     data.withUnsafeBytes { bytes in
-        stringBuffer.appendBytes(bytes, length: UInt(data.count))
+        stringBuffer.appendBytes(bytes.baseAddress!, length: UInt(bytes.count))
     }
     serializeBytes(stringBuffer, buffer: buffer, boxed: boxed)
 }
@@ -157,7 +192,7 @@ public func parseBytes(_ reader: BufferReader) -> Buffer? {
 
 func parseString(_ reader: BufferReader) -> String? {
     if let buffer = parseBytes(reader) {
-        return (NSString(data: buffer.makeData() as Data, encoding: String.Encoding.utf8.rawValue) as? String) ?? ""
+        return String(data: buffer.makeData(), encoding: .utf8) ?? ""
     }
     return nil
 }
@@ -197,7 +232,7 @@ public class Buffer: CustomStringConvertible {
         
         if let data = data {
             data.withUnsafeBytes { bytes in
-                self.appendBytes(bytes, length: UInt(data.count))
+                self.appendBytes(bytes.baseAddress!, length: UInt(bytes.count))
             }
         }
     }
@@ -328,13 +363,16 @@ public class BufferReader {
         if count == 0 {
             return 0
         }
-        else if count > 0 && count <= 4 || self.offset + UInt(count) <= self.buffer._size {
-            var value: Int32 = 0
-            memcpy(&value, self.buffer.data?.advanced(by: Int(self.offset)), count)
-            self.offset += UInt(count)
-            return value
+        guard count > 0, count <= 4, self.offset + UInt(count) <= self.buffer._size else {
+            return nil
         }
-        return nil
+        guard let bufferData = self.buffer.data else {
+            return nil
+        }
+        var value: Int32 = 0
+        memcpy(&value, bufferData.advanced(by: Int(self.offset)), count)
+        self.offset += UInt(count)
+        return value
     }
     
     public func readBuffer(_ count: Int) -> Buffer? {

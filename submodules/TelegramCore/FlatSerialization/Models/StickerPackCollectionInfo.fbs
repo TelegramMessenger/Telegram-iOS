@@ -1,0 +1,19 @@
+include "ItemCollectionId.fbs";
+include "TelegramMediaImageRepresentation.fbs";
+
+namespace TelegramCore;
+
+table StickerPackCollectionInfo {
+    id:ItemCollectionId (id: 0, required);
+    flags:int32 (id: 1);
+    accessHash:int64 (id: 2);
+    title:string (id: 3, required);
+    shortName:string (id: 4, required);
+    thumbnail:TelegramMediaImageRepresentation (id: 5);
+    thumbnailFileId:int64 (id: 6);
+    immediateThumbnailData:[ubyte] (id: 7);
+    hash:int32 (id: 8);
+    count:int32 (id: 9);
+}
+
+root_type StickerPackCollectionInfo;

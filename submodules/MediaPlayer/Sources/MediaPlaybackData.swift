@@ -5,7 +5,7 @@ public final class MediaPlaybackBuffers {
     public let audioBuffer: MediaTrackFrameBuffer?
     public let videoBuffer: MediaTrackFrameBuffer?
     
-    init(audioBuffer: MediaTrackFrameBuffer?, videoBuffer: MediaTrackFrameBuffer?) {
+    public init(audioBuffer: MediaTrackFrameBuffer?, videoBuffer: MediaTrackFrameBuffer?) {
         self.audioBuffer = audioBuffer
         self.videoBuffer = videoBuffer
     }

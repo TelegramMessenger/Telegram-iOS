@@ -1,0 +1,6 @@
+mode = .clang-fast
+extra_cflags = /O2 /Zc:inline
+
+include ninja/msvs
+
+cl = "../clang_win/bin/clang-cl.exe"

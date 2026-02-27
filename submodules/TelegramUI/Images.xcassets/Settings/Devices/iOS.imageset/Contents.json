@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "apple_30.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

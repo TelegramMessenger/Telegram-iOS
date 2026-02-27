@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Copyright (c) the JPEG XL Project Authors. All rights reserved.
+#
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+#
+# Bisects JPEG XL encoding quality parameter to reach a given
+# target bits-per-pixel value.
+# (To be used directly, or as a template for tailored processing.)
+#
+# Usage: cjxl_bisect_size {input_filename} {output_filename} {target_bpp}
+
+#
+# We take the `bisector` tool from $PATH, or, if not available,
+# try to locate it in the same directory as the current script.
+# The `get_bpp` helper is taken from the same directory as the current script.
+#
+
+input_filename=$1
+output_filename=$2
+target_size=$3
+
+script_dir=$(dirname $(readlink -f $0))
+bisect_tool=$(which bisector)
+if [ -z $bisect_tool ] ; then
+  bisect_tool="${script_dir}/bisector"
+fi
+jxl_get_bpp_helper="${script_dir}/jxl_get_bpp_helper"
+# If $CJXL_BIN is set, we use this instead of looking for `cjxl` on $PATH.
+
+cjxl_bin=${CJXL_BIN}
+if [ -z $cjxl_bin ] ; then
+  cjxl_bin="cjxl"
+fi
+
+# Using `identify` from ImageMagick here.
+num_pixels=$(identify -format "%w*%h\n" /tmp/baseball.png|bc)
+
+# Allow 0.5% tolerance in size (--rtol=0.005).
+exec $bisect_tool --var=BISECT --range=0.01,15.0 --target=$target_size \
+  --rtol_val=0.005 \
+  --cmd="$cjxl_bin --distance=\$BISECT ${input_filename} ${output_filename}_bisect_\$BISECT.jxl ; (find ${output_filename}_bisect_\$BISECT.jxl -printf \"scale=10;%s/$num_pixels\n\" | bc -l)" \
+  --final="mv ${output_filename}_bisect_\$BISECT.jxl ${output_filename}; rm -f ${output_filename}_bisect_*.jxl" \
+  --verbosity=1

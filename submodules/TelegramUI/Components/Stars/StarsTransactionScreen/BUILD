@@ -1,0 +1,48 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "StarsTransactionScreen",
+    module_name = "StarsTransactionScreen",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit",
+        "//submodules/Display",
+        "//submodules/Postbox",
+        "//submodules/TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ViewControllerComponent",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
+        "//submodules/Components/BalancedTextComponent",
+        "//submodules/TelegramPresentationData",
+        "//submodules/AccountContext",
+        "//submodules/AppBundle",
+        "//submodules/TelegramStringFormatting",
+        "//submodules/PresentationDataUtils",
+        "//submodules/Components/SheetComponent",
+        "//submodules/UndoUI",
+        "//submodules/TextFormat",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/AvatarNode",
+        "//submodules/TelegramUI/Components/Stars/StarsImageComponent",
+        "//submodules/TelegramUI/Components/Stars/StarsAvatarComponent",
+        "//submodules/GalleryUI",
+        "//submodules/TelegramUI/Components/MiniAppListScreen",
+        "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
+        "//submodules/TelegramUI/Components/Gifts/GiftAnimationComponent",
+        "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/TelegramUI/Components/Gifts/TableComponent",
+        "//submodules/TelegramUI/Components/Gifts/PeerTableCellComponent",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

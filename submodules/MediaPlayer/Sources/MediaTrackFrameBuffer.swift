@@ -3,7 +3,7 @@ import SwiftSignalKit
 import CoreMedia
 
 public enum MediaTrackFrameBufferStatus {
-    case buffering
+    case buffering(progress: Double)
     case full(until: Double)
     case finished(at: Double)
 }
@@ -11,12 +11,18 @@ public enum MediaTrackFrameBufferStatus {
 public enum MediaTrackFrameResult {
     case noFrames
     case skipFrame
-    case restoreState([MediaTrackFrame], CMTime)
+    case restoreState(frames: [MediaTrackFrame], atTimestamp: CMTime, soft: Bool)
     case frame(MediaTrackFrame)
     case finished
 }
 
-private let traceEvents = false
+private let traceEvents: Bool = {
+    #if DEBUG && false
+    return true
+    #else
+    return false
+    #endif
+}()
 
 public final class MediaTrackFrameBuffer {
     private let stallDuration: Double
@@ -26,22 +32,26 @@ public final class MediaTrackFrameBuffer {
     private let frameSource: MediaFrameSource
     private let decoder: MediaTrackFrameDecoder
     private let type: MediaTrackFrameType
+    public let startTime: CMTime
     public let duration: CMTime
-    let rotationAngle: Double
-    let aspect: Double
+    public let rotationAngle: Double
+    public let aspect: Double
     
-    var statusUpdated: () -> Void = { }
+    public var statusUpdated: () -> Void = { }
     
     private var frameSourceSinkIndex: Int?
     
-    private var frames: [MediaTrackDecodableFrame] = []
+    private(set) var frames: [MediaTrackDecodableFrame] = []
+    private var maxFrameTime: Double?
     private var endOfStream = false
     private var bufferedUntilTime: CMTime?
+    private var isWaitingForLowWaterDuration: Bool = false
     
-    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime, rotationAngle: Double, aspect: Double, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
+    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, startTime: CMTime, duration: CMTime, rotationAngle: Double, aspect: Double, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
         self.frameSource = frameSource
         self.type = type
         self.decoder = decoder
+        self.startTime = startTime
         self.duration = duration
         self.rotationAngle = rotationAngle
         self.aspect = aspect
@@ -87,8 +97,15 @@ public final class MediaTrackFrameBuffer {
         }
         
         if let maxUntilTime = maxUntilTime {
+            if let maxFrameTime = self.maxFrameTime {
+                if maxFrameTime < CMTimeGetSeconds(maxUntilTime) {
+                    self.maxFrameTime = CMTimeGetSeconds(maxUntilTime)
+                }
+            } else {
+                self.maxFrameTime = CMTimeGetSeconds(maxUntilTime)
+            }
             if traceEvents {
-                print("added \(frames.count) frames until \(CMTimeGetSeconds(maxUntilTime)), \(self.frames.count) total")
+                print("\(self.type) added \(frames.count) frames until \(CMTimeGetSeconds(maxUntilTime)), \(self.frames.count) total")
             }
         }
         
@@ -97,17 +114,28 @@ public final class MediaTrackFrameBuffer {
     
     private func endOfStreamReached() {
         self.endOfStream = true
+        self.isWaitingForLowWaterDuration = false
         self.statusUpdated()
     }
     
     public func status(at timestamp: Double) -> MediaTrackFrameBufferStatus {
         var bufferedDuration = 0.0
         if let bufferedUntilTime = self.bufferedUntilTime {
-            if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+            if CMTimeGetSeconds(self.duration) > 0.0 {
+                if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+                    return .finished(at: CMTimeGetSeconds(bufferedUntilTime))
+                }
+            } else if self.endOfStream {
                 return .finished(at: CMTimeGetSeconds(bufferedUntilTime))
             }
             
             bufferedDuration = CMTimeGetSeconds(bufferedUntilTime) - timestamp
+        } else if self.endOfStream {
+            if let maxFrameTime = self.maxFrameTime {
+                return .finished(at: maxFrameTime)
+            } else {
+                return .finished(at: CMTimeGetSeconds(self.duration))
+            }
         }
         
         let minTimestamp = timestamp - 1.0
@@ -119,21 +147,28 @@ public final class MediaTrackFrameBuffer {
         
         if bufferedDuration < self.lowWaterDuration {
             if traceEvents {
-                print("buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+                print("\(self.type) buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
             }
-            self.frameSource.generateFrames(until: timestamp + self.highWaterDuration)
+            let delayIncrement = 0.3
+            var generateUntil = timestamp + delayIncrement
+            while generateUntil < timestamp + self.highWaterDuration {
+                self.frameSource.generateFrames(until: min(timestamp + self.highWaterDuration, generateUntil), types: [self.type])
+                generateUntil += delayIncrement
+            }
             
-            if bufferedDuration > self.stallDuration {
+            if bufferedDuration > self.stallDuration && !self.isWaitingForLowWaterDuration {
                 if traceEvents {
-                    print("buffered1 duration: \(bufferedDuration), wait until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+                    print("\(self.type) buffered1 duration: \(bufferedDuration), wait until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
                 }
                 return .full(until: timestamp + self.highWaterDuration)
             } else {
-                return .buffering
+                self.isWaitingForLowWaterDuration = true
+                return .buffering(progress: max(0.0, bufferedDuration / self.lowWaterDuration))
             }
         } else {
+            self.isWaitingForLowWaterDuration = false
             if traceEvents {
-                print("buffered2 duration: \(bufferedDuration), wait until \(timestamp) + \(bufferedDuration - self.lowWaterDuration)")
+                print("\(self.type) buffered2 duration: \(bufferedDuration), wait until \(timestamp) + \(bufferedDuration - self.lowWaterDuration)")
             }
             return .full(until: timestamp + max(0.0, bufferedDuration - self.lowWaterDuration))
         }
@@ -144,10 +179,18 @@ public final class MediaTrackFrameBuffer {
     }
     
     public func takeFrame() -> MediaTrackFrameResult {
+        if let decodedFrame = self.decoder.takeQueuedFrame() {
+            return .frame(decodedFrame)
+        }
+        
         if !self.frames.isEmpty {
             let frame = self.frames.removeFirst()
-            if let decodedFrame = self.decoder.decode(frame: frame) {
-                return .frame(decodedFrame)
+            if self.decoder.send(frame: frame) {
+                if let decodedFrame = self.decoder.decode() {
+                    return .frame(decodedFrame)
+                } else {
+                    return .skipFrame
+                }
             } else {
                 return .skipFrame
             }
@@ -155,8 +198,10 @@ public final class MediaTrackFrameBuffer {
             if self.endOfStream, let decodedFrame = self.decoder.takeRemainingFrame() {
                 return .frame(decodedFrame)
             } else {
-                if let bufferedUntilTime = bufferedUntilTime {
-                    if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+                if self.endOfStream {
+                    return .finished
+                } else if let bufferedUntilTime = self.bufferedUntilTime {
+                    if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 {
                         return .finished
                     }
                 }

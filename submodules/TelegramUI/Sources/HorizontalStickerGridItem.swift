@@ -1,0 +1,321 @@
+import Foundation
+import UIKit
+import Display
+import TelegramCore
+import SwiftSignalKit
+import AsyncDisplayKit
+import Postbox
+import StickerResources
+import AccountContext
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import ShimmerEffect
+import TelegramPresentationData
+import AccountContext
+
+final class HorizontalStickerGridItem: GridItem {
+    let context: AccountContext
+    let file: TelegramMediaFile
+    let theme: PresentationTheme
+    let isPreviewed: (HorizontalStickerGridItem) -> Bool
+    let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
+    
+    let section: GridSection? = nil
+    
+    init(context: AccountContext, file: TelegramMediaFile, theme: PresentationTheme, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void) {
+        self.context = context
+        self.file = file
+        self.theme = theme
+        self.isPreviewed = isPreviewed
+        self.sendSticker = sendSticker
+    }
+    
+    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
+        let node = HorizontalStickerGridItemNode()
+        node.setup(context: self.context, item: self)
+        node.sendSticker = self.sendSticker
+        return node
+    }
+    
+    func update(node: GridItemNode) {
+        guard let node = node as? HorizontalStickerGridItemNode else {
+            assertionFailure()
+            return
+        }
+        node.setup(context: self.context, item: self)
+        node.sendSticker = self.sendSticker
+    }
+}
+
+final class HorizontalStickerGridItemNode: GridItemNode {
+    private var currentState: (AccountContext, HorizontalStickerGridItem, CGSize)?
+    let imageNode: TransformImageNode
+    private(set) var animationNode: AnimatedStickerNode?
+    private(set) var placeholderNode: StickerShimmerEffectNode?
+    private var lockBackground: UIVisualEffectView?
+    private var lockTintView: UIView?
+    private var lockIconNode: ASImageNode?
+    
+    private let stickerFetchedDisposable = MetaDisposable()
+    
+    var sendSticker: ((FileMediaReference, UIView, CGRect) -> Void)?
+    
+    private var currentIsPreviewing: Bool = false
+    
+    private var setupTimestamp: Double?
+    
+    override var isVisibleInGrid: Bool {
+        didSet {
+            if oldValue != self.isVisibleInGrid {
+                if self.isVisibleInGrid {
+                    if self.setupTimestamp == nil {
+                        self.setupTimestamp = CACurrentMediaTime()
+                    }
+                    self.animationNode?.visibility = true
+                } else {
+                    self.animationNode?.visibility = false
+                }
+            }
+        }
+    }
+    
+    var stickerItem: StickerPackItem? {
+        if let (_, item, _) = self.currentState {
+            return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: item.file, indexKeys: [])
+        } else {
+            return nil
+        }
+    }
+    
+    override init() {
+        self.imageNode = TransformImageNode()
+        self.placeholderNode = StickerShimmerEffectNode()
+        
+        super.init()
+        
+        self.imageNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+        self.addSubnode(self.imageNode)
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+            self.addSubnode(placeholderNode)
+        }
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
+    }
+    
+    deinit {
+        self.stickerFetchedDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.allowsGroupOpacity = true
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                    placeholderNode?.allowsGroupOpacity = false
+                })
+            }
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+    }
+    
+    func setup(context: AccountContext, item: HorizontalStickerGridItem) {
+        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1.file.id != item.file.id {
+            if let dimensions = item.file.dimensions {
+                if item.file.isAnimatedSticker || item.file.isVideoSticker {
+                    let animationNode: AnimatedStickerNode
+                    if let currentAnimationNode = self.animationNode {
+                        animationNode = currentAnimationNode
+                    } else {
+                        animationNode = DefaultAnimatedStickerNodeImpl()
+                        animationNode.transform = self.imageNode.transform
+                        animationNode.visibility = self.isVisibleInGrid
+                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+                        if let placeholderNode = self.placeholderNode {
+                            self.insertSubnode(animationNode, belowSubnode: placeholderNode)
+                        } else {
+                            self.addSubnode(animationNode)
+                        }
+                        self.animationNode = animationNode
+                    }
+                    
+                    let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    
+                    if item.file.isVideoSticker {
+                        self.imageNode.setSignal(chatMessageSticker(postbox: context.account.postbox, userLocation: .other, file: item.file, small: true, synchronousLoad: false))
+                    } else {
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .other, file: item.file, small: true, size: fittedDimensions, synchronousLoad: false))
+                    }
+                    animationNode.started = { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.imageNode.alpha = 0.0
+                        
+                        let current = CACurrentMediaTime()
+                        if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                            if let placeholderNode = strongSelf.placeholderNode, !placeholderNode.alpha.isZero {
+                                strongSelf.removePlaceholder(animated: true)
+                            }
+                        } else {
+                            strongSelf.removePlaceholder(animated: false)
+                        }
+                    }
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+                    
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).startStrict())
+                } else {
+                    self.imageNode.alpha = 1.0
+                    self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: item.file, small: true))
+                    
+                    if let currentAnimationNode = self.animationNode {
+                        self.animationNode = nil
+                        currentAnimationNode.removeFromSupernode()
+                    }
+                    
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).startStrict())
+                }
+                
+                if item.file.isPremiumSticker {
+                    let lockBackground: UIVisualEffectView
+                    let lockIconNode: ASImageNode
+                    if let currentBackground = self.lockBackground, let currentIcon = self.lockIconNode {
+                        lockBackground = currentBackground
+                        lockIconNode = currentIcon
+                    } else {
+                        let effect: UIBlurEffect
+                        if #available(iOS 10.0, *) {
+                            effect = UIBlurEffect(style: .regular)
+                        } else {
+                            effect = UIBlurEffect(style: .light)
+                        }
+                        lockBackground = UIVisualEffectView(effect: effect)
+                        lockBackground.clipsToBounds = true
+                        lockBackground.isUserInteractionEnabled = false
+                        lockIconNode = ASImageNode()
+                        lockIconNode.displaysAsynchronously = false
+                        lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
+                        lockIconNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                        
+                        let lockTintView = UIView()
+                        lockTintView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
+                        lockBackground.contentView.addSubview(lockTintView)
+                        
+                        self.lockBackground = lockBackground
+                        self.lockTintView = lockTintView
+                        self.lockIconNode = lockIconNode
+                        
+                        self.view.addSubview(lockBackground)
+                        self.addSubnode(lockIconNode)
+                    }
+                } else if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
+                    self.lockBackground = nil
+                    self.lockTintView = nil
+                    self.lockIconNode = nil
+                    lockBackground.removeFromSuperview()
+                    lockTintView.removeFromSuperview()
+                    lockIconNode.removeFromSupernode()
+                }
+                
+                self.currentState = (context, item, dimensions.cgSize)
+                self.setNeedsLayout()
+            }
+        }
+        
+        self.updatePreviewing(animated: false)
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        let bounds = self.bounds
+        let boundingSize = bounds.insetBy(dx: 2.0, dy: 2.0).size
+        
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.frame = bounds
+            
+            if let context = self.currentState?.0, let theme = self.currentState?.1.theme, let file = self.currentState?.1.file {
+                placeholderNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor.mixedWith(theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: file.immediateThumbnailData, size: bounds.size, enableEffect: context.sharedContext.energyUsageSettings.fullTranslucency)
+            }
+        }
+        
+        if let (_, _, mediaDimensions) = self.currentState {
+            let imageSize = mediaDimensions.aspectFitted(boundingSize)
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+            let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            self.imageNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: imageSize.width, height: imageSize.height))
+            self.imageNode.position = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
+            
+            if let animationNode = self.animationNode {
+                animationNode.bounds = self.imageNode.bounds
+                animationNode.position = self.imageNode.position
+                animationNode.updateLayout(size: self.imageNode.bounds.size)
+            }
+        }
+        
+        if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
+            let lockSize = CGSize(width: 16.0, height: 16.0)
+            let lockBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: bounds.height - lockSize.height), size: lockSize)
+            lockBackground.frame = lockBackgroundFrame
+            lockBackground.layer.cornerRadius = lockSize.width / 2.0
+            if #available(iOS 13.0, *) {
+                lockBackground.layer.cornerCurve = .circular
+            }
+            lockTintView.frame = CGRect(origin: CGPoint(), size: lockBackgroundFrame.size)
+            if let icon = lockIconNode.image {
+                let iconSize = CGSize(width: icon.size.width - 4.0, height: icon.size.height - 4.0)
+                lockIconNode.frame = CGRect(origin: CGPoint(x: lockBackgroundFrame.minX + floorToScreenPixels((lockBackgroundFrame.width - iconSize.width) / 2.0), y: lockBackgroundFrame.minY + floorToScreenPixels((lockBackgroundFrame.height - iconSize.height) / 2.0)), size: iconSize)
+            }
+        }
+    }
+    
+    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        if let placeholderNode = self.placeholderNode {
+            placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
+        }
+    }
+    
+    @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
+        if let (_, item, _) = self.currentState, case .ended = recognizer.state {
+            self.sendSticker?(.standalone(media: item.file), self.view, self.bounds)
+        }
+    }
+    
+    func transitionNode() -> ASDisplayNode? {
+        return self.imageNode
+    }
+    
+    func updatePreviewing(animated: Bool) {
+        let isPreviewing = false
+        
+        if self.currentIsPreviewing != isPreviewing {
+            self.currentIsPreviewing = isPreviewing
+
+            self.layer.sublayerTransform = CATransform3DIdentity
+            if animated {
+                self.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.5)
+            }
+        }
+    }
+}

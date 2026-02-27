@@ -1,0 +1,3 @@
+rule run
+    command = $disabled && touch $out || ./$in > $out
+    description = run $in

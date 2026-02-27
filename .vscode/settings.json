@@ -1,0 +1,26 @@
+{
+    "search.followSymlinks": false,
+    "files.exclude": {
+        ".git/**": true
+    },
+    "files.watcherExclude": {
+        ".git/**": true
+    },
+    "search.exclude": {
+        ".git/**": true
+    },
+    "files.associations": {
+    },
+    "swift.sourcekit-lsp.backgroundIndexing": "on",
+    "swift.sourcekit-lsp.trace.server": "messages",
+    "terminal.integrated.profiles.osx": {
+        "zsh": {
+            "path": "/bin/zsh",
+            "args": [
+                "-l",
+                "-i"
+            ]
+        }
+    },
+    "swift.sourcekit-lsp.serverPath": "${workspaceFolder}/build-input/sourcekit-lsp",
+}
