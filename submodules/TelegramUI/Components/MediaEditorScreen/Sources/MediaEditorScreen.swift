@@ -6742,6 +6742,16 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     fileprivate let customTarget: EnginePeer.Id?
     let forwardSource: (EnginePeer, EngineStoryItem)?
     
+    public weak var customNavigationController: UINavigationController?
+    
+    var effectiveNavigationController: UINavigationController? {
+        if let navigationController = self.navigationController {
+            return navigationController
+        } else {
+            return self.customNavigationController
+        }
+    }
+    
     let initialCaption: NSAttributedString?
     let initialPrivacy: EngineStoryPrivacy?
     let initialMediaAreas: [MediaArea]?
@@ -8145,7 +8155,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     self?.stickerUploadDisposable.set(nil)
                 })
             case let .complete(resource, _):
-                let navigationController = self.navigationController as? NavigationController
+                let navigationController = self.effectiveNavigationController as? NavigationController
                 
                 let result: MediaEditorScreenImpl.Result
                 switch action {
@@ -8174,7 +8184,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     parentController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: presentationData.strings.Conversation_StickerAddedToFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                 }
                             case .addToStickerPack, .createStickerPack:
-                                if let (packReference, packTitle) = packReferenceAndTitle, let navigationController = self.navigationController as? NavigationController {
+                                if let (packReference, packTitle) = packReferenceAndTitle, let navigationController {
                                     Queue.mainQueue().after(0.2) {
                                         let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], actionTitle: nil, isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker, actionPerformed: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))

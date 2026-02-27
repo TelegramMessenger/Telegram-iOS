@@ -743,6 +743,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             }
                             galleryController.willDismiss()
                             (navigationController.topViewController as? ViewController)?.present(controller, in: .window(.root))
+                            (controller as? MediaEditorScreen)?.customNavigationController  = navigationController
                             self.imageNode.isHidden = true
                             Queue.mainQueue().after(0.5, {
                                 galleryController.dismiss()

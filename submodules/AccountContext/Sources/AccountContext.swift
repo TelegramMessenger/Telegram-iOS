@@ -1008,6 +1008,7 @@ public protocol CameraScreen: ViewController {
 }
 
 public protocol MediaEditorScreen: ViewController {
+    var customNavigationController: UINavigationController? { get set }
 }
 
 public protocol MediaPickerScreen: ViewController {
