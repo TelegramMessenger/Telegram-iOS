@@ -5280,8 +5280,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let chatParticipant = Promise<ChannelParticipant?>()
             
             if let channel = chatPeer as? TelegramChannel {
-                canEdit = channel.hasPermission(.manageRanks)
-                
+                canEdit = channel.hasPermission(.manageRanks) && role == .member
+                                
                 if let defaultBannedRights = channel.defaultBannedRights {
                     canChange = !defaultBannedRights.flags.contains(.banEditRank)
                     
