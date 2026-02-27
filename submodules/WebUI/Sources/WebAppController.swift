@@ -4192,6 +4192,7 @@ public func standaloneWebAppController(
         webAppController.requestSwitchInline = requestSwitchInline
         webAppController.verifyAgeCompletion = verifyAgeCompletion
         present(webAppController, webAppController.mediaPickerContext)
+        return true
     }
     controller.willDismiss = willDismiss
     controller.didDismiss = didDismiss

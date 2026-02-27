@@ -892,8 +892,7 @@ public class AttachmentController: ViewController, MinimizableController {
                 return true
             }
             let previousType = self.currentType
-            self.currentType = type
-            self.controller?.requestController(type, { [weak self] controller, mediaPickerContext in
+            let shouldSwitch = self.controller?.requestController(type, { [weak self] controller, mediaPickerContext in
                 if let strongSelf = self {
                     if let controller = controller  {
                         if case .glass = strongSelf.controller?.style {
@@ -971,8 +970,11 @@ public class AttachmentController: ViewController, MinimizableController {
                     }
                     strongSelf.mediaPickerContext = mediaPickerContext
                 }
-            })
-            return true
+            }) ?? true
+            if shouldSwitch {
+                self.currentType = type
+            }
+            return shouldSwitch
         }
         
         private func animateSwitchTransition(_ controller: AttachmentContainable, previousController: AttachmentContainable?) {
@@ -1437,8 +1439,9 @@ public class AttachmentController: ViewController, MinimizableController {
         }
     }
     
-    public var requestController: (AttachmentButtonType, @escaping (AttachmentContainable?, AttachmentMediaPickerContext?) -> Void) -> Void = { _, completion in
+    public var requestController: (AttachmentButtonType, @escaping (AttachmentContainable?, AttachmentMediaPickerContext?) -> Void) -> Bool = { _, completion in
         completion(nil, nil)
+        return true
     }
     
     public var getInputContainerNode: () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }

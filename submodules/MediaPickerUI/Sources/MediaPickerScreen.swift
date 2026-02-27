@@ -3483,6 +3483,7 @@ public func wallpaperMediaPickerController(
         })
         mediaPickerController.customSelection = completion
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
+        return true
     }
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     return controller
@@ -3525,6 +3526,7 @@ public func mediaPickerController(
             }
         }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
+        return true
     }
     controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
@@ -3658,6 +3660,7 @@ public func storyMediaPickerController(
             }
         }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
+        return true
     }
     controller.willDismiss = { [weak selectionContext] in
         dismissed()
@@ -3810,6 +3813,7 @@ public func stickerMediaPickerController(
             }
         }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
+        return true
     }
     controller.willDismiss = {
         dismissed()
@@ -4000,6 +4004,7 @@ public func avatarMediaPickerController(
                 }
             }
             present(mediaPickerController, mediaPickerController.mediaPickerContext)
+            return true
         }
         controller.willDismiss = {
             dismissed()
@@ -4063,6 +4068,7 @@ public func coverMediaPickerController(
             controller?.dismiss(animated: true)
         }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
+        return true
     }
     controller.willDismiss = {
         dismissed()

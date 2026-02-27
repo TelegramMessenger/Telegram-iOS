@@ -452,6 +452,7 @@ public func storyLocationPickerController(
             completion(location, queryId, resultId, address, countryCode)
         })
         present(locationPickerController, locationPickerController.mediaPickerContext)
+        return true
     }
     controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)

@@ -1888,7 +1888,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                 }
                 attachmentController.requestController = { [weak self, weak view, weak attachmentController] type, completion in
                     guard let self, let view, let component = view.component else {
-                        return
+                        return true
                     }
                     switch type {
                     case .gallery:
@@ -1897,7 +1897,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                         if let controller = existingController {
                             completion(controller, controller.mediaPickerContext)
                             controller.prepareForReuse()
-                            return
+                            return true
                         }
                         self.presentMediaPicker(
                             view: view,
@@ -1925,13 +1925,14 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                                 self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             }
                         )
+                        return true
                     case .file:
                         self.controllerNavigationDisposable.set(nil)
                         let existingController = currentFilesController.with { $0 }
                         if let controller = existingController as? AttachmentContainable, let mediaPickerContext = controller.mediaPickerContext {
                             completion(controller, mediaPickerContext)
                             controller.prepareForReuse()
-                            return
+                            return true
                         }
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
@@ -1970,13 +1971,14 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                         if let controller = controller as? AttachmentContainable, let mediaPickerContext = controller.mediaPickerContext {
                             completion(controller, mediaPickerContext)
                         }
+                        return true
                     case .location:
                         self.controllerNavigationDisposable.set(nil)
                         let existingController = currentLocationController.with { $0 }
                         if let controller = existingController {
                             completion(controller, controller.mediaPickerContext)
                             controller.prepareForReuse()
-                            return
+                            return true
                         }
                         let selfPeerId: EnginePeer.Id
                         if case let .channel(peer) = peer, case .broadcast = peer.info {
@@ -2010,6 +2012,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                             
                             let _ = currentLocationController.swap(controller)
                         })
+                        return true
                     case .contact:
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
@@ -2170,6 +2173,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                                 }))
                             }
                         }))
+                        return true
                     case .gift:
                         /*let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
                         if !premiumGiftOptions.isEmpty {
@@ -2226,6 +2230,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                     default:
                         break
                     }
+                    return true
                 }
                 let present = { [weak self, weak view] in
                     guard let self, let view, let controller = view.component?.controller() else {

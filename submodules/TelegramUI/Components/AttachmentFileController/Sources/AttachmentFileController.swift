@@ -691,6 +691,7 @@ public func storyAudioPickerController(
             dismissImpl?()
         }) as! AttachmentFileControllerImpl
         present(filePickerController, filePickerController.mediaPickerContext)
+        return true
     }
     controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
