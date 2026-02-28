@@ -441,26 +441,17 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                         return
                     }
                     var dismissImpl: (() -> Void)?
-                    let controller = AuthConfirmationScreen(context: self.context, requestSubject: subject, subject: result, completion: { [weak self] accountContext, accountPeer, authResult in
+                    let controller = AuthConfirmationScreen(context: self.context, requestSubject: subject, subject: result, completion: { [weak self] accountContext, accountPeer, authResult, disposable in
                         guard let self else {
                             return
                         }
                         switch authResult {
                         case let .accept(allowWriteAccess, sharePhoneNumber, matchCode):
-                            let signal: Signal<MessageActionUrlAuthResult, MessageActionUrlAuthError>
-                            if accountContext === context {
-                                signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
-                            } else {
-                                accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                                signal = accountContext.engine.messages.requestMessageActionUrlAuth(subject: subject)
-                                |> castError(MessageActionUrlAuthError.self)
-                                |> mapToSignal { result in
-                                    return accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
-                                } |> afterDisposed {
-                                    accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
-                                }
+                            let signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
+                            |> afterDisposed {
+                                disposable.dispose()
                             }
-                            
+                                                        
                             let _ = (signal
                             |> deliverOnMainQueue).start(next: { authResult in
                                 dismissImpl?()
