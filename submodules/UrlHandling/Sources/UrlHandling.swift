@@ -120,6 +120,7 @@ public enum ParsedInternalUrl {
     case messageLink(slug: String)
     case collectible(slug: String)
     case auction(slug: String)
+    case oauth(url: String)
     case externalUrl(url: String)
 }
 
@@ -279,8 +280,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                 }
                             }
                         }
-                        if let token {
-                            return .externalUrl(url: "tg://oauth?token=\(token)")
+                        if let _ = token {
+                            return .oauth(url: "https://t.me/\(query)")
                         }
                     } else {
                         for queryItem in queryItems {
@@ -1270,6 +1271,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             })
         case let .externalUrl(url):
             return .single(.result(.externalUrl(url)))
+        case let .oauth(url):
+            return .single(.result(.oauth(url: url)))
     }
 }
 
