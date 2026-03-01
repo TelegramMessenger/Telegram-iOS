@@ -553,7 +553,7 @@ public class AttachmentController: ViewController, MinimizableController {
             self.wrapperNode = ASDisplayNode()
             self.wrapperNode.clipsToBounds = true
             
-            self.container = AttachmentContainer(presentationData: self.presentationData, isFullSize: controller.isFullSize, glass: controller.style == .glass)
+            self.container = AttachmentContainer(presentationData: self.presentationData, isFullSize: controller.isFullSize, glass: controller._hasGlassStyle, hasPill: controller.style == .glass)
             self.container.canHaveKeyboardFocus = true
             
             let panelStyle: AttachmentPanel.Style
@@ -895,7 +895,7 @@ public class AttachmentController: ViewController, MinimizableController {
             let shouldSwitch = self.controller?.requestController(type, { [weak self] controller, mediaPickerContext in
                 if let strongSelf = self {
                     if let controller = controller  {
-                        if case .glass = strongSelf.controller?.style {
+                        if strongSelf.controller?._hasGlassStyle == true {
                             controller._hasGlassStyle = true
                         }
                         strongSelf.controller?._ready.set(controller.ready.get())
@@ -1477,7 +1477,7 @@ public class AttachmentController: ViewController, MinimizableController {
         
         super.init(navigationBarPresentationData: nil)
         
-        self._hasGlassStyle = style == .glass
+        self._hasGlassStyle = true //style == .glass
         
         self.statusBar.statusBarStyle = .Ignore
         self.blocksBackgroundWhenInOverlay = true

@@ -3666,14 +3666,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: cancelButtonNode)
             }
             
-            let morehButtonNode: BarComponentHostNode
+            let moreButtonNode: BarComponentHostNode
             if let current = self.moreBarButtonNode {
-                morehButtonNode = current
-                morehButtonNode.component = moreComponent
+                moreButtonNode = current
+                moreButtonNode.component = moreComponent
             } else {
-                morehButtonNode = BarComponentHostNode(component: moreComponent, size: barButtonSize)
-                self.moreBarButtonNode = morehButtonNode
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: morehButtonNode)
+                moreButtonNode = BarComponentHostNode(component: moreComponent, size: barButtonSize)
+                self.moreBarButtonNode = moreButtonNode
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: moreButtonNode)
             }
         }
             
@@ -4181,7 +4181,16 @@ public func standaloneWebAppController(
     getSourceRect: (() -> CGRect?)? = nil,
     verifyAgeCompletion: ((Int) -> Void)? = nil
 ) -> ViewController {
-    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.source == .menu, hasTextInput: false, isFullSize: params.fullSize, makeEntityInputView: {
+    let controller = AttachmentController(
+        context: context,
+        updatedPresentationData: updatedPresentationData,
+        chatLocation: .peer(id: params.peerId),
+        buttons: [.standalone],
+        initialButton: .standalone,
+        fromMenu: params.source == .menu,
+        hasTextInput: false,
+        isFullSize: params.fullSize,
+        makeEntityInputView: {
         return nil
     })
     controller.requestController = { _, present in

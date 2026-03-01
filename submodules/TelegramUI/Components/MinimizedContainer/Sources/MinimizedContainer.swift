@@ -239,7 +239,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
             
             var navigationHeight: CGFloat = minimizedNavigationHeight
             if !isExpanded {
-                navigationHeight += insets.bottom
+                navigationHeight += insets.bottom + 3.0
             }
             
             let headerFrame = CGRect(origin: .zero, size: CGSize(width: size.width, height: navigationHeight))
