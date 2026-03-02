@@ -31,9 +31,15 @@ extension PeerInfoScreenNode {
         }
         
         if actions.contains(.editRank) {
-            var actionTitle: String = self.presentationData.strings.GroupInfo_ActionEditRank
+            let actionTitle: String
             if case .admin = member.role {
                 actionTitle = self.presentationData.strings.GroupInfo_ActionEditAdminRank
+            } else {
+                if let rank = member.rank, !rank.isEmpty {
+                    actionTitle = self.presentationData.strings.GroupInfo_ActionEditRank
+                } else {
+                    actionTitle = self.presentationData.strings.GroupInfo_ActionAddRank
+                }
             }
             items.append(.action(ContextMenuActionItem(text: actionTitle, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tag"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c?.dismiss {

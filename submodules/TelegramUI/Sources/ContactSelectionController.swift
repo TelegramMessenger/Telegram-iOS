@@ -157,9 +157,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
                 let previousTheme = self.presentationData.theme
                 let previousStrings = self.presentationData.strings
                 
-                self.presentationData = presentationData
                 if case .glass = params.style {
-                    self.presentationData = self.presentationData.withUpdated(theme: self.presentationData.theme.withModalBlocksBackground())
+                    self.presentationData = self.presentationData.withUpdated(theme: presentationData.theme.withModalBlocksBackground())
+                } else {
+                    self.presentationData = presentationData
                 }
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {

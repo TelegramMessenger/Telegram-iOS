@@ -107,7 +107,15 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     case .admin:
                         label = presentationData.strings.GroupInfo_LabelAdmin
                     case .member:
-                        if member.id == context.account.peerId, let enclosingPeer = enclosingPeer as? TelegramChannel, enclosingPeer.hasPermission(.editRank) {
+                        var canEditRank = false
+                        if member.id == context.account.peerId {
+                            if let channel = enclosingPeer as? TelegramChannel, channel.hasPermission(.editRank) {
+                                canEditRank = true
+                            } else if let group = enclosingPeer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
+                                canEditRank = true
+                            }
+                        }
+                        if canEditRank {
                             label = presentationData.strings.GroupInfo_AddRank
                             labelColor = presentationData.theme.list.itemAccentColor
                         } else {

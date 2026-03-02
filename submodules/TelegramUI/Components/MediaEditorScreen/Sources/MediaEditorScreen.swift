@@ -3958,16 +3958,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
             self.stickerMaskDrawingView = stickerMaskDrawingView
             
-            let previewSize = self.previewView.bounds.size
-            self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
-            self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
-            
-            let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
-            self.initialMaskScale = maskScale
-            self.initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
-            stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
-            
-            self.updateMaskDrawingView(position: .zero, scale: 1.0, rotation: 0.0)
+            Queue.mainQueue().justDispatch {
+                let previewSize = self.previewView.bounds.size
+                self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
+                self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
+                
+                let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
+                self.initialMaskScale = maskScale
+                self.initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
+                stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
+                
+                self.updateMaskDrawingView(position: .zero, scale: 1.0, rotation: 0.0)
+            }
         }
         
         private func updateMaskDrawingView(position: CGPoint, scale: CGFloat, rotation: CGFloat) {

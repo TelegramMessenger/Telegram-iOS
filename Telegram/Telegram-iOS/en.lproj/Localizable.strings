@@ -15892,6 +15892,7 @@ Error: %8$@";
 "GroupPermission.AddException" = "Add Exception";
 
 "GroupInfo.ActionSend" = "Send Message";
+"GroupInfo.ActionAddRank" = "Add Member Tag";
 "GroupInfo.ActionEditRank" = "Edit Member Tag";
 "GroupInfo.ActionEditAdminRank" = "Edit Admin Tag";
 "GroupInfo.ActionEditAdmin" = "Edit Admin Rights";
