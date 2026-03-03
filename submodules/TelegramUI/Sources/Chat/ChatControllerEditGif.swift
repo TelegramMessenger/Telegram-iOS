@@ -27,10 +27,14 @@ extension ChatControllerImpl {
             getCaptionPanelView: { [weak self] in
                 return self?.getCaptionPanelView(isFile: false, hasTimer: false)
             },
-            sendMessagesWithSignals: { [weak self] signals, _, _, _ in
+            sendMessagesWithSignals: { [weak self] signals, _, _, isCaptionAbove in
                 guard let self else {
                     return
                 }
+                let parameters = ChatSendMessageActionSheetController.SendParameters(
+                    effect: nil,
+                    textIsAboveMedia: isCaptionAbove
+                )
                 self.enqueueMediaMessages(
                     fromGallery: false,
                     signals: signals,
@@ -38,7 +42,7 @@ extension ChatControllerImpl {
                     silentPosting: false,
                     scheduleTime: nil,
                     replyToSubject: nil,
-                    parameters: nil,
+                    parameters: parameters,
                     getAnimatedTransitionSource: nil,
                     completion: {}
                 )

@@ -389,10 +389,11 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
             if case let .paidMessages(value) = stateValue.with({ $0 }).updatedValue {
                 currentAmount = value
             }
+            let fractionAfterCommission = configuration.paidMessageCommissionPermille / 10
             let starsScreen = context.sharedContext.makeStarsWithdrawalScreen(context: context, subject: .enterAmount(
                 current: currentAmount,
                 minValue: StarsAmount(value: 1, nanos: 0),
-                fractionAfterCommission: 80, kind: .privacy,
+                fractionAfterCommission: Int(fractionAfterCommission), kind: .privacy,
                 completion: { amount in
                     updateState { state in
                         var state = state

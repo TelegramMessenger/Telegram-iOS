@@ -1453,6 +1453,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.performMemberAction(member: member, action: .promote)
             case .restrict:
                 strongSelf.performMemberAction(member: member, action: .restrict)
+            case .editRank:
+                strongSelf.performMemberAction(member: member, action: .editRank)
             case .remove:
                 strongSelf.performMemberAction(member: member, action: .remove)
             case let .openStories(sourceView):
