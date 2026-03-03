@@ -1351,13 +1351,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             if let contextExtractableContainer {
-                let positionTransition = ComponentTransition(animation: .curve(duration: 0.35, curve: .bounce(stiffness: 900.0, damping: 95.0)))
+                //let positionTransition = ComponentTransition(animation: .curve(duration: 0.35, curve: .bounce(stiffness: 900.0, damping: 95.0)))
                 let transition = ComponentTransition(animation: .curve(duration: 0.5, curve: .spring))
                 
-                positionTransition.animatePosition(layer: self.actionsContainerNode.layer, from: CGPoint(
+                /*positionTransition.animatePosition(layer: self.actionsContainerNode.layer, from: CGPoint(
                     x: contextExtractableContainer.sourceRect.midX - self.actionsContainerNode.frame.midX,
                     y: contextExtractableContainer.sourceRect.midY - self.actionsContainerNode.frame.midY
-                ), to: CGPoint(), additive: true)
+                ), to: CGPoint(), additive: true)*/
                 /*self.actionsContainerNode.layer.animateScale(from: 1.0, to: 1.2, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, completion: { [weak self] _ in
                     guard let self else {
                         return
@@ -1365,7 +1365,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     self.actionsContainerNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                 })*/
                 
-                self.actionsStackNode.animateIn(fromExtractableContainer: contextExtractableContainer.container, transition: transition)
+                self.actionsStackNode.animateIn(fromExtractableContainer: contextExtractableContainer.container, fromRect: contextExtractableContainer.sourceRect.offsetBy(dx: -self.actionsContainerNode.frame.minX, dy: -self.actionsContainerNode.frame.minY), transition: transition)
             } else {
                 self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: self.actionsContainerNode.alpha, duration: 0.05)
                 self.actionsContainerNode.layer.animateSpring(
@@ -1719,20 +1719,24 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 
                 let contextExtractableContainerView = contextExtractableContainer.container
                 
-                positionTransition.setPosition(view: self.actionsContainerNode.view, position: CGPoint(x: contextExtractableContainer.sourceRect.midX, y: contextExtractableContainer.sourceRect.midY), completion: {  _ in
+                /*positionTransition.setPosition(view: self.actionsContainerNode.view, position: CGPoint(x: contextExtractableContainer.sourceRect.midX, y: contextExtractableContainer.sourceRect.midY), completion: {  _ in
                     if completeWithActionStack {
                         restoreOverlayViews.forEach({ $0() })
                         completion()
                     }
-                })
+                })*/
                 
                 positionTransition.attachAnimation(view: self.actionsContainerNode.view, id: "animateOut", completion: { [weak self, weak contextExtractableContainerView] _ in
+                    if completeWithActionStack {
+                        restoreOverlayViews.forEach({ $0() })
+                        completion()
+                    }
                     if let self, let contextExtractableContainerView {
                         self.actionsStackNode.didAnimateOut(toExtractableContainer: contextExtractableContainerView)
                     }
                 })
                 
-                self.actionsStackNode.animateOut(toExtractableContainer: contextExtractableContainer.container, transition: transition)
+                self.actionsStackNode.animateOut(toExtractableContainer: contextExtractableContainer.container, toRect: contextExtractableContainer.sourceRect.offsetBy(dx: -self.actionsContainerNode.frame.minX, dy: -self.actionsContainerNode.frame.minY), transition: transition)
             } else {
                 self.actionsContainerNode.layer.animateAlpha(from: self.actionsContainerNode.alpha, to: 0.0, duration: duration, removeOnCompletion: false)
                 self.actionsContainerNode.layer.animate(
