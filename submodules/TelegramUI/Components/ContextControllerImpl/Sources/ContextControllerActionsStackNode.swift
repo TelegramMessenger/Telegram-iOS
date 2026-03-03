@@ -1611,7 +1611,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         }
         
         override init() {
-            self.backgroundContainer = GlassBackgroundContainerView(spacing: 20.0)
+            self.backgroundContainer = GlassBackgroundContainerView(spacing: 28.0)
             self.contentContainer = LensTransitionContainer(effectView: LensTransitionContainerEffectViewImpl(contentView: nil))
             
             self.backgroundContainerInset = 32.0
