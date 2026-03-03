@@ -253,22 +253,11 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
         let maxSide = max(toSize.width, toSize.height)
         let fromCenter = CGPoint(x: fromRect.midX, y: fromRect.midY)
         let toCenter = CGPoint(x: toRect.midX, y: toRect.midY)
-        let opposingDirection = CGPoint(x: fromCenter.x - toCenter.x, y: fromCenter.y - toCenter.y)
-        
-        func clampSourcePositionToOriginalOpposingAxes(_ point: CGPoint) -> CGPoint {
-            var clamped = point
-            if opposingDirection.x > 0.0 {
-                clamped.x = min(clamped.x, fromCenter.x)
-            } else if opposingDirection.x < 0.0 {
-                clamped.x = max(clamped.x, fromCenter.x)
-            }
-            if opposingDirection.y > 0.0 {
-                clamped.y = min(clamped.y, fromCenter.y)
-            } else if opposingDirection.y < 0.0 {
-                clamped.y = max(clamped.y, fromCenter.y)
-            }
-            return clamped
-        }
+        let centerLineDelta = CGPoint(x: fromCenter.x - toCenter.x, y: fromCenter.y - toCenter.y)
+        let centerLineLength = hypot(centerLineDelta.x, centerLineDelta.y)
+        let centerLineDirection: CGPoint = centerLineLength > 1e-6 ? CGPoint(x: centerLineDelta.x / centerLineLength, y: centerLineDelta.y / centerLineLength) : CGPoint(x: 1.0, y: 0.0)
+        let centerLineMinDistance: CGFloat = -centerLineLength
+        let centerLineMaxDistance: CGFloat = 0.0
         
         func isPointInsideRoundedRect(point: CGPoint, rectCenter: CGPoint, rectSize: CGSize, cornerRadius: CGFloat) -> Bool {
             let halfWidth = rectSize.width * 0.5
@@ -454,43 +443,16 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
                 continue
             }
             
+            let lineDirection = centerLineDirection
             let nearestEdgePoint = nearestBoundaryPointOnRoundedRect(
-                point: fromCenter,
+                point: CGPoint(
+                    x: blobCenter.x + lineDirection.x * 10000.0,
+                    y: blobCenter.y + lineDirection.y * 10000.0
+                ),
                 rectCenter: blobCenter,
                 rectSize: scaledSize,
                 cornerRadius: scaledCornerRadius
             )
-            
-            let rawRayX = fromCenter.x - nearestEdgePoint.x
-            let rawRayY = fromCenter.y - nearestEdgePoint.y
-            let rawRayLength = hypot(rawRayX, rawRayY)
-            var rayDirection: CGPoint
-            if rawRayLength > 1e-6 {
-                rayDirection = CGPoint(x: rawRayX / rawRayLength, y: rawRayY / rawRayLength)
-            } else {
-                let outwardX = nearestEdgePoint.x - blobCenter.x
-                let outwardY = nearestEdgePoint.y - blobCenter.y
-                let outwardLength = hypot(outwardX, outwardY)
-                if outwardLength > 1e-6 {
-                    rayDirection = CGPoint(x: outwardX / outwardLength, y: outwardY / outwardLength)
-                } else {
-                    rayDirection = CGPoint(x: 0.0, y: 0.0)
-                }
-            }
-            
-            let outwardProbe = CGPoint(
-                x: nearestEdgePoint.x + rayDirection.x,
-                y: nearestEdgePoint.y + rayDirection.y
-            )
-            if isPointInsideRoundedRect(
-                point: outwardProbe,
-                rectCenter: blobCenter,
-                rectSize: scaledSize,
-                cornerRadius: scaledCornerRadius
-            ) {
-                rayDirection.x = -rayDirection.x
-                rayDirection.y = -rayDirection.y
-            }
             
             let normalizedSuckProgress = max(0.0, min(1.0, t / sourceSuckDurationFraction))
             let oneMinusSuckProgress = 1.0 - normalizedSuckProgress
@@ -503,14 +465,48 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
             let sourceInsetDistance = baseSourceInsetDistance + (sourceFinalInsideDistance - baseSourceInsetDistance) * finalInsideEase
             let sourceHalfWidth = fromRect.width * 0.5
             let sourceHalfHeight = fromRect.height * 0.5
-            let sourceHalfExtentAlongRay = abs(rayDirection.x) * sourceHalfWidth + abs(rayDirection.y) * sourceHalfHeight
+            let sourceHalfExtentAlongRay = abs(lineDirection.x) * sourceHalfWidth + abs(lineDirection.y) * sourceHalfHeight
             let sourceCenterDistance = sourceInsetDistance + sourceHalfExtentAlongRay
-            let rawSourcePosition = CGPoint(
-                x: nearestEdgePoint.x + rayDirection.x * sourceCenterDistance,
-                y: nearestEdgePoint.y + rayDirection.y * sourceCenterDistance
+            let sourcePosition = CGPoint(
+                x: nearestEdgePoint.x + lineDirection.x * sourceCenterDistance,
+                y: nearestEdgePoint.y + lineDirection.y * sourceCenterDistance
             )
-            let sourcePosition = clampSourcePositionToOriginalOpposingAxes(rawSourcePosition)
-            sourcePositions.append(sourcePosition)
+            let centerLineDistance = (sourcePosition.x - fromCenter.x) * centerLineDirection.x + (sourcePosition.y - fromCenter.y) * centerLineDirection.y
+            let clampedCenterLineDistance = max(centerLineMinDistance, min(centerLineMaxDistance, centerLineDistance))
+            var projectedSourcePosition = CGPoint(
+                x: fromCenter.x + centerLineDirection.x * clampedCenterLineDistance,
+                y: fromCenter.y + centerLineDirection.y * clampedCenterLineDistance
+            )
+            let sourceNearestPoint = CGPoint(
+                x: projectedSourcePosition.x - centerLineDirection.x * sourceHalfExtentAlongRay,
+                y: projectedSourcePosition.y - centerLineDirection.y * sourceHalfExtentAlongRay
+            )
+            let sourceNearestBoundaryPoint = nearestBoundaryPointOnRoundedRect(
+                point: sourceNearestPoint,
+                rectCenter: blobCenter,
+                rectSize: scaledSize,
+                cornerRadius: scaledCornerRadius
+            )
+            let sourceNearestDistance = hypot(
+                sourceNearestPoint.x - sourceNearestBoundaryPoint.x,
+                sourceNearestPoint.y - sourceNearestBoundaryPoint.y
+            )
+            let sourceNearestSignedDistance: CGFloat = isPointInsideRoundedRect(
+                point: sourceNearestPoint,
+                rectCenter: blobCenter,
+                rectSize: scaledSize,
+                cornerRadius: scaledCornerRadius
+            ) ? -sourceNearestDistance : sourceNearestDistance
+            let centerCorrection = sourceNearestSignedDistance - sourceInsetDistance
+            if abs(centerCorrection) > 0.01 {
+                let correctedCenterLineDistance = centerLineDistance - centerCorrection
+                let clampedCorrectedCenterLineDistance = max(centerLineMinDistance, min(centerLineMaxDistance, correctedCenterLineDistance))
+                projectedSourcePosition = CGPoint(
+                    x: fromCenter.x + centerLineDirection.x * clampedCorrectedCenterLineDistance,
+                    y: fromCenter.y + centerLineDirection.y * clampedCorrectedCenterLineDistance
+                )
+            }
+            sourcePositions.append(projectedSourcePosition)
             
             if lockedSourceInsetDistance == nil {
                 let insetWidth = max(0.0, scaledSize.width - sourceFullInsideInset * 2.0)
@@ -518,7 +514,7 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
                 let insetSize = CGSize(width: insetWidth, height: insetHeight)
                 let insetRadius = max(0.0, scaledCornerRadius - sourceFullInsideInset)
                 if sourceInsetDistance <= 0.0 && isPointInsideRoundedRect(
-                    point: sourcePosition,
+                    point: projectedSourcePosition,
                     rectCenter: blobCenter,
                     rectSize: insetSize,
                     cornerRadius: insetRadius
@@ -566,22 +562,11 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
         let maxSide = max(toSize.width, toSize.height)
         let fromCenter = CGPoint(x: fromRect.midX, y: fromRect.midY)
         let toCenter = CGPoint(x: toRect.midX, y: toRect.midY)
-        let opposingDirection = CGPoint(x: fromCenter.x - toCenter.x, y: fromCenter.y - toCenter.y)
-        
-        func clampSourcePositionToOriginalOpposingAxes(_ point: CGPoint) -> CGPoint {
-            var clamped = point
-            if opposingDirection.x > 0.0 {
-                clamped.x = min(clamped.x, fromCenter.x)
-            } else if opposingDirection.x < 0.0 {
-                clamped.x = max(clamped.x, fromCenter.x)
-            }
-            if opposingDirection.y > 0.0 {
-                clamped.y = min(clamped.y, fromCenter.y)
-            } else if opposingDirection.y < 0.0 {
-                clamped.y = max(clamped.y, fromCenter.y)
-            }
-            return clamped
-        }
+        let centerLineDelta = CGPoint(x: fromCenter.x - toCenter.x, y: fromCenter.y - toCenter.y)
+        let centerLineLength = hypot(centerLineDelta.x, centerLineDelta.y)
+        let centerLineDirection: CGPoint = centerLineLength > 1e-6 ? CGPoint(x: centerLineDelta.x / centerLineLength, y: centerLineDelta.y / centerLineLength) : CGPoint(x: 1.0, y: 0.0)
+        let centerLineMinDistance: CGFloat = -centerLineLength
+        let centerLineMaxDistance: CGFloat = 0.0
         
         func isPointInsideRoundedRect(point: CGPoint, rectCenter: CGPoint, rectSize: CGSize, cornerRadius: CGFloat) -> Bool {
             let halfWidth = rectSize.width * 0.5
@@ -771,44 +756,16 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
                 continue
             }
             
+            let lineDirection = centerLineDirection
             let nearestEdgePoint = nearestBoundaryPointOnRoundedRect(
-                point: fromCenter,
+                point: CGPoint(
+                    x: blobCenter.x + lineDirection.x * 10000.0,
+                    y: blobCenter.y + lineDirection.y * 10000.0
+                ),
                 rectCenter: blobCenter,
                 rectSize: scaledSize,
                 cornerRadius: scaledCornerRadius
             )
-            
-            let rawRayX = fromCenter.x - nearestEdgePoint.x
-            let rawRayY = fromCenter.y - nearestEdgePoint.y
-            let rawRayLength = hypot(rawRayX, rawRayY)
-            var rayDirection: CGPoint
-            if rawRayLength > 1e-6 {
-                rayDirection = CGPoint(x: rawRayX / rawRayLength, y: rawRayY / rawRayLength)
-            } else {
-                let outwardX = nearestEdgePoint.x - blobCenter.x
-                let outwardY = nearestEdgePoint.y - blobCenter.y
-                let outwardLength = hypot(outwardX, outwardY)
-                if outwardLength > 1e-6 {
-                    rayDirection = CGPoint(x: outwardX / outwardLength, y: outwardY / outwardLength)
-                } else {
-                    rayDirection = CGPoint(x: 0.0, y: 0.0)
-                }
-            }
-            
-            // Ensure positive distances move outward from the blob.
-            let outwardProbe = CGPoint(
-                x: nearestEdgePoint.x + rayDirection.x,
-                y: nearestEdgePoint.y + rayDirection.y
-            )
-            if isPointInsideRoundedRect(
-                point: outwardProbe,
-                rectCenter: blobCenter,
-                rectSize: scaledSize,
-                cornerRadius: scaledCornerRadius
-            ) {
-                rayDirection.x = -rayDirection.x
-                rayDirection.y = -rayDirection.y
-            }
             
             let normalizedSuckProgress = max(0.0, min(1.0, t / sourceSuckDurationFraction))
             let oneMinusSuckProgress = 1.0 - normalizedSuckProgress
@@ -821,14 +778,48 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
             let sourceInsetDistance = baseSourceInsetDistance + (sourceFinalInsideDistance - baseSourceInsetDistance) * finalInsideEase
             let sourceHalfWidth = fromRect.width * 0.5
             let sourceHalfHeight = fromRect.height * 0.5
-            let sourceHalfExtentAlongRay = abs(rayDirection.x) * sourceHalfWidth + abs(rayDirection.y) * sourceHalfHeight
+            let sourceHalfExtentAlongRay = abs(lineDirection.x) * sourceHalfWidth + abs(lineDirection.y) * sourceHalfHeight
             let sourceCenterDistance = sourceInsetDistance + sourceHalfExtentAlongRay
-            let rawSourcePosition = CGPoint(
-                x: nearestEdgePoint.x + rayDirection.x * sourceCenterDistance,
-                y: nearestEdgePoint.y + rayDirection.y * sourceCenterDistance
+            let sourcePosition = CGPoint(
+                x: nearestEdgePoint.x + lineDirection.x * sourceCenterDistance,
+                y: nearestEdgePoint.y + lineDirection.y * sourceCenterDistance
             )
-            let sourcePosition = clampSourcePositionToOriginalOpposingAxes(rawSourcePosition)
-            sourcePositions.append(sourcePosition)
+            let centerLineDistance = (sourcePosition.x - fromCenter.x) * centerLineDirection.x + (sourcePosition.y - fromCenter.y) * centerLineDirection.y
+            let clampedCenterLineDistance = max(centerLineMinDistance, min(centerLineMaxDistance, centerLineDistance))
+            var projectedSourcePosition = CGPoint(
+                x: fromCenter.x + centerLineDirection.x * clampedCenterLineDistance,
+                y: fromCenter.y + centerLineDirection.y * clampedCenterLineDistance
+            )
+            let sourceNearestPoint = CGPoint(
+                x: projectedSourcePosition.x - centerLineDirection.x * sourceHalfExtentAlongRay,
+                y: projectedSourcePosition.y - centerLineDirection.y * sourceHalfExtentAlongRay
+            )
+            let sourceNearestBoundaryPoint = nearestBoundaryPointOnRoundedRect(
+                point: sourceNearestPoint,
+                rectCenter: blobCenter,
+                rectSize: scaledSize,
+                cornerRadius: scaledCornerRadius
+            )
+            let sourceNearestDistance = hypot(
+                sourceNearestPoint.x - sourceNearestBoundaryPoint.x,
+                sourceNearestPoint.y - sourceNearestBoundaryPoint.y
+            )
+            let sourceNearestSignedDistance: CGFloat = isPointInsideRoundedRect(
+                point: sourceNearestPoint,
+                rectCenter: blobCenter,
+                rectSize: scaledSize,
+                cornerRadius: scaledCornerRadius
+            ) ? -sourceNearestDistance : sourceNearestDistance
+            let centerCorrection = sourceNearestSignedDistance - sourceInsetDistance
+            if abs(centerCorrection) > 0.01 {
+                let correctedCenterLineDistance = centerLineDistance - centerCorrection
+                let clampedCorrectedCenterLineDistance = max(centerLineMinDistance, min(centerLineMaxDistance, correctedCenterLineDistance))
+                projectedSourcePosition = CGPoint(
+                    x: fromCenter.x + centerLineDirection.x * clampedCorrectedCenterLineDistance,
+                    y: fromCenter.y + centerLineDirection.y * clampedCorrectedCenterLineDistance
+                )
+            }
+            sourcePositions.append(projectedSourcePosition)
             
             if lockedSourceInsetDistance == nil {
                 let insetWidth = max(0.0, scaledSize.width - sourceFullInsideInset * 2.0)
@@ -836,7 +827,7 @@ final class LensTransitionContainerImpl: UIView, LensTransitionContainerProtocol
                 let insetSize = CGSize(width: insetWidth, height: insetHeight)
                 let insetRadius = max(0.0, scaledCornerRadius - sourceFullInsideInset)
                 if sourceInsetDistance <= 0.0 && isPointInsideRoundedRect(
-                    point: sourcePosition,
+                    point: projectedSourcePosition,
                     rectCenter: blobCenter,
                     rectSize: insetSize,
                     cornerRadius: insetRadius
