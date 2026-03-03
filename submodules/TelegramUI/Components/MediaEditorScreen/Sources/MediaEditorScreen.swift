@@ -5386,6 +5386,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             )
             
             if trackId != 0 && !isCollage {
+                items.append(.separator)
                 items.append(
                     .action(
                         ContextMenuActionItem(

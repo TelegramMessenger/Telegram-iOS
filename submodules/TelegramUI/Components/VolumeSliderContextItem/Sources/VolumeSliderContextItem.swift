@@ -155,11 +155,21 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
     }
     
     private func updateValue(transition: ContainedViewLayoutTransition = .immediate) {
-        let width = self.frame.width
+        let sideInset: CGFloat = 10.0
+        let width = self.frame.width - sideInset * 2.0
         
         let range = self.maxValue - self.minValue
-        let value = self.value
-        transition.updateFrameAdditive(node: self.foregroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: value / range * width, height: self.frame.height)))
+        let value = (self.value - self.minValue) / range
+        var foregroundFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: value * width, height: self.frame.height))
+        var foregroundOffset: CGFloat = 0.0
+        if foregroundFrame.width < 40.0 {
+            foregroundOffset = (40.0 - foregroundFrame.width) * 0.5
+            foregroundFrame = foregroundFrame.insetBy(dx: 0.0, dy: foregroundOffset)
+        }
+        transition.updateFrameAdditive(node: self.foregroundNode, frame: foregroundFrame)
+        transition.updateSublayerTransformOffset(layer: self.foregroundNode.layer, offset: CGPoint(x: 0.0, y: -foregroundOffset))
+        
+        transition.updateCornerRadius(node: self.foregroundNode, cornerRadius: min(20.0, foregroundFrame.width * 0.5))
         
         let stringValue = "\(Int(self.value * 100.0))%"
         

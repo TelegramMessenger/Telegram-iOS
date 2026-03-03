@@ -15960,3 +15960,16 @@ Error: %8$@";
 "Channel.Management.DismissAdmin" = "Dismiss";
 
 "Attachment.ScanDocument" = "Scan Document";
+
+"Month.NomJanuary" = "January";
+"Month.NomFebruary" = "February";
+"Month.NomMarch" = "March";
+"Month.NomApril" = "April";
+"Month.NomMay" = "May";
+"Month.NomJune" = "June";
+"Month.NomJuly" = "July";
+"Month.NomAugust" = "August";
+"Month.NomSeptember" = "September";
+"Month.NomOctober" = "October";
+"Month.NomNovember" = "November";
+"Month.NomDecember" = "December";

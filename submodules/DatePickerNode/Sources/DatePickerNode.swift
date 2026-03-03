@@ -1021,7 +1021,7 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         if component == 1 {
             string = "\(self.yearRange.startIndex + row)"
         } else {
-            string = stringForMonth(strings: self.strings, month: Int32(row))
+            string = stringForNominativeMonth(strings: self.strings, month: Int32(row))
         }
         return NSAttributedString(string: string, font: Font.medium(15.0), textColor: self.theme.textColor)
     }
