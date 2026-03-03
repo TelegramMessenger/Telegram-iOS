@@ -666,10 +666,10 @@ public final class GlassBackgroundContainerView: UIView {
         }
     }
     
-    public override init(frame: CGRect) {
+    public init(spacing: CGFloat = 7.0) {
         if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
             let effect = UIGlassContainerEffect()
-            effect.spacing = 7.0
+            effect.spacing = spacing
             let nativeView = UIVisualEffectView(effect: effect)
             self.nativeView = nativeView
             
@@ -684,7 +684,7 @@ public final class GlassBackgroundContainerView: UIView {
             self.legacyView = ContentView()
         }
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         if let nativeParamsView = self.nativeParamsView {
             self.addSubview(nativeParamsView)

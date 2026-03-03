@@ -327,6 +327,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.contentRectDebugNode.backgroundColor = UIColor.red.withAlphaComponent(0.2)
         
         self.actionsContainerNode = ASDisplayNode()
+        self.actionsContainerNode.alpha = 0.0
         self.actionsStackNode = ContextControllerActionsStackNodeImpl(
             context: self.context,
             getController: getController,
@@ -816,7 +817,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         case let .reference(reference):
             if let transitionInfo = reference.transitionInfo() {
                 if let referenceView = transitionInfo.referenceView as? ContextExtractableContainer {
-                    contextExtractableContainer = (referenceView, convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view))
+                    if #available(iOS 26.0, *) {
+                        contextExtractableContainer = (referenceView, convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view))
+                    }
                 }
                 
                 contentRect = convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view).insetBy(dx: -2.0, dy: 0.0)
@@ -885,6 +888,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             } else {
                 return
             }
+        }
+        
+        if contextExtractableContainer != nil {
+            if stateTransition != nil {
+                self.actionsContainerNode.alpha = 1.0
+            }
+        } else {
+            self.actionsContainerNode.alpha = 1.0
         }
         
         var contentParentGlobalFrameOffsetX: CGFloat = 0.0
@@ -1351,21 +1362,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             if let contextExtractableContainer {
-                //let positionTransition = ComponentTransition(animation: .curve(duration: 0.35, curve: .bounce(stiffness: 900.0, damping: 95.0)))
                 let transition = ComponentTransition(animation: .curve(duration: 0.5, curve: .spring))
                 
-                /*positionTransition.animatePosition(layer: self.actionsContainerNode.layer, from: CGPoint(
-                    x: contextExtractableContainer.sourceRect.midX - self.actionsContainerNode.frame.midX,
-                    y: contextExtractableContainer.sourceRect.midY - self.actionsContainerNode.frame.midY
-                ), to: CGPoint(), additive: true)*/
-                /*self.actionsContainerNode.layer.animateScale(from: 1.0, to: 1.2, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, completion: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    self.actionsContainerNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
-                })*/
-                
-                self.actionsStackNode.animateIn(fromExtractableContainer: contextExtractableContainer.container, fromRect: contextExtractableContainer.sourceRect.offsetBy(dx: -self.actionsContainerNode.frame.minX, dy: -self.actionsContainerNode.frame.minY), transition: transition)
+                self.actionsStackNode.animateIn(fromExtractableContainer: contextExtractableContainer.container, fromRect: contextExtractableContainer.sourceRect.offsetBy(dx: -self.actionsContainerNode.frame.minX, dy: -self.actionsContainerNode.frame.minY), presentationData: presentationData, transition: transition)
             } else {
                 self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: self.actionsContainerNode.alpha, duration: 0.05)
                 self.actionsContainerNode.layer.animateSpring(
@@ -1736,7 +1735,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     }
                 })
                 
-                self.actionsStackNode.animateOut(toExtractableContainer: contextExtractableContainer.container, toRect: contextExtractableContainer.sourceRect.offsetBy(dx: -self.actionsContainerNode.frame.minX, dy: -self.actionsContainerNode.frame.minY), transition: transition)
+                self.actionsStackNode.animateOut(toExtractableContainer: contextExtractableContainer.container, toRect: contextExtractableContainer.sourceRect.offsetBy(dx: -self.actionsContainerNode.frame.minX, dy: -self.actionsContainerNode.frame.minY), presentationData: presentationData, transition: transition)
             } else {
                 self.actionsContainerNode.layer.animateAlpha(from: self.actionsContainerNode.alpha, to: 0.0, duration: duration, removeOnCompletion: false)
                 self.actionsContainerNode.layer.animate(

@@ -1408,15 +1408,20 @@ private final class ItemSelectionRecognizer: UIGestureRecognizer {
 
 private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitionContainerEffectView {
     let glassView: UIVisualEffectView
+    let contentView: UIView?
     
     private var theme: PresentationTheme?
     
-    override init(frame: CGRect) {
+    init(contentView: UIView?) {
         self.glassView = UIVisualEffectView()
+        self.contentView = contentView
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         self.addSubview(self.glassView)
+        if let contentView {
+            self.glassView.contentView.addSubview(contentView)
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -1429,10 +1434,10 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
             let glassEffectValue: UIGlassEffect
             if theme.overallDarkAppearance {
                 glassEffectValue = UIGlassEffect(style: .regular)
-                glassEffectValue.tintColor = UIColor(white: 1.0, alpha: 0.025)
+                //glassEffectValue.tintColor = UIColor(white: 1.0, alpha: 0.025)
             } else {
                 glassEffectValue = UIGlassEffect(style: .regular)
-                glassEffectValue.tintColor = UIColor(white: 1.0, alpha: 0.1)
+                //glassEffectValue.tintColor = UIColor(white: 1.0, alpha: 0.1)
             }
             self.glassView.effect = glassEffectValue
         }
@@ -1448,6 +1453,12 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
         }
     }
     
+    func updateSize(size: CGSize, transition: ComponentTransition) {
+        transition.setBounds(view: self, bounds: CGRect(origin: .zero, size: size))
+        transition.setBounds(view: self.glassView, bounds: CGRect(origin: .zero, size: size))
+        transition.setPosition(view: self.glassView, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+    }
+    
     func updateSize(duration: Double, keyframes: [CGSize]) {
         guard keyframes.count >= 2 else {
             if let last = keyframes.last {
@@ -1460,9 +1471,11 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
 
         // Start value
         self.bounds.size = keyframes[0]
+        self.glassView.bounds.size = keyframes[0]
+        self.glassView.center = CGPoint(x: keyframes[0].width * 0.5, y: keyframes[0].height * 0.5)
 
         let segmentCount = keyframes.count - 1
-        let step = 1.0 / Double(segmentCount)
+        let relativeStep = 1.0 / Double(segmentCount)
 
         var options: UIView.KeyframeAnimationOptions = [.calculationModeLinear]
         options.insert(UIView.KeyframeAnimationOptions(rawValue: UIView.AnimationOptions.curveLinear.rawValue))
@@ -1473,9 +1486,11 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
             animations: {
                 for i in 0..<segmentCount {
                     let nextSize = keyframes[i + 1]
+                    let relativeStartTime = Double(i) * relativeStep
+                    let relativeDuration = (i == segmentCount - 1) ? (1.0 - relativeStartTime) : relativeStep
                     UIView.addKeyframe(
-                        withRelativeStartTime: Double(i) * step,
-                        relativeDuration: step
+                        withRelativeStartTime: relativeStartTime,
+                        relativeDuration: relativeDuration
                     ) {
                         self.bounds.size = nextSize
                         self.glassView.bounds.size = nextSize
@@ -1485,6 +1500,46 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
             },
             completion: nil
         )
+    }
+
+    func updatePosition(duration: Double, keyframes: [CGPoint]) {
+        guard keyframes.count >= 2 else {
+            if let last = keyframes.last {
+                self.center = last
+            }
+            return
+        }
+
+        self.center = keyframes[0]
+
+        let segmentCount = keyframes.count - 1
+        let relativeStep = 1.0 / Double(segmentCount)
+
+        var options: UIView.KeyframeAnimationOptions = [.calculationModeLinear]
+        options.insert(UIView.KeyframeAnimationOptions(rawValue: UIView.AnimationOptions.curveLinear.rawValue))
+        UIView.animateKeyframes(
+            withDuration: duration,
+            delay: 0.0,
+            options: options,
+            animations: {
+                for i in 0 ..< segmentCount {
+                    let nextPosition = keyframes[i + 1]
+                    let relativeStartTime = Double(i) * relativeStep
+                    let relativeDuration = (i == segmentCount - 1) ? (1.0 - relativeStartTime) : relativeStep
+                    UIView.addKeyframe(
+                        withRelativeStartTime: relativeStartTime,
+                        relativeDuration: relativeDuration
+                    ) {
+                        self.center = nextPosition
+                    }
+                }
+            },
+            completion: nil
+        )
+    }
+    
+    func updatePosition(position: CGPoint, transition: ComponentTransition) {
+        transition.setPosition(view: self, position: position)
     }
     
     func updateCornerRadius(duration: Double, keyframes: [CGFloat]) {
@@ -1503,7 +1558,7 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
         self.glassView.cornerConfiguration = .corners(radius: UICornerRadius(floatLiteral: keyframes[0]))
         
         let segmentCount = keyframes.count - 1
-        let step = 1.0 / Double(segmentCount)
+        let relativeStep = 1.0 / Double(segmentCount)
         
         var options: UIView.KeyframeAnimationOptions = [.calculationModeLinear]
         options.insert(UIView.KeyframeAnimationOptions(rawValue: UIView.AnimationOptions.curveLinear.rawValue))
@@ -1514,9 +1569,11 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
             animations: {
                 for i in 0 ..< segmentCount {
                     let nextValue = keyframes[i + 1]
+                    let relativeStartTime = Double(i) * relativeStep
+                    let relativeDuration = (i == segmentCount - 1) ? (1.0 - relativeStartTime) : relativeStep
                     UIView.addKeyframe(
-                        withRelativeStartTime: Double(i) * step,
-                        relativeDuration: step
+                        withRelativeStartTime: relativeStartTime,
+                        relativeDuration: relativeDuration
                     ) {
                         self.glassView.cornerConfiguration = .corners(radius: UICornerRadius(floatLiteral: nextValue))
                     }
@@ -1524,6 +1581,13 @@ private final class LensTransitionContainerEffectViewImpl: UIView, LensTransitio
             },
             completion: nil
         )
+    }
+    
+    func setTransitionFraction(value: CGFloat, duration: Double) {
+        let fraction = max(0.0, min(1.0, value))
+        let transition: ComponentTransition = duration == 0.0 ? .immediate : .easeInOut(duration: duration)
+        transition.setBlur(layer: self.glassView.contentView.layer, radius: (1.0 - fraction) * 4.0)
+        transition.setAlpha(view: self.glassView.contentView, alpha: fraction)
     }
 }
 
@@ -1547,13 +1611,8 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         }
         
         override init() {
-            /*self.backgroundContainer = GlassBackgroundContainerView()
-            self.backgroundView = GlassBackgroundView()
-            self.backgroundContainer.contentView.addSubview(self.backgroundView)*/
-            
-            self.backgroundContainer = GlassBackgroundContainerView()
-            self.contentContainer = LensTransitionContainer(effectView: LensTransitionContainerEffectViewImpl(), sourceEffectView: LensTransitionContainerEffectViewImpl())
-            //self.backgroundView.contentView.addSubview(self.contentContainer)
+            self.backgroundContainer = GlassBackgroundContainerView(spacing: 20.0)
+            self.contentContainer = LensTransitionContainer(effectView: LensTransitionContainerEffectViewImpl(contentView: nil))
             
             self.backgroundContainerInset = 32.0
             
@@ -1614,7 +1673,7 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             }
         }
         
-        func animateIn(fromExtractableContainer extractableContainer: ContextExtractableContainer, fromRect: CGRect, transition: ComponentTransition) {
+        func animateIn(fromExtractableContainer extractableContainer: ContextExtractableContainer, fromRect: CGRect, presentationData: PresentationData, transition: ComponentTransition) {
             let normalState = extractableContainer.normalState
             //let sourceSize = normalState.size
             let normalCornerRadius: CGFloat = normalState.cornerRadius
@@ -1622,29 +1681,25 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             let currentSize = self.contentContainer.bounds.size
             
             self.sourceExtractableContainer = extractableContainer
-            self.backgroundContainer.contentView.addSubview(extractableContainer.extractableContentView)
-            extractableContainer.extractableContentView.frame = fromRect
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: currentSize)
-            extractableContainer.extractableContentView.alpha = 0.0
-            extractableContainer.extractableContentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
-            extractableContainer.isHidden = true
-            self.contentContainer.animateIn(fromRect: fromRect, toRect: CGRect(origin: CGPoint(), size: currentSize), fromCornerRadius: normalCornerRadius, toCornerRadius: 30.0)
+            
+            let sourceEffectView = LensTransitionContainerEffectViewImpl(contentView: extractableContainer.extractableContentView)
+            sourceEffectView.update(theme: presentationData.theme)
+            
+            self.contentContainer.animateIn(fromRect: fromRect, toRect: CGRect(origin: CGPoint(), size: currentSize), fromCornerRadius: normalCornerRadius, toCornerRadius: 30.0, isDark: presentationData.theme.overallDarkAppearance, sourceEffectView: sourceEffectView)
         }
         
-        func animateOut(toExtractableContainer extractableContainer: ContextExtractableContainer, toRect: CGRect, transition: ComponentTransition) {
+        func animateOut(toExtractableContainer extractableContainer: ContextExtractableContainer, toRect: CGRect, presentationData: PresentationData, transition: ComponentTransition) {
             let normalState = extractableContainer.normalState
             let normalCornerRadius: CGFloat = normalState.cornerRadius
 
             let currentSize = self.contentContainer.bounds.size
-
-            self.backgroundContainer.contentView.addSubview(extractableContainer.extractableContentView)
-            extractableContainer.extractableContentView.frame = toRect
-            extractableContainer.extractableContentView.alpha = 1.0
-            extractableContainer.extractableContentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-
             self.contentContainer.frame = CGRect(origin: CGPoint(), size: currentSize)
+            
+            let sourceEffectView = LensTransitionContainerEffectViewImpl(contentView: extractableContainer.extractableContentView)
+            sourceEffectView.update(theme: presentationData.theme)
 
-            self.contentContainer.animateOut(fromRect: CGRect(origin: CGPoint(), size: currentSize), toRect: toRect, fromCornerRadius: 30.0, toCornerRadius: normalCornerRadius)
+            self.contentContainer.animateOut(fromRect: CGRect(origin: CGPoint(), size: currentSize), toRect: toRect, fromCornerRadius: 30.0, toCornerRadius: normalCornerRadius, isDark: presentationData.theme.overallDarkAppearance, sourceEffectView: sourceEffectView)
         }
         
         func didAnimateOut(toExtractableContainer extractableContainer: ContextExtractableContainer) {
@@ -1664,9 +1719,6 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
             
             if let effectView = self.contentContainer.effectView as? LensTransitionContainerEffectViewImpl {
                 effectView.update(theme: presentationData.theme)
-            }
-            if let sourceEffectView = self.contentContainer.sourceEffectView as? LensTransitionContainerEffectViewImpl {
-                sourceEffectView.update(theme: presentationData.theme)
             }
             transition.setPosition(view: self.contentContainer, position: CGRect(origin: CGPoint(), size: size).center)
             transition.setBounds(view: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: size))
@@ -2329,12 +2381,12 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         }
     }
     
-    func animateIn(fromExtractableContainer extractableContainer: ContextExtractableContainer, fromRect: CGRect, transition: ComponentTransition) {
-        self.navigationContainer.animateIn(fromExtractableContainer: extractableContainer, fromRect: fromRect, transition: transition)
+    func animateIn(fromExtractableContainer extractableContainer: ContextExtractableContainer, fromRect: CGRect, presentationData: PresentationData, transition: ComponentTransition) {
+        self.navigationContainer.animateIn(fromExtractableContainer: extractableContainer, fromRect: fromRect, presentationData: presentationData, transition: transition)
     }
     
-    func animateOut(toExtractableContainer extractableContainer: ContextExtractableContainer, toRect: CGRect, transition: ComponentTransition) {
-        self.navigationContainer.animateOut(toExtractableContainer: extractableContainer, toRect: toRect, transition: transition)
+    func animateOut(toExtractableContainer extractableContainer: ContextExtractableContainer, toRect: CGRect, presentationData: PresentationData, transition: ComponentTransition) {
+        self.navigationContainer.animateOut(toExtractableContainer: extractableContainer, toRect: toRect, presentationData: presentationData, transition: transition)
     }
     
     func didAnimateOut(toExtractableContainer extractableContainer: ContextExtractableContainer) {
