@@ -2002,7 +2002,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         var panelWidth = layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right
         if self.appearance?.isNarrow == true {
-            panelWidth = 180.0
+            panelWidth = 210.0
         }
         
         var panelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - panelWidth) / 2.0), y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))

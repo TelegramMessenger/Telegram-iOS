@@ -27,6 +27,7 @@ public final class OpenChatMessageParams {
     public let message: Message
     public let mediaIndex: Int?
     public let standalone: Bool
+    public let copyProtected: Bool
     public let reverseMessageGalleryOrder: Bool
     public let mode: ChatControllerInteractionOpenMessageMode
     public let navigationController: NavigationController?
@@ -61,6 +62,7 @@ public final class OpenChatMessageParams {
         message: Message,
         mediaIndex: Int? = nil,
         standalone: Bool,
+        copyProtected: Bool = false,
         reverseMessageGalleryOrder: Bool,
         mode: ChatControllerInteractionOpenMessageMode = .default,
         navigationController: NavigationController?,
@@ -93,6 +95,7 @@ public final class OpenChatMessageParams {
         self.message = message
         self.mediaIndex = mediaIndex
         self.standalone = standalone
+        self.copyProtected = copyProtected
         self.reverseMessageGalleryOrder = reverseMessageGalleryOrder
         self.mode = mode
         self.navigationController = navigationController

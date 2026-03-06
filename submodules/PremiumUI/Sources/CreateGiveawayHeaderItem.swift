@@ -9,6 +9,8 @@ import PresentationDataUtils
 import Markdown
 import ComponentFlow
 import PremiumStarComponent
+import GlassBarButtonComponent
+import BundleIconComponent
 
 final class CreateGiveawayHeaderItem: ItemListControllerHeaderItem {
     let theme: PresentationTheme
@@ -49,13 +51,10 @@ private let titleFont = Font.semibold(20.0)
 private let textFont = Font.regular(15.0)
 
 class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
-    private let backgroundNode: NavigationBackgroundNode
-    private let separatorNode: ASDisplayNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     
-    private let cancelNode: HighlightableButtonNode
-    
+    private let cancelButton = ComponentView<Empty>()
     private var hostView: ComponentHostView<Empty>?
     
     private var component: AnyComponent<Empty>?
@@ -72,11 +71,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
     
     init(item: CreateGiveawayHeaderItem) {
         self.item = item
-        
-        self.backgroundNode = NavigationBackgroundNode(color: item.theme.rootController.navigationBar.blurredBackgroundColor)
-        
-        self.separatorNode = ASDisplayNode()
-        
+                
         self.titleNode = ImmediateTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
@@ -87,26 +82,15 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         self.textNode.contentMode = .left
         self.textNode.contentsScale = UIScreen.main.scale
         self.textNode.maximumNumberOfLines = 0
-        
-        self.cancelNode = HighlightableButtonNode()
-        
+                
         super.init()
         
         self.addSubnode(self.textNode)
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.separatorNode)
         self.addSubnode(self.titleNode)
-        self.addSubnode(self.cancelNode)
-        
-        self.cancelNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
-        
+                
         self.updateItem()
     }
-    
-    @objc private func cancelPressed() {
-        self.item.cancel()
-    }
-    
+
     override func didLoad() {
         super.didLoad()
         
@@ -128,23 +112,18 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
     }
     
     func updateItem() {
-        self.backgroundNode.updateColor(color: self.item.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-        self.separatorNode.backgroundColor = self.item.theme.rootController.navigationBar.separatorColor
-        
         let attributedTitle = NSAttributedString(string: self.item.title, font: titleFont, textColor: self.item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         let attributedText = NSAttributedString(string: self.item.text, font: textFont, textColor: self.item.theme.list.freeTextColor, paragraphAlignment: .center)
         
         self.titleNode.attributedText = attributedTitle
         self.textNode.attributedText = attributedText
-        
-        self.cancelNode.setAttributedTitle(NSAttributedString(string: self.item.strings.Common_Cancel, font: Font.regular(17.0), textColor: self.item.theme.rootController.navigationBar.accentTextColor), for: .normal)
     }
     
     override func updateContentOffset(_ contentOffset: CGFloat, transition: ContainedViewLayoutTransition) {
         guard let layout = self.validLayout else {
             return
         }
-        let navigationHeight: CGFloat = 56.0
+        let navigationHeight: CGFloat = 76.0
         let statusBarHeight = layout.statusBarHeight ?? 0.0
         
         let topInset : CGFloat = 0.0
@@ -155,10 +134,6 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
         let titleScale = 1.0 - fraction * 0.18
                 
-        let topPanelAlpha = min(20.0, max(0.0, contentOffset - 95.0)) / 20.0
-        transition.updateAlpha(node: self.backgroundNode, alpha: topPanelAlpha)
-        transition.updateAlpha(node: self.separatorNode, alpha: topPanelAlpha)
-
         let starPosition = CGPoint(
             x: layout.size.width / 2.0,
             y: -contentOffset + 80.0
@@ -185,18 +160,34 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
     override func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
         let leftInset: CGFloat = 24.0
         
-        let navigationBarHeight: CGFloat = 56.0
         let constrainedSize = CGSize(width: layout.size.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude)
         let titleSize = self.titleNode.updateLayout(constrainedSize)
         let textSize = self.textNode.updateLayout(constrainedSize)
-        
-        let cancelSize = self.cancelNode.measure(constrainedSize)
-        transition.updateFrame(node: self.cancelNode, frame: CGRect(origin: CGPoint(x: 16.0 + layout.safeInsets.left, y: floorToScreenPixels((navigationBarHeight - cancelSize.height) / 2.0)), size: cancelSize))
-        
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight)))
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
-        
-        self.backgroundNode.update(size: CGSize(width: layout.size.width, height: navigationBarHeight), transition: transition)
+                
+        let cancelButtonSize = self.cancelButton.update(
+            transition: .immediate,
+            component: AnyComponent(
+                GlassBarButtonComponent(
+                    size: CGSize(width: 44.0, height: 44.0),
+                    backgroundColor: nil,
+                    isDark: self.item.theme.overallDarkAppearance,
+                    state: .glass,
+                    component: AnyComponentWithIdentity(id: "icon", component: AnyComponent(BundleIconComponent(name: "Navigation/Close", tintColor: self.item.theme.chat.inputPanel.panelControlColor))),
+                    action: { [weak self] _ in
+                        self?.item.cancel()
+                    }
+                )
+            ),
+            environment: {},
+            containerSize: CGSize(width: 44.0, height: 44.0)
+        )
+        let cancelButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: cancelButtonSize)
+        if let cancelButtonView = self.cancelButton.view {
+            if cancelButtonView.superview == nil {
+                self.view.addSubview(cancelButtonView)
+            }
+            cancelButtonView.frame = cancelButtonFrame
+        }
                
         let colors: [UIColor]
         let particleColor: UIColor?

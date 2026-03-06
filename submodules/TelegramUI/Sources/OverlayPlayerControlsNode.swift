@@ -209,6 +209,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     var getParentController: () -> ViewController? = { return nil }
     
+    let forceCopyProtected = ValuePromise<Bool>(false)
+    
     private(set) var currentItemId: SharedMediaPlaylistItemId?
     private var displayData: SharedMediaPlaybackDisplayData?
     private var currentAlbumArtInitialized = false
@@ -401,8 +403,11 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
         })
         
-        self.statusDisposable = (delayedStatus
-        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+        self.statusDisposable = combineLatest(
+            queue: Queue.mainQueue(),
+            delayedStatus,
+            self.forceCopyProtected.get()
+        ).startStrict(next: { [weak self] value, forceCopyProtected in
             guard let strongSelf = self else {
                 return
             }
@@ -492,11 +497,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             if strongSelf.displayData != displayData {
                 strongSelf.displayData = displayData
                           
-                var canShare = true
                 if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                     switch source {
-                        case let .telegramFile(fileReference, isCopyProtected, _):
-                            canShare = !isCopyProtected
+                        case let .telegramFile(fileReference, _, _):
                             strongSelf.currentFileReference = fileReference
                             if let size = fileReference.media.size {
                                 strongSelf.scrubberNode.bufferingStatus = strongSelf.account.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
@@ -511,8 +514,13 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.scrubberNode.bufferingStatus = nil
                 }
                 strongSelf.updateLabels(transition: .immediate)
-                
-                strongSelf.shareNode.isHidden = !canShare
+            }
+            
+            if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
+                switch source {
+                case let .telegramFile(_, isCopyProtected, _):
+                    strongSelf.shareNode.isHidden = isCopyProtected || forceCopyProtected
+                }
             }
             
             if itemUpdated {

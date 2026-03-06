@@ -951,20 +951,24 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     handleResolvedUrl(.postStory(section))
                 case "settings":
                     if let lastComponent = parsedUrl.pathComponents.last {
+                        let fullPath = parsedUrl.pathComponents.joined(separator: "/").replacingOccurrences(of: "//", with: "")
                         var section: ResolvedUrl.SettingsSection?
-                        switch lastComponent {
-                        case "themes":
-                            section = .legacy(.theme)
-                        case "devices":
-                            section = .legacy(.devices)
-                        case "enable_log":
-                            section = .legacy(.enableLog)
-                        case "phone_privacy":
-                            section = .legacy(.phonePrivacy)
-                        case "login_email":
-                            section = .legacy(.loginEmail)
-                        default:
-                            let fullPath = parsedUrl.pathComponents.joined(separator: "/").replacingOccurrences(of: "//", with: "")
+                        if parsedUrl.pathComponents.count == 2 {
+                            switch lastComponent {
+                            case "themes":
+                                section = .legacy(.theme)
+                            case "devices":
+                                section = .legacy(.devices)
+                            case "enable_log":
+                                section = .legacy(.enableLog)
+                            case "phone_privacy":
+                                section = .legacy(.phonePrivacy)
+                            case "login_email":
+                                section = .legacy(.loginEmail)
+                            default:
+                                section = .path(fullPath)
+                            }
+                        } else {
                             section = .path(fullPath)
                         }
                         if let section {

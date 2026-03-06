@@ -433,7 +433,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .modeHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .giftPremium(_, title, subtitle, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: .premium, name: "Peer Info/PremiumIcon"), title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, systemStyle: .glass, context: arguments.context, icon: .image(color: .premium, name: "Peer Info/PremiumIcon"), title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
                 var openSelection = false
                 arguments.updateState { state in
                     var updatedState = state
@@ -448,7 +448,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             })
         case let .giftStars(_, title, subtitle, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: .stars, name: "Peer Info/PremiumIcon"), title: title, subtitle: subtitle, subtitleActive: false, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, systemStyle: .glass, context: arguments.context, icon: .image(color: .stars, name: "Peer Info/PremiumIcon"), title: title, subtitle: subtitle, subtitleActive: false, isSelected: isSelected, sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.mode = .starsGiveaway
@@ -480,7 +480,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 icon = "Premium/PremiumStar"
                 boosts = boostCount
             }
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: icon), title: title, titleFont: .bold, titleBadge: "\(boosts)", subtitle: subtitle, sectionId: self.section, action: nil)
+            return GiftOptionItem(presentationData: presentationData, systemStyle: .glass, context: arguments.context, icon: .image(color: color, name: icon), title: title, titleFont: .bold, titleBadge: "\(boosts)", subtitle: subtitle, sectionId: self.section, action: nil)
         case let .starsHeader(_, text, additionalText):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
         case let .stars(_, _, stars, title, subtitle, label, isSelected, maxWinners):
@@ -501,7 +501,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .subscriptionsHeader(_, text, additionalText):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
         case let .subscriptions(_, value, values):
-            return SubscriptionsCountItem(theme: presentationData.theme, strings: presentationData.strings, value: value, values: values, sectionId: self.section, updated: { value in
+            return SubscriptionsCountItem(theme: presentationData.theme, strings: presentationData.strings, systemStyle: .glass, value: value, values: values, sectionId: self.section, updated: { value in
                 arguments.updateState { state in
                     var updatedState = state
                     if state.mode == .giveaway {
@@ -536,7 +536,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .usersHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .usersAll(_, title, subtitle, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, systemStyle: .glass, context: arguments.context, title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
                 var openSelection = false
                 arguments.updateState { state in
                     var updatedState = state
@@ -551,7 +551,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             })
         case let .usersNew(_, title, subtitle, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, systemStyle: .glass, context: arguments.context, title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
                 var openSelection = false
                 arguments.updateState { state in
                     var updatedState = state
@@ -570,7 +570,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .durationHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .duration(_, _, months, title, subtitle, label, badge, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleFont: .small, label: .generic(label), badge: badge, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, systemStyle: .glass, context: arguments.context, title: title, subtitle: subtitle, subtitleFont: .small, label: .generic(label), badge: badge, isSelected: isSelected, sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.selectedMonths = months
@@ -635,7 +635,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             })
         case let .timeCustomPicker(_, dateTimeFormat, date, minDate, maxDate, displayingDateSelection, displayingTimeSelection):
             let title = presentationData.strings.BoostGift_DateEnds
-            return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, minDate: minDate, maxDate: maxDate, title: title, displayingDateSelection: displayingDateSelection, displayingTimeSelection: displayingTimeSelection, sectionId: self.section, style: .blocks, toggleDateSelection: {
+            return ItemListDatePickerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, date: date, minDate: minDate, maxDate: maxDate, title: title, displayingDateSelection: displayingDateSelection, displayingTimeSelection: displayingTimeSelection, sectionId: self.section, style: .blocks, toggleDateSelection: {
                 var focus = false
                 arguments.updateState({ state in
                     var updatedState = state

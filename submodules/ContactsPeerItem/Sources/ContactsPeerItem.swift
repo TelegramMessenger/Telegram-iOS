@@ -830,7 +830,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             if let rightLabelText = item.rightLabelText {
                 let rightLabelTextLayoutAndApplyValue = makeRightLabelTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: rightLabelText.text, font: statusFont, textColor: rightLabelText.color), maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 20.0, height: 100.0)))
                 rightLabelTextLayoutAndApply = rightLabelTextLayoutAndApplyValue
-                rightInset -= 6.0 + rightLabelTextLayoutAndApplyValue.0.size.width
             }
             
             var searchAdIcon: UIImage?

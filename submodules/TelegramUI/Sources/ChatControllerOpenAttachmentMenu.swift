@@ -204,7 +204,7 @@ extension ChatControllerImpl {
                         allButtons.insert(button, at: 1)
                     }
                 
-                    if let user = peer as? TelegramUser, user.botInfo == nil {
+                    if context.isPremium, shortcutMessageList.items.count > 0, let user = peer as? TelegramUser, user.botInfo == nil {
                         if let index = buttons.firstIndex(where: { $0 == .location }) {
                             buttons.insert(.quickReply, at: index + 1)
                         } else {
@@ -334,7 +334,7 @@ extension ChatControllerImpl {
             }
             attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
                 guard let strongSelf = self else {
-                    return
+                    return true
                 }
                 switch type {
                 case .gallery:
@@ -343,7 +343,7 @@ extension ChatControllerImpl {
                     if let controller = existingController {
                         completion(controller, controller.mediaPickerContext)
                         controller.prepareForReuse()
-                        return
+                        return true
                     }
                     strongSelf.presentMediaPicker(saveEditedPhotos: dataSettings.storeEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, enableMultiselection: enableMultiselection, present: { controller, mediaPickerContext in
                         let _ = currentMediaController.swap(controller)
@@ -359,13 +359,14 @@ extension ChatControllerImpl {
                         }
                         self?.enqueueMediaMessages(fromGallery: fromGallery, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                     })
+                    return true
                 case .file:
                     strongSelf.controllerNavigationDisposable.set(nil)
                     let existingController = currentFilesController.with { $0 }
                     if let controller = existingController {
                         completion(controller, controller.mediaPickerContext)
                         controller.prepareForReuse()
-                        return
+                        return true
                     }
                     let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
@@ -388,13 +389,14 @@ extension ChatControllerImpl {
                         let _ = currentFilesController.swap(controller)
                         completion(controller, controller.mediaPickerContext)
                     }
+                    return true
                 case .location:
                     strongSelf.controllerNavigationDisposable.set(nil)
                     let existingController = currentLocationController.with { $0 }
                     if let controller = existingController {
                         completion(controller, controller.mediaPickerContext)
                         controller.prepareForReuse()
-                        return
+                        return true
                     }
                     let selfPeerId: PeerId
                     if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
@@ -408,7 +410,7 @@ extension ChatControllerImpl {
                     } else {
                         selfPeerId = strongSelf.context.account.peerId
                     }
-                    ;let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: selfPeerId))
+                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: selfPeerId))
                     |> deliverOnMainQueue).startStandalone(next: { selfPeer in
                         guard let strongSelf = self, let selfPeer = selfPeer else {
                             return
@@ -447,6 +449,7 @@ extension ChatControllerImpl {
                         
                         let _ = currentLocationController.swap(controller)
                     })
+                    return true
                 case .contact:
                     let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, style: .glass, updatedPresentationData: strongSelf.updatedPresentationData, title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: .always, requirePhoneNumbers: true))
                     contactsController.presentScheduleTimePicker = { [weak self] completion in
@@ -639,30 +642,34 @@ extension ChatControllerImpl {
                             }
                         }
                     }))
+                    return true
                 case .poll:
                     if let controller = strongSelf.configurePollCreation() as? AttachmentContainable {
                         completion(controller, controller.mediaPickerContext)
                         strongSelf.controllerNavigationDisposable.set(nil)
                     }
+                    return true
                 case .todo:
                     if strongSelf.context.isPremium {
                         if let controller = strongSelf.configureTodoCreation() as? AttachmentContainable {
                             completion(controller, controller.mediaPickerContext)
                             strongSelf.controllerNavigationDisposable.set(nil)
                         }
+                        return true
                     } else {
                         var replaceImpl: ((ViewController) -> Void)?
                         let demoController = strongSelf.context.sharedContext.makePremiumDemoController(context: strongSelf.context, subject: .todo, forceDark: false, action: {
                             let controller = context.sharedContext.makePremiumIntroController(context: context, source: .todo, forceDark: false, dismissed: nil)
                             replaceImpl?(controller)
                         }, dismissed: nil)
-                        replaceImpl = { [weak demoController] c in
+                        replaceImpl = { [weak self, weak demoController] c in
+                            Queue.mainQueue().after(0.4) {
+                                self?.attachmentController?.dismiss(animated: false)
+                            }
                             demoController?.replace(with: c)
                         }
                         strongSelf.push(demoController)
-                        Queue.mainQueue().after(0.4) {
-                            strongSelf.attachmentController?.dismiss(animated: false)
-                        }
+                        return false
                     }
                 case .gift:
                     if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let starsContext = context.starsContext {
@@ -681,6 +688,7 @@ extension ChatControllerImpl {
                             let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: context.sharedContext.accountManager, peerId: peer.id, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
                         }
                     }
+                    return true
                 case let .app(bot):
                     if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                         var payload: String?
@@ -729,6 +737,7 @@ extension ChatControllerImpl {
                             strongSelf.present(alertController, in: .window(.root))
                         }
                     }
+                    return true
                 case .quickReply:
                     let _ = (strongSelf.context.sharedContext.makeQuickReplySetupScreenInitialData(context: strongSelf.context)
                     |> take(1)
@@ -747,9 +756,11 @@ extension ChatControllerImpl {
                         completion(controller, controller.mediaPickerContext)
                         strongSelf.controllerNavigationDisposable.set(nil)
                     })
+                    return true
                 default:
                     break
                 }
+                return true
             }
             let present = {
                 attachmentController.navigationPresentation = .flatModal

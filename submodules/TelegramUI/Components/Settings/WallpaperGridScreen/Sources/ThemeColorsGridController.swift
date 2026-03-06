@@ -389,6 +389,7 @@ public func standaloneColorPickerController(
         }
         colorPickerController.openGallery = openGallery
         present(colorPickerController, colorPickerController.mediaPickerContext)
+        return true
     }
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     return controller

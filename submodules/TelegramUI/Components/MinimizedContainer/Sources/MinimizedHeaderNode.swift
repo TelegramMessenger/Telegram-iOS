@@ -311,13 +311,13 @@ final class MinimizedHeaderNode: ASDisplayNode {
             transition.updateFrame(view: view, frame: closeButtonFrame)
         }
         
-        transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: size.width, height: 243.0)))
+        transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: CGSize(width: size.width, height: 246.0)))
         
         //self.backgroundView.update(size: CGSize(width: size.width, height: 243.0), color: self.theme.navigationBar.opaqueBackgroundColor, topCornerRadius: 25.0, bottomCornerRadius: 62.0, transition: .immediate)
         
         transition.updateAlpha(layer: self.progressView.layer, alpha: isExpanded && self.progress != nil ? 1.0 : 0.0)
         if let progress = self.progress {
-            self.progressView.frame = CGRect(origin: .zero, size: CGSize(width: size.width * CGFloat(progress), height: 243.0))
+            self.progressView.frame = CGRect(origin: .zero, size: CGSize(width: size.width * CGFloat(progress), height: 246.0))
         }
     }
 }

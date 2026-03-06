@@ -389,7 +389,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                     if enabled {
                         arguments.resetAutomaticDownload()
                     }
-                })
+                }, tag: DataAndStorageEntryTag.automaticDownloadReset)
             case let .autoSaveHeader(text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .autoSaveItem(_, type, title, label, value):

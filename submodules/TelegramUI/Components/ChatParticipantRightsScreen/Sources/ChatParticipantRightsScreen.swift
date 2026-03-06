@@ -97,6 +97,13 @@ private final class ChatParticipantRightsContent: CombinedComponent {
             self.disposable?.dispose()
         }
         
+        func animateError() {
+            guard let controller = self.controller as? ChatParticipantRightsScreen else {
+                return
+            }
+            controller.animateError()
+        }
+        
         func complete() {
             guard let controller = self.controller as? ChatParticipantRightsScreen else {
                 return
@@ -118,7 +125,7 @@ private final class ChatParticipantRightsContent: CombinedComponent {
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
-            let theme = environment.theme
+            let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
             let state = context.state
             if state.controller == nil {
@@ -251,6 +258,13 @@ private final class ChatParticipantRightsContent: CombinedComponent {
                         }
                         state.rank = value
                         state.updated(transition: .easeInOut(duration: 0.2))
+                    },
+                    shouldUpdateText: { [weak state] text in
+                        if text.containsEmoji {
+                            state?.animateError()
+                            return false
+                        }
+                        return true
                     },
                     onReturn: { [weak state] in
                         guard let state else {
@@ -472,6 +486,7 @@ public class ChatParticipantRightsScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .flatModal
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -503,20 +518,33 @@ public class ChatParticipantRightsScreen: ViewControllerComponentContainer {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if let navigationController = self.navigationController as? NavigationController {
             Queue.mainQueue().after(0.5) {
+                var hadRank = false
+                if case let .rank(_, _, rank, _) = self.subject, !(rank ?? "").isEmpty {
+                    hadRank = true
+                }
+                
                 var title: String?
-                var text: String
+                var text: String?
                 if let rank {
-                    title = presentationData.strings.Chat_TagUpdated_Added
+                    title = hadRank ? presentationData.strings.Chat_TagUpdated_Edited : presentationData.strings.Chat_TagUpdated_Added
                     text = rank
-                } else {
+                } else if hadRank {
                     text = presentationData.strings.Chat_TagUpdated_Removed
                 }
-                let toastController = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: title, text: text, cancel: nil, destructive: false), appearance: .init(isNarrow: true), action: { _ in return true})
-                (navigationController.topViewController as? ViewController)?.present(toastController, in: .current)
+                if let text {
+                    let toastController = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: title, text: text, cancel: nil, destructive: false), appearance: .init(isNarrow: true), action: { _ in return true})
+                    (navigationController.topViewController as? ViewController)?.present(toastController, in: .current)
+                }
             }
         }
         
         self.dismissAnimated()
+    }
+    
+    fileprivate func animateError() {
+        if let view = self.node.hostView.findTaggedView(tag: rankFieldTag) as? ListTextFieldItemComponent.View {
+            view.animateError()
+        }
     }
     
     public override func viewDidAppear(_ animated: Bool) {

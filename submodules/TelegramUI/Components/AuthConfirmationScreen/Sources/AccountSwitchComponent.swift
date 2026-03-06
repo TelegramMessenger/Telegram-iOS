@@ -82,6 +82,8 @@ final class AccountSwitchComponent: Component {
         func update(component: AccountSwitchComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
+            self.button.isUserInteractionEnabled = component.canSwitch
+            
             let size = CGSize(width: component.canSwitch ? 76.0 : 44.0, height: 44.0)
             
             let avatarSize = self.avatar.update(

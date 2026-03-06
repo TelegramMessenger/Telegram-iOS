@@ -1393,6 +1393,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 message: message,
                 mediaIndex: params.mediaIndex,
                 standalone: standalone,
+                copyProtected: self.presentationInterfaceState.copyProtectionEnabled || self.presentationInterfaceState.myCopyProtectionEnabled,
                 reverseMessageGalleryOrder: false,
                 mode: mode,
                 navigationController: self.effectiveNavigationController, dismissInput: { [weak self] in
@@ -3066,8 +3067,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var skipConcealedAlert = false
             if let author = message?.author, author.isVerified {
                 skipConcealedAlert = true
+            } else if let forwardInfo = message?.forwardInfo, let author = forwardInfo.author, author.isVerified {
+                skipConcealedAlert = true
             }
-            
+
             if let message, let adAttribute = message.attributes.first(where: { $0 is AdMessageAttribute }) as? AdMessageAttribute {
                 strongSelf.chatDisplayNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: false, fullscreen: false)
             }
@@ -5271,32 +5274,50 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, openStarsPurchase: { [weak self] amount in
             self?.interfaceInteraction?.openStarsPurchase(amount)
         }, openRankInfo: { [weak self] peer, role, rank in
-            guard let self, let chatPeer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel else {
+            guard let self, let chatPeer = self.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
             var canChange = false
+            var canEdit =  false
             let chatParticipant = Promise<ChannelParticipant?>()
-            if let defaultBannedRights = chatPeer.defaultBannedRights {
-                canChange = !defaultBannedRights.flags.contains(.banEditRank)
-                
-                if canChange {
-                    chatParticipant.set(self.context.engine.peers.fetchChannelParticipant(peerId: chatPeer.id, participantId: self.context.account.peerId))
+            
+            if let channel = chatPeer as? TelegramChannel {
+                canEdit = channel.hasPermission(.manageRanks) && role == .member
+                                
+                if let defaultBannedRights = channel.defaultBannedRights {
+                    canChange = !defaultBannedRights.flags.contains(.banEditRank)
+                    
+                    if canChange {
+                        chatParticipant.set(self.context.engine.peers.fetchChannelParticipant(peerId: chatPeer.id, participantId: self.context.account.peerId))
+                    }
+                }
+            } else if let group = chatPeer as? TelegramGroup {
+                switch group.role {
+                case .creator:
+                    canEdit = true
+                case .admin:
+                    canEdit = false
+                default:
+                    break
+                }
+                if let defaultBannedRights = group.defaultBannedRights {
+                    canChange = !defaultBannedRights.flags.contains(.banEditRank)
                 }
             }
-            let controller = self.context.sharedContext.makeChatRankInfoScreen(
-                context: self.context,
-                chatPeer: EnginePeer(chatPeer),
-                userPeer: peer,
-                role: role,
-                rank: rank,
-                canChange: canChange,
-                completion: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    let _ = (chatParticipant.get()
-                    |> deliverOnMainQueue).start(next: { [weak self] participant in
-                        guard let self else {
+            
+            let openEdit: (EnginePeer.Id, String?, ChatRankInfoScreenRole) -> Void = { [weak self] peerId, rank, role in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makeChatCustomRankSetupScreen(context: self.context, peerId: chatPeer.id, participantId: peerId, rank: rank, role: role)
+                self.push(controller)
+            }
+            
+            if canEdit {
+                if chatPeer is TelegramChannel {
+                    let _ = (self.context.engine.peers.fetchChannelParticipant(peerId: chatPeer.id, participantId: peer.id)
+                    |> deliverOnMainQueue).start(next: { participant in
+                        guard let participant else {
                             return
                         }
                         var rank: String? = nil
@@ -5308,15 +5329,45 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case let .member(_, _, adminInfo, _, rankValue, _):
                             rank = rankValue
                             role = adminInfo != nil ? .admin : .member
-                        default:
-                            break
                         }
-                        let controller = self.context.sharedContext.makeChatCustomRankSetupScreen(context: self.context, peerId: chatPeer.id, participantId: self.context.account.peerId, rank: rank, role: role)
-                        self.push(controller)
+                        openEdit(peer.id, rank, role)
                     })
+                } else {
+                    openEdit(peer.id, rank, role)
                 }
-            )
-            self.push(controller)
+            } else {
+                let controller = self.context.sharedContext.makeChatRankInfoScreen(
+                    context: self.context,
+                    chatPeer: EnginePeer(chatPeer),
+                    userPeer: peer,
+                    role: role,
+                    rank: rank,
+                    canChange: canChange,
+                    completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        let _ = (chatParticipant.get()
+                        |> deliverOnMainQueue).start(next: { [weak self] participant in
+                            guard let self, let participant else {
+                                return
+                            }
+                            var rank: String? = nil
+                            var role: ChatRankInfoScreenRole = .member
+                            switch participant {
+                            case let .creator(_, _, rankValue):
+                                rank = rankValue
+                                role = .creator
+                            case let .member(_, _, adminInfo, _, rankValue, _):
+                                rank = rankValue
+                                role = adminInfo != nil ? .admin : .member
+                            }
+                            openEdit(self.context.account.peerId, rank, role)
+                        })
+                    }
+                )
+                self.push(controller)
+            }
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         

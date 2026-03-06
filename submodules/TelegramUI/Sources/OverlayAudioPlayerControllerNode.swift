@@ -397,7 +397,16 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         let copyProtectionEnabled: Signal<Bool, NoError>
         if case let .peer(peerId) = self.chatLocation {
-            copyProtectionEnabled = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.CopyProtectionEnabled(id: peerId))
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                copyProtectionEnabled = context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.CopyProtectionEnabled(id: peerId),
+                    TelegramEngine.EngineData.Item.Peer.MyCopyProtectionEnabled(id: peerId)
+                ) |> map { copyProtectionEnabled, myCopyProtectionEnabled in
+                    return copyProtectionEnabled || myCopyProtectionEnabled
+                }
+            } else {
+                copyProtectionEnabled = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.CopyProtectionEnabled(id: peerId))
+            }
         } else {
             copyProtectionEnabled = .single(false)
         }
@@ -414,6 +423,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             self.savedIds = savedIds
             self.savedIdsPromise.set(.single(savedIds))
             self.copyProtectionEnabled = copyProtectionEnabled
+            self.controlsNode.forceCopyProtected.set(copyProtectionEnabled)
             
             let transition: ContainedViewLayoutTransition = isFirstTime ? .immediate : .animated(duration: 0.5, curve: .spring)
             self.updateFloatingHeaderOffset(offset: self.floatingHeaderOffset ?? 0.0, transition: transition)

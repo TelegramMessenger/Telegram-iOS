@@ -452,7 +452,7 @@ private final class PeerInfoPendingPane {
             chatLocationContextHolder = Atomic(value: nil)
         }
         
-        var captureProtected = data.peer?.isCopyProtectionEnabled ?? false
+        var captureProtected = peerInfoIsCopyProtected(data: data)
         let paneNode: PeerInfoPaneNode
         switch key {
         case .gifts:

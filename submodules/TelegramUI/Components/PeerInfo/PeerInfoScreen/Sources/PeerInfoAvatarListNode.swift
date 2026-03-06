@@ -71,7 +71,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         |> take(1)
         
         let combinedSignal: Signal<Bool, NoError>
-        if readyWhenGalleryLoads {
+        if !"".isEmpty, readyWhenGalleryLoads {
             combinedSignal = combineLatest(queue: .mainQueue(),
                 avatarReady,
                 galleryReady

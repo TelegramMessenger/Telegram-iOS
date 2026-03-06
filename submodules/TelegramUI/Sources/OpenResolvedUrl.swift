@@ -1822,14 +1822,12 @@ func openResolvedUrlImpl(
             |> deliverOnMainQueue).start(next: { result in
                 if case .request = result {
                     var dismissImpl: (() -> Void)?
-                    let controller = AuthConfirmationScreen(context: context, requestSubject: subject, subject: result, completion: { accountContext, accountPeer, authResult in
+                    let controller = AuthConfirmationScreen(context: context, requestSubject: subject, subject: result, completion: { accountContext, accountPeer, authResult, disposable in
                         switch authResult {
                         case let .accept(allowWriteAccess, sharePhoneNumber, matchCode):
                             let signal = accountContext.engine.messages.acceptMessageActionUrlAuth(subject: subject, allowWriteAccess: allowWriteAccess, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode)
                             |> afterDisposed {
-                                if accountContext !== context {
-                                    accountContext.account.shouldBeServiceTaskMaster.set(.single(.never))
-                                }
+                                disposable.dispose()
                             }
                             
                             let _ = (signal

@@ -610,6 +610,7 @@ public func allGroupPermissionList(peer: EnginePeer, expandMedia: Bool) -> [(Tel
             (.banSendMedia, .banMembers),
             (.banAddMembers, .banMembers),
             (.banPinMessages, .pinMessages),
+            (.banEditRank, .editRank),
             (.banManageTopics, .manageTopics),
             (.banChangeInfo, .changeInfo)
         ]

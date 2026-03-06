@@ -13,6 +13,7 @@ import NotificationExceptionsScreen
 import ShareController
 import TranslateUI
 import TelegramNotices
+import AlertComponent
 
 extension PeerInfoScreenNode {
     func performButtonAction(key: PeerInfoHeaderButtonKey, buttonNode: PeerInfoHeaderButtonNode?, gesture: ContextGesture?) {
@@ -816,9 +817,26 @@ extension PeerInfoScreenNode {
                                     })
                                 }
                             } else {
-                                let _ = self.context.engine.peers.toggleMessageCopyProtection(peerId: user.id, enabled: false).start()
+                                let action = {
+                                    let _ = self.context.engine.peers.toggleMessageCopyProtection(peerId: user.id, enabled: false).start()
+                                    
+                                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: .default, scrollToEndIfExists: true, completion: { _ in }))
+                                }
                                 
-                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: .default, peerNearbyData: nil, completion: { _ in }))
+                                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                                let timeout: Int32 = self.context.account.testingEnvironment ? 300 : 86400
+                                if let cachedUserData = self.data?.cachedData as? CachedUserData, !cachedUserData.flags.contains(.copyProtectionEnabled), let date = cachedUserData.myCopyProtectionEnableDate, currentTime < date + timeout {
+                                    action()
+                                } else {
+                                    let peerName = self.data?.peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
+                                    let alertController = AlertScreen(context: self.context, configuration: .init(actionAlignment: .vertical), title: self.presentationData.strings.EnableSharing_Title, text: self.presentationData.strings.EnableSharing_Text(peerName).string, actions: [
+                                        .init(title: self.presentationData.strings.EnableSharing_SendRequest, type: .default, action: {
+                                            action()
+                                        }),
+                                        .init(title: self.presentationData.strings.Common_Cancel)
+                                    ])
+                                    self.controller?.present(alertController, in: .window(.root))
+                                }
                             }
                         })))
                     }

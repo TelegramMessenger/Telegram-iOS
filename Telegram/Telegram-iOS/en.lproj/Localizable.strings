@@ -15846,6 +15846,7 @@ Error: %8$@";
 
 "AuthConfirmation.Emoji.Title" = "Tap the emoji shown\non your other device";
 "AuthConfirmation.Emoji.Description" = "Telegram wants to make sure it's really you.";
+"AuthConfirmation.Emoji.DescriptionFirst" = "Telegram wants to make sure it's really you trying to log in to **%@**.";
 
 "Chat.TagPlaceholder" = "Tag";
 
@@ -15861,6 +15862,7 @@ Error: %8$@";
 "Chat.EnableSharingOffer.RejectConfirmation.Reject" = "Keep Disabled";
 
 "Chat.TagUpdated.Added" = "Tag added";
+"Chat.TagUpdated.Edited" = "Tag edited";
 "Chat.TagUpdated.Removed" = "Tag removed";
 
 "Conversation.FormatDate.Title" = "Date";
@@ -15890,7 +15892,10 @@ Error: %8$@";
 "GroupPermission.AddException" = "Add Exception";
 
 "GroupInfo.ActionSend" = "Send Message";
+"GroupInfo.ActionAddRank" = "Add Member Tag";
 "GroupInfo.ActionEditRank" = "Edit Member Tag";
+"GroupInfo.ActionEditAdminRank" = "Edit Admin Tag";
+"GroupInfo.ActionEditAdmin" = "Edit Admin Rights";
 "GroupInfo.ActionRemove" = "Remove";
 
 "PeerInfo.EnableSharing" = "Enable Sharing";
@@ -15938,12 +15943,33 @@ Error: %8$@";
 "DisableSharing.Title" = "Disable Sharing";
 "DisableSharing.Screenshot.Title" = "No Screenshots";
 "DisableSharing.Screenshot.Text" = "Disable screenshots and screen recordings in this chat.";
-
 "DisableSharing.Forwarding.Title" = "No Forwarding";
 "DisableSharing.Forwarding.Text" = "Disable message forwarding to other chats.";
-
 "DisableSharing.Saving.Title" = "No Saving";
 "DisableSharing.Saving.Text" = "Disable copying text and saving photos and videos to Photos.";
 "DisableSharing.Confirm" = "Disable Sharing";
 
+"EnableSharing.Title" = "Enable Sharing";
+"EnableSharing.Text" = "You need **%@'s** approval to enable sharing. Send a request?";
+"EnableSharing.SendRequest" = "Send Request";
+
 "OAUTH_REQUEST" = "Login request for %1$@, location: %2$@";
+
+"GroupInfo.AddRank" = "Add Tag";
+
+"Channel.Management.DismissAdmin" = "Dismiss";
+
+"Attachment.ScanDocument" = "Scan Document";
+
+"Month.NomJanuary" = "January";
+"Month.NomFebruary" = "February";
+"Month.NomMarch" = "March";
+"Month.NomApril" = "April";
+"Month.NomMay" = "May";
+"Month.NomJune" = "June";
+"Month.NomJuly" = "July";
+"Month.NomAugust" = "August";
+"Month.NomSeptember" = "September";
+"Month.NomOctober" = "October";
+"Month.NomNovember" = "November";
+"Month.NomDecember" = "December";

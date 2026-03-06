@@ -68,6 +68,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private let requestPeerType: [ReplyMarkupButtonRequestPeerType]?
     let multipleSelectionLimit: Int32?
     private let hasCreation: Bool
+    let immediatelySwitchToContacts: Bool
     let immediatelyActivateMultipleSelection: Bool
     
     override public var _presentedInModal: Bool {
@@ -110,6 +111,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.selectForumThreads = params.selectForumThreads
         self.requestPeerType = params.requestPeerType
         self.hasCreation = params.hasCreation
+        self.immediatelySwitchToContacts = params.immediatelySwitchToContacts
         self.immediatelyActivateMultipleSelection = params.immediatelyActivateMultipleSelection
         self.multipleSelectionLimit = params.multipleSelectionLimit
         

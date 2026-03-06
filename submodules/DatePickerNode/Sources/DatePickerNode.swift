@@ -460,12 +460,12 @@ public final class DatePickerNode: ASDisplayNode {
         self.dateButtonNode = HighlightableButtonNode()
         self.dateButtonNode.clipsToBounds = true
         self.dateButtonNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
-        self.dateButtonNode.cornerRadius = 9.0
+        self.dateButtonNode.cornerRadius = 18.0
         
         self.timeButtonNode = HighlightableButtonNode()
         self.timeButtonNode.clipsToBounds = true
         self.timeButtonNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
-        self.timeButtonNode.cornerRadius = 9.0
+        self.timeButtonNode.cornerRadius = 18.0
         
         super.init()
         
@@ -828,7 +828,7 @@ public final class DatePickerNode: ASDisplayNode {
         var timeSize = self.timeButtonNode.measure(size)
         timeSize.width += 24.0
         timeSize.height = 36.0
-        self.timeButtonNode.frame = CGRect(x: size.width - timeSize.width - 4.0, y: 4.0, width: timeSize.width, height: timeSize.height)
+        self.timeButtonNode.frame = CGRect(x: size.width - timeSize.width - 10.0, y: 4.0, width: timeSize.width, height: timeSize.height)
         
         let dateString = stringForMediumDate(timestamp: Int32(date.timeIntervalSince1970), strings: self.strings, dateTimeFormat: self.dateTimeFormat, withTime: false)
         self.dateButtonNode.setTitle(dateString, with: Font.with(size: 17.0, traits: .monospacedNumbers), with: self.state.displayingDateSelection ? self.theme.accentColor : self.theme.textColor, for: .normal)
@@ -836,7 +836,7 @@ public final class DatePickerNode: ASDisplayNode {
         var dateSize = self.dateButtonNode.measure(size)
         dateSize.width += 24.0
         dateSize.height = 36.0
-        self.dateButtonNode.frame = CGRect(x: size.width - timeSize.width - 4.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
+        self.dateButtonNode.frame = CGRect(x: size.width - timeSize.width - 10.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
         
         let daysSideInset: CGFloat = 12.0
         let cellSize: CGFloat = floor((constrainedSize.width - daysSideInset * 2.0) / 7.0)
@@ -1021,7 +1021,7 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         if component == 1 {
             string = "\(self.yearRange.startIndex + row)"
         } else {
-            string = stringForMonth(strings: self.strings, month: Int32(row))
+            string = stringForNominativeMonth(strings: self.strings, month: Int32(row))
         }
         return NSAttributedString(string: string, font: Font.medium(15.0), textColor: self.theme.textColor)
     }

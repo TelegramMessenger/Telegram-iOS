@@ -3958,16 +3958,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
             self.stickerMaskDrawingView = stickerMaskDrawingView
             
-            let previewSize = self.previewView.bounds.size
-            self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
-            self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
-            
-            let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
-            self.initialMaskScale = maskScale
-            self.initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
-            stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
-            
-            self.updateMaskDrawingView(position: .zero, scale: 1.0, rotation: 0.0)
+            Queue.mainQueue().justDispatch {
+                let previewSize = self.previewView.bounds.size
+                self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
+                self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
+                
+                let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
+                self.initialMaskScale = maskScale
+                self.initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
+                stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
+                
+                self.updateMaskDrawingView(position: .zero, scale: 1.0, rotation: 0.0)
+            }
         }
         
         private func updateMaskDrawingView(position: CGPoint, scale: CGFloat, rotation: CGFloat) {
@@ -5384,6 +5386,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             )
             
             if trackId != 0 && !isCollage {
+                items.append(.separator)
                 items.append(
                     .action(
                         ContextMenuActionItem(
@@ -6742,6 +6745,16 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     fileprivate let customTarget: EnginePeer.Id?
     let forwardSource: (EnginePeer, EngineStoryItem)?
     
+    public weak var customNavigationController: UINavigationController?
+    
+    var effectiveNavigationController: UINavigationController? {
+        if let navigationController = self.navigationController {
+            return navigationController
+        } else {
+            return self.customNavigationController
+        }
+    }
+    
     let initialCaption: NSAttributedString?
     let initialPrivacy: EngineStoryPrivacy?
     let initialMediaAreas: [MediaArea]?
@@ -7806,13 +7819,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             return true
                         }
                         if pack.count >= 120 {
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.MediaEditor_StickersTooMuch, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
-                                if case .info = action, let self {
-                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: {
-                                        
-                                    })
-                                    self.push(controller)
-                                }
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.MediaEditor_StickersTooMuch, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in
                                 return false
                             })
                             self.hapticFeedback.error()
@@ -8151,7 +8158,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     self?.stickerUploadDisposable.set(nil)
                 })
             case let .complete(resource, _):
-                let navigationController = self.navigationController as? NavigationController
+                let navigationController = self.effectiveNavigationController as? NavigationController
                 
                 let result: MediaEditorScreenImpl.Result
                 switch action {
@@ -8180,7 +8187,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     parentController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: presentationData.strings.Conversation_StickerAddedToFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                 }
                             case .addToStickerPack, .createStickerPack:
-                                if let (packReference, packTitle) = packReferenceAndTitle, let navigationController = self.navigationController as? NavigationController {
+                                if let (packReference, packTitle) = packReferenceAndTitle, let navigationController {
                                     Queue.mainQueue().after(0.2) {
                                         let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], actionTitle: nil, isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker, actionPerformed: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))

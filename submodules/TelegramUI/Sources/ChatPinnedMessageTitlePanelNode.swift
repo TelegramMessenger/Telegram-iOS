@@ -24,6 +24,7 @@ import MultiAnimationRenderer
 import TranslateUI
 import ChatControllerInteraction
 import LegacyChatHeaderPanelComponent
+import UIKitRuntimeUtils
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -85,6 +86,16 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let animationRenderer: MultiAnimationRenderer?
 
     private let queue = Queue()
+    
+    private var captureProtected: Bool = false {
+        didSet {
+            if self.captureProtected != oldValue {
+                if self.isNodeLoaded {
+                    setLayerDisableScreenshots(self.contentContainer.layer, self.captureProtected)
+                }
+            }
+        }
+    }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let buttonResult = self.buttonsContainer.hitTest(point.offsetBy(dx: -self.buttonsContainer.frame.minX, dy: -self.buttonsContainer.frame.minY), with: event) {
@@ -280,6 +291,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             isReplyThread = false
         }
         self.isReplyThread = isReplyThread
+        
+        self.captureProtected = interfaceState.copyProtectionEnabled || interfaceState.myCopyProtectionEnabled
         
         self.contextContainer.isGestureEnabled = !isReplyThread
         

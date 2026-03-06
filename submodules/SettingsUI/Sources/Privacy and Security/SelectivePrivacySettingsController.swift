@@ -638,7 +638,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
             case let .peersInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .callsP2PHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section, tag: SelectivePrivacyEntryTag.callsP2P)
             case let .callsP2PAlways(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateCallP2PMode?(.everybody)

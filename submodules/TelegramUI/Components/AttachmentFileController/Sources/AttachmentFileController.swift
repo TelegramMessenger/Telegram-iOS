@@ -216,7 +216,7 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
     }
     entries.append(.selectFromFiles(presentationData.theme, presentationData.strings.Attachment_SelectFromFiles))
     if hasScan {
-        entries.append(.scanDocument(presentationData.theme, "Scan Document"))
+        entries.append(.scanDocument(presentationData.theme, presentationData.strings.Attachment_ScanDocument))
     }
     
     let listTitle: String
@@ -691,6 +691,7 @@ public func storyAudioPickerController(
             dismissImpl?()
         }) as! AttachmentFileControllerImpl
         present(filePickerController, filePickerController.mediaPickerContext)
+        return true
     }
     controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)

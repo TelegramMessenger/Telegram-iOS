@@ -722,6 +722,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var didChangeFromPendingToSent: Bool = false
     
     private var authorNameColor: UIColor?
+    private var authorRank: CachedChannelAdminRank?
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
@@ -3619,7 +3620,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 disablesComments: disablesComments,
                 suggestedPostInfoNodeLayout: suggestedPostInfoNodeLayout,
                 alignment: alignment,
-                isSidePanelOpen: isSidePanelOpen
+                isSidePanelOpen: isSidePanelOpen,
+                authorRank: authorRank
             )
         })
     }
@@ -3685,7 +3687,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         disablesComments: Bool,
         suggestedPostInfoNodeLayout: (CGSize, () -> ChatMessageSuggestedPostInfoNode)?,
         alignment: ChatMessageBubbleContentAlignment,
-        isSidePanelOpen: Bool
+        isSidePanelOpen: Bool,
+        authorRank: CachedChannelAdminRank?
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
@@ -3721,6 +3724,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         strongSelf.disablesComments = disablesComments
         
         strongSelf.authorNameColor = authorNameColor
+        strongSelf.authorRank = authorRank
         
         strongSelf.replyRecognizer?.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         strongSelf.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
@@ -6651,30 +6655,21 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         item.controllerInteraction.openGroupBoostInfo(peer.id, boostCount)
     }
     @objc private func rankButtonPressed() {
-        guard let item = self.item, let peer = item.message.author else {
+        guard let item = self.item, let peer = item.message.author, let authorRank = self.authorRank else {
             return
         }
-        
-        var role: ChatRankInfoScreenRole = .member
         var rank: String = ""
-        if case let .message(message, _, _, attributes, _) = item.content {
-            switch attributes.rank {
-            case let .creator(rankValue):
-                role = .creator
-                rank = rankValue ?? ""
-            case let .admin(rankValue):
-                role = .admin
-                rank = rankValue ?? ""
-            case let .member(rankValue):
-                role = .member
-                rank = rankValue ?? ""
-            default:
-                break
-            }
-            
-            if rank.isEmpty, let attribute = message.attributes.first(where: { $0 is ParticipantRankMessageAttribute }) as? ParticipantRankMessageAttribute, !attribute.rank.isEmpty {
-                rank = attribute.rank
-            }
+        var role: ChatRankInfoScreenRole = .member
+        switch authorRank {
+        case let .creator(rankValue):
+            role = .creator
+            rank = rankValue ?? ""
+        case let .admin(rankValue):
+            role = .admin
+            rank = rankValue ?? ""
+        case let .member(rankValue):
+            role = .member
+            rank = rankValue ?? ""
         }
         item.controllerInteraction.openRankInfo(EnginePeer(peer), role, rank)
     }

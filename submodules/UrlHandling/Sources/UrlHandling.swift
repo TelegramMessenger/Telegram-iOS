@@ -120,6 +120,7 @@ public enum ParsedInternalUrl {
     case messageLink(slug: String)
     case collectible(slug: String)
     case auction(slug: String)
+    case oauth(url: String)
     case externalUrl(url: String)
 }
 
@@ -269,6 +270,18 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                                 return .peer(.id(peerId), .boost)
                             }
+                        }
+                    } else if peerName == "oauth" {
+                        var token: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "startapp" {
+                                    token = value
+                                }
+                            }
+                        }
+                        if let _ = token {
+                            return .oauth(url: "https://t.me/\(query)")
                         }
                     } else {
                         for queryItem in queryItems {
@@ -1258,6 +1271,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             })
         case let .externalUrl(url):
             return .single(.result(.externalUrl(url)))
+        case let .oauth(url):
+            return .single(.result(.oauth(url: url)))
     }
 }
 

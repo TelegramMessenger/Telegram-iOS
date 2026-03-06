@@ -381,7 +381,7 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .topInvitersTitle(_, text, dates):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
             case let .overview(_, stats):
-                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: true, stats: stats, sectionId: self.section, style: .blocks)
+                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, systemStyle: .glass, isGroup: true, stats: stats, sectionId: self.section, style: .blocks)
             case let .growthGraph(_, _, _, graph, type),
                  let .membersGraph(_, _, _, graph, type),
                  let .newMembersBySourceGraph(_, _, _, graph, type),
@@ -390,7 +390,7 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .actionsGraph(_, _, _, graph, type),
                  let .topHoursGraph(_, _, _, graph, type),
                  let .topWeekdaysGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
+                return StatsGraphItem(presentationData: presentationData, systemStyle: .glass, graph: graph, type: type, sectionId: self.section, style: .blocks)
             case let .topPoster(_, _, strings, dateTimeFormat, peer, topPoster, revealed, canPromote):
                 var textComponents: [String] = []
                 if topPoster.messageCount > 0 {
@@ -410,13 +410,13 @@ private enum StatsEntry: ItemListNodeEntry {
                         }))
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setPostersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
             case let .topPostersExpand(theme, title):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.expandTopPosters()
                 })
             case let .topAdmin(_, _, strings, dateTimeFormat, peer, topAdmin, revealed, canPromote):
@@ -441,13 +441,13 @@ private enum StatsEntry: ItemListNodeEntry {
                         }))
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setAdminsPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
             case let .topAdminsExpand(theme, title):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.expandTopAdmins()
                 })
             case let .topInviter(_, _, strings, dateTimeFormat, peer, topInviter, revealed, canPromote):
@@ -464,13 +464,13 @@ private enum StatsEntry: ItemListNodeEntry {
                         }))
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setInvitersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
             case let .topInvitersExpand(theme, title):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.expandTopInviters()
                 })
         }

@@ -30,6 +30,8 @@ public func attachmentDefaultTopInset(layout: ContainerViewLayout?) -> CGFloat {
 
 final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     private let glass: Bool
+    private let hasPill: Bool
+    
     let wrappingNode: ASDisplayNode
     let clipNode: ASDisplayNode
     let bottomClipNode: ASDisplayNode
@@ -85,13 +87,14 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     var isInnerPanGestureEnabled: (() -> Bool)?
     var onExpandAnimationCompleted: () -> Void = {}
     
-    init(presentationData: PresentationData, isFullSize: Bool, glass: Bool) {
+    init(presentationData: PresentationData, isFullSize: Bool, glass: Bool, hasPill: Bool) {
         self.presentationData = presentationData
         self.isFullSize = isFullSize
         if isFullSize {
             self.isExpanded = true
         }
         self.glass = glass
+        self.hasPill = hasPill
         
         self.wrappingNode = ASDisplayNode()
         self.clipNode = ASDisplayNode()
@@ -147,7 +150,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         self.panGestureRecognizer = panRecognizer
         self.wrappingNode.view.addGestureRecognizer(panRecognizer)
                 
-        if self.glass {
+        if self.hasPill {
             self.clipNode.view.addSubview(self.pillView)
         }
         

@@ -53,6 +53,7 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
     }
     
     let presentationData: ItemListPresentationData
+    let systemStyle: ItemListSystemStyle
     let context: AccountContext
     let icon: Icon?
     let title: String
@@ -68,8 +69,9 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, context: AccountContext, icon: Icon? = nil, title: String, titleFont: Font = .regular, titleBadge: String? = nil, subtitle: String?, subtitleFont: SubtitleFont = .regular, subtitleActive: Bool = false, label: Label? = nil, badge: String? = nil, isSelected: Bool? = nil, stars: Int64? = nil, sectionId: ItemListSectionId, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle = .legacy, context: AccountContext, icon: Icon? = nil, title: String, titleFont: Font = .regular, titleBadge: String? = nil, subtitle: String?, subtitleFont: SubtitleFont = .regular, subtitleActive: Bool = false, label: Label? = nil, badge: String? = nil, isSelected: Bool? = nil, stars: Int64? = nil, sectionId: ItemListSectionId, action: (() -> Void)?) {
         self.presentationData = presentationData
+        self.systemStyle = systemStyle
         self.icon = icon
         self.context = context
         self.title = title
@@ -518,7 +520,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)

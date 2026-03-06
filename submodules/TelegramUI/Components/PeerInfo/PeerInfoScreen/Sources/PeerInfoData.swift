@@ -2191,6 +2191,16 @@ func peerInfoScreenData(
     }
 }
 
+func peerInfoIsCopyProtected(data: PeerInfoScreenData) -> Bool {
+    var isCopyProtected = false
+    if let cachedUserData = data.cachedData as? CachedUserData, cachedUserData.flags.contains(.copyProtectionEnabled) || cachedUserData.flags.contains(.myCopyProtectionEnabled) {
+        isCopyProtected = true
+    } else if let peer = data.peer, peer.isCopyProtectionEnabled {
+        isCopyProtected = true
+    }
+    return isCopyProtected
+}
+
 func canEditPeerInfo(context: AccountContext, peer: Peer?, chatLocation: ChatLocation, threadData: MessageHistoryThreadData?) -> Bool {
     if context.account.peerId == peer?.id {
         return true
@@ -2278,7 +2288,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                                 if channel.hasPermission(.addAdmins) {
                                     result.insert(.promote)
                                 }
-                                if channel.hasPermission(.editRank) {
+                                if channel.hasPermission(.manageRanks) {
                                     result.insert(.editRank)
                                 }
                             }
@@ -2289,7 +2299,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                             if channel.hasPermission(.addAdmins) {
                                 result.insert(.promote)
                             }
-                            if channel.hasPermission(.editRank) {
+                            if channel.hasPermission(.manageRanks) {
                                 result.insert(.editRank)
                             }
                         }

@@ -34,14 +34,14 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
     let context: AccountContext
     let requestSubject: MessageActionUrlSubject
     let subject: MessageActionUrlAuthResult
-    let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
+    let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void
     let cancel: (Bool) -> Void
     
     init(
         context: AccountContext,
         requestSubject: MessageActionUrlSubject,
         subject: MessageActionUrlAuthResult,
-        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void,
+        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void,
         cancel: @escaping  (Bool) -> Void
     ) {
         self.context = context
@@ -61,13 +61,15 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
     final class State: ComponentState {
         private let context: AccountContext
         private let requestSubject: MessageActionUrlSubject
-        private let subject: MessageActionUrlAuthResult
-        private let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
+        fileprivate var subject: MessageActionUrlAuthResult
+        private let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void
         
         private let disposables = DisposableSet()
+        private let accountInUseDisposable = MetaDisposable()
         
-        var peer: EnginePeer?
+        var canSwitchAccount = false
         var forcedAccount: (AccountContext, EnginePeer)?
+        var peer: EnginePeer?
         
         fileprivate var inProgress = false
         var allowWrite = true
@@ -77,7 +79,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         var matchCodes: [String]?
         var selectedMatchCode: String?
         
-        init(context: AccountContext, requestSubject: MessageActionUrlSubject, subject: MessageActionUrlAuthResult, completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void) {
+        init(context: AccountContext, requestSubject: MessageActionUrlSubject, subject: MessageActionUrlAuthResult, completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void) {
             self.context = context
             self.requestSubject = requestSubject
             self.subject = subject
@@ -113,23 +115,43 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 }
             }
             
-            if case let .request(_, _, _, _, _, userIdHint) = self.subject, let userIdHint, userIdHint != context.account.peerId {
+            if case let .request(_, _, _, _, _, userIdHint) = self.subject {
+                let isTestEnvironment = context.account.testingEnvironment
                 let _ = (activeAccountsAndPeers(context: self.context, includePrimary: true)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] primary, other in
                     guard let self else {
                         return
                     }
+                    
+                    var accountCount = 0
                     for (accountContext, peer, _) in other {
-                        if peer.id == userIdHint {
-                            self.forcedAccount = (accountContext, peer)
-                            self.updated()
-                            
-                            accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
-                            let _ = accountContext.engine.messages.requestMessageActionUrlAuth(subject: requestSubject).start()
-                            break
+                        if accountContext.account.testingEnvironment == isTestEnvironment {
+                            accountCount += 1
+                        }
+                        if let userIdHint, userIdHint != context.account.peerId {
+                            if peer.id == userIdHint {
+                                self.forcedAccount = (accountContext, peer)
+                                
+                                self.accountInUseDisposable.set(self.context.sharedContext.setAccountUserInterfaceInUse(accountContext.account.id))
+                                
+                                let _ = (accountContext.engine.messages.requestMessageActionUrlAuth(subject: requestSubject)
+                                |> deliverOnMainQueue).start(next: { [weak self] result in
+                                    guard let self, case .request = result else {
+                                        return
+                                    }
+                                    self.subject = result
+                                    if case let .request(_, _, _, flags, _, _) = result, !flags.contains(.showMatchCodesFirst) {
+                                        self.displayEmoji = false
+                                        self.matchCodes = nil
+                                    }
+                                    self.updated()
+                                })
+                            }
                         }
                     }
+                    self.canSwitchAccount = accountCount > 0
+                    self.updated()
                 })
             }
         }
@@ -138,9 +160,37 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             self.disposables.dispose()
             
             if !self.inProgress {
-                if let (context, _) = self.forcedAccount {
-                    context.account.shouldBeServiceTaskMaster.set(.single(.never))
-                }
+                self.accountInUseDisposable.dispose()
+            }
+        }
+        
+        func complete(matchCode: String?) {
+            guard case let .request(_, _, _, flags, _, _) = self.subject else {
+                return
+            }
+            
+            var allowWrite = false
+            if flags.contains(.requestWriteAccess) && self.allowWrite {
+                allowWrite = true
+            }
+            
+            let accountContext = self.forcedAccount?.0 ?? self.context
+            guard let accountPeer = self.forcedAccount?.1 ?? self.peer else {
+                return
+            }
+            
+            if flags.contains(.requestPhoneNumber) {
+                self.displayPhoneNumberConfirmation(commit: { sharePhoneNumber in
+                    self.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode), self.accountInUseDisposable)
+                    self.inProgress = true
+                    self.selectedMatchCode = matchCode
+                    self.updated()
+                })
+            } else {
+                self.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: false, matchCode: matchCode), self.accountInUseDisposable)
+                self.inProgress = true
+                self.selectedMatchCode = matchCode
+                self.updated()
             }
         }
         
@@ -165,7 +215,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         return
                     }
                     
-                    self.completion(accountContext, accountPeer, .failed)
+                    self.completion(accountContext, accountPeer, .failed, self.accountInUseDisposable)
                 }
             })
         }
@@ -206,6 +256,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             }
             
             let context = self.context
+            let isTestEnvironment = context.account.testingEnvironment
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let items: Signal<[ContextMenuItem], NoError> = activeAccountsAndPeers(context: self.context, includePrimary: true)
             |> take(1)
@@ -218,9 +269,8 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         guard let self else {
                             return
                         }
-                        if let (context, _) = self.forcedAccount {
-                            context.account.shouldBeServiceTaskMaster.set(.single(.never))
-                        }
+                        
+                        self.accountInUseDisposable.set(nil)
                         
                         self.forcedAccount = nil
                         self.updated()
@@ -229,7 +279,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 }
                 
                 for (accountContext, peer, _) in other {
-                    guard !existingIds.contains(peer.id) else {
+                    guard !existingIds.contains(peer.id), accountContext.account.testingEnvironment == isTestEnvironment else {
                         continue
                     }
                     items.append(.custom(AccountPeerContextItem(context: accountContext, account: accountContext.account, peer: peer, action: { [weak self] _, f in
@@ -237,14 +287,19 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         guard let self else {
                             return
                         }
-                        if let (context, _) = self.forcedAccount {
-                            context.account.shouldBeServiceTaskMaster.set(.single(.never))
-                        }
-                        
-                        accountContext.account.shouldBeServiceTaskMaster.set(.single(.now))
+                        self.accountInUseDisposable.set(self.context.sharedContext.setAccountUserInterfaceInUse(accountContext.account.id))
                         
                         self.forcedAccount = (accountContext, peer)
                         self.updated()
+                        
+                        let _ = (accountContext.engine.messages.requestMessageActionUrlAuth(subject: self.requestSubject)
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let self, case .request = result else {
+                                return
+                            }
+                            self.subject = result
+                            self.updated()
+                        })
                     }), true))
                 }
                 
@@ -279,7 +334,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
-            let theme = environment.theme
+            let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
             let state = context.state
             if state.controller == nil {
@@ -288,7 +343,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             
             let presentationData = context.component.context.sharedContext.currentPresentationData.with { $0 }
             
-            guard case let .request(domain, bot, clientData, flags, matchCodes, _) = component.subject else {
+            guard case let .request(domain, bot, clientData, flags, matchCodes, _) = state.subject else {
                 fatalError()
             }
 
@@ -323,7 +378,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         context: state.forcedAccount?.0 ?? component.context,
                         theme: environment.theme,
                         peer: state.forcedAccount?.1 ?? peer,
-                        canSwitch: true,
+                        canSwitch: state.canSwitchAccount,
                         isVisible: true,
                         action: { [weak state] sourceView in
                             state?.presentAccountSwitchMenu(sourceView: sourceView)
@@ -340,36 +395,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             let titleFont = Font.bold(24.0)
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
-            
-            let complete: (String?) -> Void = { [weak state] matchCode in
-                guard let state else {
-                    return
-                }
-                var allowWrite = false
-                if flags.contains(.requestWriteAccess) && state.allowWrite {
-                    allowWrite = true
-                }
-                
-                let accountContext = state.forcedAccount?.0 ?? component.context
-                guard let accountPeer = state.forcedAccount?.1 ?? state.peer else {
-                    return
-                }
-                
-                if flags.contains(.requestPhoneNumber) {
-                    state.displayPhoneNumberConfirmation(commit: { sharePhoneNumber in
-                        component.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: sharePhoneNumber, matchCode: matchCode))
-                        state.inProgress = true
-                        state.selectedMatchCode = matchCode
-                        state.updated()
-                    })
-                } else {
-                    component.completion(accountContext, accountPeer, .accept(allowWriteAccess: allowWrite, sharePhoneNumber: false, matchCode: matchCode))
-                    state.inProgress = true
-                    state.selectedMatchCode = matchCode
-                    state.updated()
-                }
-            }
-            
+        
             var contentHeight: CGFloat = 32.0
             
             if state.displayEmoji, let matchCodes = state.matchCodes {
@@ -379,7 +405,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                     component: MultilineTextComponent(
                         text: .markdown(text: strings.AuthConfirmation_Emoji_Title, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.controlAccentColor), link: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
-                        maximumNumberOfLines: 2,
+                        maximumNumberOfLines: 3,
                         lineSpacing: 0.2
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
@@ -393,9 +419,16 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 contentHeight += emojiTitle.size.height
                 contentHeight += 16.0
                 
+                let emojiDescriptionString: String
+                if flags.contains(.showMatchCodesFirst) {
+                    emojiDescriptionString = strings.AuthConfirmation_Emoji_DescriptionFirst(domain).string
+                } else {
+                    emojiDescriptionString = strings.AuthConfirmation_Emoji_Description
+                }
+                
                 let emojiDescription = emojiDescription.update(
                     component: MultilineTextComponent(
-                        text: .markdown(text: strings.AuthConfirmation_Emoji_Description, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
+                        text: .markdown(text: emojiDescriptionString, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 3,
                         lineSpacing: 0.2
@@ -451,7 +484,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         )
                     }
                     
-                    let subject = component.subject
+                    let subject = state.subject
                     let emoji = emojis[code].update(
                         component: AnyComponent(
                             PlainButtonComponent(
@@ -466,7 +499,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                                     if case let .request(_, _, _, flags, _, _) = subject, flags.contains(.showMatchCodesFirst) {
                                         state.checkMatchCode(code)
                                     } else {
-                                        complete(code)
+                                        state.complete(matchCode: code)
                                     }
                                 },
                                 isEnabled: state.selectedMatchCode == nil,
@@ -752,7 +785,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                         guard let accountPeer = state.forcedAccount?.1 ?? state.peer else {
                             return
                         }
-                        component.completion(accountContext, accountPeer, .decline)
+                        component.completion(accountContext, accountPeer, .decline, EmptyDisposable)
                         component.cancel(true)
                     }
                 ),
@@ -786,7 +819,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                             state.matchCodes = matchCodes.shuffled()
                             state.updated(transition: .spring(duration: 0.4))
                         } else {
-                            complete(state.selectedMatchCode)
+                            state.complete(matchCode: state.selectedMatchCode)
                         }
                     }
                 ),
@@ -813,13 +846,13 @@ private final class AuthConfirmationSheetComponent: CombinedComponent {
     let context: AccountContext
     let requestSubject: MessageActionUrlSubject
     let subject: MessageActionUrlAuthResult
-    let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
+    let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void
     
     init(
         context: AccountContext,
         requestSubject: MessageActionUrlSubject,
         subject: MessageActionUrlAuthResult,
-        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
+        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void
     ) {
         self.context = context
         self.requestSubject = requestSubject
@@ -914,13 +947,13 @@ public class AuthConfirmationScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let requestSubject: MessageActionUrlSubject
     private let subject: MessageActionUrlAuthResult
-    fileprivate let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
+    fileprivate let completion: (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void
     
     public init(
         context: AccountContext,
         requestSubject: MessageActionUrlSubject,
         subject: MessageActionUrlAuthResult,
-        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result) -> Void
+        completion: @escaping (AccountContext, EnginePeer, AuthConfirmationScreen.Result, Disposable) -> Void
     ) {
         self.context = context
         self.requestSubject = requestSubject

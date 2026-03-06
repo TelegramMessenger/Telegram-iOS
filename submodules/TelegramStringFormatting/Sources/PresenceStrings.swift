@@ -47,6 +47,37 @@ public func shortStringForDayOfWeek(strings: PresentationStrings, day: Int32) ->
     }
 }
 
+public func stringForNominativeMonth(strings: PresentationStrings, month: Int32) -> String {
+    switch month {
+    case 0:
+        return strings.Month_NomJanuary
+    case 1:
+        return strings.Month_NomFebruary
+    case 2:
+        return strings.Month_NomMarch
+    case 3:
+        return strings.Month_NomApril
+    case 4:
+        return strings.Month_NomMay
+    case 5:
+        return strings.Month_NomJune
+    case 6:
+        return strings.Month_NomJuly
+    case 7:
+        return strings.Month_NomAugust
+    case 8:
+        return strings.Month_NomSeptember
+    case 9:
+        return strings.Month_NomOctober
+    case 10:
+        return strings.Month_NomNovember
+    case 11:
+        return strings.Month_NomDecember
+    default:
+        return ""
+    }
+}
+
 public func stringForMonth(strings: PresentationStrings, month: Int32) -> String {
     switch month {
     case 0:

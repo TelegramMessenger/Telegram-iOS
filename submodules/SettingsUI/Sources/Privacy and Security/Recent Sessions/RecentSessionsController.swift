@@ -359,7 +359,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         case let .terminateAllWebSessions(_, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.blockDestructiveIcon(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                 arguments.terminateAllWebSessions()
-            })
+            }, tag: RecentSessionsEntryTag.terminateOtherSessions)
         case let .currentAddDevice(_, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.addDeviceIcon(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                 arguments.addDevice()
@@ -880,7 +880,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: emptyStateItem, crossfadeState: crossfadeState, animateChanges: animateChanges, scrollEnabled: emptyStateItem == nil)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: nil, emptyStateItem: emptyStateItem, crossfadeState: crossfadeState, animateChanges: animateChanges, scrollEnabled: emptyStateItem == nil)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -910,10 +910,14 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         var didFocusOnItem = false
         controller.afterTransactionCompleted = { [weak controller] in
             if !didFocusOnItem, let controller {
-                controller.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? ItemListItemNode, let tag = itemNode.tag, tag.isEqual(to: focusOnItemTag) {
+                controller.forEachItemNode { [weak controller] listItemNode in
+                    if let itemNode = listItemNode as? ItemListItemNode, let tag = itemNode.tag, tag.isEqual(to: focusOnItemTag) {
                         didFocusOnItem = true
                         itemNode.displayHighlight()
+                        
+                        Queue.mainQueue().after(0.3) {
+                            controller?.ensureItemNodeVisible(listItemNode)
+                        }
                     }
                 }
             }

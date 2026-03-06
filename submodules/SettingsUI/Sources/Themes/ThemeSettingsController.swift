@@ -110,6 +110,7 @@ public enum ThemeSettingsEntryTag: ItemListItemTag {
     case sendWithCmdEnter
     case tapForNextMedia
     case nightMode
+    case edit
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? ThemeSettingsEntryTag, self == other {

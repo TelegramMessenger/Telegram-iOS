@@ -27,6 +27,7 @@ private struct PeerMembersListTransaction {
 
 enum PeerMembersListAction {
     case open
+    case editRank
     case promote
     case restrict
     case remove
@@ -107,7 +108,20 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     case .admin:
                         label = presentationData.strings.GroupInfo_LabelAdmin
                     case .member:
-                        label = nil
+                        var canEditRank = false
+                        if member.id == context.account.peerId {
+                            if let channel = enclosingPeer as? TelegramChannel, channel.hasPermission(.editRank) {
+                                canEditRank = true
+                            } else if let group = enclosingPeer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
+                                canEditRank = true
+                            }
+                        }
+                        if canEditRank {
+                            label = presentationData.strings.GroupInfo_AddRank
+                            labelColor = presentationData.theme.list.itemAccentColor
+                        } else {
+                            label = nil
+                        }
                     }
                 }
             
@@ -125,7 +139,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                 let actions = availableActionsForMemberOfPeer(accountPeerId: context.account.peerId, peer: enclosingPeer, member: member)
                 
                 var options: [ItemListPeerItemRevealOption] = []
-                if actions.contains(.promote) && enclosingPeer is TelegramChannel{
+                if actions.contains(.promote) && enclosingPeer is TelegramChannel {
                     options.append(ItemListPeerItemRevealOption(type: .neutral, title: presentationData.strings.GroupInfo_ActionPromote, action: {
                         action(member, .promote)
                     }))
@@ -161,6 +175,10 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     status = .custom(string: NSAttributedString(string: botStatus, font: Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize * 14.0 / 17.0)), textColor: presentationData.theme.list.itemSecondaryTextColor), multiline: false, isActive: false, icon: nil)
                 }
             
+                var canEditRank = false
+                if actions.contains(.editRank) {
+                    canEditRank = true
+                }
                 return ContactsPeerItem(
                     presentationData: ItemListPresentationData(presentationData),
                     style: .plain,
@@ -182,8 +200,12 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     index: nil,
                     header: nil,
                     hideBackground: true,
-                    action: member.peer.id == context.account.peerId ? nil : { _ in
-                        action(member, .open)
+                    action: member.peer.id == context.account.peerId && !canEditRank ? nil : { _ in
+                        if member.peer.id == context.account.peerId && canEditRank {
+                            action(member, .editRank)
+                        } else {
+                            action(member, .open)
+                        }
                     },
                     disabledAction: nil,
                     setPeerIdWithRevealedOptions: { _, _ in

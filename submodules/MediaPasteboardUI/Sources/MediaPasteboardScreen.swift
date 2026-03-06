@@ -24,6 +24,7 @@ public func mediaPasteboardScreen(
         presentMediaPicker(.media(subjects), false, nil, nil, { mediaPicker, mediaPickerContext in
             present(mediaPicker, mediaPickerContext)
         })
+        return true
     }
     controller.updateSelectionCount(subjects.count)
     controller.getSourceRect = getSourceRect

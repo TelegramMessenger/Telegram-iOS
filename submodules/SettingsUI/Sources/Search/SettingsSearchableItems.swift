@@ -1422,7 +1422,7 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
     }
     items.append(
         SettingsSearchableItem(
-            id: "appearance/stickers-and-emoji/large",
+            id: "appearance/stickers-and-emoji/large-emoji",
             title: strings.Appearance_LargeEmoji,
             alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_LargeEmoji),
             icon: icon,
@@ -1474,7 +1474,7 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
             icon: icon,
             breadcrumbs: [strings.StickerPacksSettings_Emoji],
             present: { context, _, present in
-                presentStickerSettings(context, present, .emoji, .suggestOptions)
+                presentStickerSettings(context, present, .emoji, .suggestAnimatedEmoji)
             }
         )
     )
@@ -2160,10 +2160,10 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         present(.push, dataPrivacyController(context: context, focusOnItemTag: itemTag))
     }
     
-    let presentBlockUser: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void = { context, present in
+    let presentBlockUser: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void, Bool) -> Void = { context, present, switchToContacts in
         let blockedPeersContext = BlockedPeersContext(account: context.account, subject: .blocked)
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent, .doNotSearchMessages], title: presentationData.strings.BlockedUsers_SelectUserTitle))
+        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent, .doNotSearchMessages], title: presentationData.strings.BlockedUsers_SelectUserTitle, immediatelySwitchToContacts: switchToContacts))
         controller.peerSelected = { [weak controller] peer, _ in
             let peerId = peer.id
             
@@ -2242,7 +2242,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             breadcrumbs: [strings.Settings_PrivacySettings, strings.Settings_BlockedUsers],
             isVisible: false,
             present: { context, _, present in
-                presentBlockUser(context, present)
+                presentBlockUser(context, present, false)
             }
         )
     )
@@ -2253,7 +2253,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             breadcrumbs: [strings.Settings_PrivacySettings, strings.Settings_BlockedUsers],
             isVisible: false,
             present: { context, _, present in
-                presentBlockUser(context, present)
+                presentBlockUser(context, present, false)
             }
         )
     )
@@ -2264,7 +2264,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             breadcrumbs: [strings.Settings_PrivacySettings, strings.Settings_BlockedUsers],
             isVisible: false,
             present: { context, _, present in
-                presentBlockUser(context, present)
+                presentBlockUser(context, present, true)
             }
         )
     )
@@ -3329,7 +3329,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             }
         ),
         SettingsSearchableItem(
-            id: "data/max-cache",
+            id: "data/storage/max-cache",
             icon: icon,
             breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_Cache],
             isVisible: false,
@@ -3621,7 +3621,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             }
         ),
         SettingsSearchableItem(
-            id: "data/use-less-data",
+            id: "data/less-data-calls",
             title: strings.CallSettings_UseLessData,
             alternate: synonyms(strings.SettingsSearch_Synonyms_Data_CallsUseLessData),
             icon: icon,
@@ -3754,7 +3754,7 @@ private func proxySearchableItems(context: AccountContext, servers: [ProxyServer
     )
     items.append(
         SettingsSearchableItem(
-            id: "data/use-proxy",
+            id: "data/proxy/use-proxy",
             icon: icon,
             isVisible: false,
             present: { context, _, present in
@@ -3988,7 +3988,7 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
             icon: icon,
             breadcrumbs: [strings.Settings_Appearance, strings.Themes_Title],
             present: { context, _, present in
-                let controller = themePickerController(context: context)
+                let controller = themePickerController(context: context, focusOnItemTag: .edit)
                 present(.push, controller)
             }
         ),
@@ -4388,17 +4388,7 @@ func settingsSearchableItems(
     let activeWebSessionsContext = webSessionsContext
     |> mapToSignal { webSessionsContext -> Signal<WebSessionsContext?, NoError> in
         if let webSessionsContext = webSessionsContext {
-            return webSessionsContext.state
-            |> map { state -> WebSessionsContext? in
-                if !state.sessions.isEmpty {
-                    return webSessionsContext
-                } else {
-                    return nil
-                }
-            }
-            |> distinctUntilChanged(isEqual: { lhs, rhs in
-                return lhs !== rhs
-            })
+            return .single(webSessionsContext)
         } else {
             return .single(nil)
         }
@@ -4417,6 +4407,7 @@ func settingsSearchableItems(
         activeSessionsContext,
         activeWebSessionsContext
     )
+    |> deliverOnMainQueue
     |> map {
         canAddAccount,
         localizations,
@@ -4615,7 +4606,29 @@ func searchSettingsItems(items: [SettingsSearchableItem], query: String) -> [Set
 }
 
 public func handleSettingsPathUrl(context: AccountContext, path: String, navigationController: NavigationController) {
-    let _ = (settingsSearchableItems(context: context)
+    var notificationExceptionsList: Signal<NotificationExceptionsList?, NoError> = .single(nil)
+    var activeSessionsContext: Signal<ActiveSessionsContext?, NoError> = .single(nil)
+    var webSessionsContext: Signal<WebSessionsContext?, NoError> = .single(nil)
+    
+    if path.hasPrefix("devices") {
+        activeSessionsContext = .single(context.engine.privacy.activeSessions())
+    } else if path.hasPrefix("privacy/active-websites") {
+        webSessionsContext = .single(context.engine.privacy.webSessions())
+    } else if path.hasPrefix("notifications") {
+        if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getNotificationExceptions() {
+            notificationExceptionsList = current.get()
+        } else {
+            notificationExceptionsList = context.engine.peers.notificationExceptionsList()
+            |> map(Optional.init)
+        }
+    }
+
+    let _ = (settingsSearchableItems(
+        context: context,
+        notificationExceptionsList: notificationExceptionsList,
+        activeSessionsContext: activeSessionsContext,
+        webSessionsContext: webSessionsContext
+    )
     |> take(1)
     |> deliverOnMainQueue).start(next: { items in
         guard let item = items.first(where: { $0.id == AnyHashable(path) }) else {

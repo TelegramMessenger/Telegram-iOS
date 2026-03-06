@@ -258,7 +258,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 Queue.mainQueue().after(0.5) {
                     if let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
                         var canEditRank = false
-                        if let channel = peer as? TelegramChannel, channel.hasPermission(.editRank) {
+                        if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.editRank) {
                             canEditRank = true
                         } else if let group = peer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
                             canEditRank = true

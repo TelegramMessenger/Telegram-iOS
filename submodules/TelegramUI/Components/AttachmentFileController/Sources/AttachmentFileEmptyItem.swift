@@ -122,7 +122,7 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
             insets.top += -60.0
             imageSize = CGSize(width: 112.0, height: 112.0)
         } else {
-            insets.top += 30.0 //-160.0
+            insets.top += 120.0
         }
         
         let imageSpacing: CGFloat = 12.0

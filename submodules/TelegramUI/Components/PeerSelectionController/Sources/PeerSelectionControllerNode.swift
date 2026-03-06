@@ -848,6 +848,18 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        if let controller = self.controller, controller.immediatelySwitchToContacts {
+            self.segmentedControlSelectedIndex = 1
+            if let (layout, navigationBarHeight, actualNavigationBarHeight) = self.containerLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, actualNavigationBarHeight: actualNavigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
+            }
+            self.indexChanged(1)
+        }
+    }
+    
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.updateThemeAndStrings()

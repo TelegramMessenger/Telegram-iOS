@@ -36,12 +36,14 @@ func _internal_toggleMessageCopyProtection(account: Account, peerId: PeerId, ena
                         transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                             if let previous = current as? CachedUserData {
                                 var updatedFlags = previous.flags
+                                var updatedMyCopyProtectionEnableDate: Int32?
                                 if enabled {
-                                    updatedFlags.insert(.copyProtectionEnabled)
+                                    updatedFlags.insert(.myCopyProtectionEnabled)
+                                    updatedMyCopyProtectionEnableDate = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                                 } else {
-                                    updatedFlags.remove(.copyProtectionEnabled)
+                                    updatedFlags.remove(.myCopyProtectionEnabled)
                                 }
-                                return previous.withUpdatedFlags(updatedFlags)
+                                return previous.withUpdatedFlags(updatedFlags).withUpdatedMyCopyProtectionEnableDate(updatedMyCopyProtectionEnableDate)
                             }
                             return current
                         })
