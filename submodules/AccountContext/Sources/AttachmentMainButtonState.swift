@@ -45,6 +45,7 @@ public struct AttachmentMainButtonState {
     public let iconCustomEmojiId: Int64?
     public let smallSpacing: Bool
     public let position: Position?
+    public let hidesPanelBackground: Bool
     
     public init(
         text: String?,
@@ -59,7 +60,8 @@ public struct AttachmentMainButtonState {
         iconName: String? = nil,
         iconCustomEmojiId: Int64? = nil,
         smallSpacing: Bool = false,
-        position: Position? = nil
+        position: Position? = nil,
+        hidesPanelBackground: Bool = false
     ) {
         self.text = text
         self.badge = badge
@@ -74,6 +76,7 @@ public struct AttachmentMainButtonState {
         self.iconCustomEmojiId = iconCustomEmojiId
         self.smallSpacing = smallSpacing
         self.position = position
+        self.hidesPanelBackground = hidesPanelBackground
     }
     
     public static var initial: AttachmentMainButtonState {
