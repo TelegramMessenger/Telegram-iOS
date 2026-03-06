@@ -5253,7 +5253,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return
                                 }
                                 var canEditRank = false
-                                if let channel = peer as? TelegramChannel, channel.hasPermission(.editRank) {
+                                if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.editRank) {
                                     canEditRank = true
                                 } else if let group = peer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
                                     canEditRank = true
