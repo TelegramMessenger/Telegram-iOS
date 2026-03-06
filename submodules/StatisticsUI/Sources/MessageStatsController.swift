@@ -160,9 +160,9 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .publicForwardsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(_, stats, storyViews, publicShares):
-                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats as? Stats, storyViews: storyViews, publicShares: publicShares, sectionId: self.section, style: .blocks)
+                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, systemStyle: .glass, isGroup: false, stats: stats as? Stats, storyViews: storyViews, publicShares: publicShares, sectionId: self.section, style: .blocks)
             case let .interactionsGraph(_, _, _, graph, type, noInitialZoom), let .reactionsGraph(_, _, _, graph, type, noInitialZoom):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, noInitialZoom: noInitialZoom, getDetailsData: { date, completion in
+                return StatsGraphItem(presentationData: presentationData, systemStyle: .glass, graph: graph, type: type, noInitialZoom: noInitialZoom, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
                         if let graph = graph, case let .Loaded(_, data) = graph {
                             completion(data)
@@ -197,7 +197,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     reactions = Int32(story.views?.reactedCount ?? 0)
                     isStory = true
                 }
-                return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: item, views: views, reactions: reactions, forwards: forwards, isPeer: true, sectionId: self.section, style: .blocks, action: {
+                return StatsMessageItem(context: arguments.context, presentationData: presentationData, systemStyle: .glass, peer: peer, item: item, views: views, reactions: reactions, forwards: forwards, isPeer: true, sectionId: self.section, style: .blocks, action: {
                     switch item {
                     case let .message(message):
                         arguments.openMessage(message.id)

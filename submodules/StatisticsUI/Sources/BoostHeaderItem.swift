@@ -14,6 +14,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import PlainButtonComponent
 import AccountContext
+import GlassBackgroundComponent
 
 final class BoostHeaderItem: ItemListControllerHeaderItem {
     let context: AccountContext
@@ -291,9 +292,9 @@ private final class BoostHeaderComponent: CombinedComponent {
         let progress = Child(PremiumLimitDisplayComponent.self)
         let text = Child(MultilineTextComponent.self)
         
-        let boostButton = Child(PlainButtonComponent.self)
-        let giveawayButton = Child(PlainButtonComponent.self)
-        let featuresButton = Child(PlainButtonComponent.self)
+        let boostButton = Child(HeaderButtonComponent.self)
+        let giveawayButton = Child(HeaderButtonComponent.self)
+        let featuresButton = Child(HeaderButtonComponent.self)
 
         return { context in
             let size = context.availableSize
@@ -393,18 +394,14 @@ private final class BoostHeaderComponent: CombinedComponent {
             )
             
             let minButtonWidth: CGFloat = 112.0
-//            let buttonSpacing = (size.width - sideInset * 2.0 - minButtonWidth * 3.0) / 2.0
             let buttonHeight: CGFloat = 58.0
-             
+            let buttonColor = UIColor(rgb: 0x908eff)
+            
             let boostButton = boostButton.update(
-                component: PlainButtonComponent(
-                    content: AnyComponent(
-                        BoostButtonComponent(
-                            iconName: "Premium/Boosts/Boost",
-                            title: component.strings.ChannelBoost_Header_Boost
-                        )
-                    ),
-                    effectAlignment: .center,
+                component: HeaderButtonComponent(
+                    title: component.strings.ChannelBoost_Header_Boost,
+                    buttonColor: buttonColor,
+                    iconName: "Premium/Boosts/Boost",
                     action: {
                         component.openBoost()
                     }
@@ -417,14 +414,10 @@ private final class BoostHeaderComponent: CombinedComponent {
             )
             
             let giveawayButton = giveawayButton.update(
-                component: PlainButtonComponent(
-                    content: AnyComponent(
-                        BoostButtonComponent(
-                            iconName: "Premium/Boosts/Giveaway",
-                            title: component.strings.ChannelBoost_Header_Giveaway
-                        )
-                    ),
-                    effectAlignment: .center,
+                component: HeaderButtonComponent(
+                    title: component.strings.ChannelBoost_Header_Giveaway,
+                    buttonColor: buttonColor,
+                    iconName: "Premium/Boosts/Giveaway",
                     action: {
                         component.createGiveaway()
                     }
@@ -437,14 +430,10 @@ private final class BoostHeaderComponent: CombinedComponent {
             )
             
             let featuresButton = featuresButton.update(
-                component: PlainButtonComponent(
-                    content: AnyComponent(
-                        BoostButtonComponent(
-                            iconName: "Premium/Boosts/Features",
-                            title: component.strings.ChannelBoost_Header_Features
-                        )
-                    ),
-                    effectAlignment: .center,
+                component: HeaderButtonComponent(
+                    title: component.strings.ChannelBoost_Header_Features,
+                    buttonColor: buttonColor,
+                    iconName: "Premium/Boosts/Features",
                     action: {
                         component.openFeatures()
                     }
@@ -535,5 +524,169 @@ private final class BoostButtonComponent: CombinedComponent {
             
             return background.size
         }
+    }
+}
+
+private final class HeaderButtonComponent: Component {
+    let title: String
+    let buttonColor: UIColor
+    let iconName: String
+    let isLocked: Bool
+    let action: () -> Void
+    
+    public init(
+        title: String,
+        buttonColor: UIColor,
+        iconName: String,
+        isLocked: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.buttonColor = buttonColor
+        self.iconName = iconName
+        self.isLocked = isLocked
+        self.action = action
+    }
+    
+    static func ==(lhs: HeaderButtonComponent, rhs: HeaderButtonComponent) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.buttonColor != rhs.buttonColor {
+            return false
+        }
+        if lhs.iconName != rhs.iconName {
+            return false
+        }
+        if lhs.isLocked != rhs.isLocked {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private var component: HeaderButtonComponent?
+        private weak var componentState: EmptyComponentState?
+        
+        private let backgroundView = GlassBackgroundView()
+        private let title = ComponentView<Empty>()
+        private let icon = ComponentView<Empty>()
+        private let lockIcon = ComponentView<Empty>()
+        private let button = HighlightTrackingButton()
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.addSubview(self.backgroundView)
+            self.backgroundView.contentView.addSubview(self.button)
+            
+            self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func buttonPressed() {
+            if let component = self.component {
+                component.action()
+            }
+        }
+        
+        func update(component: HeaderButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.componentState = state
+            
+            let bounds = CGRect(origin: .zero, size: availableSize)
+            
+            self.backgroundView.update(size: bounds.size, cornerRadius: 16.0, isDark: true, tintColor: .init(kind: .custom(style: .default, color: component.buttonColor)), isInteractive: true, transition: transition)
+            transition.setFrame(view: self.backgroundView, frame: bounds)
+            
+            let iconSize = self.icon.update(
+                transition: transition,
+                component: AnyComponent(
+                    BundleIconComponent(
+                        name: component.iconName,
+                        tintColor: UIColor.white
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    iconView.isUserInteractionEnabled = false
+                    self.backgroundView.contentView.addSubview(iconView)
+                }
+                iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: floorToScreenPixels(22.0 - iconSize.height * 0.5)), size: iconSize)
+            }
+            
+            let titleSize = self.title.update(
+                transition: transition,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: component.title,
+                            font: Font.regular(11.0),
+                            textColor: UIColor.white,
+                            paragraphAlignment: .natural
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 16.0, height: availableSize.height)
+            )
+            
+            var totalTitleWidth = titleSize.width
+            var titleOriginX = availableSize.width / 2.0 - totalTitleWidth / 2.0
+            if component.isLocked {
+                let titleSpacing: CGFloat = 3.0
+                
+                let lockIconSize = self.lockIcon.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        BundleIconComponent(
+                            name: "Chat List/StatusLockIcon",
+                            tintColor: .white
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                totalTitleWidth += lockIconSize.width + titleSpacing
+                titleOriginX = availableSize.width / 2.0 - totalTitleWidth / 2.0
+                
+                if let lockIconView = self.lockIcon.view {
+                    if lockIconView.superview == nil {
+                        lockIconView.isUserInteractionEnabled = false
+                        self.backgroundView.contentView.addSubview(lockIconView)
+                    }
+                    lockIconView.frame = CGRect(origin: CGPoint(x: titleOriginX, y: floorToScreenPixels(42.0 - lockIconSize.height * 0.5)), size: lockIconSize)
+                }
+                titleOriginX += lockIconSize.width + titleSpacing
+            }
+            
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
+                    self.backgroundView.contentView.addSubview(titleView)
+                }
+                titleView.frame = CGRect(origin: CGPoint(x: titleOriginX, y: floorToScreenPixels(42.0 - titleSize.height * 0.5)), size: titleSize)
+            }
+            
+            self.button.frame = bounds
+        
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

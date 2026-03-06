@@ -479,10 +479,8 @@ private final class SheetContent: Component {
                 contentHeight += itemSize.height
             }
             
-            contentHeight += 31.0
-            
-            contentHeight += 82.0
-                        
+            contentHeight += 113.0
+        
             return CGSize(width: availableSize.width, height: contentHeight)
         }
     }

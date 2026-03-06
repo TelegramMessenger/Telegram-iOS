@@ -14,6 +14,7 @@ import ListItemComponentAdaptor
 
 public final class StatsGraphItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     let presentationData: ItemListPresentationData
+    let systemStyle: ItemListSystemStyle
     let graph: StatsGraph
     let type: ChartType
     let noInitialZoom: Bool
@@ -22,8 +23,9 @@ public final class StatsGraphItem: ListViewItem, ItemListItem, ListItemComponent
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    public init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, noInitialZoom: Bool = false, conversionRate: Double = 1.0, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    public init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle = .legacy, graph: StatsGraph, type: ChartType, noInitialZoom: Bool = false, conversionRate: Double = 1.0, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
+        self.systemStyle = systemStyle
         self.graph = graph
         self.type = type
         self.noInitialZoom = noInitialZoom
@@ -215,6 +217,7 @@ public final class StatsGraphItemNode: ListViewItemNode {
                 contentSize.height += visibilityHeight
             }
             contentSize.height += 7.0
+            contentSize.height += 8.0
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
@@ -280,9 +283,9 @@ public final class StatsGraphItemNode: ListViewItemNode {
                                 strongSelf.bottomStripeNode.isHidden = hasCorners
                         }
                         
-                        strongSelf.chartContainerNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: contentSize.height))
+                        strongSelf.chartContainerNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: contentSize.height - 8.0))
                         strongSelf.chartNode.frame = CGRect(origin: CGPoint(x: 0.0, y: item.type == .hourlyStep ? -40.0 : 0.0), size: CGSize(width: layout.size.width - leftInset - rightInset, height: 750.0))
-                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                         strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)

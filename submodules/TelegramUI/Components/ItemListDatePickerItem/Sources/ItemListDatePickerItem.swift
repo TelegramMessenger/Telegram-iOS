@@ -9,6 +9,7 @@ import DatePickerNode
 
 public class ItemListDatePickerItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
+    let systemStyle: ItemListSystemStyle
     let dateTimeFormat: PresentationDateTimeFormat
     let date: Int32?
     let minDate: Int32?
@@ -28,6 +29,7 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
     
     public init(
         presentationData: ItemListPresentationData,
+        systemStyle: ItemListSystemStyle = .legacy,
         dateTimeFormat: PresentationDateTimeFormat,
         date: Int32?,
         minDate: Int32? = nil,
@@ -43,6 +45,7 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
         tag: ItemListItemTag? = nil
     ) {
         self.presentationData = presentationData
+        self.systemStyle = systemStyle
         self.dateTimeFormat = dateTimeFormat
         self.date = date
         self.minDate = minDate
@@ -158,14 +161,14 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
             let width = params.width - params.leftInset - params.rightInset
             let constrainedWidth = min(390.0, width)
             let cellSize = floor((constrainedWidth - 12.0 * 2.0) / 7.0)
-            let pickerHeight = 122.0 + cellSize * 6.0
+            let pickerHeight = 132.0 + cellSize * 6.0
             let height: CGFloat
             if item.displayingDateSelection {
                 height = pickerHeight
             } else if item.displayingTimeSelection {
                 height = 260.0
             } else {
-                height = 44.0
+                height = 56.0
             }
             switch item.style {
             case .plain:
@@ -244,7 +247,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.bottomStripeNode.isHidden = hasCorners
                         }
                         
-                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight))))
                         transition.updateFrame(node: strongSelf.maskNode, frame: strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0))
@@ -291,7 +294,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                     datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) }
                    
                     let datePickerSize = CGSize(width: width, height: pickerHeight)
-                    datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 0.0), size: datePickerSize)
+                    datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 6.0), size: datePickerSize)
                     datePickerNode.updateLayout(size: datePickerSize, transition: .immediate)
                     
                     transition.updateFrame(node: strongSelf.containerNode, frame: CGRect(origin: .zero, size: CGSize(width: params.width, height: contentSize.height)))

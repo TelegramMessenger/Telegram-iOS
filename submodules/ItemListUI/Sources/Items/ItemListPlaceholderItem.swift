@@ -7,13 +7,15 @@ import TelegramPresentationData
 
 public class ItemListPlaceholderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let systemStyle: ItemListSystemStyle
     let text: String
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId, style: ItemListStyle, tag: ItemListItemTag? = nil) {
+    public init(theme: PresentationTheme, systemStyle: ItemListSystemStyle = .legacy, text: String, sectionId: ItemListSectionId, style: ItemListStyle, tag: ItemListItemTag? = nil) {
         self.theme = theme
+        self.systemStyle = systemStyle
         self.text = text
         self.sectionId = sectionId
         self.style = style
@@ -198,7 +200,7 @@ public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
                                     strongSelf.bottomStripeNode.isHidden = hasCorners
                             }
                             
-                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                             strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)

@@ -7,6 +7,7 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import ButtonComponent
+import EdgeEffect
 
 final class CreateGiveawayFooterItem: ItemListControllerFooterItem {
     let theme: PresentationTheme
@@ -42,8 +43,7 @@ final class CreateGiveawayFooterItem: ItemListControllerFooterItem {
 }
 
 final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
-    private let backgroundNode: NavigationBackgroundNode
-    private let separatorNode: ASDisplayNode
+    private let edgeEffectView = EdgeEffectView()
     private let button = ComponentView<Empty>()
 
     private var validLayout: ContainerViewLayout?
@@ -51,7 +51,6 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
     private var currentIsLoading = false
     var item: CreateGiveawayFooterItem {
         didSet {
-            self.updateItem()
             if let layout = self.validLayout {
                 let _ = self.updateLayout(layout: layout, transition: .immediate)
             }
@@ -60,48 +59,34 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
     
     init(item: CreateGiveawayFooterItem) {
         self.item = item
-        
-        self.backgroundNode = NavigationBackgroundNode(color: item.theme.rootController.tabBar.backgroundColor)
-        self.separatorNode = ASDisplayNode()
-        
+                
         super.init()
-        
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.separatorNode)
-        
-        self.updateItem()
     }
         
-    private func updateItem() {
-        self.backgroundNode.updateColor(color: self.item.theme.rootController.tabBar.backgroundColor, transition: .immediate)
-        self.separatorNode.backgroundColor = self.item.theme.rootController.tabBar.separatorColor
-    }
-    
     override func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.backgroundNode, alpha: alpha)
-        transition.updateAlpha(node: self.separatorNode, alpha: alpha)
     }
     
     override func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
         let hadLayout = self.validLayout != nil
         self.validLayout = layout
         
-        let buttonInset: CGFloat = 16.0
-        let buttonWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInset * 2.0
-        let inset: CGFloat = 9.0
+        let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: layout.intrinsicInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+        let height: CGFloat = 52.0 + buttonInsets.bottom
         
-        let insets = layout.insets(options: [.input])
-        
-        var panelHeight: CGFloat = 50.0 + inset * 2.0
-        let totalPanelHeight: CGFloat
-        if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
-            totalPanelHeight = panelHeight + insets.bottom
-        } else {
-            totalPanelHeight = panelHeight + insets.bottom
-            panelHeight += insets.bottom
+        let edgeEffectHeight: CGFloat = height
+        let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - edgeEffectHeight), size: CGSize(width: layout.size.width, height: edgeEffectHeight))
+        transition.updateFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+        self.edgeEffectView.update(
+            content: self.item.theme.list.plainBackgroundColor,
+            blur: true,
+            rect: edgeEffectFrame,
+            edge: .bottom,
+            edgeSize: edgeEffectFrame.height,
+            transition: ComponentTransition(transition)
+        )
+        if self.edgeEffectView.superview == nil {
+            self.view.addSubview(self.edgeEffectView)
         }
-        
-        let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - totalPanelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
         
         var buttonTransition: ComponentTransition = .easeInOut(duration: 0.2)
         if !hadLayout {
@@ -112,6 +97,7 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
             component: AnyComponent(
                 ButtonComponent(
                     background: ButtonComponent.Background(
+                        style: .glass,
                         color: self.item.theme.list.itemCheckColors.fillColor,
                         foreground: self.item.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: self.item.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
@@ -140,26 +126,21 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
                 )
             ),
             environment: {},
-            containerSize: CGSize(width: buttonWidth, height: 50.0)
+            containerSize: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInsets.left - buttonInsets.right, height: 52.0)
         )
-        if let view = self.button.view {
-            if view.superview == nil {
-                self.view.addSubview(view)
+        let buttonFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInsets.left, y: layout.size.height - buttonInsets.bottom - buttonSize.height), size: buttonSize)
+        if let buttonView = self.button.view {
+            if buttonView.superview == nil {
+                self.view.addSubview(buttonView)
             }
-            transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + inset), size: buttonSize))
+            transition.updateFrame(view: buttonView, frame: buttonFrame)
         }
         
-        
-        transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
-        self.backgroundNode.update(size: panelFrame.size, transition: transition)
-        
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: panelFrame.origin, size: CGSize(width: panelFrame.width, height: UIScreenPixel)))
-        
-        return totalPanelHeight
+        return height
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if self.backgroundNode.frame.contains(point) {
+        if self.edgeEffectView.frame.contains(point) {
             return true
         } else {
             return false
