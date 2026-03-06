@@ -818,7 +818,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let transitionInfo = reference.transitionInfo() {
                 if let referenceView = transitionInfo.referenceView as? ContextExtractableContainer {
                     if #available(iOS 26.0, *) {
-                        contextExtractableContainer = (referenceView, convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view))
+                        if transitionInfo.referenceView.bounds.width == transitionInfo.referenceView.bounds.height {
+                            contextExtractableContainer = (referenceView, convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view))
+                        }
                     }
                 }
                 

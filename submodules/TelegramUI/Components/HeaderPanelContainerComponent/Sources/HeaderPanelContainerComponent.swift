@@ -251,13 +251,27 @@ public final class HeaderPanelContainerComponent: Component {
             self.backgroundContainer.update(size: CGSize(width: backgroundSize.width + 32.0 * 2.0, height: backgroundSize.height + 32.0 * 2.0), isDark: component.theme.overallDarkAppearance, transition: transition)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: 32.0 + sideInset, y: 32.0), size: CGSize(width: size.width - sideInset * 2.0, height: backgroundSize.height))
+            
+            var panelCount = 0
+            if component.tabs != nil {
+                panelCount += 1
+            }
+            panelCount += component.panels.count
+            var cornerRadius: CGFloat = 0.0
+            if panelCount == 1 {
+                cornerRadius = backgroundFrame.height * 0.5
+            } else {
+                cornerRadius = 20.0
+            }
+            
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
-            self.backgroundView.update(size: backgroundFrame.size, cornerRadius: 20.0, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: true, transition: transition)
+            self.backgroundView.update(size: backgroundFrame.size, cornerRadius: cornerRadius, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: component.preferClearGlass ? .clear : .panel), isInteractive: true, transition: transition)
             
             transition.setAlpha(view: self.backgroundContainer, alpha: (component.tabs != nil || !component.panels.isEmpty) ? 1.0 : 0.0)
             
             transition.setFrame(view: self.contentContainer, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-            self.contentContainer.layer.cornerRadius = 20.0
+            
+            transition.setCornerRadius(layer: self.contentContainer.layer, cornerRadius: min(cornerRadius, backgroundFrame.height * 0.5))
             
             return size
         }

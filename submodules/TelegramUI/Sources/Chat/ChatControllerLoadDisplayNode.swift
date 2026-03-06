@@ -662,7 +662,7 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, self.presentationInterfaceState.persistentData.topicListPanelLocation == true, self.presentationInterfaceState.chatLocation.threadId != nil {
+            if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, self.presentationInterfaceState.persistentData.topicListPanelLocation == .side, self.presentationInterfaceState.chatLocation.threadId != nil {
                 self.updateChatLocationThread(threadId: nil, animationDirection: .left)
             } else {
                 if self.attemptNavigation({ [weak self] in
@@ -4540,7 +4540,14 @@ extension ChatControllerImpl {
             }
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { presentationInterfaceState in
                 var persistentData = presentationInterfaceState.persistentData
-                persistentData.topicListPanelLocation = !persistentData.topicListPanelLocation
+                switch persistentData.topicListPanelLocation {
+                case .top:
+                    persistentData.topicListPanelLocation = .side
+                case .side:
+                    persistentData.topicListPanelLocation = .bottom
+                case .bottom:
+                    persistentData.topicListPanelLocation = .top
+                }
                 return presentationInterfaceState.updatedPersistentData(persistentData)
             })
         }, updateDisplayHistoryFilterAsList: { [weak self] displayAsList in

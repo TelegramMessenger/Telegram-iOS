@@ -290,6 +290,10 @@ NSObject * _Nullable makeDisplacementMapFilter() {
     }
 }
 
+NSObject * _Nullable makeColorMatrixFilter() {
+    return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"colorMatrix"];
+}
+
 static const void *layerDisableScreenshotsKey = &layerDisableScreenshotsKey;
 
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {

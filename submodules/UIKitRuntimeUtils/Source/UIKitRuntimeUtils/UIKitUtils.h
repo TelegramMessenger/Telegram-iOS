@@ -34,6 +34,7 @@ NSObject * _Nullable makeLuminanceToAlphaFilter();
 NSObject * _Nullable makeColorInvertFilter();
 NSObject * _Nullable makeMonochromeFilter();
 NSObject * _Nullable makeDisplacementMapFilter();
+NSObject * _Nullable makeColorMatrixFilter();
 
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots);
 bool getLayerDisableScreenshots(CALayer * _Nonnull layer);
