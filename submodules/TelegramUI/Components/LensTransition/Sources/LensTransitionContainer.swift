@@ -1554,6 +1554,10 @@ public final class LensTransitionContainer: UIView {
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, transition: ComponentTransition) {
         self.impl.update(size: size, cornerRadius: cornerRadius, isDark: isDark, transition: transition)
     }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        return self.contentsView.hitTest(point, with: event)
+    }
 }
 
 @inline(__always)
