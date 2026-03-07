@@ -2180,10 +2180,14 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         switch self.panelStyle {
         case .glass:
             buttonHeight = 52.0
-            buttonSideInset = 22.0
+            buttonSideInset = 25.0
         case .legacy:
             buttonHeight = 50.0
             buttonSideInset = 16.0
+        }
+        
+        if self.mainButtonState.hidesPanelBackground {
+            self.backgroundView?.isHidden = true
         }
         
         if isAnyButtonVisible {
