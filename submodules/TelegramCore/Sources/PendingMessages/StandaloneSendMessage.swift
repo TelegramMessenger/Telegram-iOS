@@ -767,7 +767,7 @@ private func uploadedImage(account: Account, data: Data) -> Signal<UploadMediaEv
             switch next {
                 case let .inputFile(inputFileData):
                     let inputFile = inputFileData
-                    return .result(Api.InputMedia.inputMediaUploadedPhoto(.init(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil)))
+                    return .result(Api.InputMedia.inputMediaUploadedPhoto(.init(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil, video: nil)))
                 case .inputSecretFile:
                         preconditionFailure()
                 case let .progress(progress):

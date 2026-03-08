@@ -243,14 +243,16 @@ public extension Api {
             public var file: Api.InputFile
             public var stickers: [Api.InputDocument]?
             public var ttlSeconds: Int32?
-            public init(flags: Int32, file: Api.InputFile, stickers: [Api.InputDocument]?, ttlSeconds: Int32?) {
+            public var video: Api.InputDocument?
+            public init(flags: Int32, file: Api.InputFile, stickers: [Api.InputDocument]?, ttlSeconds: Int32?, video: Api.InputDocument?) {
                 self.flags = flags
                 self.file = file
                 self.stickers = stickers
                 self.ttlSeconds = ttlSeconds
+                self.video = video
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputMediaUploadedPhoto", [("flags", self.flags as Any), ("file", self.file as Any), ("stickers", self.stickers as Any), ("ttlSeconds", self.ttlSeconds as Any)])
+                return ("inputMediaUploadedPhoto", [("flags", self.flags as Any), ("file", self.file as Any), ("stickers", self.stickers as Any), ("ttlSeconds", self.ttlSeconds as Any), ("video", self.video as Any)])
             }
         }
         public class Cons_inputMediaVenue: TypeConstructorDescription {
@@ -526,7 +528,7 @@ public extension Api {
                 break
             case .inputMediaUploadedPhoto(let _data):
                 if boxed {
-                    buffer.appendInt32(505969924)
+                    buffer.appendInt32(2105767386)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.file.serialize(buffer, true)
@@ -539,6 +541,9 @@ public extension Api {
                 }
                 if Int(_data.flags) & Int(1 << 1) != 0 {
                     serializeInt32(_data.ttlSeconds!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 3) != 0 {
+                    _data.video!.serialize(buffer, true)
                 }
                 break
             case .inputMediaVenue(let _data):
@@ -599,7 +604,7 @@ public extension Api {
             case .inputMediaUploadedDocument(let _data):
                 return ("inputMediaUploadedDocument", [("flags", _data.flags as Any), ("file", _data.file as Any), ("thumb", _data.thumb as Any), ("mimeType", _data.mimeType as Any), ("attributes", _data.attributes as Any), ("stickers", _data.stickers as Any), ("videoCover", _data.videoCover as Any), ("videoTimestamp", _data.videoTimestamp as Any), ("ttlSeconds", _data.ttlSeconds as Any)])
             case .inputMediaUploadedPhoto(let _data):
-                return ("inputMediaUploadedPhoto", [("flags", _data.flags as Any), ("file", _data.file as Any), ("stickers", _data.stickers as Any), ("ttlSeconds", _data.ttlSeconds as Any)])
+                return ("inputMediaUploadedPhoto", [("flags", _data.flags as Any), ("file", _data.file as Any), ("stickers", _data.stickers as Any), ("ttlSeconds", _data.ttlSeconds as Any), ("video", _data.video as Any)])
             case .inputMediaVenue(let _data):
                 return ("inputMediaVenue", [("geoPoint", _data.geoPoint as Any), ("title", _data.title as Any), ("address", _data.address as Any), ("provider", _data.provider as Any), ("venueId", _data.venueId as Any), ("venueType", _data.venueType as Any)])
             case .inputMediaWebPage(let _data):
@@ -1038,12 +1043,19 @@ public extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {
                 _4 = reader.readInt32()
             }
+            var _5: Api.InputDocument?
+            if Int(_1!) & Int(1 << 3) != 0 {
+                if let signature = reader.readInt32() {
+                    _5 = Api.parse(reader, signature: signature) as? Api.InputDocument
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputMedia.inputMediaUploadedPhoto(Cons_inputMediaUploadedPhoto(flags: _1!, file: _2!, stickers: _3, ttlSeconds: _4))
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputMedia.inputMediaUploadedPhoto(Cons_inputMediaUploadedPhoto(flags: _1!, file: _2!, stickers: _3, ttlSeconds: _4, video: _5))
             }
             else {
                 return nil
@@ -1205,6 +1217,80 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputMessage.inputMessageReplyTo(Cons_inputMessageReplyTo(id: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
+    enum InputMessageReadMetric: TypeConstructorDescription {
+        public class Cons_inputMessageReadMetric: TypeConstructorDescription {
+            public var msgId: Int32
+            public var viewId: Int64
+            public var timeInViewMs: Int32
+            public var activeTimeInViewMs: Int32
+            public var heightToViewportRatioPermille: Int32
+            public var seenRangeRatioPermille: Int32
+            public init(msgId: Int32, viewId: Int64, timeInViewMs: Int32, activeTimeInViewMs: Int32, heightToViewportRatioPermille: Int32, seenRangeRatioPermille: Int32) {
+                self.msgId = msgId
+                self.viewId = viewId
+                self.timeInViewMs = timeInViewMs
+                self.activeTimeInViewMs = activeTimeInViewMs
+                self.heightToViewportRatioPermille = heightToViewportRatioPermille
+                self.seenRangeRatioPermille = seenRangeRatioPermille
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("inputMessageReadMetric", [("msgId", self.msgId as Any), ("viewId", self.viewId as Any), ("timeInViewMs", self.timeInViewMs as Any), ("activeTimeInViewMs", self.activeTimeInViewMs as Any), ("heightToViewportRatioPermille", self.heightToViewportRatioPermille as Any), ("seenRangeRatioPermille", self.seenRangeRatioPermille as Any)])
+            }
+        }
+        case inputMessageReadMetric(Cons_inputMessageReadMetric)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .inputMessageReadMetric(let _data):
+                if boxed {
+                    buffer.appendInt32(1076577429)
+                }
+                serializeInt32(_data.msgId, buffer: buffer, boxed: false)
+                serializeInt64(_data.viewId, buffer: buffer, boxed: false)
+                serializeInt32(_data.timeInViewMs, buffer: buffer, boxed: false)
+                serializeInt32(_data.activeTimeInViewMs, buffer: buffer, boxed: false)
+                serializeInt32(_data.heightToViewportRatioPermille, buffer: buffer, boxed: false)
+                serializeInt32(_data.seenRangeRatioPermille, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .inputMessageReadMetric(let _data):
+                return ("inputMessageReadMetric", [("msgId", _data.msgId as Any), ("viewId", _data.viewId as Any), ("timeInViewMs", _data.timeInViewMs as Any), ("activeTimeInViewMs", _data.activeTimeInViewMs as Any), ("heightToViewportRatioPermille", _data.heightToViewportRatioPermille as Any), ("seenRangeRatioPermille", _data.seenRangeRatioPermille as Any)])
+            }
+        }
+
+        public static func parse_inputMessageReadMetric(_ reader: BufferReader) -> InputMessageReadMetric? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputMessageReadMetric.inputMessageReadMetric(Cons_inputMessageReadMetric(msgId: _1!, viewId: _2!, timeInViewMs: _3!, activeTimeInViewMs: _4!, heightToViewportRatioPermille: _5!, seenRangeRatioPermille: _6!))
             }
             else {
                 return nil
@@ -1408,107 +1494,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputPasskeyCredential.inputPasskeyCredentialPublicKey(Cons_inputPasskeyCredentialPublicKey(id: _1!, rawId: _2!, response: _3!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum InputPasskeyResponse: TypeConstructorDescription {
-        public class Cons_inputPasskeyResponseLogin: TypeConstructorDescription {
-            public var clientData: Api.DataJSON
-            public var authenticatorData: Buffer
-            public var signature: Buffer
-            public var userHandle: String
-            public init(clientData: Api.DataJSON, authenticatorData: Buffer, signature: Buffer, userHandle: String) {
-                self.clientData = clientData
-                self.authenticatorData = authenticatorData
-                self.signature = signature
-                self.userHandle = userHandle
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputPasskeyResponseLogin", [("clientData", self.clientData as Any), ("authenticatorData", self.authenticatorData as Any), ("signature", self.signature as Any), ("userHandle", self.userHandle as Any)])
-            }
-        }
-        public class Cons_inputPasskeyResponseRegister: TypeConstructorDescription {
-            public var clientData: Api.DataJSON
-            public var attestationData: Buffer
-            public init(clientData: Api.DataJSON, attestationData: Buffer) {
-                self.clientData = clientData
-                self.attestationData = attestationData
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputPasskeyResponseRegister", [("clientData", self.clientData as Any), ("attestationData", self.attestationData as Any)])
-            }
-        }
-        case inputPasskeyResponseLogin(Cons_inputPasskeyResponseLogin)
-        case inputPasskeyResponseRegister(Cons_inputPasskeyResponseRegister)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .inputPasskeyResponseLogin(let _data):
-                if boxed {
-                    buffer.appendInt32(-1021329078)
-                }
-                _data.clientData.serialize(buffer, true)
-                serializeBytes(_data.authenticatorData, buffer: buffer, boxed: false)
-                serializeBytes(_data.signature, buffer: buffer, boxed: false)
-                serializeString(_data.userHandle, buffer: buffer, boxed: false)
-                break
-            case .inputPasskeyResponseRegister(let _data):
-                if boxed {
-                    buffer.appendInt32(1046713180)
-                }
-                _data.clientData.serialize(buffer, true)
-                serializeBytes(_data.attestationData, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .inputPasskeyResponseLogin(let _data):
-                return ("inputPasskeyResponseLogin", [("clientData", _data.clientData as Any), ("authenticatorData", _data.authenticatorData as Any), ("signature", _data.signature as Any), ("userHandle", _data.userHandle as Any)])
-            case .inputPasskeyResponseRegister(let _data):
-                return ("inputPasskeyResponseRegister", [("clientData", _data.clientData as Any), ("attestationData", _data.attestationData as Any)])
-            }
-        }
-
-        public static func parse_inputPasskeyResponseLogin(_ reader: BufferReader) -> InputPasskeyResponse? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputPasskeyResponse.inputPasskeyResponseLogin(Cons_inputPasskeyResponseLogin(clientData: _1!, authenticatorData: _2!, signature: _3!, userHandle: _4!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputPasskeyResponseRegister(_ reader: BufferReader) -> InputPasskeyResponse? {
-            var _1: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputPasskeyResponse.inputPasskeyResponseRegister(Cons_inputPasskeyResponseRegister(clientData: _1!, attestationData: _2!))
             }
             else {
                 return nil
