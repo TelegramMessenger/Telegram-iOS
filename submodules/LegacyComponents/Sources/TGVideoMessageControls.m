@@ -362,8 +362,11 @@ static CGRect viewFrame(UIView *view)
     
     _deleteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0.0f, (self.bounds.size.height - 45.0f) / 2.0f, 45.0f, 45.0f)];
     [_deleteButton setImage:deleteImage forState:UIControlStateNormal];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     _deleteButton.adjustsImageWhenDisabled = false;
     _deleteButton.adjustsImageWhenHighlighted = false;
+#pragma clang diagnostic pop
     [_deleteButton addTarget:self action:@selector(deleteButtonPressed) forControlEvents:UIControlEventTouchUpInside];
     if (!_forStory) {
         [self addSubview:_deleteButton];
@@ -379,7 +382,10 @@ static CGRect viewFrame(UIView *view)
     _sendButton.alpha = 0.0f;
     _sendButton.exclusiveTouch = true;
     [_sendButton setImage:_assets.sendImage forState:UIControlStateNormal];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     _sendButton.adjustsImageWhenHighlighted = false;
+#pragma clang diagnostic pop
     [_sendButton addTarget:self action:@selector(sendButtonPressed) forControlEvents:UIControlEventTouchUpInside];
     
     _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(doneButtonLongPressed:)];

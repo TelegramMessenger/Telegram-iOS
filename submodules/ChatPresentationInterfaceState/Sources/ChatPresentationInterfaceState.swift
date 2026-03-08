@@ -438,10 +438,30 @@ public final class ChatPresentationInterfaceState: Equatable {
     }
     
     public struct PersistentPeerData: Codable, Equatable {
-        public var topicListPanelLocation: Bool
+        public enum TopicListPanelLocation: Int32 {
+            case top = 0
+            case side = 1
+            case bottom = 2
+        }
         
-        public init(topicListPanelLocation: Bool) {
+        private enum CodingKeys: String, CodingKey {
+            case topicListPanelLocation
+        }
+        
+        public var topicListPanelLocation: TopicListPanelLocation
+        
+        public init(topicListPanelLocation: TopicListPanelLocation) {
             self.topicListPanelLocation = topicListPanelLocation
+        }
+        
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.topicListPanelLocation = TopicListPanelLocation(rawValue: try container.decode(Int32.self, forKey: .topicListPanelLocation)) ?? .top
+        }
+        
+        public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(Int32(self.topicListPanelLocation.rawValue), forKey: .topicListPanelLocation)
         }
     }
     
@@ -660,7 +680,7 @@ public final class ChatPresentationInterfaceState: Equatable {
         self.alwaysShowGiftButton = false
         self.disallowedGifts = nil
         self.persistentData = PersistentPeerData(
-            topicListPanelLocation: false
+            topicListPanelLocation: .top
         )
         self.removePaidMessageFeeData = nil
         self.viewForumAsMessages = false

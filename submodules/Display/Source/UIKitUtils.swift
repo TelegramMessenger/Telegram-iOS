@@ -911,6 +911,10 @@ public extension CALayer {
     static func displacementMap() -> NSObject? {
         return makeDisplacementMapFilter()
     }
+    
+    static func colorMatrix() -> NSObject? {
+        return makeColorMatrixFilter()
+    }
 }
 
 public extension CALayer {

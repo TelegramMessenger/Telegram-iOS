@@ -249,6 +249,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var floatingTopicsPanelContainer: ChatControllerTitlePanelNodeContainer
     private var floatingTopicsPanel: (view: ComponentView<ChatSidePanelEnvironment>, component: ChatFloatingTopicsPanel)?
     private var headerPanelsView: ComponentView<Empty>?
+    private var footerPanelsView: ComponentView<Empty>?
     
     private var topBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
     private var bottomBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
@@ -762,6 +763,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.usePlainInputSeparator = false
             self.plainInputSeparatorAlpha = nil
         }
+        self.inputPanelBackgroundNode.isUserInteractionEnabled = false
         
         self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, preferClearGlass: self.chatPresentationInterfaceState.preferredGlassType == .clear, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, backgroundNode: self.backgroundNode, isChatRotated: historyNodeRotated)
         self.navigateButtons.accessibilityElementsHidden = true
@@ -1347,13 +1349,19 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.containerLayoutAndNavigationBarHeight = (layout, navigationBarHeight)
         
         var headerPanels: [HeaderPanelContainerComponent.Panel] = []
+        var footerPanels: [HeaderPanelContainerComponent.Panel] = []
         
-        if let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction,  force: false) {
-            headerPanels.append(HeaderPanelContainerComponent.Panel(
+        if let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+            let panel = HeaderPanelContainerComponent.Panel(
                 key: "topics",
                 orderIndex: 0,
                 component: headerTopicsPanel
-            ))
+            )
+            if self.chatPresentationInterfaceState.persistentData.topicListPanelLocation == .top {
+                headerPanels.append(panel)
+            } else {
+                footerPanels.append(panel)
+            }
         }
         if let mediaPlayback = self.controller?.globalControlPanelsContextState?.mediaPlayback {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
@@ -2232,6 +2240,59 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
+        var containerInsets = insets
+        if let dismissAsOverlayLayout = self.dismissAsOverlayLayout {
+            if let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
+                containerInsets = dismissAsOverlayLayout.insets(options: [])
+                containerInsets.bottom = max(inputNodeHeightAndOverflow.0 + inputNodeHeightAndOverflow.1, insets.bottom)
+            } else {
+                containerInsets = dismissAsOverlayLayout.insets(options: [.input])
+            }
+        }
+        
+        var footerPanelsSize: CGSize?
+        if !footerPanels.isEmpty {
+            let footerPanelsView: ComponentView<Empty>
+            var footerPanelsTransition = ComponentTransition(transition)
+            if let current = self.footerPanelsView {
+                footerPanelsView = current
+            } else {
+                footerPanelsTransition = footerPanelsTransition.withAnimation(.none)
+                footerPanelsView = ComponentView()
+                self.footerPanelsView = footerPanelsView
+            }
+            
+            var footerPanelsWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right + 16.0
+            if containerInsets.bottom <= 32.0 {
+                footerPanelsWidth -= 36.0
+            }
+            
+            let footerPanelsSizeValue = footerPanelsView.update(
+                transition: footerPanelsTransition,
+                component: AnyComponent(HeaderPanelContainerComponent(
+                    theme: self.chatPresentationInterfaceState.theme,
+                    preferClearGlass: self.chatPresentationInterfaceState.preferredGlassType == .clear,
+                    tabs: nil,
+                    panels: footerPanels
+                )),
+                environment: {},
+                containerSize: CGSize(width: footerPanelsWidth, height: layout.size.height)
+            )
+            footerPanelsSize = footerPanelsSizeValue
+            floatingTopicsPanelInsets.bottom += footerPanelsSizeValue.height
+        } else if let footerPanelsView = self.footerPanelsView {
+            self.footerPanelsView = nil
+            if let footerPanelsComponentView = footerPanelsView.view {
+                transition.updateAlpha(layer: footerPanelsComponentView.layer, alpha: 0.0, completion: { [weak footerPanelsComponentView] _ in
+                    footerPanelsComponentView?.removeFromSuperview()
+                })
+            }
+        }
+        
+        if let footerPanelsSize {
+            inputPanelsHeight += 12.0 + footerPanelsSize.height
+        }
+        
         if self.dismissedAsOverlay {
             inputPanelsHeight = 0.0
         }
@@ -2306,16 +2367,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         if let scrollContainerNode = self.scrollContainerNode {
             transition.updateFrame(node: scrollContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        }
-        
-        var containerInsets = insets
-        if let dismissAsOverlayLayout = self.dismissAsOverlayLayout {
-            if let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
-                containerInsets = dismissAsOverlayLayout.insets(options: [])
-                containerInsets.bottom = max(inputNodeHeightAndOverflow.0 + inputNodeHeightAndOverflow.1, insets.bottom)
-            } else {
-                containerInsets = dismissAsOverlayLayout.insets(options: [.input])
-            }
         }
         
         let visibleAreaInset = UIEdgeInsets(top: containerInsets.top, left: 0.0, bottom: containerInsets.bottom + inputPanelsHeight + 8.0 + 8.0, right: 0.0)
@@ -2565,6 +2616,17 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             headerPanelsTransition.setFrame(view: headerPanelsComponentView, frame: headerPanelsFrame)
             sidePanelTopInset += headerPanelsSize.height + 2.0
+        }
+        
+        if let footerPanelsComponentView = self.footerPanelsView?.view, let footerPanelsSize {
+            let footerPanelsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - footerPanelsSize.width) * 0.5), y: layout.size.height - (containerInsets.bottom + inputPanelsHeight + 8.0)), size: footerPanelsSize)
+            var footerPanelsTransition = ComponentTransition(transition)
+            if footerPanelsComponentView.superview == nil {
+                footerPanelsTransition.animateAlpha(view: footerPanelsComponentView, from: 0.0, to: 1.0)
+                footerPanelsTransition = footerPanelsTransition.withAnimation(.none)
+                self.floatingTopicsPanelContainer.view.addSubview(footerPanelsComponentView)
+            }
+            footerPanelsTransition.setFrame(view: footerPanelsComponentView, frame: footerPanelsFrame)
         }
         
         let floatingTopicsPanelContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 0.0, height: layout.size.height))
@@ -5074,6 +5136,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         if leftIndex == nil || rightIndex == nil {
             if let headerPanelsComponentView = self.headerPanelsView?.view as? HeaderPanelContainerComponent.View, let topicsPanelView = headerPanelsComponentView.panel(forKey: AnyHashable("topics")) as? ChatTopicsHeaderPanelComponent.View {
+                leftIndex = topicsPanelView.topicIndex(threadId: fromLocation)
+                rightIndex = topicsPanelView.topicIndex(threadId: toLocation)
+            } else if let footerPanelsComponentView = self.footerPanelsView?.view as? HeaderPanelContainerComponent.View, let topicsPanelView = footerPanelsComponentView.panel(forKey: AnyHashable("topics")) as? ChatTopicsHeaderPanelComponent.View {
                 leftIndex = topicsPanelView.topicIndex(threadId: fromLocation)
                 rightIndex = topicsPanelView.topicIndex(threadId: toLocation)
             }

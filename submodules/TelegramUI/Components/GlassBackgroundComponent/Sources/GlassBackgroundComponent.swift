@@ -310,6 +310,8 @@ public class GlassBackgroundView: UIView {
     }
     
     private let legacyView: LegacyGlassView?
+    private let legacyHighlightContainerView: UIView?
+    private var glassHighlightRecognizer: GlassHighlightGestureRecognizer?
     
     private let nativeView: UIVisualEffectView?
     private let nativeViewClippingContext: ClippingShapeContext?
@@ -339,6 +341,7 @@ public class GlassBackgroundView: UIView {
     public override init(frame: CGRect) {
         if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
             self.legacyView = nil
+            self.legacyHighlightContainerView = nil
             
             let glassEffect = UIGlassEffect(style: .regular)
             glassEffect.isInteractive = false
@@ -355,6 +358,10 @@ public class GlassBackgroundView: UIView {
             self.shadowView = nil
         } else {
             self.legacyView = LegacyGlassView(frame: CGRect())
+            let legacyHighlightContainerView = UIView()
+            legacyHighlightContainerView.isUserInteractionEnabled = false
+            legacyHighlightContainerView.clipsToBounds = true
+            self.legacyHighlightContainerView = legacyHighlightContainerView
             self.nativeView = nil
             self.nativeViewClippingContext = nil
             self.nativeParamsView = nil
@@ -384,16 +391,27 @@ public class GlassBackgroundView: UIView {
         }
         if let legacyView = self.legacyView {
             self.addSubview(legacyView)
+            let glassHighlightRecognizer = GlassHighlightGestureRecognizer(target: self, action: #selector(self.onHighlightGesture(_:)))
+            glassHighlightRecognizer.highlightContainerView = self.legacyHighlightContainerView
+            self.glassHighlightRecognizer = glassHighlightRecognizer
+            self.addGestureRecognizer(glassHighlightRecognizer)
+            glassHighlightRecognizer.isEnabled = false
         }
         if let foregroundView = self.foregroundView {
             self.addSubview(foregroundView)
             foregroundView.mask = self.maskContainerView
         }
         self.addSubview(self.contentContainer)
+        if let legacyHighlightContainerView = self.legacyHighlightContainerView {
+            self.addSubview(legacyHighlightContainerView)
+        }
     }
     
     required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc private func onHighlightGesture(_ recognizer: GlassHighlightGestureRecognizer) {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -420,6 +438,10 @@ public class GlassBackgroundView: UIView {
     
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: TintColor, isInteractive: Bool = false, isVisible: Bool = true, transition: ComponentTransition) {
         let shape: Shape = .roundedRect(cornerRadius: cornerRadius)
+        
+        if let glassHighlightRecognizer = self.glassHighlightRecognizer {
+            glassHighlightRecognizer.isEnabled = isInteractive
+        }
         
         if let nativeView = self.nativeView, let nativeViewClippingContext = self.nativeViewClippingContext, (nativeView.bounds.size != size || nativeViewClippingContext.shape != shape) {
             
@@ -455,6 +477,16 @@ public class GlassBackgroundView: UIView {
             }
             transition.setFrame(view: legacyView, frame: CGRect(origin: CGPoint(), size: size))
             transition.setAlpha(view: legacyView, alpha: isVisible ? 1.0 : 0.0)
+            
+            transition.setPosition(view: self.contentView, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+            transition.setBounds(view: self.contentView, bounds: CGRect(origin: CGPoint(), size: size))
+        }
+        if let legacyHighlightContainerView = self.legacyHighlightContainerView {
+            transition.setFrame(view: legacyHighlightContainerView, frame: CGRect(origin: CGPoint(), size: size))
+            switch shape {
+            case let .roundedRect(cornerRadius):
+                transition.setCornerRadius(layer: legacyHighlightContainerView.layer, cornerRadius: cornerRadius)
+            }
         }
         
         let shadowInset: CGFloat = 32.0
@@ -548,6 +580,9 @@ public class GlassBackgroundView: UIView {
                     }
                 }
                 foregroundView.image = GlassBackgroundView.generateLegacyGlassImage(size: CGSize(width: outerCornerRadius * 2.0, height: outerCornerRadius * 2.0), inset: shadowInset, borderWidthFactor: borderWidthFactor, isDark: isDark, fillColor: fillColor)
+                #if DEBUG
+                //foregroundView.image = nil
+                #endif
                 transition.setAlpha(view: foregroundView, alpha: isVisible ? 1.0 : 0.0)
             } else {
                 if let nativeParamsView = self.nativeParamsView, let nativeView = self.nativeView {
@@ -666,10 +701,10 @@ public final class GlassBackgroundContainerView: UIView {
         }
     }
     
-    public override init(frame: CGRect) {
+    public init(spacing: CGFloat = 7.0) {
         if #available(iOS 26.0, *), !GlassBackgroundView.useCustomGlassImpl {
             let effect = UIGlassContainerEffect()
-            effect.spacing = 7.0
+            effect.spacing = spacing
             let nativeView = UIVisualEffectView(effect: effect)
             self.nativeView = nativeView
             
@@ -684,7 +719,7 @@ public final class GlassBackgroundContainerView: UIView {
             self.legacyView = ContentView()
         }
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         if let nativeParamsView = self.nativeParamsView {
             self.addSubview(nativeParamsView)
@@ -717,6 +752,31 @@ public final class GlassBackgroundContainerView: UIView {
         }
         for view in self.contentView.subviews.reversed() {
             if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+                
+                #if DEBUG
+                func findMatrix(layer: CALayer) -> AnyObject? {
+                    for filter in layer.filters ?? [] {
+                        if "\(filter)".contains("vibrantColorMatrix") {
+                            return filter as AnyObject
+                        }
+                    }
+                    
+                    for sublayer in layer.sublayers ?? [] {
+                        if let result = findMatrix(layer: sublayer) {
+                            return result
+                        }
+                    }
+                    return nil
+                }
+                
+                /*if let filter = findMatrix(layer: self.layer) as? NSObject {
+                    var matrix: [Float32] = .init(repeating: 0, count: 20)
+                    let matrixValues = filter.value(forKey: "inputColorMatrix") as! NSValue
+                    matrixValues.getValue(&matrix, size: 4 * 20)
+                    assert(true)
+                }*/
+                #endif
+                
                 return result
             }
         }

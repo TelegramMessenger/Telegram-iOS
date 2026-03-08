@@ -138,21 +138,40 @@ final class LegacyGlassView: UIView {
         }
         
         if previousParams?.style != style {
-            if let blurFilter = CALayer.blur() {
+            if let blurFilter = CALayer.blur(), let colorMatrixFilter = CALayer.colorMatrix() {
                 switch style {
                 case .clear:
-                    blurFilter.setValue(6.0 as NSNumber, forKey: "inputRadius")
+                    if #available(iOS 17.0, *), DeviceMetrics.performance.isGraphicallyCapable {
+                        blurFilter.setValue(2.0 as NSNumber, forKey: "inputRadius")
+                    } else {
+                        blurFilter.setValue(6.0 as NSNumber, forKey: "inputRadius")
+                    }
                 case .normal:
                     blurFilter.setValue(2.0 as NSNumber, forKey: "inputRadius")
                 }
-                backdropLayer.filters = [blurFilter]
+                
+                var matrix: [Float32] = [
+                    2.6705, -1.1087999, -0.1117, 0.0, 0.049999997,
+                    -0.3295, 1.8914, -0.111899994, 0.0, 0.049999997,
+                    -0.3297, -1.1084, 2.8881, 0.0, 0.049999997,
+                    0.0, 0.0, 0.0, 1.0, 0.0
+                ]
+                colorMatrixFilter.setValue(NSValue(bytes: &matrix, objCType: "{CAColorMatrix=ffffffffffffffffffff}"), forKey: "inputColorMatrix")
+                colorMatrixFilter.setValue(true as NSNumber, forKey: "inputBackdropAware")
+                
+                switch style {
+                case .clear:
+                    backdropLayer.filters = [blurFilter]
+                case .normal:
+                    backdropLayer.filters = [colorMatrixFilter, blurFilter]
+                }
             }
         }
         
         transition.setCornerRadius(layer: self.layer, cornerRadius: cornerRadius)
         transition.setFrame(layer: backdropLayer, frame: CGRect(origin: CGPoint(), size: size))
         
-        if !"".isEmpty {
+        if #available(iOS 17.0, *), DeviceMetrics.performance.isGraphicallyCapable {
             let size = CGSize(width: max(1.0, size.width), height: max(1.0, size.height))
             let cornerRadius = min(min(size.width, size.height) * 0.5, cornerRadius)
             let displacementMagnitudePoints: CGFloat = 20.0
