@@ -1286,13 +1286,15 @@ public extension Api {
             public var flags: Int32
             public var photo: Api.Photo?
             public var ttlSeconds: Int32?
-            public init(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?) {
+            public var video: Api.Document?
+            public init(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?, video: Api.Document?) {
                 self.flags = flags
                 self.photo = photo
                 self.ttlSeconds = ttlSeconds
+                self.video = video
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("messageMediaPhoto", [("flags", self.flags as Any), ("photo", self.photo as Any), ("ttlSeconds", self.ttlSeconds as Any)])
+                return ("messageMediaPhoto", [("flags", self.flags as Any), ("photo", self.photo as Any), ("ttlSeconds", self.ttlSeconds as Any), ("video", self.video as Any)])
             }
         }
         public class Cons_messageMediaPoll: TypeConstructorDescription {
@@ -1564,7 +1566,7 @@ public extension Api {
                 break
             case .messageMediaPhoto(let _data):
                 if boxed {
-                    buffer.appendInt32(1766936791)
+                    buffer.appendInt32(-501814429)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 if Int(_data.flags) & Int(1 << 0) != 0 {
@@ -1572,6 +1574,9 @@ public extension Api {
                 }
                 if Int(_data.flags) & Int(1 << 2) != 0 {
                     serializeInt32(_data.ttlSeconds!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 4) != 0 {
+                    _data.video!.serialize(buffer, true)
                 }
                 break
             case .messageMediaPoll(let _data):
@@ -1664,7 +1669,7 @@ public extension Api {
             case .messageMediaPaidMedia(let _data):
                 return ("messageMediaPaidMedia", [("starsAmount", _data.starsAmount as Any), ("extendedMedia", _data.extendedMedia as Any)])
             case .messageMediaPhoto(let _data):
-                return ("messageMediaPhoto", [("flags", _data.flags as Any), ("photo", _data.photo as Any), ("ttlSeconds", _data.ttlSeconds as Any)])
+                return ("messageMediaPhoto", [("flags", _data.flags as Any), ("photo", _data.photo as Any), ("ttlSeconds", _data.ttlSeconds as Any), ("video", _data.video as Any)])
             case .messageMediaPoll(let _data):
                 return ("messageMediaPoll", [("poll", _data.poll as Any), ("results", _data.results as Any)])
             case .messageMediaStory(let _data):
@@ -1998,11 +2003,18 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {
                 _3 = reader.readInt32()
             }
+            var _4: Api.Document?
+            if Int(_1!) & Int(1 << 4) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.Document
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageMedia.messageMediaPhoto(Cons_messageMediaPhoto(flags: _1!, photo: _2, ttlSeconds: _3))
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageMedia.messageMediaPhoto(Cons_messageMediaPhoto(flags: _1!, photo: _2, ttlSeconds: _3, video: _4))
             }
             else {
                 return nil

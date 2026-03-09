@@ -422,13 +422,14 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1979852936] = { return Api.InputMedia.parse_inputMediaStory($0) }
     dict[-1614454818] = { return Api.InputMedia.parse_inputMediaTodo($0) }
     dict[58495792] = { return Api.InputMedia.parse_inputMediaUploadedDocument($0) }
-    dict[505969924] = { return Api.InputMedia.parse_inputMediaUploadedPhoto($0) }
+    dict[2105767386] = { return Api.InputMedia.parse_inputMediaUploadedPhoto($0) }
     dict[-1052959727] = { return Api.InputMedia.parse_inputMediaVenue($0) }
     dict[-1038383031] = { return Api.InputMedia.parse_inputMediaWebPage($0) }
     dict[-1392895362] = { return Api.InputMessage.parse_inputMessageCallbackQuery($0) }
     dict[-1502174430] = { return Api.InputMessage.parse_inputMessageID($0) }
     dict[-2037963464] = { return Api.InputMessage.parse_inputMessagePinned($0) }
     dict[-1160215659] = { return Api.InputMessage.parse_inputMessageReplyTo($0) }
+    dict[1076577429] = { return Api.InputMessageReadMetric.parse_inputMessageReadMetric($0) }
     dict[-1311015810] = { return Api.InputNotifyPeer.parse_inputNotifyBroadcasts($0) }
     dict[1251338318] = { return Api.InputNotifyPeer.parse_inputNotifyChats($0) }
     dict[1548122514] = { return Api.InputNotifyPeer.parse_inputNotifyForumTopic($0) }
@@ -679,7 +680,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-827703647] = { return Api.MessageMedia.parse_messageMediaGiveawayResults($0) }
     dict[-156940077] = { return Api.MessageMedia.parse_messageMediaInvoice($0) }
     dict[-1467669359] = { return Api.MessageMedia.parse_messageMediaPaidMedia($0) }
-    dict[1766936791] = { return Api.MessageMedia.parse_messageMediaPhoto($0) }
+    dict[-501814429] = { return Api.MessageMedia.parse_messageMediaPhoto($0) }
     dict[1272375192] = { return Api.MessageMedia.parse_messageMediaPoll($0) }
     dict[1758159491] = { return Api.MessageMedia.parse_messageMediaStory($0) }
     dict[-1974226924] = { return Api.MessageMedia.parse_messageMediaToDo($0) }
@@ -1957,6 +1958,8 @@ public extension Api {
         case let _1 as Api.InputMedia:
             _1.serialize(buffer, boxed)
         case let _1 as Api.InputMessage:
+            _1.serialize(buffer, boxed)
+        case let _1 as Api.InputMessageReadMetric:
             _1.serialize(buffer, boxed)
         case let _1 as Api.InputNotifyPeer:
             _1.serialize(buffer, boxed)

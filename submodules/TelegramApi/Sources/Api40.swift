@@ -8259,6 +8259,22 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
+    static func reportMusicListen(id: Api.InputDocument, listenedDuration: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let buffer = Buffer()
+        buffer.appendInt32(-574826471)
+        id.serialize(buffer, true)
+        serializeInt32(listenedDuration, buffer: buffer, boxed: false)
+        return (FunctionDescription(name: "messages.reportMusicListen", parameters: [("id", String(describing: id)), ("listenedDuration", String(describing: listenedDuration))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+            let reader = BufferReader(buffer)
+            var result: Api.Bool?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
     static func reportReaction(peer: Api.InputPeer, id: Int32, reactionPeer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
         let buffer = Buffer()
         buffer.appendInt32(1063567478)
@@ -8266,6 +8282,26 @@ public extension Api.functions.messages {
         serializeInt32(id, buffer: buffer, boxed: false)
         reactionPeer.serialize(buffer, true)
         return (FunctionDescription(name: "messages.reportReaction", parameters: [("peer", String(describing: peer)), ("id", String(describing: id)), ("reactionPeer", String(describing: reactionPeer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+            let reader = BufferReader(buffer)
+            var result: Api.Bool?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
+    static func reportReadMetrics(peer: Api.InputPeer, metrics: [Api.InputMessageReadMetric]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+        let buffer = Buffer()
+        buffer.appendInt32(1080542694)
+        peer.serialize(buffer, true)
+        buffer.appendInt32(481674261)
+        buffer.appendInt32(Int32(metrics.count))
+        for item in metrics {
+            item.serialize(buffer, true)
+        }
+        return (FunctionDescription(name: "messages.reportReadMetrics", parameters: [("peer", String(describing: peer)), ("metrics", String(describing: metrics))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
             let reader = BufferReader(buffer)
             var result: Api.Bool?
             if let signature = reader.readInt32() {
@@ -9686,9 +9722,9 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func translateText(flags: Int32, peer: Api.InputPeer?, id: [Int32]?, text: [Api.TextWithEntities]?, toLang: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranslatedText>) {
+    static func translateText(flags: Int32, peer: Api.InputPeer?, id: [Int32]?, text: [Api.TextWithEntities]?, toLang: String, tone: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranslatedText>) {
         let buffer = Buffer()
-        buffer.appendInt32(1662529584)
+        buffer.appendInt32(-1511079099)
         serializeInt32(flags, buffer: buffer, boxed: false)
         if Int(flags) & Int(1 << 0) != 0 {
             peer!.serialize(buffer, true)
@@ -9708,7 +9744,10 @@ public extension Api.functions.messages {
             }
         }
         serializeString(toLang, buffer: buffer, boxed: false)
-        return (FunctionDescription(name: "messages.translateText", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("id", String(describing: id)), ("text", String(describing: text)), ("toLang", String(describing: toLang))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.TranslatedText? in
+        if Int(flags) & Int(1 << 2) != 0 {
+            serializeString(tone!, buffer: buffer, boxed: false)
+        }
+        return (FunctionDescription(name: "messages.translateText", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("id", String(describing: id)), ("text", String(describing: text)), ("toLang", String(describing: toLang)), ("tone", String(describing: tone))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.TranslatedText? in
             let reader = BufferReader(buffer)
             var result: Api.messages.TranslatedText?
             if let signature = reader.readInt32() {
