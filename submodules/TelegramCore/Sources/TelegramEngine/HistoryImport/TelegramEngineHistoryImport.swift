@@ -140,7 +140,7 @@ public extension TelegramEngine {
                 case let .inputFile(inputFile):
                     switch type {
                     case .photo:
-                        inputMedia = .inputMediaUploadedPhoto(.init(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil))
+                        inputMedia = .inputMediaUploadedPhoto(.init(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil, video: nil))
                     case .file, .video, .sticker, .voice:
                         var attributes: [Api.DocumentAttribute] = []
                         attributes.append(.documentAttributeFilename(.init(fileName: fileName)))

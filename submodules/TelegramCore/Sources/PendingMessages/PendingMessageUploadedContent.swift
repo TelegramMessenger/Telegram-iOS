@@ -683,10 +683,10 @@ if "".isEmpty {
                             |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                 if let inputPeer = inputPeer {
                                     if autoclearMessageAttribute != nil {
-                                        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds)), text), reuploadInfo: nil, cacheReferenceKey: nil)))
+                                        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds, video: nil)), text), reuploadInfo: nil, cacheReferenceKey: nil)))
                                     }
                                     
-                                    return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds))))
+                                    return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds, video: nil))))
                                     |> mapError { _ -> PendingMessageUploadError in return .generic }
                                     |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                         switch result {
@@ -857,7 +857,7 @@ private func uploadedVideoCover(network: Network, postbox: Postbox, resourceRefe
             case .progress:
                 return .complete()
             case let .inputFile(file):
-                return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(.init(flags: 0, file: file, stickers: [], ttlSeconds: nil))))
+                return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(.init(flags: 0, file: file, stickers: [], ttlSeconds: nil, video: nil))))
                 |> mapError { _ -> PendingMessageUploadError in return .generic }
                 |> map { uploadResult in
                     switch uploadResult {
@@ -1219,11 +1219,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         if videoTimestamp != nil {
                             flags |= 1 << 7
                         }
-                        
-                        if file.isLivePhoto {
-                            flags |= 1 << 8
-                        }
-                        
+                                                
                         if ttlSeconds != nil {
                             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedDocument(.init(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: stickers, videoCover: videoCoverPhoto, videoTimestamp: videoTimestamp, ttlSeconds: ttlSeconds)), text), reuploadInfo: nil, cacheReferenceKey: referenceKey)))
                         }

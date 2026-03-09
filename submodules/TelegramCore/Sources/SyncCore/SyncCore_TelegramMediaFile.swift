@@ -311,7 +311,6 @@ public struct TelegramMediaVideoFlags: OptionSet {
     public static let instantRoundVideo = TelegramMediaVideoFlags(rawValue: 1 << 0)
     public static let supportsStreaming = TelegramMediaVideoFlags(rawValue: 1 << 1)
     public static let isSilent = TelegramMediaVideoFlags(rawValue: 1 << 3)
-    public static let isLivePhoto = TelegramMediaVideoFlags(rawValue: 1 << 4)
 }
 
 public struct StickerMaskCoords: PostboxCoding, Equatable {
@@ -1062,11 +1061,6 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     }
     
     public var isLivePhoto: Bool {
-        for attribute in self.attributes {
-            if case .Video(_, _, let flags, _, _, _) = attribute {
-                return flags.contains(.isLivePhoto)
-            }
-        }
         return false
     }
     

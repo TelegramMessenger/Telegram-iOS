@@ -15973,3 +15973,6 @@ Error: %8$@";
 "Month.NomOctober" = "October";
 "Month.NomNovember" = "November";
 "Month.NomDecember" = "December";
+
+"ChannelMessages.LinkTitle" = "LINK TO DIRECT MESSAGES";
+"Chat.ContactChannel" = "CONTACT CHANNEL";

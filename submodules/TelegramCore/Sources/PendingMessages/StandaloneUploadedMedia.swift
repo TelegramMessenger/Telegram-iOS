@@ -64,7 +64,7 @@ public func standaloneUploadedImage(postbox: Postbox, network: Network, peerId: 
                 |> mapError { _ -> StandaloneUploadMediaError in }
                 |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                     if let inputPeer = inputPeer {
-                        return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(.init(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil))))
+                        return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(.init(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil, video: nil))))
                         |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                         |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                             switch media {

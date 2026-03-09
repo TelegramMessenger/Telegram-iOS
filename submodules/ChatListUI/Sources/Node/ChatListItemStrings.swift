@@ -195,9 +195,14 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 break
                             }
                         }
-                    case _ as TelegramMediaImage:
+                    case let imageMedia as TelegramMediaImage:
                         if message.text.isEmpty {
-                            messageText = strings.Message_Photo
+                            if imageMedia.flags.contains(.isLivePhoto) {
+                                //TODO:localize
+                                messageText = "Live Photo"
+                            } else {
+                                messageText = strings.Message_Photo
+                            }
                         } else if enableMediaEmoji {
                             messageText = "🖼 \(messageText)"
                         }
@@ -255,21 +260,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         break inner
                                     } else {
                                         if message.text.isEmpty {
-                                            if flags.contains(.isLivePhoto) {
-                                                //TODO:localize
-                                                messageText = "Live Photo"
-                                            } else {
-                                                messageText = strings.Message_Video
-                                            }
+                                            messageText = strings.Message_Video
                                             processed = true
                                         } else {
                                             if enableMediaEmoji {
                                                 if !fileMedia.isAnimated {
-                                                    if flags.contains(.isLivePhoto) {
-                                                        messageText = "🖼 \(messageText)"
-                                                    } else {
-                                                        messageText = "📹 \(messageText)"
-                                                    }
+                                                    messageText = "📹 \(messageText)"
                                                 }
                                             }
                                             processed = true

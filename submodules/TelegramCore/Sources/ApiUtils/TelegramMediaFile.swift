@@ -108,7 +108,7 @@ extension StickerMaskCoords {
     }
 }
 
-func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAttribute], isLivePhoto: Bool = false) -> [TelegramMediaFileAttribute] {
+func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAttribute]) -> [TelegramMediaFileAttribute] {
     var result: [TelegramMediaFileAttribute] = []
     for attribute in attributes {
         switch attribute {
@@ -136,9 +136,6 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 }
                 if (flags & (1 << 3)) != 0 {
                     videoFlags.insert(.isSilent)
-                }
-                if isLivePhoto {
-                    videoFlags.insert(.isLivePhoto)
                 }
                 result.append(.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize, coverTime: videoStart, videoCodec: videoCodec))
             case let .documentAttributeAudio(documentAttributeAudioData):
@@ -195,11 +192,11 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
     return (immediateThumbnailData, representations)
 }
 
-func telegramMediaFileFromApiDocument(_ document: Api.Document, altDocuments: [Api.Document]?, videoCover: Api.Photo? = nil, isLivePhoto: Bool = false) -> TelegramMediaFile? {
+func telegramMediaFileFromApiDocument(_ document: Api.Document, altDocuments: [Api.Document]?, videoCover: Api.Photo? = nil) -> TelegramMediaFile? {
     switch document {
         case let .document(documentData):
             let (id, accessHash, fileReference, mimeType, size, thumbs, videoThumbs, dcId, attributes) = (documentData.id, documentData.accessHash, documentData.fileReference, documentData.mimeType, documentData.size, documentData.thumbs, documentData.videoThumbs, documentData.dcId, documentData.attributes)
-            var parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes, isLivePhoto: isLivePhoto)
+            var parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
             var isSticker = false
             var isAnimated = false
             for attribute in parsedAttributes {
@@ -241,7 +238,7 @@ func telegramMediaFileFromApiDocument(_ document: Api.Document, altDocuments: [A
                 alternativeRepresentations = altDocuments.compactMap { telegramMediaFileFromApiDocument($0, altDocuments: []) }
             }
             
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: size, fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, videoCover: videoCover.flatMap(telegramMediaImageFromApiPhoto), immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: size, attributes: parsedAttributes, alternativeRepresentations: alternativeRepresentations)
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: size, fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, videoCover: videoCover.flatMap({ telegramMediaImageFromApiPhoto($0) }), immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: size, attributes: parsedAttributes, alternativeRepresentations: alternativeRepresentations)
         case .documentEmpty:
             return nil
     }

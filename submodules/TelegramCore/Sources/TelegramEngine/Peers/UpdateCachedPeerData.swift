@@ -548,7 +548,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     }
                                 }
                                 
-                                let photo: TelegramMediaImage? = chatFullChatPhoto.flatMap(telegramMediaImageFromApiPhoto)
+                                let photo: TelegramMediaImage? = chatFullChatPhoto.flatMap { telegramMediaImageFromApiPhoto($0) }
                                 
                                 let exportedInvitation = chatFullExportedInvite.flatMap { ExportedInvitation(apiExportedInvite: $0) }
                                 let pinnedMessageId = chatFullPinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })

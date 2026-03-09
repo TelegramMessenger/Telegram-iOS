@@ -750,7 +750,7 @@ extension Api.InputMedia {
             if let _ = stickers {
                 flags |= (1 << 0)
             }
-            return .inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds))
+            return .inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds, video: nil))
         default:
             return self
         }
