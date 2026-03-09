@@ -897,10 +897,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                 fileAttributes.append(.Animated)
                             }
                             if !asFile {
-                                var flags: TelegramMediaVideoFlags = [.supportsStreaming]
-                                if isLivePhoto {
-                                    flags.insert(.isLivePhoto)
-                                }
+                                let flags: TelegramMediaVideoFlags = [.supportsStreaming]
                                 fileAttributes.append(.Video(duration: finalDuration, size: PixelDimensions(finalDimensions), flags: flags, preloadSize: nil, coverTime: nil, videoCodec: nil))
                                 if let adjustments = adjustments {
                                     if adjustments.sendAsGif {

@@ -2,6 +2,7 @@ include "MediaId.fbs";
 include "TelegramMediaImageRepresentation.fbs";
 include "StickerPackReference.fbs";
 include "PartialMediaReference.fbs";
+include "TelegramMediaFile.fbs";
 
 namespace TelegramCore;
 
@@ -46,6 +47,7 @@ table TelegramMediaImage {
     reference:TelegramMediaImageReference (id: 5);
     partialReference:PartialMediaReference (id: 6);
     flags:int32 (id: 7);
+    video:TelegramMediaFile (id: 8);
 }
 
 root_type TelegramMediaImage;

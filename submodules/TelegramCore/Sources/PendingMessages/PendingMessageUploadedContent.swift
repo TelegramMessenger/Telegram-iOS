@@ -1219,11 +1219,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         if videoTimestamp != nil {
                             flags |= 1 << 7
                         }
-                        
-                        if file.isLivePhoto {
-                            flags |= 1 << 8
-                        }
-                        
+                                                
                         if ttlSeconds != nil {
                             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedDocument(.init(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: stickers, videoCover: videoCoverPhoto, videoTimestamp: videoTimestamp, ttlSeconds: ttlSeconds)), text), reuploadInfo: nil, cacheReferenceKey: referenceKey)))
                         }

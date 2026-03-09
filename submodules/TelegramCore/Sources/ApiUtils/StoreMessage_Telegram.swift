@@ -372,7 +372,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaPhoto(messageMediaPhotoData):
             let (flags, photo, ttlSeconds) = (messageMediaPhotoData.flags, messageMediaPhotoData.photo, messageMediaPhotoData.ttlSeconds)
             if let photo = photo {
-                if let mediaImage = telegramMediaImageFromApiPhoto(photo) {
+                if let mediaImage = telegramMediaImageFromApiPhoto(photo, video: messageMediaPhotoData.video) {
                     return (mediaImage, ttlSeconds, nil, (flags & (1 << 3)) != 0, nil, nil)
                 }
             } else {
@@ -398,7 +398,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaDocument(messageMediaDocumentData):
             let (flags, document, altDocuments, coverPhoto, videoTimestamp, ttlSeconds) = (messageMediaDocumentData.flags, messageMediaDocumentData.document, messageMediaDocumentData.altDocuments, messageMediaDocumentData.videoCover, messageMediaDocumentData.videoTimestamp, messageMediaDocumentData.ttlSeconds)
             if let document = document {
-                if let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments, videoCover: coverPhoto, isLivePhoto: (flags & (1 << 11)) != 0) {
+                if let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments, videoCover: coverPhoto) {
                     return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0, nil, videoTimestamp)
                 }
             } else {

@@ -101,6 +101,7 @@ public struct TelegramMediaImageFlags: OptionSet {
     }
     
     public static let hasStickers = TelegramMediaImageFlags(rawValue: 1 << 0)
+    public static let isLivePhoto = TelegramMediaImageFlags(rawValue: 1 << 1)
 }
 
 public enum TelegramMediaImageDecodingError: Error {
@@ -282,12 +283,13 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
     public let partialReference: PartialMediaReference?
     public let peerIds: [PeerId] = []
     public let flags: TelegramMediaImageFlags
+    public let video: TelegramMediaFile?
     
     public var id: MediaId? {
         return self.imageId
     }
     
-    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], videoRepresentations: [TelegramMediaImage.VideoRepresentation] = [], immediateThumbnailData: Data?, emojiMarkup: TelegramMediaImage.EmojiMarkup? = nil, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?, flags: TelegramMediaImageFlags) {
+    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], videoRepresentations: [TelegramMediaImage.VideoRepresentation] = [], immediateThumbnailData: Data?, emojiMarkup: TelegramMediaImage.EmojiMarkup? = nil, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?, flags: TelegramMediaImageFlags, video: TelegramMediaFile? = nil) {
         self.imageId = imageId
         self.representations = representations
         self.videoRepresentations = videoRepresentations
@@ -296,6 +298,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         self.reference = reference
         self.partialReference = partialReference
         self.flags = flags
+        self.video = video
     }
     
     public init(decoder: PostboxDecoder) {
@@ -307,6 +310,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         self.reference = decoder.decodeObjectForKey("rf", decoder: { TelegramMediaImageReference(decoder: $0) }) as? TelegramMediaImageReference
         self.partialReference = decoder.decodeAnyObjectForKey("prf", decoder: { PartialMediaReference(decoder: $0) }) as? PartialMediaReference
         self.flags = TelegramMediaImageFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
+        self.video = decoder.decodeObjectForKey("vid", decoder: { TelegramMediaFile(decoder: $0) }) as? TelegramMediaFile
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -336,6 +340,11 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             encoder.encodeNil(forKey: "prf")
         }
         encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
+        if let video = self.video {
+            encoder.encodeObject(video, forKey: "vid")
+        } else {
+            encoder.encodeNil(forKey: "vid")
+        }
     }
     
     public required init(from decoder: Decoder) throws {
@@ -353,6 +362,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         self.reference = object.reference
         self.partialReference = object.partialReference
         self.flags = object.flags
+        self.video = object.video
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -376,6 +386,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         self.reference = try flatBuffersObject.reference.flatMap { try TelegramMediaImageReference(flatBuffersObject: $0) }
         self.partialReference = try flatBuffersObject.partialReference.flatMap { try PartialMediaReference(flatBuffersObject: $0) }
         self.flags = TelegramMediaImageFlags(rawValue: flatBuffersObject.flags)
+        self.video = try flatBuffersObject.video.flatMap { try TelegramMediaFile(flatBuffersObject: $0) }
     }
     
     public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
@@ -393,6 +404,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         let emojiMarkupOffset = self.emojiMarkup.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
         let referenceOffset = self.reference.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
         let partialReferenceOffset = self.partialReference.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+        let videoOffset = self.video.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
         
         let start = TelegramCore_TelegramMediaImage.startTelegramMediaImage(&builder)
         
@@ -412,6 +424,9 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             TelegramCore_TelegramMediaImage.add(partialReference: partialReferenceOffset, &builder)
         }
         TelegramCore_TelegramMediaImage.add(flags: self.flags.rawValue, &builder)
+        if let videoOffset {
+            TelegramCore_TelegramMediaImage.add(video: videoOffset, &builder)
+        }
         
         return TelegramCore_TelegramMediaImage.endTelegramMediaImage(&builder, start: start)
     }
@@ -466,6 +481,9 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             if other.flags != self.flags {
                 return false
             }
+            if other.video != self.video {
+                return false
+            }
             return true
         }
         return false
@@ -494,6 +512,9 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             if self.flags != other.flags {
                 return false
             }
+            if self.video != other.video {
+                return false
+            }
             return true
         }
         return false
@@ -504,7 +525,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
     }
     
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaImage {
-        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, videoRepresentations: self.videoRepresentations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference, flags: self.flags)
+        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, videoRepresentations: self.videoRepresentations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference, flags: self.flags, video: self.video)
     }
 }
 
