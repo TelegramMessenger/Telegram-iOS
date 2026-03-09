@@ -367,12 +367,12 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         }
         self.presentationDataPromise = Promise(self.presentationData)
         
-        self.emptyQueryListNode = ListView()
+        self.emptyQueryListNode = ListViewImpl()
         self.emptyQueryListNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }

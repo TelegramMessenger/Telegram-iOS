@@ -86,7 +86,7 @@ private final class ArchivedStickersNoticeAlertContentNode: AlertContentNode {
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 4
         
-        self.listView = ListView()
+        self.listView = ListViewImpl()
         self.listView.isOpaque = false
         
         self.actionNodesSeparator = ASDisplayNode()

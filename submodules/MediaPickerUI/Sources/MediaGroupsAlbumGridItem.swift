@@ -280,7 +280,7 @@ private class MediaGroupsAlbumGridItemNode: ListViewItemNode {
     private var enqueuedTransitions: [MediaGroupsAlbumGridItemNodeTransition] = []
     
     init() {
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init(layerBacked: false, rotated: false, seeThrough: false)

@@ -281,7 +281,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         private var hintAnimateListTransition: Bool = false
         
         override public init(frame: CGRect) {
-            self.listNode = ListView()
+            self.listNode = ListViewImpl()
             
             super.init(frame: frame)
             

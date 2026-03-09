@@ -198,7 +198,7 @@ private final class OldChannelsSearchContainerNode: SearchDisplayControllerConte
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(self.presentationData)
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
         self.listNode.accessibilityPageScrolledString = { row, count in

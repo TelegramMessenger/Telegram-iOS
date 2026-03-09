@@ -567,7 +567,7 @@ public final class InviteLinkViewController: ViewController {
             
             self.historyBackgroundNode.addSubnode(self.historyBackgroundContentNode)
             
-            self.listNode = ListView()
+            self.listNode = ListViewImpl()
             self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
             self.listNode.verticalScrollIndicatorFollowsOverscroll = true
             self.listNode.accessibilityPageScrolledString = { row, count in

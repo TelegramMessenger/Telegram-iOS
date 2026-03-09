@@ -207,7 +207,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     
     init(context: AccountContext, presentationData: PresentationData, forceTheme: PresentationTheme?, peerId: EnginePeer.Id, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.context = context
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.peerId = peerId
         self.mode = mode
         self.filters = filters

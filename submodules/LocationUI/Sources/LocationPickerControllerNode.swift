@@ -399,7 +399,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         self.state = LocationPickerState()
         self.statePromise = Promise(self.state)
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true

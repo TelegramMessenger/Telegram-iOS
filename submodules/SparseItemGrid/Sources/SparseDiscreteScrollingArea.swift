@@ -125,7 +125,7 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
     private struct State {
         var containerSize: CGSize
         var containerInsets: UIEdgeInsets
-        var scrollingState: ListView.ScrollingIndicatorState?
+        var scrollingState: ListViewImpl.ScrollingIndicatorState?
         var isScrolling: Bool
         var isDragging: Bool
         var theme: PresentationTheme
@@ -288,7 +288,7 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
     public func update(
         containerSize: CGSize,
         containerInsets: UIEdgeInsets,
-        scrollingState: ListView.ScrollingIndicatorState?,
+        scrollingState: ListViewImpl.ScrollingIndicatorState?,
         isScrolling: Bool,
         theme: PresentationTheme,
         transition: ContainedViewLayoutTransition

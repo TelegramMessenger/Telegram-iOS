@@ -225,7 +225,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.peerContextAction = peerContextAction
         self.isPeerSelected = isPeerSelected
         
-        self.listView = ListView()
+        self.listView = ListViewImpl()
         self.listView.preloadPages = false
         self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.listView.accessibilityPageScrolledString = { row, count in

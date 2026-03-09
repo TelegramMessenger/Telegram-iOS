@@ -159,7 +159,7 @@ public final class ChatHistorySearchContainerNode: SearchDisplayControllerConten
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = .clear
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }

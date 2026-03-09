@@ -297,7 +297,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         self.backgroundView = GlassBackgroundView()
         self.backgroundView.layer.anchorPoint = CGPoint()
         
-        self.listView = ListView()
+        self.listView = ListViewImpl()
         self.listView.anchorPoint = CGPoint()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true

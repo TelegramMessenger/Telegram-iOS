@@ -208,7 +208,7 @@ public final class MediaGroupsScreen: ViewController, AttachmentContainable {
             self.containerNode = ASDisplayNode()
             self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
             
-            self.listNode = ListView()
+            self.listNode = ListViewImpl()
 
             super.init()
             

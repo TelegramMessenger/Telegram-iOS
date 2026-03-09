@@ -299,7 +299,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.backgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.backgroundNode.alpha = 0.0
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.alpha = 0.0
         
