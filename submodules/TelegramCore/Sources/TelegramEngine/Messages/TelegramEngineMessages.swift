@@ -67,6 +67,24 @@ public final class TelegramGlobalPostSearchState: Codable, Equatable {
     }
 }
 
+public struct TelegramMessageReadMetric {
+    public let id: Int64
+    public let messageId: EngineMessage.Id
+    public let timeInViewMs: Int
+    public let activeTimeInViewMs: Int
+    public let heightToViewportRatio: Double
+    public let seenRangeRatio: Double
+    
+    public init(id: Int64, messageId: EngineMessage.Id, timeInViewMs: Int, activeTimeInViewMs: Int, heightToViewportRatio: Double, seenRangeRatio: Double) {
+        self.id = id
+        self.messageId = messageId
+        self.timeInViewMs = timeInViewMs
+        self.activeTimeInViewMs = activeTimeInViewMs
+        self.heightToViewportRatio = heightToViewportRatio
+        self.seenRangeRatio = seenRangeRatio
+    }
+}
+
 public extension TelegramEngine {
     final class Messages {
         private let account: Account
@@ -1686,6 +1704,34 @@ public extension TelegramEngine {
         
         public func groupCallMessages(appConfig: AppConfiguration, callId: Int64, reference: InternalGroupCallReference, e2eContext: ConferenceCallE2EContext?, messageLifetime: Int32, isLiveStream: Bool) -> GroupCallMessagesContext {
             return GroupCallMessagesContext(account: self.account, appConfig: appConfig, callId: callId, reference: reference, e2eContext: e2eContext, messageLifetime: messageLifetime, isLiveStream: isLiveStream)
+        }
+        
+        public func reportPeerReadMetrics(peerId: EnginePeer.Id, metrics: [TelegramMessageReadMetric]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
+            }
+            |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+                guard let inputPeer else {
+                    return .complete()
+                }
+                return self.account.network.request(Api.functions.messages.reportReadMetrics(
+                    peer: inputPeer,
+                    metrics: metrics.map { metric in
+                        return Api.InputMessageReadMetric.inputMessageReadMetric(Api.InputMessageReadMetric.Cons_inputMessageReadMetric(
+                            msgId: metric.messageId.id,
+                            viewId: metric.id,
+                            timeInViewMs: Int32(metric.timeInViewMs),
+                            activeTimeInViewMs: Int32(metric.activeTimeInViewMs),
+                            heightToViewportRatioPermille: Int32(metric.heightToViewportRatio * 1000.0),
+                            seenRangeRatioPermille: Int32(metric.seenRangeRatio * 1000.0)
+                        ))
+                    }
+                ))
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> ignoreValues
+            }
         }
     }
 }
