@@ -539,12 +539,20 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                     }
                 )
             )))
+                        
             let linkSectionSize = self.linkSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     style: .glass,
-                    header: nil,
+                    header: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: environment.strings.ChannelMessages_LinkTitle.uppercased(),
+                            font: Font.regular(13.0),
+                            textColor: environment.theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    )),
                     footer: nil,
                     items: linkSectionItems
                 )),
