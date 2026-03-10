@@ -180,7 +180,8 @@ public final class ChatFloatingTopicsPanel: Component {
                 }
             }
             
-            if case .top = component.location {
+            switch component.location {
+            case .top, .bottom:
                 let topPanel: ComponentView<ChatSidePanelEnvironment>
                 var topPanelTransition = transition
                 if let current = self.topPanel {
@@ -196,7 +197,7 @@ public final class ChatFloatingTopicsPanel: Component {
                         context: component.context,
                         theme: component.theme,
                         strings: component.strings,
-                        location: .top,
+                        location: component.location == .top ? .top : .bottom,
                         peerId: component.peerId,
                         kind: component.kind,
                         topicId: component.topicId,
@@ -232,13 +233,15 @@ public final class ChatFloatingTopicsPanel: Component {
                     }
                     transition.setFrame(view: topPanelView, frame: topPanelFrame)
                 }
-            } else if let topPanel = self.topPanel {
-                self.topPanel = nil
-                if let topPanelView = topPanel.view as? ChatSideTopicsPanel.View {
-                    topPanelView.clipsToBounds = true
-                    transition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 8.0, y: 0.0), size: CGSize(width: 16.0 + 72.0, height: topPanelView.bounds.height)), completion: { [weak topPanelView] _ in
-                        topPanelView?.removeFromSuperview()
-                    })
+            default:
+                if let topPanel = self.topPanel {
+                    self.topPanel = nil
+                    if let topPanelView = topPanel.view as? ChatSideTopicsPanel.View {
+                        topPanelView.clipsToBounds = true
+                        transition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 8.0, y: 0.0), size: CGSize(width: 16.0 + 72.0, height: topPanelView.bounds.height)), completion: { [weak topPanelView] _ in
+                            topPanelView?.removeFromSuperview()
+                        })
+                    }
                 }
             }
             
@@ -291,11 +294,17 @@ public final class ChatFloatingTopicsPanel: Component {
 }
 
 public final class ChatTopicsHeaderPanelComponent: Component {
+    public enum Location {
+        case top
+        case bottom
+    }
+    
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let peerId: EnginePeer.Id
     public let kind: ChatSideTopicsPanel.Kind
+    public let location: Location
     public let topicId: Int64?
     public let controller: () -> ViewController?
     public let togglePanel: () -> Void
@@ -308,6 +317,7 @@ public final class ChatTopicsHeaderPanelComponent: Component {
         strings: PresentationStrings,
         peerId: EnginePeer.Id,
         kind: ChatSideTopicsPanel.Kind,
+        location: Location,
         topicId: Int64?,
         controller: @escaping () -> ViewController?,
         togglePanel: @escaping () -> Void,
@@ -319,6 +329,7 @@ public final class ChatTopicsHeaderPanelComponent: Component {
         self.strings = strings
         self.peerId = peerId
         self.kind = kind
+        self.location = location
         self.topicId = topicId
         self.controller = controller
         self.togglePanel = togglePanel
@@ -340,6 +351,9 @@ public final class ChatTopicsHeaderPanelComponent: Component {
             return false
         }
         if lhs.kind != rhs.kind {
+            return false
+        }
+        if lhs.location != rhs.location {
             return false
         }
         if lhs.topicId != rhs.topicId {
@@ -371,7 +385,7 @@ public final class ChatTopicsHeaderPanelComponent: Component {
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,
-                    location: .top,
+                    location: component.location == .top ? .top : .bottom,
                     peerId: component.peerId,
                     kind: component.kind,
                     topicId: component.topicId,

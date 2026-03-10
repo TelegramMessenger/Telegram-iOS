@@ -1215,7 +1215,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             playbackControlsIsSeekable = seekable
             playbackControlsIsPlaying = !paused
         }
-        if !self.areControlsVisible || hideControls {
+        if !self.controlsVisibility() || hideControls {
             playbackControlsIsVisible = false
         }
         

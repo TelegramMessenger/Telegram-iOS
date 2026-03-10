@@ -461,6 +461,9 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
                 case .Loading:
                     return nil
                 case let .HistoryView(view, _, _, _, _, _, _):
+                    if view.isLoading {
+                        return nil
+                    }
                     return view.entries.isEmpty
                 }
             }

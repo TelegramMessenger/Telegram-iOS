@@ -258,7 +258,7 @@ public final class HeaderPanelContainerComponent: Component {
             }
             panelCount += component.panels.count
             var cornerRadius: CGFloat = 0.0
-            if panelCount == 1 {
+            if panelCount == 1 && backgroundFrame.height <= 50.0 * 2.0 {
                 cornerRadius = backgroundFrame.height * 0.5
             } else {
                 cornerRadius = 20.0

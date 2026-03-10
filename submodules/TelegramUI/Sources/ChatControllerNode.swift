@@ -1351,7 +1351,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var headerPanels: [HeaderPanelContainerComponent.Panel] = []
         var footerPanels: [HeaderPanelContainerComponent.Panel] = []
         
-        if let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
+        if self.chatPresentationInterfaceState.search == nil, let headerTopicsPanel = headerTopicsPanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction, force: false) {
             let panel = HeaderPanelContainerComponent.Panel(
                 key: "topics",
                 orderIndex: 0,
@@ -1363,7 +1363,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 footerPanels.append(panel)
             }
         }
-        if let mediaPlayback = self.controller?.globalControlPanelsContextState?.mediaPlayback {
+        if self.chatPresentationInterfaceState.search == nil, let mediaPlayback = self.controller?.globalControlPanelsContextState?.mediaPlayback {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
                 key: "media",
                 orderIndex: 1,
@@ -1378,7 +1378,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 )))
             )
         }
-        if let liveLocation = self.controller?.globalControlPanelsContextState?.liveLocation {
+        if self.chatPresentationInterfaceState.search == nil, let liveLocation = self.controller?.globalControlPanelsContextState?.liveLocation {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
                 key: "liveLocation",
                 orderIndex: 2,
@@ -1393,7 +1393,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 )))
             )
         }
-        if let groupCall = self.controller?.globalControlPanelsContextState?.groupCall {
+        if self.chatPresentationInterfaceState.search == nil, let groupCall = self.controller?.globalControlPanelsContextState?.groupCall {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
                 key: "groupCall",
                 orderIndex: 3,
@@ -1651,7 +1651,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             switch floatingTopicsPanelComponent.location {
             case .side:
                 floatingTopicsPanelInsets.left += 72.0 + 10.0 + 10.0
-            case .top:
+            case .top, .bottom:
                 floatingTopicsPanelInsets.top += 40.0 + 10.0
             }
         } else if let floatingTopicsPanel = self.floatingTopicsPanel {

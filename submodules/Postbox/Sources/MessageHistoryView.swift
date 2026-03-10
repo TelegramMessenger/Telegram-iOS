@@ -1295,6 +1295,10 @@ public final class MessageHistoryView: PostboxView {
     }
     
     init(_ mutableView: MutableMessageHistoryView) {
+        if case .external = mutableView.peerIds, mutableView.tag == nil, case .not = mutableView.namespaces {
+            assert(true)
+        }
+        
         self.tag = mutableView.tag
         self.namespaces = mutableView.namespaces
         self.isAddedToChatList = mutableView.isAddedToChatList

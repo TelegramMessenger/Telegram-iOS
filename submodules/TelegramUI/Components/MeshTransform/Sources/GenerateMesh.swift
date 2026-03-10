@@ -132,123 +132,39 @@ public func roundedRectGradient(x: CGFloat, y: CGFloat, width: CGFloat, height: 
     return (nx, ny)
 }
 
-/// Generates a displacement map image as a signed distance field from rounded rect edges.
-/// - edgeDistance: The distance (in points) over which displacement is applied
-/// - R channel: X displacement (127 = neutral, 0 = max left, 255 = max right)
-/// - G channel: Y displacement (127 = neutral, 0 = max up, 255 = max down)
-/// - B channel: Unused (always 0)
-/// Displacement is maximum at the edge and fades linearly to zero at edgeDistance.
-/// Actual displacement magnitude is applied when sampling the map.
-public func generateDisplacementMap(size: CGSize, cornerRadius: CGFloat, edgeDistance: CGFloat, scale: CGFloat) -> CGImage? {
-    let width = Int(size.width * scale)
-    let height = Int(size.height * scale)
-
-    // Clamp corner radius
-    let maxCornerRadius = min(size.width, size.height) / 2.0
-    let clampedRadius = min(cornerRadius, maxCornerRadius)
-
-    // Create bitmap context
-    var pixelData = [UInt8](repeating: 0, count: width * height * 4)
-
-    for py in 0 ..< height {
-        for px in 0 ..< width {
-            // Convert pixel to point coordinates
-            let x = CGFloat(px) / scale
-            let y = CGFloat(py) / scale
-
-            // Get signed distance (negative inside, positive outside)
-            let sdf = roundedRectSDF(x: x, y: y, width: size.width, height: size.height, cornerRadius: clampedRadius)
-
-            // Get gradient (outward normal direction)
-            let (nx, ny) = roundedRectGradient(x: x, y: y, width: size.width, height: size.height, cornerRadius: clampedRadius)
-
-            // Inward normal (content moves away from edge, toward center)
-            let inwardX = -nx
-            let inwardY = -ny
-
-            // Distance from edge (positive inside the shape)
-            let distFromEdge = -sdf
-
-            // Weight: 1 at edge, 0 at edgeDistance (linear falloff)
-            let weight = max(0, min(1, 1.0 - distFromEdge / edgeDistance))
-
-            // Displacement modulated by distance from edge
-            let displacementX = inwardX * weight
-            let displacementY = inwardY * weight
-
-            // Encode in R/G: 127 = neutral, map -1..1 to 0..254
-            let r = UInt8(max(0, min(255, Int(127 + displacementX * 127))))
-            let g = UInt8(max(0, min(255, Int(127 + displacementY * 127))))
-
-            let idx = (py * width + px) * 4
-            pixelData[idx + 0] = r    // X displacement
-            pixelData[idx + 1] = g    // Y displacement
-            pixelData[idx + 2] = 0    // Unused
-            pixelData[idx + 3] = 255  // A
-        }
-    }
-
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    guard let context = CGContext(
-        data: &pixelData,
-        width: width,
-        height: height,
-        bitsPerComponent: 8,
-        bytesPerRow: width * 4,
-        space: colorSpace,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-    ) else {
-        return nil
-    }
-
-    return context.makeImage()
-}
-
-/// Samples displacement from a displacement map with bilinear interpolation and bezier easing
+/// Computes displacement at a point analytically using the rounded rect SDF.
 /// - Parameters:
-///   - x, y: Coordinates in the displacement map's pixel space
-///   - pixels: Pointer to displacement map pixel data
-///   - width, height: Displacement map dimensions
-///   - bytesPerRow, bytesPerPixel: Displacement map layout
-///   - bezier: Bezier control points for easing curve
-/// - Returns: Displacement (dx, dy) in range -1..1 with bezier easing applied
-public func sampleDisplacement(
+///   - x, y: Point coordinates in the shape's coordinate space
+///   - width, height: Dimensions of the rounded rectangle
+///   - cornerRadius: Already-clamped corner radius
+///   - edgeDistance: Distance (in points) over which displacement fades from edge inward
+///   - bezier: Bezier control points for easing the displacement magnitude
+/// - Returns: (dx, dy) displacement in range -1..1 with bezier easing, plus the raw SDF value
+public func computeDisplacement(
     x: CGFloat,
     y: CGFloat,
-    pixels: UnsafePointer<UInt8>,
-    width: Int,
-    height: Int,
-    bytesPerRow: Int,
-    bytesPerPixel: Int,
+    width: CGFloat,
+    height: CGFloat,
+    cornerRadius: CGFloat,
+    edgeDistance: CGFloat,
     bezier: DisplacementBezier
-) -> (dx: CGFloat, dy: CGFloat) {
-    let clampedX = max(0, min(CGFloat(width - 1), x))
-    let clampedY = max(0, min(CGFloat(height - 1), y))
+) -> (dx: CGFloat, dy: CGFloat, sdf: CGFloat) {
+    let sdf = roundedRectSDF(x: x, y: y, width: width, height: height, cornerRadius: cornerRadius)
+    let (nx, ny) = roundedRectGradient(x: x, y: y, width: width, height: height, cornerRadius: cornerRadius)
 
-    let x0 = Int(clampedX)
-    let y0 = Int(clampedY)
-    let x1 = min(x0 + 1, width - 1)
-    let y1 = min(y0 + 1, height - 1)
+    // Inward normal (content moves away from edge, toward center)
+    let inwardX = -nx
+    let inwardY = -ny
 
-    let fx = clampedX - CGFloat(x0)
-    let fy = clampedY - CGFloat(y0)
+    // Distance from edge (positive inside the shape)
+    let distFromEdge = -sdf
 
-    func sample(_ sx: Int, _ sy: Int) -> (r: CGFloat, g: CGFloat) {
-        let offset = sy * bytesPerRow + sx * bytesPerPixel
-        return (CGFloat(pixels[offset + 0]), CGFloat(pixels[offset + 1]))
-    }
+    // Weight: 1 at edge, 0 at edgeDistance inward (linear falloff)
+    let weight = max(0, min(1, 1.0 - distFromEdge / edgeDistance))
 
-    let c00 = sample(x0, y0)
-    let c10 = sample(x1, y0)
-    let c01 = sample(x0, y1)
-    let c11 = sample(x1, y1)
-
-    let r = (c00.r * (1 - fx) + c10.r * fx) * (1 - fy) + (c01.r * (1 - fx) + c11.r * fx) * fy
-    let g = (c00.g * (1 - fx) + c10.g * fx) * (1 - fy) + (c01.g * (1 - fx) + c11.g * fx) * fy
-
-    // Decode: 127 = neutral, map 0..254 to -1..1
-    var dx = (r - 127.0) / 127.0
-    var dy = (g - 127.0) / 127.0
+    // Displacement direction modulated by distance
+    var dx = inwardX * weight
+    var dy = inwardY * weight
 
     // Apply bezier easing to vector magnitude, preserving direction
     let mag = hypot(dx, dy)
@@ -259,7 +175,7 @@ public func sampleDisplacement(
         dy *= scale
     }
 
-    return (dx, dy)
+    return (dx, dy, sdf)
 }
 
 /// Generates a glass mesh with corner-aware topology.
@@ -268,10 +184,10 @@ public func sampleDisplacement(
 /// - 1 center patch
 /// Corner/edge seams share the same coordinates (but do not reuse vertices) so
 /// the neighbouring faces fit perfectly without T-junctions.
-public func generateGlassMeshFromDisplacementMap(
+public func generateGlassMesh(
     size: CGSize,
     cornerRadius: CGFloat,
-    displacementMap: CGImage,
+    edgeDistance: CGFloat,
     displacementMagnitudeU: CGFloat,
     displacementMagnitudeV: CGFloat,
     cornerResolution: Int,
@@ -279,17 +195,6 @@ public func generateGlassMeshFromDisplacementMap(
     bezier: DisplacementBezier,
     generateWireframe: Bool = false
 ) -> (mesh: MeshTransform, wireframe: CGPath?) {
-    guard let dispDataProvider = displacementMap.dataProvider,
-          let dispData = dispDataProvider.data,
-          let dispPixels = CFDataGetBytePtr(dispData) else {
-        return (mesh: MeshTransform(), wireframe: nil)
-    }
-
-    let dispWidth = displacementMap.width
-    let dispHeight = displacementMap.height
-    let dispBytesPerRow = displacementMap.bytesPerRow
-    let dispBytesPerPixel = displacementMap.bitsPerPixel / 8
-
     let clampedRadius = min(cornerRadius, min(size.width, size.height) / 2)
 
     let transform = MeshTransform()
@@ -311,7 +216,7 @@ public func generateGlassMeshFromDisplacementMap(
     let usableUNorm = usableWidth / size.width
     let usableVNorm = usableHeight / size.height
 
-    // Helper to sample displacement and create vertex
+    // Helper to compute displacement analytically and create vertex
     func makeVertex(u: CGFloat, v: CGFloat, depth: CGFloat = 0) -> (vertex: MeshTransform.Vertex, point: CGPoint) {
         let mappedU = insetUOffset + u * usableUNorm
         let mappedV = insetVOffset + v * usableVNorm
@@ -322,28 +227,27 @@ public func generateGlassMeshFromDisplacementMap(
             fromX = mappedU
             fromY = mappedV
         } else {
-            let (dispX, dispY) = sampleDisplacement(
-                x: mappedU * CGFloat(dispWidth - 1),
-                y: mappedV * CGFloat(dispHeight - 1),
-                pixels: dispPixels,
-                width: dispWidth,
-                height: dispHeight,
-                bytesPerRow: dispBytesPerRow,
-                bytesPerPixel: dispBytesPerPixel,
+            let worldX = insetPoints + u * usableWidth
+            let worldY = insetPoints + v * usableHeight
+
+            let (dispX, dispY, sdf) = computeDisplacement(
+                x: worldX,
+                y: worldY,
+                width: size.width,
+                height: size.height,
+                cornerRadius: clampedRadius,
+                edgeDistance: edgeDistance,
                 bezier: bezier
             )
 
-            // Slight boost near the edge to emphasize the outer strip (rounded-corner aware)
-            let worldX = insetPoints + u * usableWidth
-            let worldY = insetPoints + v * usableHeight
-            let sdf = roundedRectSDF(x: worldX, y: worldY, width: size.width, height: size.height, cornerRadius: clampedRadius)
-            let distToEdge = max(0.0, -sdf) // distance inside the rounded rect to the edge
+            // Edge boost: slight displacement boost near the silhouette
+            let distToEdge = max(0.0, -sdf)
             let edgeBand = max(0.0, outerEdgeDistance)
-            let edgeBoostGain: CGFloat = 0.5 // up to +50% displacement at the edge, fades inside
+            let edgeBoostGain: CGFloat = 0.5
             let edgeBoost: CGFloat
             if edgeBand > 0 {
                 let t = max(0.0, min(1.0, (edgeBand - distToEdge) / edgeBand))
-                let eased = t * t * (3 - 2 * t) // smoothstep
+                let eased = t * t * (3 - 2 * t)
                 edgeBoost = 1.0 + eased * edgeBoostGain
             } else {
                 edgeBoost = 1.0
