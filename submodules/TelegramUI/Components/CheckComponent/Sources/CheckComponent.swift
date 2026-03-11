@@ -5,6 +5,11 @@ import ComponentFlow
 import CheckNode
 
 public final class CheckComponent: Component {
+    public enum Mode {
+        case option
+        case checkbox
+    }
+    
     public struct Theme: Equatable {
         public let backgroundColor: UIColor
         public let strokeColor: UIColor
@@ -40,21 +45,27 @@ public final class CheckComponent: Component {
         }
     }
     
+    let mode: Mode
     let theme: Theme
     let size: CGSize
     let selected: Bool
     
     public init(
+        mode: Mode = .option,
         theme: Theme,
         size: CGSize = CGSize(width: 22.0, height: 22.0),
         selected: Bool
     ) {
+        self.mode = mode
         self.theme = theme
         self.size = size
         self.selected = selected
     }
     
     public static func ==(lhs: CheckComponent, rhs: CheckComponent) -> Bool {
+        if lhs.mode != rhs.mode {
+            return false
+        }
         if lhs.theme != rhs.theme {
             return false
         }

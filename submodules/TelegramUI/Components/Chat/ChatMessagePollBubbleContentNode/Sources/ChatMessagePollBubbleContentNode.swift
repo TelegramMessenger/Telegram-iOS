@@ -21,6 +21,7 @@ import ShimmeringLinkNode
 
 private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
     let timestamp: Double
+    let isRectangle: Bool
     let staticColor: UIColor
     let animatedColor: UIColor
     let fillColor: UIColor
@@ -29,8 +30,9 @@ private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
     let isChecked: Bool?
     let checkTransition: ChatMessagePollOptionRadioNodeCheckTransition?
     
-    init(timestamp: Double, staticColor: UIColor, animatedColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, offset: Double?, isChecked: Bool?, checkTransition: ChatMessagePollOptionRadioNodeCheckTransition?) {
+    init(timestamp: Double, isRectangle: Bool, staticColor: UIColor, animatedColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, offset: Double?, isChecked: Bool?, checkTransition: ChatMessagePollOptionRadioNodeCheckTransition?) {
         self.timestamp = timestamp
+        self.isRectangle = isRectangle
         self.staticColor = staticColor
         self.animatedColor = animatedColor
         self.fillColor = fillColor
@@ -58,6 +60,7 @@ private final class ChatMessagePollOptionRadioNodeCheckTransition {
 }
 
 private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
+    private(set) var isRectangle = false
     private(set) var staticColor: UIColor?
     private(set) var animatedColor: UIColor?
     private(set) var fillColor: UIColor?
@@ -116,9 +119,13 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
         }
     }
     
-    func update(staticColor: UIColor, animatedColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, isSelectable: Bool, isAnimating: Bool) {
+    func update(isRectangle: Bool, staticColor: UIColor, animatedColor: UIColor, fillColor: UIColor, foregroundColor: UIColor, isSelectable: Bool, isAnimating: Bool) {
         var updated = false
         let shouldHaveBeenAnimating = self.shouldBeAnimating
+        if self.isRectangle != isRectangle {
+            self.isRectangle = isRectangle
+            updated = true
+        }
         if !staticColor.isEqual(self.staticColor) {
             self.staticColor = staticColor
             updated = true
@@ -191,7 +198,7 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
             if let startTime = self.startTime {
                 offset = CACurrentMediaTime() - startTime
             }
-            return ChatMessagePollOptionRadioNodeParameters(timestamp: timestamp, staticColor: staticColor, animatedColor: animatedColor, fillColor: fillColor, foregroundColor: foregroundColor, offset: offset, isChecked: self.isChecked, checkTransition: self.checkTransition)
+            return ChatMessagePollOptionRadioNodeParameters(timestamp: timestamp, isRectangle: self.isRectangle, staticColor: staticColor, animatedColor: animatedColor, fillColor: fillColor, foregroundColor: foregroundColor, offset: offset, isChecked: self.isChecked, checkTransition: self.checkTransition)
         } else {
             return nil
         }
@@ -295,12 +302,23 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
                 
                 if abs(diameter - 1.0) > CGFloat.ulpOfOne {
                     context.setStrokeColor(parameters.staticColor.cgColor)
-                    context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: bounds.width - 1.0, height: bounds.height - 1.0)))
+                    
+                    if parameters.isRectangle{
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: bounds.size).insetBy(dx: 0.5, dy: 0.5), cornerRadius: 6.0).cgPath)
+                        context.strokePath()
+                    } else {
+                        context.strokeEllipse(in: CGRect(origin: .zero, size: bounds.size).insetBy(dx: 0.5, dy: 0.5))
+                    }
                 }
                 
                 if !diameter.isZero {
                     context.setFillColor(parameters.fillColor.withAlphaComponent(alpha).cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(x: (bounds.width - diameter) / 2.0, y: (bounds.width - diameter) / 2.0), size: CGSize(width: diameter, height: diameter)))
+                    if parameters.isRectangle{
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: (bounds.width - diameter) / 2.0, y: (bounds.width - diameter) / 2.0), size: CGSize(width: diameter, height: diameter)), cornerRadius: 6.0).cgPath)
+                        context.fillPath()
+                    } else {
+                        context.fillEllipse(in: CGRect(origin: CGPoint(x: (bounds.width - diameter) / 2.0, y: (bounds.width - diameter) / 2.0), size: CGSize(width: diameter, height: diameter)))
+                    }
                     
                     context.setLineWidth(1.5)
                     context.setLineJoin(.round)
@@ -336,7 +354,13 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
                 }
             } else {
                 context.setStrokeColor(parameters.staticColor.cgColor)
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: bounds.width - 1.0, height: bounds.height - 1.0)))
+                
+                if parameters.isRectangle {
+                    context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: bounds.size).insetBy(dx: 0.5, dy: 0.5), cornerRadius: 6.0).cgPath)
+                    context.strokePath()
+                } else {
+                    context.strokeEllipse(in: CGRect(origin: .zero, size: bounds.size).insetBy(dx: 0.5, dy: 0.5))
+                }
             }
         }
     }
@@ -694,7 +718,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                         let radioSize: CGFloat = 22.0
                         radioNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: CGSize(width: radioSize, height: radioSize))
-                        radioNode.update(staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, fillColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable, isAnimating: inProgress)
+                        radioNode.update(isRectangle: poll.kind == .poll(multipleAnswers: true), staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, fillColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable, isAnimating: inProgress)
                     } else if let radioNode = node.radioNode {
                         node.radioNode = nil
                         if animated {
@@ -1301,7 +1325,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 inner: for optionVoters in voters {
                                     if optionVoters.opaqueIdentifier == poll.options[i].opaqueIdentifier {
                                         optionVoterCount[i] = optionVoters.count
-                                        maxOptionVoterCount = max(maxOptionVoterCount, optionVoters.count)
+                                        //TODO:correct
+                                        maxOptionVoterCount = max(maxOptionVoterCount, optionVoters.count ?? 0)
                                         break inner
                                     }
                                 }
