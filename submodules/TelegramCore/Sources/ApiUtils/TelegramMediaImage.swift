@@ -44,6 +44,9 @@ func telegramMediaImageFromApiPhoto(_ photo: Api.Photo, video: Api.Document? = n
             if hasStickers {
                 imageFlags.insert(.hasStickers)
             }
+            if video != nil {
+                imageFlags.insert(.isLivePhoto)
+            }
             
             var videoRepresentations: [TelegramMediaImage.VideoRepresentation] = []
             var emojiMarkup: TelegramMediaImage.EmojiMarkup?

@@ -141,13 +141,15 @@ public extension Api {
             public var flags: Int32
             public var id: Api.InputPhoto
             public var ttlSeconds: Int32?
-            public init(flags: Int32, id: Api.InputPhoto, ttlSeconds: Int32?) {
+            public var video: Api.InputDocument?
+            public init(flags: Int32, id: Api.InputPhoto, ttlSeconds: Int32?, video: Api.InputDocument?) {
                 self.flags = flags
                 self.id = id
                 self.ttlSeconds = ttlSeconds
+                self.video = video
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputMediaPhoto", [("flags", self.flags as Any), ("id", self.id as Any), ("ttlSeconds", self.ttlSeconds as Any)])
+                return ("inputMediaPhoto", [("flags", self.flags as Any), ("id", self.id as Any), ("ttlSeconds", self.ttlSeconds as Any), ("video", self.video as Any)])
             }
         }
         public class Cons_inputMediaPhotoExternal: TypeConstructorDescription {
@@ -167,17 +169,21 @@ public extension Api {
             public var flags: Int32
             public var poll: Api.Poll
             public var correctAnswers: [Buffer]?
+            public var attachedMedia: Api.InputMedia?
             public var solution: String?
             public var solutionEntities: [Api.MessageEntity]?
-            public init(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?) {
+            public var solutionMedia: Api.InputMedia?
+            public init(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, attachedMedia: Api.InputMedia?, solution: String?, solutionEntities: [Api.MessageEntity]?, solutionMedia: Api.InputMedia?) {
                 self.flags = flags
                 self.poll = poll
                 self.correctAnswers = correctAnswers
+                self.attachedMedia = attachedMedia
                 self.solution = solution
                 self.solutionEntities = solutionEntities
+                self.solutionMedia = solutionMedia
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputMediaPoll", [("flags", self.flags as Any), ("poll", self.poll as Any), ("correctAnswers", self.correctAnswers as Any), ("solution", self.solution as Any), ("solutionEntities", self.solutionEntities as Any)])
+                return ("inputMediaPoll", [("flags", self.flags as Any), ("poll", self.poll as Any), ("correctAnswers", self.correctAnswers as Any), ("attachedMedia", self.attachedMedia as Any), ("solution", self.solution as Any), ("solutionEntities", self.solutionEntities as Any), ("solutionMedia", self.solutionMedia as Any)])
             }
         }
         public class Cons_inputMediaStakeDice: TypeConstructorDescription {
@@ -431,12 +437,15 @@ public extension Api {
                 break
             case .inputMediaPhoto(let _data):
                 if boxed {
-                    buffer.appendInt32(-1279654347)
+                    buffer.appendInt32(-475053004)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.id.serialize(buffer, true)
                 if Int(_data.flags) & Int(1 << 0) != 0 {
                     serializeInt32(_data.ttlSeconds!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    _data.video!.serialize(buffer, true)
                 }
                 break
             case .inputMediaPhotoExternal(let _data):
@@ -451,7 +460,7 @@ public extension Api {
                 break
             case .inputMediaPoll(let _data):
                 if boxed {
-                    buffer.appendInt32(261416433)
+                    buffer.appendInt32(-1229194966)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.poll.serialize(buffer, true)
@@ -462,6 +471,9 @@ public extension Api {
                         serializeBytes(item, buffer: buffer, boxed: false)
                     }
                 }
+                if Int(_data.flags) & Int(1 << 3) != 0 {
+                    _data.attachedMedia!.serialize(buffer, true)
+                }
                 if Int(_data.flags) & Int(1 << 1) != 0 {
                     serializeString(_data.solution!, buffer: buffer, boxed: false)
                 }
@@ -471,6 +483,9 @@ public extension Api {
                     for item in _data.solutionEntities! {
                         item.serialize(buffer, true)
                     }
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    _data.solutionMedia!.serialize(buffer, true)
                 }
                 break
             case .inputMediaStakeDice(let _data):
@@ -590,11 +605,11 @@ public extension Api {
             case .inputMediaPaidMedia(let _data):
                 return ("inputMediaPaidMedia", [("flags", _data.flags as Any), ("starsAmount", _data.starsAmount as Any), ("extendedMedia", _data.extendedMedia as Any), ("payload", _data.payload as Any)])
             case .inputMediaPhoto(let _data):
-                return ("inputMediaPhoto", [("flags", _data.flags as Any), ("id", _data.id as Any), ("ttlSeconds", _data.ttlSeconds as Any)])
+                return ("inputMediaPhoto", [("flags", _data.flags as Any), ("id", _data.id as Any), ("ttlSeconds", _data.ttlSeconds as Any), ("video", _data.video as Any)])
             case .inputMediaPhotoExternal(let _data):
                 return ("inputMediaPhotoExternal", [("flags", _data.flags as Any), ("url", _data.url as Any), ("ttlSeconds", _data.ttlSeconds as Any)])
             case .inputMediaPoll(let _data):
-                return ("inputMediaPoll", [("flags", _data.flags as Any), ("poll", _data.poll as Any), ("correctAnswers", _data.correctAnswers as Any), ("solution", _data.solution as Any), ("solutionEntities", _data.solutionEntities as Any)])
+                return ("inputMediaPoll", [("flags", _data.flags as Any), ("poll", _data.poll as Any), ("correctAnswers", _data.correctAnswers as Any), ("attachedMedia", _data.attachedMedia as Any), ("solution", _data.solution as Any), ("solutionEntities", _data.solutionEntities as Any), ("solutionMedia", _data.solutionMedia as Any)])
             case .inputMediaStakeDice(let _data):
                 return ("inputMediaStakeDice", [("gameHash", _data.gameHash as Any), ("tonAmount", _data.tonAmount as Any), ("clientSeed", _data.clientSeed as Any)])
             case .inputMediaStory(let _data):
@@ -861,11 +876,18 @@ public extension Api {
             if Int(_1!) & Int(1 << 0) != 0 {
                 _3 = reader.readInt32()
             }
+            var _4: Api.InputDocument?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.InputDocument
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputMedia.inputMediaPhoto(Cons_inputMediaPhoto(flags: _1!, id: _2!, ttlSeconds: _3))
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputMedia.inputMediaPhoto(Cons_inputMediaPhoto(flags: _1!, id: _2!, ttlSeconds: _3, video: _4))
             }
             else {
                 return nil
@@ -903,23 +925,37 @@ public extension Api {
                     _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
                 }
             }
-            var _4: String?
-            if Int(_1!) & Int(1 << 1) != 0 {
-                _4 = parseString(reader)
+            var _4: Api.InputMedia?
+            if Int(_1!) & Int(1 << 3) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.InputMedia
+                }
             }
-            var _5: [Api.MessageEntity]?
+            var _5: String?
+            if Int(_1!) & Int(1 << 1) != 0 {
+                _5 = parseString(reader)
+            }
+            var _6: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 1) != 0 {
                 if let _ = reader.readInt32() {
-                    _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                    _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                }
+            }
+            var _7: Api.InputMedia?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                if let signature = reader.readInt32() {
+                    _7 = Api.parse(reader, signature: signature) as? Api.InputMedia
                 }
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputMedia.inputMediaPoll(Cons_inputMediaPoll(flags: _1!, poll: _2!, correctAnswers: _3, solution: _4, solutionEntities: _5))
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.InputMedia.inputMediaPoll(Cons_inputMediaPoll(flags: _1!, poll: _2!, correctAnswers: _3, attachedMedia: _4, solution: _5, solutionEntities: _6, solutionMedia: _7))
             }
             else {
                 return nil
