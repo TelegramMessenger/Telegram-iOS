@@ -617,16 +617,26 @@ public extension TelegramEngine {
             return EngineMessageReactionListContext(account: self.account, message: message, readStats: readStats, reaction: reaction)
         }
         
-        public func translate(text: String, toLang: String, entities: [MessageTextEntity] = [], tone: TranslationTone = .neutral) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
-            return _internal_translate(network: self.account.network, text: text, toLang: toLang, entities: entities, tone: tone)
+        public func translate(text: String, toLang: String, entities: [MessageTextEntity] = [], tone: TranslationTone = .neutral, messageId: EngineMessage.Id? = nil) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
+            if let messageId = messageId {
+                return self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                    return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+                }
+                |> castError(TranslationError.self)
+                |> mapToSignal { inputPeer in
+                    return _internal_translate(network: self.account.network, text: text, toLang: toLang, entities: entities, tone: tone, peer: inputPeer, messageId: messageId.id)
+                }
+            } else {
+                return _internal_translate(network: self.account.network, text: text, toLang: toLang, entities: entities, tone: tone)
+            }
         }
         
         public func translate(texts: [(String, [MessageTextEntity])], toLang: String, tone: TranslationTone = .neutral) -> Signal<[(String, [MessageTextEntity])], TranslationError> {
             return _internal_translateTexts(network: self.account.network, texts: texts, toLang: toLang, tone: tone)
         }
         
-        public func translateMessages(messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool) -> Signal<Never, TranslationError> {
-            return _internal_translateMessages(account: self.account, messageIds: messageIds, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: enableLocalIfPossible)
+        public func translateMessages(messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool, tone: TranslationTone = .neutral) -> Signal<Never, TranslationError> {
+            return _internal_translateMessages(account: self.account, messageIds: messageIds, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: enableLocalIfPossible, tone: tone)
         }
         
         public func togglePeerMessagesTranslationHidden(peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
