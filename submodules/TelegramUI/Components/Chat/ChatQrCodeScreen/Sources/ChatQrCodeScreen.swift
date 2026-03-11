@@ -883,7 +883,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDeleg
         self.scanButton.title = presentationData.strings.PeerInfo_QRCode_Scan
         self.scanButton.icon = UIImage(bundleImageName: "Settings/ScanQr")
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init()

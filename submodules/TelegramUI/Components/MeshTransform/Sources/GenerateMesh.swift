@@ -68,6 +68,310 @@ public struct DisplacementBezier {
     }
 }
 
+private struct GlassMeshCacheKey: Hashable {
+    var cornerRadius: CGFloat
+    var edgeDistance: CGFloat
+    var cornerResolution: Int
+    var outerEdgeDistance: CGFloat
+    var bezierX1: CGFloat
+    var bezierY1: CGFloat
+    var bezierX2: CGFloat
+    var bezierY2: CGFloat
+
+    init(cornerRadius: CGFloat, edgeDistance: CGFloat, cornerResolution: Int, outerEdgeDistance: CGFloat, bezier: DisplacementBezier) {
+        self.cornerRadius = cornerRadius
+        self.edgeDistance = edgeDistance
+        self.cornerResolution = cornerResolution
+        self.outerEdgeDistance = outerEdgeDistance
+        self.bezierX1 = bezier.x1
+        self.bezierY1 = bezier.y1
+        self.bezierX2 = bezier.x2
+        self.bezierY2 = bezier.y2
+    }
+}
+
+private struct GlassMeshTemplate {
+    struct VertexTemplate {
+        /// worldX = baseX + sizeScaleX * width
+        var baseX: CGFloat
+        var sizeScaleX: CGFloat
+        /// worldY = baseY + sizeScaleY * height
+        var baseY: CGFloat
+        var sizeScaleY: CGFloat
+        /// Unitless displacement (direction * weight * bezier * edgeBoost), range roughly -1...1
+        var dispX: CGFloat
+        var dispY: CGFloat
+        var depth: CGFloat
+    }
+
+    var vertices: ContiguousArray<VertexTemplate>
+    var faces: ContiguousArray<MeshTransform.Face>
+}
+
+private var glassMeshTemplateCache: [GlassMeshCacheKey: GlassMeshTemplate] = [:]
+
+private func instantiateGlassMesh(
+    from template: GlassMeshTemplate,
+    size: CGSize,
+    displacementMagnitudeU: CGFloat,
+    displacementMagnitudeV: CGFloat
+) -> MeshTransform {
+    let W = size.width
+    let H = size.height
+    let insetPoints: CGFloat = -1.0
+    let insetUOffset = insetPoints / W
+    let insetVOffset = insetPoints / H
+    let usableUNorm = (W - insetPoints * 2) / W
+    let usableVNorm = (H - insetPoints * 2) / H
+
+    let transform = MeshTransform()
+    for v in template.vertices {
+        let worldX = v.baseX + v.sizeScaleX * W
+        let worldY = v.baseY + v.sizeScaleY * H
+        let u = worldX / W
+        let vCoord = worldY / H
+        let mappedU = insetUOffset + u * usableUNorm
+        let mappedV = insetVOffset + vCoord * usableVNorm
+        let fromX = max(0.0, min(1.0, mappedU + v.dispX * displacementMagnitudeU))
+        let fromY = max(0.0, min(1.0, mappedV + v.dispY * displacementMagnitudeV))
+        transform.add(MeshTransform.Vertex(
+            from: CGPoint(x: fromX, y: fromY),
+            to: MeshTransform.Point3D(x: mappedU, y: mappedV, z: v.depth)
+        ))
+    }
+    for face in template.faces {
+        transform.add(face)
+    }
+    return transform
+}
+
+private func generateGlassMeshTemplate(
+    cornerRadius: CGFloat,
+    edgeDistance: CGFloat,
+    cornerResolution: Int,
+    outerEdgeDistance: CGFloat,
+    bezier: DisplacementBezier
+) -> GlassMeshTemplate {
+    let clampedRadius = cornerRadius
+
+    // Reference size for displacement computation (must be >= 2R per axis)
+    let refW = max(4 * clampedRadius, 100)
+    let refH = max(4 * clampedRadius, 100)
+
+    var vertices = ContiguousArray<GlassMeshTemplate.VertexTemplate>()
+    var faces = ContiguousArray<MeshTransform.Face>()
+    var vertexIndex: Int = 0
+
+    // Compute unitless displacement (direction * weight * bezier * edgeBoost) at reference size
+    func templateDisplacement(worldX: CGFloat, worldY: CGFloat) -> (CGFloat, CGFloat) {
+        let (rawDispX, rawDispY, sdf) = computeDisplacement(
+            x: worldX, y: worldY,
+            width: refW, height: refH,
+            cornerRadius: clampedRadius,
+            edgeDistance: edgeDistance,
+            bezier: bezier
+        )
+        let distToEdge = max(0.0, -sdf)
+        let edgeBand = max(0.0, outerEdgeDistance)
+        let edgeBoost: CGFloat
+        if edgeBand > 0 {
+            let t = max(0.0, min(1.0, (edgeBand - distToEdge) / edgeBand))
+            edgeBoost = 1.0 + t * t * (3 - 2 * t) * 0.5
+        } else {
+            edgeBoost = 1.0
+        }
+        return (rawDispX * edgeBoost, rawDispY * edgeBoost)
+    }
+
+    func addVertex(baseX: CGFloat, scaleX: CGFloat, baseY: CGFloat, scaleY: CGFloat, depth: CGFloat = 0) -> Int {
+        let worldX = baseX + scaleX * refW
+        let worldY = baseY + scaleY * refH
+        let (dispX, dispY) = templateDisplacement(worldX: worldX, worldY: worldY)
+        vertices.append(GlassMeshTemplate.VertexTemplate(
+            baseX: baseX, sizeScaleX: scaleX,
+            baseY: baseY, sizeScaleY: scaleY,
+            dispX: dispX, dispY: dispY, depth: depth
+        ))
+        let idx = vertexIndex
+        vertexIndex += 1
+        return idx
+    }
+
+    func addQuadFace(_ i0: Int, _ i1: Int, _ i2: Int, _ i3: Int) {
+        faces.append(MeshTransform.Face(
+            indices: (UInt32(i0), UInt32(i1), UInt32(i2), UInt32(i3)),
+            w: (0.0, 0.0, 0.0, 0.0)
+        ))
+    }
+
+    // Topology parameters (same formulas as generateGlassMesh)
+    let angularStepsBase = max(3, cornerResolution)
+    let angularSteps = angularStepsBase % 2 == 0 ? angularStepsBase : angularStepsBase + 1
+    let radialSteps = max(2, cornerResolution)
+    let horizontalSegments = max(2, cornerResolution / 2 + 1)
+    let verticalSegments = max(2, cornerResolution / 2 + 1)
+    let R = clampedRadius
+
+    func depthFactorsWithOuterBand(count: Int, band: CGFloat, maxRadius: CGFloat) -> [CGFloat] {
+        guard count > 0, maxRadius > 0 else { return [0, 1] }
+        let bandNorm = max(0, min(1, band / maxRadius))
+        let innerSegments = max(1, count - 1)
+        let innerMax = max(0, 1 - bandNorm)
+        var factors: [CGFloat] = (0...innerSegments).map { i in
+            innerMax * CGFloat(i) / CGFloat(innerSegments)
+        }
+        func appendUnique(_ value: CGFloat) {
+            if let last = factors.last, abs(last - value) < 1e-4 { return }
+            factors.append(value)
+        }
+        appendUnique(innerMax)
+        appendUnique(1.0)
+        return factors
+    }
+
+    let depthFactors = depthFactorsWithOuterBand(count: radialSteps, band: outerEdgeDistance, maxRadius: R)
+    let angularFactors = (0...angularSteps).map { CGFloat($0) / CGFloat(angularSteps) }
+    let outerToInner = depthFactors.reversed()
+
+    // Affine coefficient arrays for strip/grid positions
+    let topXCoeffs: [(base: CGFloat, scale: CGFloat)] = (0...horizontalSegments).map { i in
+        let t = CGFloat(i) / CGFloat(horizontalSegments)
+        return (base: R * (1 - 2 * t), scale: t)
+    }
+    let sideYCoeffs: [(base: CGFloat, scale: CGFloat)] = (0...verticalSegments).map { j in
+        let t = CGFloat(j) / CGFloat(verticalSegments)
+        return (base: R * (1 - 2 * t), scale: t)
+    }
+    let topYCoeffs: [(base: CGFloat, scale: CGFloat)] = outerToInner.map { factor in
+        (base: R * (1 - factor), scale: 0)
+    }
+    let bottomYCoeffs: [(base: CGFloat, scale: CGFloat)] = depthFactors.map { factor in
+        (base: -R * (1 - factor), scale: 1)
+    }
+    let leftXCoeffs: [(base: CGFloat, scale: CGFloat)] = outerToInner.map { factor in
+        (base: R * (1 - factor), scale: 0)
+    }
+    let rightXCoeffs: [(base: CGFloat, scale: CGFloat)] = depthFactors.map { factor in
+        (base: -R * (1 - factor), scale: 1)
+    }
+
+    // Build a grid of vertices from coefficient arrays and emit quad faces
+    func buildGridTemplate(
+        xCoeffs: [(base: CGFloat, scale: CGFloat)],
+        yCoeffs: [(base: CGFloat, scale: CGFloat)]
+    ) {
+        var indexGrid: [[Int]] = []
+        for yc in yCoeffs {
+            var row: [Int] = []
+            for xc in xCoeffs {
+                row.append(addVertex(baseX: xc.base, scaleX: xc.scale, baseY: yc.base, scaleY: yc.scale))
+            }
+            indexGrid.append(row)
+        }
+        let numRows = indexGrid.count - 1
+        let numCols = indexGrid.first!.count - 1
+        for row in 0..<numRows {
+            for col in 0..<numCols {
+                addQuadFace(
+                    indexGrid[row][col],
+                    indexGrid[row][col + 1],
+                    indexGrid[row + 1][col + 1],
+                    indexGrid[row + 1][col]
+                )
+            }
+        }
+    }
+
+    // Corner wedge template
+    func buildCornerTemplate(
+        centerBaseX: CGFloat, centerScaleX: CGFloat,
+        centerBaseY: CGFloat, centerScaleY: CGFloat,
+        startAngle: CGFloat, endAngle: CGFloat
+    ) {
+        let ringRadials = outerToInner.filter { $0 > 0 }
+        guard !ringRadials.isEmpty else { return }
+
+        var ringIndices: [[Int]] = []
+        for radial in ringRadials {
+            let r = R * radial
+            var row: [Int] = []
+            for t in angularFactors {
+                let angle = startAngle + (endAngle - startAngle) * t
+                let offsetX = r * cos(angle)
+                let offsetY = r * sin(angle)
+                row.append(addVertex(
+                    baseX: centerBaseX + offsetX, scaleX: centerScaleX,
+                    baseY: centerBaseY + offsetY, scaleY: centerScaleY
+                ))
+            }
+            ringIndices.append(row)
+        }
+
+        // Quad rings between concentric samples
+        for r in 0..<(ringIndices.count - 1) {
+            let outerRing = ringIndices[r]
+            let innerRing = ringIndices[r + 1]
+            for i in 0..<(outerRing.count - 1) {
+                addQuadFace(outerRing[i], outerRing[i + 1], innerRing[i + 1], innerRing[i])
+            }
+        }
+
+        // Center fan collapse (same logic as original)
+        if let innermostRing = ringIndices.last {
+            let ringSegments = innermostRing.count - 1
+            guard ringSegments >= 2 else { return }
+
+            let centerAnchor = addVertex(
+                baseX: centerBaseX, scaleX: centerScaleX,
+                baseY: centerBaseY, scaleY: centerScaleY,
+                depth: -0.02
+            )
+            let stride = 2
+            var i = 0
+            while i + 2 <= ringSegments {
+                addQuadFace(centerAnchor, innermostRing[i], innermostRing[i + 1], innermostRing[i + 2])
+                i += stride
+            }
+            if i < ringSegments {
+                addQuadFace(centerAnchor, innermostRing[ringSegments - 1], innermostRing[ringSegments], innermostRing[ringSegments])
+            }
+        }
+    }
+
+    // Edge strips
+    buildGridTemplate(xCoeffs: topXCoeffs, yCoeffs: topYCoeffs)
+    buildGridTemplate(xCoeffs: topXCoeffs, yCoeffs: bottomYCoeffs)
+    buildGridTemplate(xCoeffs: leftXCoeffs, yCoeffs: sideYCoeffs)
+    buildGridTemplate(xCoeffs: rightXCoeffs, yCoeffs: sideYCoeffs)
+
+    // Center patch
+    buildGridTemplate(xCoeffs: topXCoeffs, yCoeffs: sideYCoeffs)
+
+    // Corners
+    buildCornerTemplate(
+        centerBaseX: R, centerScaleX: 0,
+        centerBaseY: R, centerScaleY: 0,
+        startAngle: .pi, endAngle: 1.5 * .pi
+    )
+    buildCornerTemplate(
+        centerBaseX: -R, centerScaleX: 1,
+        centerBaseY: R, centerScaleY: 0,
+        startAngle: 1.5 * .pi, endAngle: 2 * .pi
+    )
+    buildCornerTemplate(
+        centerBaseX: -R, centerScaleX: 1,
+        centerBaseY: -R, centerScaleY: 1,
+        startAngle: .pi / 2, endAngle: 0
+    )
+    buildCornerTemplate(
+        centerBaseX: R, centerScaleX: 0,
+        centerBaseY: -R, centerScaleY: 1,
+        startAngle: .pi, endAngle: .pi / 2
+    )
+
+    return GlassMeshTemplate(vertices: vertices, faces: faces)
+}
+
 /// Computes signed distance from a point to the edge of a rounded rectangle.
 /// Returns negative inside, zero on edge, positive outside.
 /// All values in points.
@@ -132,123 +436,39 @@ public func roundedRectGradient(x: CGFloat, y: CGFloat, width: CGFloat, height: 
     return (nx, ny)
 }
 
-/// Generates a displacement map image as a signed distance field from rounded rect edges.
-/// - edgeDistance: The distance (in points) over which displacement is applied
-/// - R channel: X displacement (127 = neutral, 0 = max left, 255 = max right)
-/// - G channel: Y displacement (127 = neutral, 0 = max up, 255 = max down)
-/// - B channel: Unused (always 0)
-/// Displacement is maximum at the edge and fades linearly to zero at edgeDistance.
-/// Actual displacement magnitude is applied when sampling the map.
-public func generateDisplacementMap(size: CGSize, cornerRadius: CGFloat, edgeDistance: CGFloat, scale: CGFloat) -> CGImage? {
-    let width = Int(size.width * scale)
-    let height = Int(size.height * scale)
-
-    // Clamp corner radius
-    let maxCornerRadius = min(size.width, size.height) / 2.0
-    let clampedRadius = min(cornerRadius, maxCornerRadius)
-
-    // Create bitmap context
-    var pixelData = [UInt8](repeating: 0, count: width * height * 4)
-
-    for py in 0 ..< height {
-        for px in 0 ..< width {
-            // Convert pixel to point coordinates
-            let x = CGFloat(px) / scale
-            let y = CGFloat(py) / scale
-
-            // Get signed distance (negative inside, positive outside)
-            let sdf = roundedRectSDF(x: x, y: y, width: size.width, height: size.height, cornerRadius: clampedRadius)
-
-            // Get gradient (outward normal direction)
-            let (nx, ny) = roundedRectGradient(x: x, y: y, width: size.width, height: size.height, cornerRadius: clampedRadius)
-
-            // Inward normal (content moves away from edge, toward center)
-            let inwardX = -nx
-            let inwardY = -ny
-
-            // Distance from edge (positive inside the shape)
-            let distFromEdge = -sdf
-
-            // Weight: 1 at edge, 0 at edgeDistance (linear falloff)
-            let weight = max(0, min(1, 1.0 - distFromEdge / edgeDistance))
-
-            // Displacement modulated by distance from edge
-            let displacementX = inwardX * weight
-            let displacementY = inwardY * weight
-
-            // Encode in R/G: 127 = neutral, map -1..1 to 0..254
-            let r = UInt8(max(0, min(255, Int(127 + displacementX * 127))))
-            let g = UInt8(max(0, min(255, Int(127 + displacementY * 127))))
-
-            let idx = (py * width + px) * 4
-            pixelData[idx + 0] = r    // X displacement
-            pixelData[idx + 1] = g    // Y displacement
-            pixelData[idx + 2] = 0    // Unused
-            pixelData[idx + 3] = 255  // A
-        }
-    }
-
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    guard let context = CGContext(
-        data: &pixelData,
-        width: width,
-        height: height,
-        bitsPerComponent: 8,
-        bytesPerRow: width * 4,
-        space: colorSpace,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-    ) else {
-        return nil
-    }
-
-    return context.makeImage()
-}
-
-/// Samples displacement from a displacement map with bilinear interpolation and bezier easing
+/// Computes displacement at a point analytically using the rounded rect SDF.
 /// - Parameters:
-///   - x, y: Coordinates in the displacement map's pixel space
-///   - pixels: Pointer to displacement map pixel data
-///   - width, height: Displacement map dimensions
-///   - bytesPerRow, bytesPerPixel: Displacement map layout
-///   - bezier: Bezier control points for easing curve
-/// - Returns: Displacement (dx, dy) in range -1..1 with bezier easing applied
-public func sampleDisplacement(
+///   - x, y: Point coordinates in the shape's coordinate space
+///   - width, height: Dimensions of the rounded rectangle
+///   - cornerRadius: Already-clamped corner radius
+///   - edgeDistance: Distance (in points) over which displacement fades from edge inward
+///   - bezier: Bezier control points for easing the displacement magnitude
+/// - Returns: (dx, dy) displacement in range -1..1 with bezier easing, plus the raw SDF value
+public func computeDisplacement(
     x: CGFloat,
     y: CGFloat,
-    pixels: UnsafePointer<UInt8>,
-    width: Int,
-    height: Int,
-    bytesPerRow: Int,
-    bytesPerPixel: Int,
+    width: CGFloat,
+    height: CGFloat,
+    cornerRadius: CGFloat,
+    edgeDistance: CGFloat,
     bezier: DisplacementBezier
-) -> (dx: CGFloat, dy: CGFloat) {
-    let clampedX = max(0, min(CGFloat(width - 1), x))
-    let clampedY = max(0, min(CGFloat(height - 1), y))
+) -> (dx: CGFloat, dy: CGFloat, sdf: CGFloat) {
+    let sdf = roundedRectSDF(x: x, y: y, width: width, height: height, cornerRadius: cornerRadius)
+    let (nx, ny) = roundedRectGradient(x: x, y: y, width: width, height: height, cornerRadius: cornerRadius)
 
-    let x0 = Int(clampedX)
-    let y0 = Int(clampedY)
-    let x1 = min(x0 + 1, width - 1)
-    let y1 = min(y0 + 1, height - 1)
+    // Inward normal (content moves away from edge, toward center)
+    let inwardX = -nx
+    let inwardY = -ny
 
-    let fx = clampedX - CGFloat(x0)
-    let fy = clampedY - CGFloat(y0)
+    // Distance from edge (positive inside the shape)
+    let distFromEdge = -sdf
 
-    func sample(_ sx: Int, _ sy: Int) -> (r: CGFloat, g: CGFloat) {
-        let offset = sy * bytesPerRow + sx * bytesPerPixel
-        return (CGFloat(pixels[offset + 0]), CGFloat(pixels[offset + 1]))
-    }
+    // Weight: 1 at edge, 0 at edgeDistance inward (linear falloff)
+    let weight = max(0, min(1, 1.0 - distFromEdge / edgeDistance))
 
-    let c00 = sample(x0, y0)
-    let c10 = sample(x1, y0)
-    let c01 = sample(x0, y1)
-    let c11 = sample(x1, y1)
-
-    let r = (c00.r * (1 - fx) + c10.r * fx) * (1 - fy) + (c01.r * (1 - fx) + c11.r * fx) * fy
-    let g = (c00.g * (1 - fx) + c10.g * fx) * (1 - fy) + (c01.g * (1 - fx) + c11.g * fx) * fy
-
-    // Decode: 127 = neutral, map 0..254 to -1..1
-    var dx = (r - 127.0) / 127.0
-    var dy = (g - 127.0) / 127.0
+    // Displacement direction modulated by distance
+    var dx = inwardX * weight
+    var dy = inwardY * weight
 
     // Apply bezier easing to vector magnitude, preserving direction
     let mag = hypot(dx, dy)
@@ -259,7 +479,7 @@ public func sampleDisplacement(
         dy *= scale
     }
 
-    return (dx, dy)
+    return (dx, dy, sdf)
 }
 
 /// Generates a glass mesh with corner-aware topology.
@@ -268,10 +488,10 @@ public func sampleDisplacement(
 /// - 1 center patch
 /// Corner/edge seams share the same coordinates (but do not reuse vertices) so
 /// the neighbouring faces fit perfectly without T-junctions.
-public func generateGlassMeshFromDisplacementMap(
+public func generateGlassMesh(
     size: CGSize,
     cornerRadius: CGFloat,
-    displacementMap: CGImage,
+    edgeDistance: CGFloat,
     displacementMagnitudeU: CGFloat,
     displacementMagnitudeV: CGFloat,
     cornerResolution: Int,
@@ -279,18 +499,38 @@ public func generateGlassMeshFromDisplacementMap(
     bezier: DisplacementBezier,
     generateWireframe: Bool = false
 ) -> (mesh: MeshTransform, wireframe: CGPath?) {
-    guard let dispDataProvider = displacementMap.dataProvider,
-          let dispData = dispDataProvider.data,
-          let dispPixels = CFDataGetBytePtr(dispData) else {
-        return (mesh: MeshTransform(), wireframe: nil)
-    }
-
-    let dispWidth = displacementMap.width
-    let dispHeight = displacementMap.height
-    let dispBytesPerRow = displacementMap.bytesPerRow
-    let dispBytesPerPixel = displacementMap.bitsPerPixel / 8
-
     let clampedRadius = min(cornerRadius, min(size.width, size.height) / 2)
+
+    // Fast cached path (non-wireframe)
+    if !generateWireframe {
+        let key = GlassMeshCacheKey(
+            cornerRadius: clampedRadius,
+            edgeDistance: edgeDistance,
+            cornerResolution: cornerResolution,
+            outerEdgeDistance: outerEdgeDistance,
+            bezier: bezier
+        )
+        let template: GlassMeshTemplate
+        if let cached = glassMeshTemplateCache[key] {
+            template = cached
+        } else {
+            template = generateGlassMeshTemplate(
+                cornerRadius: clampedRadius,
+                edgeDistance: edgeDistance,
+                cornerResolution: cornerResolution,
+                outerEdgeDistance: outerEdgeDistance,
+                bezier: bezier
+            )
+            glassMeshTemplateCache[key] = template
+        }
+        let mesh = instantiateGlassMesh(
+            from: template,
+            size: size,
+            displacementMagnitudeU: displacementMagnitudeU,
+            displacementMagnitudeV: displacementMagnitudeV
+        )
+        return (mesh: mesh, wireframe: nil)
+    }
 
     let transform = MeshTransform()
     var wireframe: CGMutablePath?
@@ -311,7 +551,7 @@ public func generateGlassMeshFromDisplacementMap(
     let usableUNorm = usableWidth / size.width
     let usableVNorm = usableHeight / size.height
 
-    // Helper to sample displacement and create vertex
+    // Helper to compute displacement analytically and create vertex
     func makeVertex(u: CGFloat, v: CGFloat, depth: CGFloat = 0) -> (vertex: MeshTransform.Vertex, point: CGPoint) {
         let mappedU = insetUOffset + u * usableUNorm
         let mappedV = insetVOffset + v * usableVNorm
@@ -322,28 +562,27 @@ public func generateGlassMeshFromDisplacementMap(
             fromX = mappedU
             fromY = mappedV
         } else {
-            let (dispX, dispY) = sampleDisplacement(
-                x: mappedU * CGFloat(dispWidth - 1),
-                y: mappedV * CGFloat(dispHeight - 1),
-                pixels: dispPixels,
-                width: dispWidth,
-                height: dispHeight,
-                bytesPerRow: dispBytesPerRow,
-                bytesPerPixel: dispBytesPerPixel,
+            let worldX = insetPoints + u * usableWidth
+            let worldY = insetPoints + v * usableHeight
+
+            let (dispX, dispY, sdf) = computeDisplacement(
+                x: worldX,
+                y: worldY,
+                width: size.width,
+                height: size.height,
+                cornerRadius: clampedRadius,
+                edgeDistance: edgeDistance,
                 bezier: bezier
             )
 
-            // Slight boost near the edge to emphasize the outer strip (rounded-corner aware)
-            let worldX = insetPoints + u * usableWidth
-            let worldY = insetPoints + v * usableHeight
-            let sdf = roundedRectSDF(x: worldX, y: worldY, width: size.width, height: size.height, cornerRadius: clampedRadius)
-            let distToEdge = max(0.0, -sdf) // distance inside the rounded rect to the edge
+            // Edge boost: slight displacement boost near the silhouette
+            let distToEdge = max(0.0, -sdf)
             let edgeBand = max(0.0, outerEdgeDistance)
-            let edgeBoostGain: CGFloat = 0.5 // up to +50% displacement at the edge, fades inside
+            let edgeBoostGain: CGFloat = 0.5
             let edgeBoost: CGFloat
             if edgeBand > 0 {
                 let t = max(0.0, min(1.0, (edgeBand - distToEdge) / edgeBand))
-                let eased = t * t * (3 - 2 * t) // smoothstep
+                let eased = t * t * (3 - 2 * t)
                 edgeBoost = 1.0 + eased * edgeBoostGain
             } else {
                 edgeBoost = 1.0

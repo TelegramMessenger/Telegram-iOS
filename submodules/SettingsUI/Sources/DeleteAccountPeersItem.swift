@@ -166,7 +166,7 @@ class DeleteAccountPeersItemNode: ListViewItemNode, ItemListItemNode {
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
-        self.listView = ListView()
+        self.listView = ListViewImpl()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
             
         super.init(layerBacked: false)

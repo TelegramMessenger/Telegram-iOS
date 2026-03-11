@@ -256,7 +256,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         self.focusOnItemTag = focusOnItemTag
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string

@@ -138,7 +138,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = .clear // UIColor.black.withAlphaComponent(0.5)
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.alpha = 0.0
         self.listNode.accessibilityPageScrolledString = { row, count in

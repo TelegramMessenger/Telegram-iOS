@@ -144,7 +144,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.backgroundView = GlassBackgroundView()
         self.backgroundView.layer.anchorPoint = CGPoint()
         
-        self.listView = ListView()
+        self.listView = ListViewImpl()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
         self.listView.limitHitTestToNodes = true

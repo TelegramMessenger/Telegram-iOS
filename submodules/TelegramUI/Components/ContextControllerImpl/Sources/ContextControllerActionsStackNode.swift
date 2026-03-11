@@ -756,7 +756,7 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
         
         private var tip: ContextController.Tip?
         private var tipDisposable: Disposable?
-        private var tipNode: InnerTextSelectionTipContainerNode?
+        private(set) var tipNode: InnerTextSelectionTipContainerNode?
         private var tipSeparatorNode: ContextControllerActionsListSeparatorItemNode?
         
         private var hapticFeedback: HapticFeedback?
@@ -2377,6 +2377,9 @@ public final class ContextControllerActionsStackNodeImpl: ASDisplayNode, Context
         for itemContainer in self.itemContainers {
             if let tipNode = itemContainer.tipNode {
                 tipNode.animateIn()
+            }
+            if let topNode = itemContainer.node as? ContextControllerActionsListStackItem.Node {
+                topNode.tipNode?.animateIn()
             }
         }
     }

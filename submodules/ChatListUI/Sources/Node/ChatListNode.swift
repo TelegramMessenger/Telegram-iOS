@@ -1121,7 +1121,7 @@ public enum ChatListNodeEmptyState: Equatable {
     case empty(isLoading: Bool, hasArchiveInfo: Bool)
 }
 
-public final class ChatListNode: ListView {
+public final class ChatListNode: ListViewImpl {
     public enum OpenStoriesSubject {
         case peer(EnginePeer.Id)
         case archive

@@ -1788,7 +1788,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.selectedMessages = interaction.getSelectedMessageIds()
         self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
-        self.recentListNode = ListView()
+        self.recentListNode = ListViewImpl()
         self.recentListNode.preloadPages = false
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.recentListNode.accessibilityPageScrolledString = { row, count in
@@ -1799,7 +1799,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.shimmerNode.isUserInteractionEnabled = false
         self.shimmerNode.allowsGroupOpacity = true
             
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode?.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.listNode?.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string

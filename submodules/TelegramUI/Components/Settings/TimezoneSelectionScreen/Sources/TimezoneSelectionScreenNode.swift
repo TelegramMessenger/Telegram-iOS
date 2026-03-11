@@ -111,7 +111,7 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = .clear
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
@@ -392,7 +392,7 @@ final class TimezoneSelectionScreenNode: ViewControllerTracingNode {
         self.present = present
         self.push = push
 
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }

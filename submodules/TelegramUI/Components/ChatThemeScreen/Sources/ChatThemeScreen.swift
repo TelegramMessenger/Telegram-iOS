@@ -930,7 +930,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, ASScrollViewDelega
         
         self.otherButton = HighlightableButtonNode()
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init()

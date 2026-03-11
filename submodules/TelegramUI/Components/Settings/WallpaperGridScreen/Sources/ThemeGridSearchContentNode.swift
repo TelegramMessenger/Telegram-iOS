@@ -354,7 +354,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
-        self.recentListNode = ListView()
+        self.recentListNode = ListViewImpl()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.recentListNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string

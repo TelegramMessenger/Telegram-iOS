@@ -226,7 +226,7 @@ class WebSearchControllerNode: ASDisplayNode {
         self.gridNode = GridNode()
         self.gridNode.backgroundColor = theme.list.plainBackgroundColor
         
-        self.recentQueriesNode = ListView()
+        self.recentQueriesNode = ListViewImpl()
         self.recentQueriesNode.backgroundColor = theme.list.plainBackgroundColor
         self.recentQueriesNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string

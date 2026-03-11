@@ -260,6 +260,7 @@ func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterf
                 strings: chatPresentationInterfaceState.strings,
                 peerId: peerId,
                 kind: .monoforum,
+                location: chatPresentationInterfaceState.persistentData.topicListPanelLocation == .top ? .top : .bottom,
                 topicId: chatPresentationInterfaceState.chatLocation.threadId,
                 controller: { [weak interfaceInteraction] in
                     return interfaceInteraction?.chatController()
@@ -290,6 +291,7 @@ func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterf
                 strings: chatPresentationInterfaceState.strings,
                 peerId: peerId,
                 kind: .forum,
+                location: chatPresentationInterfaceState.persistentData.topicListPanelLocation == .top ? .top : .bottom,
                 topicId: chatPresentationInterfaceState.chatLocation.threadId,
                 controller: { [weak interfaceInteraction] in
                     return interfaceInteraction?.chatController()
@@ -322,6 +324,7 @@ func headerTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInterf
                 strings: chatPresentationInterfaceState.strings,
                 peerId: peerId,
                 kind: .botForum(forumManagedByUser: botInfo.flags.contains(.forumManagedByUser)),
+                location: chatPresentationInterfaceState.persistentData.topicListPanelLocation == .top ? .top : .bottom,
                 topicId: chatPresentationInterfaceState.chatLocation.threadId,
                 controller: { [weak interfaceInteraction] in
                     return interfaceInteraction?.chatController()
@@ -374,7 +377,7 @@ func floatingTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInte
                 theme: chatPresentationInterfaceState.theme,
                 preferClearGlass: chatPresentationInterfaceState.preferredGlassType == .clear,
                 strings: chatPresentationInterfaceState.strings,
-                location: topicListDisplayModeOnTheSide ? .side : .top,
+                location: .side,
                 peerId: peerId,
                 kind: .monoforum,
                 topicId: chatPresentationInterfaceState.chatLocation.threadId,
@@ -406,7 +409,7 @@ func floatingTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInte
                 theme: chatPresentationInterfaceState.theme,
                 preferClearGlass: chatPresentationInterfaceState.preferredGlassType == .clear,
                 strings: chatPresentationInterfaceState.strings,
-                location: topicListDisplayModeOnTheSide ? .side : .top,
+                location: .side,
                 peerId: peerId,
                 kind: .forum,
                 topicId: chatPresentationInterfaceState.chatLocation.threadId,
@@ -440,7 +443,7 @@ func floatingTopicsPanelForChatPresentationInterfaceState(_ chatPresentationInte
                 theme: chatPresentationInterfaceState.theme,
                 preferClearGlass: chatPresentationInterfaceState.preferredGlassType == .clear,
                 strings: chatPresentationInterfaceState.strings,
-                location: topicListDisplayModeOnTheSide ? .side : .top,
+                location: .side,
                 peerId: peerId,
                 kind: .botForum(forumManagedByUser: botInfo.flags.contains(.forumManagedByUser)),
                 topicId: chatPresentationInterfaceState.chatLocation.threadId,

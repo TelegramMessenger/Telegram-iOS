@@ -1732,8 +1732,8 @@ public extension TelegramEngine {
                             viewId: metric.id,
                             timeInViewMs: Int32(metric.timeInViewMs),
                             activeTimeInViewMs: Int32(metric.activeTimeInViewMs),
-                            heightToViewportRatioPermille: Int32(metric.heightToViewportRatio * 1000.0),
-                            seenRangeRatioPermille: Int32(metric.seenRangeRatio * 1000.0)
+                            heightToViewportRatioPermille: Int32((metric.heightToViewportRatio * 1000.0).rounded()),
+                            seenRangeRatioPermille: Int32((metric.seenRangeRatio * 1000.0).rounded())
                         ))
                     }
                 ))
@@ -1742,6 +1742,21 @@ public extension TelegramEngine {
                 }
                 |> ignoreValues
             }
+        }
+        
+        public func reportMusicListened(file: FileMediaReference, duration: Int) -> Signal<Never, NoError> {
+            guard let resource = file.media.resource as? CloudDocumentMediaResource, let reference = file.resourceReference(file.media.resource) as? TelegramCloudMediaResourceWithFileReference else {
+                return .complete()
+            }
+            return self.account.network.request(Api.functions.messages.reportMusicListen(id: .inputDocument(Api.InputDocument.Cons_inputDocument(
+                id: resource.fileId,
+                accessHash: resource.accessHash,
+                fileReference: Buffer(data: reference.fileReference ?? Data())
+            )), listenedDuration: Int32(clamping: duration)))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
         }
     }
 }

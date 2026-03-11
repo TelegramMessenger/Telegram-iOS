@@ -96,7 +96,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private let batchVideoContext: QueueLocalObject<BatchVideoRenderingContext>
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
-        self.listView = ListView()
+        self.listView = ListViewImpl()
         self.listView.isOpaque = true
         self.listView.backgroundColor = theme.list.plainBackgroundColor
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)

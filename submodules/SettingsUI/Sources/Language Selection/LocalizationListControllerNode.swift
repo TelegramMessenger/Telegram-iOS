@@ -167,7 +167,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = .clear
         
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
@@ -379,7 +379,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.push = push
         self.focusOnItemTag = focusOnItemTag
 
-        self.listNode = ListView()
+        self.listNode = ListViewImpl()
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.list.blocksBackgroundColor, direction: true)
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string

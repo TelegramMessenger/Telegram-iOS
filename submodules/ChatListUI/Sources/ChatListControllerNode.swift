@@ -1173,7 +1173,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     var cancelEditing: (() -> Void)?
     var dismissSearch: (() -> Void)?
     
-    let debugListView = ListView()
+    let debugListView = ListViewImpl()
     
     init(context: AccountContext, location: ChatListControllerLocation, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, controller: ChatListControllerImpl) {
         self.context = context
