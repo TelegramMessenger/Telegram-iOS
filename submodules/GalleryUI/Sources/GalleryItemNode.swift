@@ -14,6 +14,7 @@ open class GalleryItemNode: ASDisplayNode {
     public enum ActiveEdge {
         case left
         case right
+        case middle
     }
     
     private var _index: Int?
