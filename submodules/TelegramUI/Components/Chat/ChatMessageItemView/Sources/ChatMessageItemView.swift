@@ -388,8 +388,7 @@ public final class ChatMessageAccessibilityData {
                                     inner: for optionVoters in voters {
                                         if optionVoters.opaqueIdentifier == poll.options[i].opaqueIdentifier {
                                             optionVoterCount[i] = optionVoters.count
-                                            //TODO:correct
-                                            maxOptionVoterCount = max(maxOptionVoterCount, optionVoters.count ?? 0)
+                                            maxOptionVoterCount = max(maxOptionVoterCount, optionVoters.count)
                                             break inner
                                         }
                                     }

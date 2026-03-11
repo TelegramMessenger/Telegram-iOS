@@ -1020,19 +1020,6 @@ public extension Api {
                 return ("updateLangPackTooLong", [("langCode", self.langCode as Any)])
             }
         }
-        public class Cons_updateManagedBot: TypeConstructorDescription {
-            public var userId: Int64
-            public var botId: Int64
-            public var qts: Int32
-            public init(userId: Int64, botId: Int64, qts: Int32) {
-                self.userId = userId
-                self.botId = botId
-                self.qts = qts
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("updateManagedBot", [("userId", self.userId as Any), ("botId", self.botId as Any), ("qts", self.qts as Any)])
-            }
-        }
         public class Cons_updateMessageExtendedMedia: TypeConstructorDescription {
             public var peer: Api.Peer
             public var msgId: Int32
@@ -1950,7 +1937,6 @@ public extension Api {
         case updateLangPack(Cons_updateLangPack)
         case updateLangPackTooLong(Cons_updateLangPackTooLong)
         case updateLoginToken
-        case updateManagedBot(Cons_updateManagedBot)
         case updateMessageExtendedMedia(Cons_updateMessageExtendedMedia)
         case updateMessageID(Cons_updateMessageID)
         case updateMessagePoll(Cons_updateMessagePoll)
@@ -2776,14 +2762,6 @@ public extension Api {
                 if boxed {
                     buffer.appendInt32(1448076945)
                 }
-                break
-            case .updateManagedBot(let _data):
-                if boxed {
-                    buffer.appendInt32(1216408986)
-                }
-                serializeInt64(_data.userId, buffer: buffer, boxed: false)
-                serializeInt64(_data.botId, buffer: buffer, boxed: false)
-                serializeInt32(_data.qts, buffer: buffer, boxed: false)
                 break
             case .updateMessageExtendedMedia(let _data):
                 if boxed {
@@ -3613,8 +3591,6 @@ public extension Api {
                 return ("updateLangPackTooLong", [("langCode", _data.langCode as Any)])
             case .updateLoginToken:
                 return ("updateLoginToken", [])
-            case .updateManagedBot(let _data):
-                return ("updateManagedBot", [("userId", _data.userId as Any), ("botId", _data.botId as Any), ("qts", _data.qts as Any)])
             case .updateMessageExtendedMedia(let _data):
                 return ("updateMessageExtendedMedia", [("peer", _data.peer as Any), ("msgId", _data.msgId as Any), ("extendedMedia", _data.extendedMedia as Any)])
             case .updateMessageID(let _data):
@@ -5292,23 +5268,6 @@ public extension Api {
         }
         public static func parse_updateLoginToken(_ reader: BufferReader) -> Update? {
             return Api.Update.updateLoginToken
-        }
-        public static func parse_updateManagedBot(_ reader: BufferReader) -> Update? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateManagedBot(Cons_updateManagedBot(userId: _1!, botId: _2!, qts: _3!))
-            }
-            else {
-                return nil
-            }
         }
         public static func parse_updateMessageExtendedMedia(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?

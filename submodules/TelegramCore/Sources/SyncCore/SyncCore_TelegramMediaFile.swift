@@ -1059,7 +1059,11 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         }
         return false
     }
-        
+    
+    public var isLivePhoto: Bool {
+        return false
+    }
+    
     public var preloadSize: Int32? {
         for attribute in self.attributes {
             if case .Video(_, _, _, let preloadSize, _, _) = attribute {

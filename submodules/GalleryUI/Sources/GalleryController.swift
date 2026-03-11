@@ -232,67 +232,22 @@ public func galleryItemForEntry(
         return nil
     }
     
-    if let image = media as? TelegramMediaImage {
-        if let file = image.video {
-            let captureProtected = message.isCopyProtected() || message.containsSecretMedia || message.minAutoremoveOrClearTimeout == viewOnceTimeout || message.paidContent != nil || peerIsCopyProtected
-            
-            var originData = GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp)
-            if Namespaces.Message.allNonRegular.contains(message.id.namespace) {
-                originData = GalleryItemOriginData(title: nil, timestamp: nil)
-            }
-            
-            let content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: captureProtected, storeAfterDownload: generateStoreAfterDownload?(message, file))
-            
-            var entities: [MessageTextEntity] = []
-            for attribute in message.attributes {
-                if let attribute = attribute as? TextEntitiesMessageAttribute {
-                    entities = attribute.entities
-                    break
-                }
-            }
-            var text = galleryMessageCaptionText(message)
-            if let translateToLanguage, !text.isEmpty {
-                for attribute in message.attributes {
-                    if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
-                        text = attribute.text
-                        entities = attribute.entities
-                        break
-                    }
-                }
-            }
-            let caption = galleryCaptionStringWithAppliedEntities(context: context, text: text, entities: entities, message: message)
-            return UniversalVideoGalleryItem(
-                context: context,
-                presentationData: presentationData,
-                content: content,
-                originData: originData,
-                indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) },
-                contentInfo: .message(message, entry.mediaIndex),
-                caption: caption,
-                peerIsCopyProtected: peerIsCopyProtected,
-                playbackRate: playbackRate,
-                performAction: performAction,
-                openActionOptions: openActionOptions,
-                storeMediaPlaybackState: storeMediaPlaybackState,
-                present: present
-            )
-        } else {
-            return ChatImageGalleryItem(
-                context: context,
-                presentationData: presentationData,
-                message: message,
-                mediaIndex: entry.mediaIndex,
-                location: location,
-                translateToLanguage: translateToLanguage,
-                peerIsCopyProtected: peerIsCopyProtected,
-                isSecret: isSecret,
-                displayInfoOnTop: displayInfoOnTop,
-                performAction: performAction,
-                openActionOptions: openActionOptions,
-                sendSticker: sendSticker,
-                present: present
-            )
-        }
+    if let _ = media as? TelegramMediaImage {
+        return ChatImageGalleryItem(
+            context: context,
+            presentationData: presentationData,
+            message: message,
+            mediaIndex: entry.mediaIndex,
+            location: location,
+            translateToLanguage: translateToLanguage,
+            peerIsCopyProtected: peerIsCopyProtected,
+            isSecret: isSecret,
+            displayInfoOnTop: displayInfoOnTop,
+            performAction: performAction,
+            openActionOptions: openActionOptions,
+            sendSticker: sendSticker,
+            present: present
+        )
     } else if let file = media as? TelegramMediaFile {
         if file.isVideo {
             let content: UniversalVideoContent

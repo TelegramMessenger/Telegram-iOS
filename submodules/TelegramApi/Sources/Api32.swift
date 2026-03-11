@@ -55,50 +55,6 @@ public extension Api.bots {
     }
 }
 public extension Api.bots {
-    enum ExportedBotToken: TypeConstructorDescription {
-        public class Cons_exportedBotToken: TypeConstructorDescription {
-            public var token: String
-            public init(token: String) {
-                self.token = token
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedBotToken", [("token", self.token as Any)])
-            }
-        }
-        case exportedBotToken(Cons_exportedBotToken)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .exportedBotToken(let _data):
-                if boxed {
-                    buffer.appendInt32(1012971041)
-                }
-                serializeString(_data.token, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .exportedBotToken(let _data):
-                return ("exportedBotToken", [("token", _data.token as Any)])
-            }
-        }
-
-        public static func parse_exportedBotToken(_ reader: BufferReader) -> ExportedBotToken? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.bots.ExportedBotToken.exportedBotToken(Cons_exportedBotToken(token: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.bots {
     enum PopularAppBots: TypeConstructorDescription {
         public class Cons_popularAppBots: TypeConstructorDescription {
             public var flags: Int32

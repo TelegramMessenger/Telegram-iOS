@@ -1298,18 +1298,14 @@ public extension Api {
             }
         }
         public class Cons_messageMediaPoll: TypeConstructorDescription {
-            public var flags: Int32
             public var poll: Api.Poll
             public var results: Api.PollResults
-            public var attachedMedia: Api.MessageMedia?
-            public init(flags: Int32, poll: Api.Poll, results: Api.PollResults, attachedMedia: Api.MessageMedia?) {
-                self.flags = flags
+            public init(poll: Api.Poll, results: Api.PollResults) {
                 self.poll = poll
                 self.results = results
-                self.attachedMedia = attachedMedia
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("messageMediaPoll", [("flags", self.flags as Any), ("poll", self.poll as Any), ("results", self.results as Any), ("attachedMedia", self.attachedMedia as Any)])
+                return ("messageMediaPoll", [("poll", self.poll as Any), ("results", self.results as Any)])
             }
         }
         public class Cons_messageMediaStory: TypeConstructorDescription {
@@ -1585,14 +1581,10 @@ public extension Api {
                 break
             case .messageMediaPoll(let _data):
                 if boxed {
-                    buffer.appendInt32(2000637542)
+                    buffer.appendInt32(1272375192)
                 }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.poll.serialize(buffer, true)
                 _data.results.serialize(buffer, true)
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    _data.attachedMedia!.serialize(buffer, true)
-                }
                 break
             case .messageMediaStory(let _data):
                 if boxed {
@@ -1679,7 +1671,7 @@ public extension Api {
             case .messageMediaPhoto(let _data):
                 return ("messageMediaPhoto", [("flags", _data.flags as Any), ("photo", _data.photo as Any), ("ttlSeconds", _data.ttlSeconds as Any), ("video", _data.video as Any)])
             case .messageMediaPoll(let _data):
-                return ("messageMediaPoll", [("flags", _data.flags as Any), ("poll", _data.poll as Any), ("results", _data.results as Any), ("attachedMedia", _data.attachedMedia as Any)])
+                return ("messageMediaPoll", [("poll", _data.poll as Any), ("results", _data.results as Any)])
             case .messageMediaStory(let _data):
                 return ("messageMediaStory", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("id", _data.id as Any), ("story", _data.story as Any)])
             case .messageMediaToDo(let _data):
@@ -2029,28 +2021,18 @@ public extension Api {
             }
         }
         public static func parse_messageMediaPoll(_ reader: BufferReader) -> MessageMedia? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Poll?
+            var _1: Api.Poll?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Poll
+                _1 = Api.parse(reader, signature: signature) as? Api.Poll
             }
-            var _3: Api.PollResults?
+            var _2: Api.PollResults?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.PollResults
-            }
-            var _4: Api.MessageMedia?
-            if Int(_1!) & Int(1 << 0) != 0 {
-                if let signature = reader.readInt32() {
-                    _4 = Api.parse(reader, signature: signature) as? Api.MessageMedia
-                }
+                _2 = Api.parse(reader, signature: signature) as? Api.PollResults
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageMedia.messageMediaPoll(Cons_messageMediaPoll(flags: _1!, poll: _2!, results: _3!, attachedMedia: _4))
+            if _c1 && _c2 {
+                return Api.MessageMedia.messageMediaPoll(Cons_messageMediaPoll(poll: _1!, results: _2!))
             }
             else {
                 return nil

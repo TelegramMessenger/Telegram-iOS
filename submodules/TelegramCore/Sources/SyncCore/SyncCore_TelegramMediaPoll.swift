@@ -28,10 +28,10 @@ public struct TelegramMediaPollOption: Equatable, PostboxCoding {
 public struct TelegramMediaPollOptionVoters: Equatable, PostboxCoding {
     public let selected: Bool
     public let opaqueIdentifier: Data
-    public let count: Int32?
+    public let count: Int32
     public let isCorrect: Bool
     
-    public init(selected: Bool, opaqueIdentifier: Data, count: Int32?, isCorrect: Bool) {
+    public init(selected: Bool, opaqueIdentifier: Data, count: Int32, isCorrect: Bool) {
         self.selected = selected
         self.opaqueIdentifier = opaqueIdentifier
         self.count = count
@@ -41,18 +41,14 @@ public struct TelegramMediaPollOptionVoters: Equatable, PostboxCoding {
     public init(decoder: PostboxDecoder) {
         self.selected = decoder.decodeInt32ForKey("s", orElse: 0) != 0
         self.opaqueIdentifier = decoder.decodeDataForKey("i") ?? Data()
-        self.count = decoder.decodeOptionalInt32ForKey("c")
+        self.count = decoder.decodeInt32ForKey("c", orElse: 0)
         self.isCorrect = decoder.decodeInt32ForKey("cr", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.selected ? 1 : 0, forKey: "s")
         encoder.encodeData(self.opaqueIdentifier, forKey: "i")
-        if let count = self.count {
-            encoder.encodeInt32(count, forKey: "c")
-        } else {
-            encoder.encodeNil(forKey: "c")
-        }
+        encoder.encodeInt32(self.count, forKey: "c")
         encoder.encodeInt32(self.isCorrect ? 1 : 0, forKey: "cr")
     }
 }

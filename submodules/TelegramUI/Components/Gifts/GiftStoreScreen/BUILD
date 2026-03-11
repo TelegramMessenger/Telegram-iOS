@@ -50,7 +50,6 @@ swift_library(
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/ContextControllerImpl",
-        "//submodules/TelegramUI/Components/CheckComponent",
     ],
     visibility = [
         "//visibility:public",
