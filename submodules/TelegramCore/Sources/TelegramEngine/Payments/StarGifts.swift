@@ -3918,6 +3918,7 @@ private final class ResaleGiftsContextImpl {
     
     private var sorting: ResaleGiftsContext.Sorting = .value
     private var filterAttributes: [ResaleGiftsContext.Attribute] = []
+    private var starsOnly = false
     
     private var gifts: [StarGift] = []
     private var attributes: [StarGift.UniqueGift.Attribute] = []
@@ -3963,6 +3964,7 @@ private final class ResaleGiftsContextImpl {
         let network = self.account.network
         let postbox = self.account.postbox
         let sorting = self.sorting
+        let starsOnly = self.starsOnly
         let filterAttributes = self.filterAttributes
         let currentAttributesHash = self.attributesHash
         
@@ -3986,6 +3988,10 @@ private final class ResaleGiftsContextImpl {
                 flags |= (1 << 1)
             case .number:
                 flags |= (1 << 2)
+            }
+            
+            if starsOnly {
+                flags |= (1 << 5)
             }
           
             var apiAttributes: [Api.StarGiftAttributeId]?
@@ -4118,6 +4124,17 @@ private final class ResaleGiftsContextImpl {
         self.loadMore()
     }
     
+    func updateStarsOnly(_ starsOnly: Bool) {
+        guard self.starsOnly != starsOnly else {
+            return
+        }
+        self.starsOnly = starsOnly
+        self.dataState = .ready(canLoadMore: true, nextOffset: nil)
+        self.pushState()
+        
+        self.loadMore()
+    }
+    
     func buyStarGift(slug: String, peerId: EnginePeer.Id, price: CurrencyAmount?) -> Signal<Never, BuyStarGiftError> {
         var listingPrice: CurrencyAmount?
         if let gift = self.gifts.first(where: { gift in
@@ -4192,6 +4209,7 @@ private final class ResaleGiftsContextImpl {
         let state = ResaleGiftsContext.State(
             sorting: self.sorting,
             filterAttributes: self.filterAttributes,
+            starsOnly: self.starsOnly,
             gifts: self.gifts,
             attributes: self.attributes,
             attributeCount: self.attributeCount,
@@ -4224,6 +4242,7 @@ public final class ResaleGiftsContext {
         
         public var sorting: Sorting
         public var filterAttributes: [Attribute]
+        public var starsOnly: Bool
         public var gifts: [StarGift]
         public var attributes: [StarGift.UniqueGift.Attribute]
         public var attributeCount: [Attribute: Int32]
@@ -4278,6 +4297,12 @@ public final class ResaleGiftsContext {
     public func updateFilterAttributes(_ attributes: [ResaleGiftsContext.Attribute]) {
         self.impl.with { impl in
             impl.updateFilterAttributes(attributes)
+        }
+    }
+    
+    public func updateStarsOnly(_ starsOnly: Bool) {
+        self.impl.with { impl in
+            impl.updateStarsOnly(starsOnly)
         }
     }
     

@@ -776,50 +776,123 @@ public extension Api {
     }
 }
 public extension Api {
-    enum PollAnswer: TypeConstructorDescription {
-        public class Cons_pollAnswer: TypeConstructorDescription {
+    indirect enum PollAnswer: TypeConstructorDescription {
+        public class Cons_inputPollAnswer: TypeConstructorDescription {
+            public var flags: Int32
             public var text: Api.TextWithEntities
             public var option: Buffer
-            public init(text: Api.TextWithEntities, option: Buffer) {
+            public var media: Api.InputMedia?
+            public init(flags: Int32, text: Api.TextWithEntities, option: Buffer, media: Api.InputMedia?) {
+                self.flags = flags
                 self.text = text
                 self.option = option
+                self.media = media
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pollAnswer", [("text", self.text as Any), ("option", self.option as Any)])
+                return ("inputPollAnswer", [("flags", self.flags as Any), ("text", self.text as Any), ("option", self.option as Any), ("media", self.media as Any)])
             }
         }
+        public class Cons_pollAnswer: TypeConstructorDescription {
+            public var flags: Int32
+            public var text: Api.TextWithEntities
+            public var option: Buffer
+            public var media: Api.MessageMedia?
+            public init(flags: Int32, text: Api.TextWithEntities, option: Buffer, media: Api.MessageMedia?) {
+                self.flags = flags
+                self.text = text
+                self.option = option
+                self.media = media
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("pollAnswer", [("flags", self.flags as Any), ("text", self.text as Any), ("option", self.option as Any), ("media", self.media as Any)])
+            }
+        }
+        case inputPollAnswer(Cons_inputPollAnswer)
         case pollAnswer(Cons_pollAnswer)
 
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
             switch self {
-            case .pollAnswer(let _data):
+            case .inputPollAnswer(let _data):
                 if boxed {
-                    buffer.appendInt32(-15277366)
+                    buffer.appendInt32(-237102592)
                 }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.text.serialize(buffer, true)
                 serializeBytes(_data.option, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    _data.media!.serialize(buffer, true)
+                }
+                break
+            case .pollAnswer(let _data):
+                if boxed {
+                    buffer.appendInt32(-779361553)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                _data.text.serialize(buffer, true)
+                serializeBytes(_data.option, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    _data.media!.serialize(buffer, true)
+                }
                 break
             }
         }
 
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
+            case .inputPollAnswer(let _data):
+                return ("inputPollAnswer", [("flags", _data.flags as Any), ("text", _data.text as Any), ("option", _data.option as Any), ("media", _data.media as Any)])
             case .pollAnswer(let _data):
-                return ("pollAnswer", [("text", _data.text as Any), ("option", _data.option as Any)])
+                return ("pollAnswer", [("flags", _data.flags as Any), ("text", _data.text as Any), ("option", _data.option as Any), ("media", _data.media as Any)])
             }
         }
 
-        public static func parse_pollAnswer(_ reader: BufferReader) -> PollAnswer? {
-            var _1: Api.TextWithEntities?
+        public static func parse_inputPollAnswer(_ reader: BufferReader) -> PollAnswer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.TextWithEntities?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
             }
-            var _2: Buffer?
-            _2 = parseBytes(reader)
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            var _4: Api.InputMedia?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.InputMedia
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PollAnswer.pollAnswer(Cons_pollAnswer(text: _1!, option: _2!))
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PollAnswer.inputPollAnswer(Cons_inputPollAnswer(flags: _1!, text: _2!, option: _3!, media: _4))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_pollAnswer(_ reader: BufferReader) -> PollAnswer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            var _4: Api.MessageMedia?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                }
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PollAnswer.pollAnswer(Cons_pollAnswer(flags: _1!, text: _2!, option: _3!, media: _4))
             }
             else {
                 return nil
@@ -832,14 +905,16 @@ public extension Api {
         public class Cons_pollAnswerVoters: TypeConstructorDescription {
             public var flags: Int32
             public var option: Buffer
-            public var voters: Int32
-            public init(flags: Int32, option: Buffer, voters: Int32) {
+            public var voters: Int32?
+            public var recentVoters: [Api.Peer]?
+            public init(flags: Int32, option: Buffer, voters: Int32?, recentVoters: [Api.Peer]?) {
                 self.flags = flags
                 self.option = option
                 self.voters = voters
+                self.recentVoters = recentVoters
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pollAnswerVoters", [("flags", self.flags as Any), ("option", self.option as Any), ("voters", self.voters as Any)])
+                return ("pollAnswerVoters", [("flags", self.flags as Any), ("option", self.option as Any), ("voters", self.voters as Any), ("recentVoters", self.recentVoters as Any)])
             }
         }
         case pollAnswerVoters(Cons_pollAnswerVoters)
@@ -848,11 +923,20 @@ public extension Api {
             switch self {
             case .pollAnswerVoters(let _data):
                 if boxed {
-                    buffer.appendInt32(997055186)
+                    buffer.appendInt32(910500618)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeBytes(_data.option, buffer: buffer, boxed: false)
-                serializeInt32(_data.voters, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeInt32(_data.voters!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(_data.recentVoters!.count))
+                    for item in _data.recentVoters! {
+                        item.serialize(buffer, true)
+                    }
+                }
                 break
             }
         }
@@ -860,7 +944,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .pollAnswerVoters(let _data):
-                return ("pollAnswerVoters", [("flags", _data.flags as Any), ("option", _data.option as Any), ("voters", _data.voters as Any)])
+                return ("pollAnswerVoters", [("flags", _data.flags as Any), ("option", _data.option as Any), ("voters", _data.voters as Any), ("recentVoters", _data.recentVoters as Any)])
             }
         }
 
@@ -870,12 +954,21 @@ public extension Api {
             var _2: Buffer?
             _2 = parseBytes(reader)
             var _3: Int32?
-            _3 = reader.readInt32()
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _3 = reader.readInt32()
+            }
+            var _4: [Api.Peer]?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                if let _ = reader.readInt32() {
+                    _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.PollAnswerVoters.pollAnswerVoters(Cons_pollAnswerVoters(flags: _1!, option: _2!, voters: _3!))
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PollAnswerVoters.pollAnswerVoters(Cons_pollAnswerVoters(flags: _1!, option: _2!, voters: _3, recentVoters: _4))
             }
             else {
                 return nil
@@ -884,7 +977,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum PollResults: TypeConstructorDescription {
+    indirect enum PollResults: TypeConstructorDescription {
         public class Cons_pollResults: TypeConstructorDescription {
             public var flags: Int32
             public var results: [Api.PollAnswerVoters]?
@@ -892,16 +985,18 @@ public extension Api {
             public var recentVoters: [Api.Peer]?
             public var solution: String?
             public var solutionEntities: [Api.MessageEntity]?
-            public init(flags: Int32, results: [Api.PollAnswerVoters]?, totalVoters: Int32?, recentVoters: [Api.Peer]?, solution: String?, solutionEntities: [Api.MessageEntity]?) {
+            public var solutionMedia: Api.MessageMedia?
+            public init(flags: Int32, results: [Api.PollAnswerVoters]?, totalVoters: Int32?, recentVoters: [Api.Peer]?, solution: String?, solutionEntities: [Api.MessageEntity]?, solutionMedia: Api.MessageMedia?) {
                 self.flags = flags
                 self.results = results
                 self.totalVoters = totalVoters
                 self.recentVoters = recentVoters
                 self.solution = solution
                 self.solutionEntities = solutionEntities
+                self.solutionMedia = solutionMedia
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pollResults", [("flags", self.flags as Any), ("results", self.results as Any), ("totalVoters", self.totalVoters as Any), ("recentVoters", self.recentVoters as Any), ("solution", self.solution as Any), ("solutionEntities", self.solutionEntities as Any)])
+                return ("pollResults", [("flags", self.flags as Any), ("results", self.results as Any), ("totalVoters", self.totalVoters as Any), ("recentVoters", self.recentVoters as Any), ("solution", self.solution as Any), ("solutionEntities", self.solutionEntities as Any), ("solutionMedia", self.solutionMedia as Any)])
             }
         }
         case pollResults(Cons_pollResults)
@@ -910,7 +1005,7 @@ public extension Api {
             switch self {
             case .pollResults(let _data):
                 if boxed {
-                    buffer.appendInt32(2061444128)
+                    buffer.appendInt32(-1166298786)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 if Int(_data.flags) & Int(1 << 1) != 0 {
@@ -940,6 +1035,9 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                 }
+                if Int(_data.flags) & Int(1 << 5) != 0 {
+                    _data.solutionMedia!.serialize(buffer, true)
+                }
                 break
             }
         }
@@ -947,7 +1045,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .pollResults(let _data):
-                return ("pollResults", [("flags", _data.flags as Any), ("results", _data.results as Any), ("totalVoters", _data.totalVoters as Any), ("recentVoters", _data.recentVoters as Any), ("solution", _data.solution as Any), ("solutionEntities", _data.solutionEntities as Any)])
+                return ("pollResults", [("flags", _data.flags as Any), ("results", _data.results as Any), ("totalVoters", _data.totalVoters as Any), ("recentVoters", _data.recentVoters as Any), ("solution", _data.solution as Any), ("solutionEntities", _data.solutionEntities as Any), ("solutionMedia", _data.solutionMedia as Any)])
             }
         }
 
@@ -980,14 +1078,21 @@ public extension Api {
                     _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
                 }
             }
+            var _7: Api.MessageMedia?
+            if Int(_1!) & Int(1 << 5) != 0 {
+                if let signature = reader.readInt32() {
+                    _7 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PollResults.pollResults(Cons_pollResults(flags: _1!, results: _2, totalVoters: _3, recentVoters: _4, solution: _5, solutionEntities: _6))
+            let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.PollResults.pollResults(Cons_pollResults(flags: _1!, results: _2, totalVoters: _3, recentVoters: _4, solution: _5, solutionEntities: _6, solutionMedia: _7))
             }
             else {
                 return nil

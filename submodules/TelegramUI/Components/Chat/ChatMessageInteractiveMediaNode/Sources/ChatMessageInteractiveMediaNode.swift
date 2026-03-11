@@ -449,6 +449,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     public let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     
+    private var livePhotoIconNode: ASImageNode?
+    
     private var timestampContainerView: UIView?
     private var timestampMaskView: UIImageView?
     private var videoTimestampBackgroundLayer: SimpleLayer?
@@ -1330,6 +1332,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             }
                         }
                         
+                        var effectiveFile: TelegramMediaFile? = media as? TelegramMediaFile
                         if let story = media as? TelegramMediaStory {
                             isStory = true
                             
@@ -1507,6 +1510,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: resource)
                                 }
                             })
+                            
+                            effectiveFile = image.video
                         } else if let image = media as? TelegramMediaWebFile {
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
@@ -1525,7 +1530,57 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             }, cancel: {
                                 chatMessageWebFileCancelInteractiveFetch(account: context.account, image: image)
                             })
-                        } else if var file = media as? TelegramMediaFile {
+                        } else if let wallpaper = media as? WallpaperPreviewMedia {
+                            updateImageSignal = { synchronousLoad, _ in
+                                switch wallpaper.content {
+                                    case let .file(file, _, _, _, isTheme, _):
+                                        if isTheme {
+                                            return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .file(FileMediaReference.message(message: MessageReference(message), media: file)), synchronousLoad: synchronousLoad)
+                                        } else {
+                                            var representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference($0.resource)) })
+                                            if file.mimeType == "image/svg+xml" || file.mimeType == "application/x-tgwallpattern" {
+                                                representations.append(ImageRepresentationWithReference(representation: .init(dimensions: PixelDimensions(width: 1440, height: 2960), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource)))
+                                            }
+                                            if ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType) {
+                                                return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .screen)
+                                                |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
+                                                    if let value = value {
+                                                        return .single(value.generator)
+                                                    } else {
+                                                        return .complete()
+                                                    }
+                                                }
+                                            } else {
+                                                return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
+                                            }
+                                        }
+                                    case let .image(representations):
+                                        return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: nil, representations: representations.map({ ImageRepresentationWithReference(representation: $0, reference: .standalone(resource: $0.resource)) }), alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
+                                    case let .themeSettings(settings):
+                                        return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .settings(settings))
+                                    case let .color(color):
+                                        return solidColorImage(color)
+                                    case let .gradient(colors, rotation):
+                                        return gradientImage(colors.map(UIColor.init(rgb:)), rotation: rotation ?? 0)
+                                    case .emoticon:
+                                        return solidColorImage(.black)
+                                }
+                            }
+                            
+                            if case let .file(file, _, _, _, _, _) = wallpaper.content {
+                                updatedFetchControls = FetchControls(fetch: { manual in
+                                    if let strongSelf = self {
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).startStrict())
+                                    }
+                                }, cancel: {
+                                    messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                                })
+                            } else if case .themeSettings = wallpaper.content {
+                            } else {
+                                boundingSize = CGSize(width: boundingSize.width, height: boundingSize.width)
+                            }
+                        }
+                        if var file = effectiveFile {
                             var uploading = false
                             if file.resource is VideoLibraryMediaResource {
                                 uploading = true
@@ -1590,7 +1645,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
                                 }
                             } else {
-                                if let file = media as? TelegramMediaFile, let image = file.videoCover {
+                                if let _ = media as? TelegramMediaImage {
+                                    
+                                } else if let image = file.videoCover {
                                     updateImageSignal = { synchronousLoad, highQuality in
                                         return chatMessagePhoto(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
                                     }
@@ -1644,55 +1701,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
                                 }
                             })
-                        } else if let wallpaper = media as? WallpaperPreviewMedia {
-                            updateImageSignal = { synchronousLoad, _ in
-                                switch wallpaper.content {
-                                    case let .file(file, _, _, _, isTheme, _):
-                                        if isTheme {
-                                            return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .file(FileMediaReference.message(message: MessageReference(message), media: file)), synchronousLoad: synchronousLoad)
-                                        } else {
-                                            var representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference($0.resource)) })
-                                            if file.mimeType == "image/svg+xml" || file.mimeType == "application/x-tgwallpattern" {
-                                                representations.append(ImageRepresentationWithReference(representation: .init(dimensions: PixelDimensions(width: 1440, height: 2960), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource)))
-                                            }
-                                            if ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType) {
-                                                return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .screen)
-                                                |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
-                                                    if let value = value {
-                                                        return .single(value.generator)
-                                                    } else {
-                                                        return .complete()
-                                                    }
-                                                }
-                                            } else {
-                                                return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
-                                            }
-                                        }
-                                    case let .image(representations):
-                                        return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: nil, representations: representations.map({ ImageRepresentationWithReference(representation: $0, reference: .standalone(resource: $0.resource)) }), alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
-                                    case let .themeSettings(settings):
-                                        return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .settings(settings))
-                                    case let .color(color):
-                                        return solidColorImage(color)
-                                    case let .gradient(colors, rotation):
-                                        return gradientImage(colors.map(UIColor.init(rgb:)), rotation: rotation ?? 0)
-                                    case .emoticon:
-                                        return solidColorImage(.black)
-                                }
-                            }
-                            
-                            if case let .file(file, _, _, _, _, _) = wallpaper.content {
-                                updatedFetchControls = FetchControls(fetch: { manual in
-                                    if let strongSelf = self {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).startStrict())
-                                    }
-                                }, cancel: {
-                                    messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
-                                })
-                            } else if case .themeSettings = wallpaper.content {
-                            } else {
-                                boundingSize = CGSize(width: boundingSize.width, height: boundingSize.width)
-                            }
                         }
                     }
                     if !reloadMedia {
@@ -2024,9 +2032,27 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                             }
                                             videoNode.isHidden = !owns
                                             if owns {
+                                                videoNode.alpha = 1.0
                                                 videoNode.setBaseRate(1.0)
-                                                videoNode.continuePlayingWithoutSound()
+                                                if let image = strongSelf.media as? TelegramMediaImage, let _ = image.video {
+                                                    videoNode.continuePlayingWithoutSound(actionAtEnd: .stop)
+                                                } else {
+                                                    videoNode.continuePlayingWithoutSound()
+                                                }
                                             }
+                                        }
+                                    }
+                                    videoNode.playbackCompleted = { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        
+                                        if let image = self.media as? TelegramMediaImage, let _ = image.video {
+                                            self.videoNode?.alpha = 0.0
+                                            self.videoNode?.layer.allowsGroupOpacity = true
+                                            self.videoNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { _ in
+                                                self.videoNode?.allowsGroupOpacity = true
+                                            })
                                         }
                                     }
                                     strongSelf.videoContent = videoContent
@@ -2318,6 +2344,25 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         }
                                     }
                                 }))
+                            }
+                            
+                            if let image = strongSelf.media as? TelegramMediaImage, let _ = image.video {
+                                let livePhotoIconNode: ASImageNode
+                                if let current = strongSelf.livePhotoIconNode {
+                                    livePhotoIconNode = current
+                                } else {
+                                    livePhotoIconNode = ASImageNode()
+                                    livePhotoIconNode.image = UIImage(bundleImageName: "Chat/Message/LivePhoto")
+                                    strongSelf.pinchContainerNode.contentNode.addSubnode(livePhotoIconNode)
+                                    strongSelf.livePhotoIconNode = livePhotoIconNode
+                                }
+                                
+                                if let icon = livePhotoIconNode.image {
+                                    livePhotoIconNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 8.0), size: icon.size)
+                                }
+                            } else if let livePhotoIconNode = strongSelf.livePhotoIconNode {
+                                strongSelf.livePhotoIconNode = nil
+                                livePhotoIconNode.removeFromSupernode()
                             }
                             
                             if let updatedFetchControls = updatedFetchControls {
@@ -2890,7 +2935,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             }
         }
         
-        if let file = media as? TelegramMediaFile, file.isLivePhoto {
+        if let image = media as? TelegramMediaImage, let _ = image.video {
             badgeContent = nil
             if case .progress = state {   
             } else {
