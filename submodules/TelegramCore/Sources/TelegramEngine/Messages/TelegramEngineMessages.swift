@@ -256,6 +256,10 @@ public extension TelegramEngine {
             return _internal_requestClosePoll(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, messageId: messageId)
         }
 
+        public func addPollAnswer(messageId: MessageId, answerText: String, answerEntities: [MessageTextEntity] = []) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
+            return _internal_addPollAnswer(account: self.account, messageId: messageId, answerText: answerText, answerEntities: answerEntities)
+        }
+
         public func pollResults(messageId: MessageId, poll: TelegramMediaPoll) -> PollResultsContext {
             return PollResultsContext(account: self.account, messageId: messageId, poll: poll)
         }

@@ -4502,11 +4502,15 @@ func replayFinalState(
                             }
                             let kind: TelegramMediaPollKind
                             if (flags & (1 << 3)) != 0 {
-                                kind = .quiz
+                                kind = .quiz(multipleAnswers: (flags & (1 << 2)) != 0)
                             } else {
                                 kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                             }
-                            
+                            let openAnswers = (flags & (1 << 6)) != 0
+                            let revotingDisabled = (flags & (1 << 7)) != 0
+                            let shuffleAnswers = (flags & (1 << 8)) != 0
+                            let hideResultsUntilClose = (flags & (1 << 9)) != 0
+
                             let questionText: String
                             let questionEntities: [MessageTextEntity]
                             switch question {
@@ -4515,8 +4519,8 @@ func replayFinalState(
                                 questionText = text
                                 questionEntities = messageTextEntitiesFromApiEntities(entities)
                             }
-                            
-                            updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: poll.results, isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
+
+                            updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: poll.results, isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: poll.attachedMedia)
                         }
                     }
                     updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
