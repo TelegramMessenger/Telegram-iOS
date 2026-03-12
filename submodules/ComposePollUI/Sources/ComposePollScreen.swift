@@ -112,8 +112,18 @@ final class ComposePollScreenComponent: Component {
         }
     }
     
+    private final class ScrollView: UIScrollView {
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            return super.hitTest(point, with: event)
+        }
+        
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
-        private let scrollView: UIScrollView
+        private let scrollView: ScrollView
         
         private var reactionInput: ComponentView<Empty>?
         private let pollTextSection = ComponentView<Empty>()
@@ -176,7 +186,7 @@ final class ComposePollScreenComponent: Component {
         private var reorderingItem: (id: AnyHashable, snapshotView: UIView, backgroundView: UIView, initialPosition: CGPoint, position: CGPoint)?
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
+            self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.scrollsToTop = false
