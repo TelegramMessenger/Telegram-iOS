@@ -720,6 +720,19 @@ public extension Api {
                 return ("requestPeerTypeChat", [("flags", self.flags as Any), ("hasUsername", self.hasUsername as Any), ("forum", self.forum as Any), ("userAdminRights", self.userAdminRights as Any), ("botAdminRights", self.botAdminRights as Any)])
             }
         }
+        public class Cons_requestPeerTypeCreateBot: TypeConstructorDescription {
+            public var flags: Int32
+            public var suggestedName: String?
+            public var suggestedUsername: String?
+            public init(flags: Int32, suggestedName: String?, suggestedUsername: String?) {
+                self.flags = flags
+                self.suggestedName = suggestedName
+                self.suggestedUsername = suggestedUsername
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestPeerTypeCreateBot", [("flags", self.flags as Any), ("suggestedName", self.suggestedName as Any), ("suggestedUsername", self.suggestedUsername as Any)])
+            }
+        }
         public class Cons_requestPeerTypeUser: TypeConstructorDescription {
             public var flags: Int32
             public var bot: Api.Bool?
@@ -735,6 +748,7 @@ public extension Api {
         }
         case requestPeerTypeBroadcast(Cons_requestPeerTypeBroadcast)
         case requestPeerTypeChat(Cons_requestPeerTypeChat)
+        case requestPeerTypeCreateBot(Cons_requestPeerTypeCreateBot)
         case requestPeerTypeUser(Cons_requestPeerTypeUser)
 
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -772,6 +786,18 @@ public extension Api {
                     _data.botAdminRights!.serialize(buffer, true)
                 }
                 break
+            case .requestPeerTypeCreateBot(let _data):
+                if boxed {
+                    buffer.appendInt32(1048699000)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    serializeString(_data.suggestedName!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeString(_data.suggestedUsername!, buffer: buffer, boxed: false)
+                }
+                break
             case .requestPeerTypeUser(let _data):
                 if boxed {
                     buffer.appendInt32(1597737472)
@@ -793,6 +819,8 @@ public extension Api {
                 return ("requestPeerTypeBroadcast", [("flags", _data.flags as Any), ("hasUsername", _data.hasUsername as Any), ("userAdminRights", _data.userAdminRights as Any), ("botAdminRights", _data.botAdminRights as Any)])
             case .requestPeerTypeChat(let _data):
                 return ("requestPeerTypeChat", [("flags", _data.flags as Any), ("hasUsername", _data.hasUsername as Any), ("forum", _data.forum as Any), ("userAdminRights", _data.userAdminRights as Any), ("botAdminRights", _data.botAdminRights as Any)])
+            case .requestPeerTypeCreateBot(let _data):
+                return ("requestPeerTypeCreateBot", [("flags", _data.flags as Any), ("suggestedName", _data.suggestedName as Any), ("suggestedUsername", _data.suggestedUsername as Any)])
             case .requestPeerTypeUser(let _data):
                 return ("requestPeerTypeUser", [("flags", _data.flags as Any), ("bot", _data.bot as Any), ("premium", _data.premium as Any)])
             }
@@ -864,6 +892,27 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.RequestPeerType.requestPeerTypeChat(Cons_requestPeerTypeChat(flags: _1!, hasUsername: _2, forum: _3, userAdminRights: _4, botAdminRights: _5))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_requestPeerTypeCreateBot(_ reader: BufferReader) -> RequestPeerType? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 1) != 0 {
+                _2 = parseString(reader)
+            }
+            var _3: String?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _3 = parseString(reader)
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.RequestPeerType.requestPeerTypeCreateBot(Cons_requestPeerTypeCreateBot(flags: _1!, suggestedName: _2, suggestedUsername: _3))
             }
             else {
                 return nil

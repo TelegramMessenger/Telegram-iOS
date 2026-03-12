@@ -226,6 +226,50 @@ public extension Api.bots {
         }
     }
 }
+public extension Api.bots {
+    enum RequestedButton: TypeConstructorDescription {
+        public class Cons_requestedButton: TypeConstructorDescription {
+            public var requestId: String
+            public init(requestId: String) {
+                self.requestId = requestId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("requestedButton", [("requestId", self.requestId as Any)])
+            }
+        }
+        case requestedButton(Cons_requestedButton)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .requestedButton(let _data):
+                if boxed {
+                    buffer.appendInt32(569994407)
+                }
+                serializeString(_data.requestId, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .requestedButton(let _data):
+                return ("requestedButton", [("requestId", _data.requestId as Any)])
+            }
+        }
+
+        public static func parse_requestedButton(_ reader: BufferReader) -> RequestedButton? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.bots.RequestedButton.requestedButton(Cons_requestedButton(requestId: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
 public extension Api.channels {
     enum AdminLogResults: TypeConstructorDescription {
         public class Cons_adminLogResults: TypeConstructorDescription {
@@ -1764,69 +1808,6 @@ public extension Api.fragment {
             else {
                 return nil
             }
-        }
-    }
-}
-public extension Api.help {
-    enum AppConfig: TypeConstructorDescription {
-        public class Cons_appConfig: TypeConstructorDescription {
-            public var hash: Int32
-            public var config: Api.JSONValue
-            public init(hash: Int32, config: Api.JSONValue) {
-                self.hash = hash
-                self.config = config
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("appConfig", [("hash", self.hash as Any), ("config", self.config as Any)])
-            }
-        }
-        case appConfig(Cons_appConfig)
-        case appConfigNotModified
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .appConfig(let _data):
-                if boxed {
-                    buffer.appendInt32(-585598930)
-                }
-                serializeInt32(_data.hash, buffer: buffer, boxed: false)
-                _data.config.serialize(buffer, true)
-                break
-            case .appConfigNotModified:
-                if boxed {
-                    buffer.appendInt32(2094949405)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .appConfig(let _data):
-                return ("appConfig", [("hash", _data.hash as Any), ("config", _data.config as Any)])
-            case .appConfigNotModified:
-                return ("appConfigNotModified", [])
-            }
-        }
-
-        public static func parse_appConfig(_ reader: BufferReader) -> AppConfig? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.JSONValue?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.JSONValue
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.help.AppConfig.appConfig(Cons_appConfig(hash: _1!, config: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_appConfigNotModified(_ reader: BufferReader) -> AppConfig? {
-            return Api.help.AppConfig.appConfigNotModified
         }
     }
 }

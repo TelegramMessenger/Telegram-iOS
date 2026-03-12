@@ -1,4 +1,196 @@
 public extension Api.phone {
+    enum GroupCallStreamChannels: TypeConstructorDescription {
+        public class Cons_groupCallStreamChannels: TypeConstructorDescription {
+            public var channels: [Api.GroupCallStreamChannel]
+            public init(channels: [Api.GroupCallStreamChannel]) {
+                self.channels = channels
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("groupCallStreamChannels", [("channels", self.channels as Any)])
+            }
+        }
+        case groupCallStreamChannels(Cons_groupCallStreamChannels)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .groupCallStreamChannels(let _data):
+                if boxed {
+                    buffer.appendInt32(-790330702)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.channels.count))
+                for item in _data.channels {
+                    item.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .groupCallStreamChannels(let _data):
+                return ("groupCallStreamChannels", [("channels", _data.channels as Any)])
+            }
+        }
+
+        public static func parse_groupCallStreamChannels(_ reader: BufferReader) -> GroupCallStreamChannels? {
+            var _1: [Api.GroupCallStreamChannel]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallStreamChannel.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.phone.GroupCallStreamChannels.groupCallStreamChannels(Cons_groupCallStreamChannels(channels: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.phone {
+    enum GroupCallStreamRtmpUrl: TypeConstructorDescription {
+        public class Cons_groupCallStreamRtmpUrl: TypeConstructorDescription {
+            public var url: String
+            public var key: String
+            public init(url: String, key: String) {
+                self.url = url
+                self.key = key
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("groupCallStreamRtmpUrl", [("url", self.url as Any), ("key", self.key as Any)])
+            }
+        }
+        case groupCallStreamRtmpUrl(Cons_groupCallStreamRtmpUrl)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .groupCallStreamRtmpUrl(let _data):
+                if boxed {
+                    buffer.appendInt32(767505458)
+                }
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                serializeString(_data.key, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .groupCallStreamRtmpUrl(let _data):
+                return ("groupCallStreamRtmpUrl", [("url", _data.url as Any), ("key", _data.key as Any)])
+            }
+        }
+
+        public static func parse_groupCallStreamRtmpUrl(_ reader: BufferReader) -> GroupCallStreamRtmpUrl? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.phone.GroupCallStreamRtmpUrl.groupCallStreamRtmpUrl(Cons_groupCallStreamRtmpUrl(url: _1!, key: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.phone {
+    enum GroupParticipants: TypeConstructorDescription {
+        public class Cons_groupParticipants: TypeConstructorDescription {
+            public var count: Int32
+            public var participants: [Api.GroupCallParticipant]
+            public var nextOffset: String
+            public var chats: [Api.Chat]
+            public var users: [Api.User]
+            public var version: Int32
+            public init(count: Int32, participants: [Api.GroupCallParticipant], nextOffset: String, chats: [Api.Chat], users: [Api.User], version: Int32) {
+                self.count = count
+                self.participants = participants
+                self.nextOffset = nextOffset
+                self.chats = chats
+                self.users = users
+                self.version = version
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("groupParticipants", [("count", self.count as Any), ("participants", self.participants as Any), ("nextOffset", self.nextOffset as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("version", self.version as Any)])
+            }
+        }
+        case groupParticipants(Cons_groupParticipants)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .groupParticipants(let _data):
+                if boxed {
+                    buffer.appendInt32(-193506890)
+                }
+                serializeInt32(_data.count, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.participants.count))
+                for item in _data.participants {
+                    item.serialize(buffer, true)
+                }
+                serializeString(_data.nextOffset, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.chats.count))
+                for item in _data.chats {
+                    item.serialize(buffer, true)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.users.count))
+                for item in _data.users {
+                    item.serialize(buffer, true)
+                }
+                serializeInt32(_data.version, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .groupParticipants(let _data):
+                return ("groupParticipants", [("count", _data.count as Any), ("participants", _data.participants as Any), ("nextOffset", _data.nextOffset as Any), ("chats", _data.chats as Any), ("users", _data.users as Any), ("version", _data.version as Any)])
+            }
+        }
+
+        public static func parse_groupParticipants(_ reader: BufferReader) -> GroupParticipants? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.GroupCallParticipant]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipant.self)
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.phone.GroupParticipants.groupParticipants(Cons_groupParticipants(count: _1!, participants: _2!, nextOffset: _3!, chats: _4!, users: _5!, version: _6!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.phone {
     enum JoinAsPeers: TypeConstructorDescription {
         public class Cons_joinAsPeers: TypeConstructorDescription {
             public var peers: [Api.Peer]
@@ -1717,146 +1909,6 @@ public extension Api.stories {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.stories.AllStories.allStoriesNotModified(Cons_allStoriesNotModified(flags: _1!, state: _2!, stealthMode: _3!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.stories {
-    enum CanSendStoryCount: TypeConstructorDescription {
-        public class Cons_canSendStoryCount: TypeConstructorDescription {
-            public var countRemains: Int32
-            public init(countRemains: Int32) {
-                self.countRemains = countRemains
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("canSendStoryCount", [("countRemains", self.countRemains as Any)])
-            }
-        }
-        case canSendStoryCount(Cons_canSendStoryCount)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .canSendStoryCount(let _data):
-                if boxed {
-                    buffer.appendInt32(-1014513586)
-                }
-                serializeInt32(_data.countRemains, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .canSendStoryCount(let _data):
-                return ("canSendStoryCount", [("countRemains", _data.countRemains as Any)])
-            }
-        }
-
-        public static func parse_canSendStoryCount(_ reader: BufferReader) -> CanSendStoryCount? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.stories.CanSendStoryCount.canSendStoryCount(Cons_canSendStoryCount(countRemains: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.stories {
-    enum FoundStories: TypeConstructorDescription {
-        public class Cons_foundStories: TypeConstructorDescription {
-            public var flags: Int32
-            public var count: Int32
-            public var stories: [Api.FoundStory]
-            public var nextOffset: String?
-            public var chats: [Api.Chat]
-            public var users: [Api.User]
-            public init(flags: Int32, count: Int32, stories: [Api.FoundStory], nextOffset: String?, chats: [Api.Chat], users: [Api.User]) {
-                self.flags = flags
-                self.count = count
-                self.stories = stories
-                self.nextOffset = nextOffset
-                self.chats = chats
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("foundStories", [("flags", self.flags as Any), ("count", self.count as Any), ("stories", self.stories as Any), ("nextOffset", self.nextOffset as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
-            }
-        }
-        case foundStories(Cons_foundStories)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .foundStories(let _data):
-                if boxed {
-                    buffer.appendInt32(-488736969)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeInt32(_data.count, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.stories.count))
-                for item in _data.stories {
-                    item.serialize(buffer, true)
-                }
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    serializeString(_data.nextOffset!, buffer: buffer, boxed: false)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.chats.count))
-                for item in _data.chats {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .foundStories(let _data):
-                return ("foundStories", [("flags", _data.flags as Any), ("count", _data.count as Any), ("stories", _data.stories as Any), ("nextOffset", _data.nextOffset as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
-            }
-        }
-
-        public static func parse_foundStories(_ reader: BufferReader) -> FoundStories? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.FoundStory]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.FoundStory.self)
-            }
-            var _4: String?
-            if Int(_1!) & Int(1 << 0) != 0 {
-                _4 = parseString(reader)
-            }
-            var _5: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _6: [Api.User]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.stories.FoundStories.foundStories(Cons_foundStories(flags: _1!, count: _2!, stories: _3!, nextOffset: _4, chats: _5!, users: _6!))
             }
             else {
                 return nil

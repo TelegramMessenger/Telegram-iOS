@@ -2573,13 +2573,14 @@ public extension Api.functions.bots {
     }
 }
 public extension Api.functions.bots {
-    static func createBot(name: String, username: String, managerId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
+    static func createBot(flags: Int32, name: String, username: String, managerId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1656313365)
+        buffer.appendInt32(-441352405)
+        serializeInt32(flags, buffer: buffer, boxed: false)
         serializeString(name, buffer: buffer, boxed: false)
         serializeString(username, buffer: buffer, boxed: false)
         managerId.serialize(buffer, true)
-        return (FunctionDescription(name: "bots.createBot", parameters: [("name", String(describing: name)), ("username", String(describing: username)), ("managerId", String(describing: managerId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.User? in
+        return (FunctionDescription(name: "bots.createBot", parameters: [("flags", String(describing: flags)), ("name", String(describing: name)), ("username", String(describing: username)), ("managerId", String(describing: managerId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.User? in
             let reader = BufferReader(buffer)
             var result: Api.User?
             if let signature = reader.readInt32() {
@@ -2771,6 +2772,22 @@ public extension Api.functions.bots {
     }
 }
 public extension Api.functions.bots {
+    static func getRequestedWebViewButton(bot: Api.InputUser, requestId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.KeyboardButton>) {
+        let buffer = Buffer()
+        buffer.appendInt32(-1295431495)
+        bot.serialize(buffer, true)
+        serializeString(requestId, buffer: buffer, boxed: false)
+        return (FunctionDescription(name: "bots.getRequestedWebViewButton", parameters: [("bot", String(describing: bot)), ("requestId", String(describing: requestId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.KeyboardButton? in
+            let reader = BufferReader(buffer)
+            var result: Api.KeyboardButton?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.KeyboardButton
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.bots {
     static func invokeWebViewCustomMethod(bot: Api.InputUser, customMethod: String, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.DataJSON>) {
         let buffer = Buffer()
         buffer.appendInt32(142591463)
@@ -2823,6 +2840,22 @@ public extension Api.functions.bots {
             var result: Api.Bool?
             if let signature = reader.readInt32() {
                 result = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.bots {
+    static func requestWebViewButton(userId: Api.InputUser, button: Api.KeyboardButton) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.bots.RequestedButton>) {
+        let buffer = Buffer()
+        buffer.appendInt32(832742238)
+        userId.serialize(buffer, true)
+        button.serialize(buffer, true)
+        return (FunctionDescription(name: "bots.requestWebViewButton", parameters: [("userId", String(describing: userId)), ("button", String(describing: button))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.bots.RequestedButton? in
+            let reader = BufferReader(buffer)
+            var result: Api.bots.RequestedButton?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.bots.RequestedButton
             }
             return result
         })
@@ -8831,18 +8864,24 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func sendBotRequestedPeer(peer: Api.InputPeer, msgId: Int32, buttonId: Int32, requestedPeers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func sendBotRequestedPeer(flags: Int32, peer: Api.InputPeer, msgId: Int32?, requestId: String?, buttonId: Int32, requestedPeers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1850552224)
+        buffer.appendInt32(-1662773304)
+        serializeInt32(flags, buffer: buffer, boxed: false)
         peer.serialize(buffer, true)
-        serializeInt32(msgId, buffer: buffer, boxed: false)
+        if Int(flags) & Int(1 << 0) != 0 {
+            serializeInt32(msgId!, buffer: buffer, boxed: false)
+        }
+        if Int(flags) & Int(1 << 1) != 0 {
+            serializeString(requestId!, buffer: buffer, boxed: false)
+        }
         serializeInt32(buttonId, buffer: buffer, boxed: false)
         buffer.appendInt32(481674261)
         buffer.appendInt32(Int32(requestedPeers.count))
         for item in requestedPeers {
             item.serialize(buffer, true)
         }
-        return (FunctionDescription(name: "messages.sendBotRequestedPeer", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("buttonId", String(describing: buttonId)), ("requestedPeers", String(describing: requestedPeers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        return (FunctionDescription(name: "messages.sendBotRequestedPeer", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("requestId", String(describing: requestId)), ("buttonId", String(describing: buttonId)), ("requestedPeers", String(describing: requestedPeers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {
