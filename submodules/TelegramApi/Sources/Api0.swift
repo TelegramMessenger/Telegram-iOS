@@ -610,6 +610,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1281329567] = { return Api.MessageAction.parse_messageActionGroupCallScheduled($0) }
     dict[-1615153660] = { return Api.MessageAction.parse_messageActionHistoryClear($0) }
     dict[1345295095] = { return Api.MessageAction.parse_messageActionInviteToGroupCall($0) }
+    dict[375414334] = { return Api.MessageAction.parse_messageActionManagedBotCreated($0) }
     dict[-1333866363] = { return Api.MessageAction.parse_messageActionNewCreatorPending($0) }
     dict[1042781114] = { return Api.MessageAction.parse_messageActionNoForwardsRequest($0) }
     dict[-1082301070] = { return Api.MessageAction.parse_messageActionNoForwardsToggle($0) }
@@ -898,6 +899,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1917633461] = { return Api.ReportResult.parse_reportResultReported($0) }
     dict[865857388] = { return Api.RequestPeerType.parse_requestPeerTypeBroadcast($0) }
     dict[-906990053] = { return Api.RequestPeerType.parse_requestPeerTypeChat($0) }
+    dict[1048699000] = { return Api.RequestPeerType.parse_requestPeerTypeCreateBot($0) }
     dict[1597737472] = { return Api.RequestPeerType.parse_requestPeerTypeUser($0) }
     dict[-1952185372] = { return Api.RequestedPeer.parse_requestedPeerChannel($0) }
     dict[1929860175] = { return Api.RequestedPeer.parse_requestedPeerChat($0) }
@@ -1353,6 +1355,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1012971041] = { return Api.bots.ExportedBotToken.parse_exportedBotToken($0) }
     dict[428978491] = { return Api.bots.PopularAppBots.parse_popularAppBots($0) }
     dict[212278628] = { return Api.bots.PreviewInfo.parse_previewInfo($0) }
+    dict[569994407] = { return Api.bots.RequestedButton.parse_requestedButton($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
@@ -2485,6 +2488,8 @@ public extension Api {
         case let _1 as Api.bots.PopularAppBots:
             _1.serialize(buffer, boxed)
         case let _1 as Api.bots.PreviewInfo:
+            _1.serialize(buffer, boxed)
+        case let _1 as Api.bots.RequestedButton:
             _1.serialize(buffer, boxed)
         case let _1 as Api.channels.AdminLogResults:
             _1.serialize(buffer, boxed)

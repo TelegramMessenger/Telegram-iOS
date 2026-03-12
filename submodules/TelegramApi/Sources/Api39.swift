@@ -1,4 +1,144 @@
 public extension Api.stories {
+    enum CanSendStoryCount: TypeConstructorDescription {
+        public class Cons_canSendStoryCount: TypeConstructorDescription {
+            public var countRemains: Int32
+            public init(countRemains: Int32) {
+                self.countRemains = countRemains
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("canSendStoryCount", [("countRemains", self.countRemains as Any)])
+            }
+        }
+        case canSendStoryCount(Cons_canSendStoryCount)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .canSendStoryCount(let _data):
+                if boxed {
+                    buffer.appendInt32(-1014513586)
+                }
+                serializeInt32(_data.countRemains, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .canSendStoryCount(let _data):
+                return ("canSendStoryCount", [("countRemains", _data.countRemains as Any)])
+            }
+        }
+
+        public static func parse_canSendStoryCount(_ reader: BufferReader) -> CanSendStoryCount? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.stories.CanSendStoryCount.canSendStoryCount(Cons_canSendStoryCount(countRemains: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.stories {
+    enum FoundStories: TypeConstructorDescription {
+        public class Cons_foundStories: TypeConstructorDescription {
+            public var flags: Int32
+            public var count: Int32
+            public var stories: [Api.FoundStory]
+            public var nextOffset: String?
+            public var chats: [Api.Chat]
+            public var users: [Api.User]
+            public init(flags: Int32, count: Int32, stories: [Api.FoundStory], nextOffset: String?, chats: [Api.Chat], users: [Api.User]) {
+                self.flags = flags
+                self.count = count
+                self.stories = stories
+                self.nextOffset = nextOffset
+                self.chats = chats
+                self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("foundStories", [("flags", self.flags as Any), ("count", self.count as Any), ("stories", self.stories as Any), ("nextOffset", self.nextOffset as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            }
+        }
+        case foundStories(Cons_foundStories)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .foundStories(let _data):
+                if boxed {
+                    buffer.appendInt32(-488736969)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt32(_data.count, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.stories.count))
+                for item in _data.stories {
+                    item.serialize(buffer, true)
+                }
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    serializeString(_data.nextOffset!, buffer: buffer, boxed: false)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.chats.count))
+                for item in _data.chats {
+                    item.serialize(buffer, true)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.users.count))
+                for item in _data.users {
+                    item.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .foundStories(let _data):
+                return ("foundStories", [("flags", _data.flags as Any), ("count", _data.count as Any), ("stories", _data.stories as Any), ("nextOffset", _data.nextOffset as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+            }
+        }
+
+        public static func parse_foundStories(_ reader: BufferReader) -> FoundStories? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.FoundStory]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.FoundStory.self)
+            }
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                _4 = parseString(reader)
+            }
+            var _5: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.stories.FoundStories.foundStories(Cons_foundStories(flags: _1!, count: _2!, stories: _3!, nextOffset: _4, chats: _5!, users: _6!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.stories {
     enum PeerStories: TypeConstructorDescription {
         public class Cons_peerStories: TypeConstructorDescription {
             public var stories: Api.PeerStories

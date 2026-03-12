@@ -20,15 +20,23 @@ public enum TranslationTone: String {
     case formal
 }
 
-func _internal_translate(network: Network, text: String, toLang: String, entities: [MessageTextEntity] = [], tone: TranslationTone = .neutral) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
+func _internal_translate(network: Network, text: String, toLang: String, entities: [MessageTextEntity] = [], tone: TranslationTone = .neutral, peer: Api.InputPeer? = nil, messageId: Int32? = nil) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
     var flags: Int32 = 0
-    flags |= (1 << 1)
-    
+
     if tone != .neutral {
         flags |= (1 << 2)
     }
 
-    return network.request(Api.functions.messages.translateText(flags: flags, peer: nil, id: nil, text: [.textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary())))], toLang: toLang, tone: tone.rawValue))
+    let apiText: [Api.TextWithEntities]?
+    if peer != nil && messageId != nil {
+        flags |= (1 << 0)
+        apiText = nil
+    } else {
+        flags |= (1 << 1)
+        apiText = [.textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary())))]
+    }
+
+    return network.request(Api.functions.messages.translateText(flags: flags, peer: peer, id: messageId.flatMap { [$0] }, text: apiText, toLang: toLang, tone: tone.rawValue))
     |> mapError { error -> TranslationError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded
@@ -105,10 +113,10 @@ func _internal_translateTexts(network: Network, texts: [(String, [MessageTextEnt
     }
 }
 
-func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool) -> Signal<Never, TranslationError> {
+func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool, tone: TranslationTone = .neutral) -> Signal<Never, TranslationError> {
     var signals: [Signal<Void, TranslationError>] = []
     for (peerId, messageIds) in messagesIdsGroupedByPeerId(messageIds) {
-        signals.append(_internal_translateMessagesByPeerId(account: account, peerId: peerId, messageIds: messageIds, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: enableLocalIfPossible))
+        signals.append(_internal_translateMessagesByPeerId(account: account, peerId: peerId, messageIds: messageIds, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: enableLocalIfPossible, tone: tone))
     }
     return combineLatest(signals)
     |> ignoreValues
@@ -120,7 +128,7 @@ public protocol ExperimentalInternalTranslationService: AnyObject {
 
 public var engineExperimentalInternalTranslationService: ExperimentalInternalTranslationService?
 
-private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool) -> Signal<Void, TranslationError> {
+private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool, tone: TranslationTone = .neutral) -> Signal<Void, TranslationError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer?, [Message]) in
         return (transaction.getPeer(peerId).flatMap(apiInputPeer), messageIds.compactMap({ transaction.getMessage($0) }))
     }
@@ -162,9 +170,12 @@ private func _internal_translateMessagesByPeerId(account: Account, peerId: Engin
         
         var flags: Int32 = 0
         flags |= (1 << 0)
-        
+        if tone != .neutral {
+            flags |= (1 << 2)
+        }
+
         let id: [Int32] = messageIds.map { $0.id }
-        
+
         let msgs: Signal<Api.messages.TranslatedText?, TranslationError>
         if id.isEmpty {
             msgs = .single(nil)
@@ -205,7 +216,7 @@ private func _internal_translateMessagesByPeerId(account: Account, peerId: Engin
                     }
                 }
             } else {
-                msgs = account.network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang, tone: nil))
+                msgs = account.network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang, tone: tone != .neutral ? tone.rawValue : nil))
                 |> map(Optional.init)
                 |> mapError { error -> TranslationError in
                     if error.errorDescription.hasPrefix("FLOOD_WAIT") {

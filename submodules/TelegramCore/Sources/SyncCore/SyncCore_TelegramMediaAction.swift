@@ -304,7 +304,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case groupCreatorChange(GroupCreatorChange)
     case copyProtectionToggle(previousValue: Bool, newValue: Bool)
     case copyProtectionRequest(hasExpired: Bool, previousValue: Bool, newValue: Bool)
-    
+    case managedBotCreated(botId: PeerId)
+
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
         switch rawValue {
@@ -481,6 +482,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .copyProtectionToggle(previousValue: decoder.decodeBoolForKey("previousValue", orElse: false), newValue: decoder.decodeBoolForKey("newValue", orElse: false))
         case 61:
             self = .copyProtectionRequest(hasExpired: decoder.decodeBoolForKey("hasExpired", orElse: false), previousValue: decoder.decodeBoolForKey("previousValue", orElse: false), newValue: decoder.decodeBoolForKey("newValue", orElse: false))
+        case 62:
+            self = .managedBotCreated(botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(decoder.decodeInt64ForKey("botId", orElse: 0))))
         default:
             self = .unknown
         }
@@ -984,6 +987,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeBool(hasExpired, forKey: "hasExpired")
             encoder.encodeBool(previousValue, forKey: "previousValue")
             encoder.encodeBool(newValue, forKey: "newValue")
+        case let .managedBotCreated(botId):
+            encoder.encodeInt32(62, forKey: "_rawValue")
+            encoder.encodeInt64(botId.toInt64(), forKey: "botId")
         }
     }
     
@@ -1042,6 +1048,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             return conferenceCall.otherParticipants
         case let .groupCreatorChange(groupCreatorChange):
             return [groupCreatorChange.targetPeerId]
+        case let .managedBotCreated(botId):
+            return [botId]
         default:
             return []
         }

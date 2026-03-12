@@ -242,6 +242,9 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             switch action {
             case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionGiftStars, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionGiveawayLaunch, .messageActionGiveawayResults, .messageActionBoostApply, .messageActionRequestedPeerSentMe, .messageActionStarGift, .messageActionStarGiftUnique, .messageActionPaidMessagesRefunded, .messageActionPaidMessagesPrice, .messageActionTodoCompletions, .messageActionTodoAppendTasks, .messageActionSuggestedPostApproval, .messageActionGiftTon, .messageActionSuggestedPostSuccess, .messageActionSuggestedPostRefund, .messageActionSuggestBirthday, .messageActionStarGiftPurchaseOffer, .messageActionStarGiftPurchaseOfferDeclined, .messageActionNoForwardsToggle, .messageActionNoForwardsRequest:
                     break
+                case let .messageActionManagedBotCreated(messageActionManagedBotCreated):
+                    let botId = messageActionManagedBotCreated.botId
+                    result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)))
                 case let .messageActionChannelMigrateFrom(messageActionChannelMigrateFromData):
                     let chatId = messageActionChannelMigrateFromData.chatId
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)))
@@ -458,11 +461,16 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 }
                 let kind: TelegramMediaPollKind
                 if (flags & (1 << 3)) != 0 {
-                    kind = .quiz
+                    kind = .quiz(multipleAnswers: (flags & (1 << 2)) != 0)
                 } else {
                     kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                 }
-                
+
+                let openAnswers = (flags & (1 << 6)) != 0
+                let revotingDisabled = (flags & (1 << 7)) != 0
+                let shuffleAnswers = (flags & (1 << 8)) != 0
+                let hideResultsUntilClose = (flags & (1 << 9)) != 0
+
                 let questionText: String
                 let questionEntities: [MessageTextEntity]
                 switch question {
@@ -471,8 +479,12 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                     questionText = text
                     questionEntities = messageTextEntitiesFromApiEntities(entities)
                 }
-                
-                return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod), nil, nil, nil, nil, nil)
+
+                var parsedAttachedMedia: Media?
+                if let apiAttachedMedia = messageMediaPollData.attachedMedia {
+                    parsedAttachedMedia = textMediaAndExpirationTimerFromApiMedia(apiAttachedMedia, peerId).media
+                }
+                return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: parsedAttachedMedia), nil, nil, nil, nil, nil)
             }
         case let .messageMediaToDo(messageMediaToDoData):
             let (todo, completions) = (messageMediaToDoData.todo, messageMediaToDoData.completions)

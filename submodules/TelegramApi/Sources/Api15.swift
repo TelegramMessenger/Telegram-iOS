@@ -1933,6 +1933,15 @@ public extension Api {
                 return ("messageActionInviteToGroupCall", [("call", self.call as Any), ("users", self.users as Any)])
             }
         }
+        public class Cons_messageActionManagedBotCreated: TypeConstructorDescription {
+            public var botId: Int64
+            public init(botId: Int64) {
+                self.botId = botId
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageActionManagedBotCreated", [("botId", self.botId as Any)])
+            }
+        }
         public class Cons_messageActionNewCreatorPending: TypeConstructorDescription {
             public var newCreatorId: Int64
             public init(newCreatorId: Int64) {
@@ -2399,6 +2408,7 @@ public extension Api {
         case messageActionGroupCallScheduled(Cons_messageActionGroupCallScheduled)
         case messageActionHistoryClear
         case messageActionInviteToGroupCall(Cons_messageActionInviteToGroupCall)
+        case messageActionManagedBotCreated(Cons_messageActionManagedBotCreated)
         case messageActionNewCreatorPending(Cons_messageActionNewCreatorPending)
         case messageActionNoForwardsRequest(Cons_messageActionNoForwardsRequest)
         case messageActionNoForwardsToggle(Cons_messageActionNoForwardsToggle)
@@ -2706,6 +2716,12 @@ public extension Api {
                 for item in _data.users {
                     serializeInt64(item, buffer: buffer, boxed: false)
                 }
+                break
+            case .messageActionManagedBotCreated(let _data):
+                if boxed {
+                    buffer.appendInt32(375414334)
+                }
+                serializeInt64(_data.botId, buffer: buffer, boxed: false)
                 break
             case .messageActionNewCreatorPending(let _data):
                 if boxed {
@@ -3152,6 +3168,8 @@ public extension Api {
                 return ("messageActionHistoryClear", [])
             case .messageActionInviteToGroupCall(let _data):
                 return ("messageActionInviteToGroupCall", [("call", _data.call as Any), ("users", _data.users as Any)])
+            case .messageActionManagedBotCreated(let _data):
+                return ("messageActionManagedBotCreated", [("botId", _data.botId as Any)])
             case .messageActionNewCreatorPending(let _data):
                 return ("messageActionNewCreatorPending", [("newCreatorId", _data.newCreatorId as Any)])
             case .messageActionNoForwardsRequest(let _data):
@@ -3700,6 +3718,17 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageAction.messageActionInviteToGroupCall(Cons_messageActionInviteToGroupCall(call: _1!, users: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionManagedBotCreated(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionManagedBotCreated(Cons_messageActionManagedBotCreated(botId: _1!))
             }
             else {
                 return nil
