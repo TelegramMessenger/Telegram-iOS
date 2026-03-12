@@ -364,7 +364,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, me
                 let optionExpandedAtCount = state.expandedOptions[option.opaqueIdentifier]
                 
                 let peers = optionState.peers
-                let count = optionState.count
+                let count = optionState.count ?? 0
                 
                 let displayCount: Int
                 if peers.count > collapsedInitialLimit {

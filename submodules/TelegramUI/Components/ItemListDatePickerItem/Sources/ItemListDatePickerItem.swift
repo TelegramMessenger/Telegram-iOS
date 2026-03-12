@@ -168,7 +168,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
             } else if item.displayingTimeSelection {
                 height = 260.0
             } else {
-                height = 56.0
+                height = 52.0
             }
             switch item.style {
             case .plain:
@@ -294,7 +294,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                     datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) }
                    
                     let datePickerSize = CGSize(width: width, height: pickerHeight)
-                    datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 6.0), size: datePickerSize)
+                    datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 4.0), size: datePickerSize)
                     datePickerNode.updateLayout(size: datePickerSize, transition: .immediate)
                     
                     transition.updateFrame(node: strongSelf.containerNode, frame: CGRect(origin: .zero, size: CGSize(width: params.width, height: contentSize.height)))

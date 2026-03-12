@@ -2059,7 +2059,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     guard let strongSelf = self, let item = strongSelf.arguments else {
                         return
                     }
-                    item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
+                    item.controllerInteraction.performTextSelectionAction(item.message, true, text, nil, action)
                 })
                 textSelectionNode.enableQuote = false
                 self.textSelectionNode = textSelectionNode

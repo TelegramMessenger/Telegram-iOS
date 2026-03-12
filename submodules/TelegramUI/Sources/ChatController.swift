@@ -577,7 +577,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var avatarNode: ChatAvatarNavigationNode?
     
-    var performTextSelectionAction: ((Message?, Bool, NSAttributedString, TextSelectionAction) -> Void)?
+    var performTextSelectionAction: ((Message?, Bool, NSAttributedString, [MessageTextEntity]?, TextSelectionAction) -> Void)?
     var performOpenURL: ((Message?, String, Promise<Bool>?) -> Void)?
     
     var networkSpeedEventsDisposable: Disposable?
@@ -3890,13 +3890,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }, delay: true)
             }
-        }, performTextSelectionAction: { [weak self] message, canCopy, text, action in
+        }, performTextSelectionAction: { [weak self] message, canCopy, text, entities, action in
             guard let strongSelf = self else {
                 return
             }
             
             if let performTextSelectionAction = strongSelf.performTextSelectionAction {
-                performTextSelectionAction(message, canCopy, text, action)
+                performTextSelectionAction(message, canCopy, text, entities, action)
                 return
             }
             
@@ -3963,9 +3963,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         presentTranslateScreen(
                             context: context,
                             text: text.string,
+                            entities: entities ?? [],
                             canCopy: canCopy,
                             fromLanguage: language,
                             ignoredLanguages: translationSettings.ignoredLanguages,
+                            translateChat: { [weak self] _, toLang in
+                                self?.interfaceInteraction?.changeTranslationLanguage(toLang)
+                                self?.interfaceInteraction?.toggleTranslation(.translated)
+                            },
                             pushController: { [weak self] c in
                                 self?.effectiveNavigationController?._keepModalDismissProgress = true
                                 self?.push(c)
@@ -3974,7 +3979,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 self?.present(c, in: .window(.root))
                             },
                             display: { [weak self] c in
-                                self?.present(c, in: .window(.root))
+                                self?.push(c)
                             }
                         )
                     })

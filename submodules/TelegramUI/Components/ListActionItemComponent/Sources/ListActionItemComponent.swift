@@ -138,6 +138,11 @@ public final class ListActionItemComponent: Component {
         case center
     }
     
+    public enum VerticalAlignment {
+        case `default`
+        case middle
+    }
+    
     public final class ContextOption: Equatable {
         public let id: AnyHashable
         public let title: String
@@ -170,6 +175,7 @@ public final class ListActionItemComponent: Component {
     public let background: AnyComponent<Empty>?
     public let title: AnyComponent<Empty>
     public let titleAlignment: Alignment
+    public let verticalAlignment: VerticalAlignment
     public let contentInsets: UIEdgeInsets
     public let leftIcon: LeftIcon?
     public let icon: Icon?
@@ -186,6 +192,7 @@ public final class ListActionItemComponent: Component {
         background: AnyComponent<Empty>? = nil,
         title: AnyComponent<Empty>,
         titleAlignment: Alignment = .default,
+        verticalAlignment: VerticalAlignment = .default,
         contentInsets: UIEdgeInsets = UIEdgeInsets(top: 12.0, left: 0.0, bottom: 12.0, right: 0.0),
         leftIcon: LeftIcon? = nil,
         icon: Icon? = nil,
@@ -201,6 +208,7 @@ public final class ListActionItemComponent: Component {
         self.background = background
         self.title = title
         self.titleAlignment = titleAlignment
+        self.verticalAlignment = verticalAlignment
         self.contentInsets = contentInsets
         self.leftIcon = leftIcon
         self.icon = icon
@@ -226,6 +234,9 @@ public final class ListActionItemComponent: Component {
             return false
         }
         if lhs.titleAlignment != rhs.titleAlignment {
+            return false
+        }
+        if lhs.verticalAlignment != rhs.verticalAlignment {
             return false
         }
         if lhs.contentInsets != rhs.contentInsets {
@@ -667,12 +678,19 @@ public final class ListActionItemComponent: Component {
                         containerSize: CGSize(width: availableSize.width, height: availableSize.height)
                     )
                     let leftIconX: CGFloat
+                    let leftIconY: CGFloat
                     if adjustLeftInset {
                         leftIconX = 15.0
                     } else {
                         leftIconX = floor((contentLeftInset - leftIconSize.width) * 0.5)
                     }
-                    let leftIconFrame = CGRect(origin: CGPoint(x: leftIconX, y: floor((min(60.0, contentHeight) - leftIconSize.height) * 0.5)), size: leftIconSize)
+                    switch component.verticalAlignment {
+                    case .default:
+                        leftIconY = floor((min(60.0, contentHeight) - leftIconSize.height) * 0.5)
+                    case .middle:
+                        leftIconY = floor((contentHeight - leftIconSize.height) * 0.5)
+                    }
+                    let leftIconFrame = CGRect(origin: CGPoint(x: leftIconX, y: leftIconY), size: leftIconSize)
                     if let leftIconView = leftIcon.view {
                         if leftIconView.superview == nil {
                             leftIconView.isUserInteractionEnabled = false
@@ -800,7 +818,14 @@ public final class ListActionItemComponent: Component {
                         }
                         switchSize = switchView.bounds.size
                     }
-                    let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: floor((min(60.0, contentHeight) - switchSize.height) * 0.5)), size: switchSize)
+                    let switchY: CGFloat
+                    switch component.verticalAlignment {
+                    case .default:
+                        switchY = floor((min(60.0, contentHeight) - switchSize.height) * 0.5)
+                    case .middle:
+                        switchY = floor((contentHeight - switchSize.height) * 0.5)
+                    }
+                    let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: switchY), size: switchSize)
                     switchTransition.setFrame(view: switchNode.view, frame: switchFrame)
                 case .icons, .lock:
                     let switchNode: IconSwitchNode

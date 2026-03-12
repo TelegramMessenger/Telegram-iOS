@@ -25,7 +25,7 @@ private let leftShadowImage: UIImage = {
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-        context.scaleBy(x: -1.0, y: 1.0)
+        context.scaleBy(x: -1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
         UIGraphicsPushContext(context)
@@ -602,7 +602,12 @@ final class MediaPickerGridItemNode: GridItemNode {
                     typeIcon = UIImage(bundleImageName: "Media Editor/MediaVideo")
                 }
                 duration = stringForDuration(Int32(asset.duration))
+            } else {
+                if asset.mediaSubtypes.contains(.photoLive) {
+                    typeIcon = UIImage(bundleImageName: "Chat/Message/LivePhoto")
+                }
             }
+                
             if asset.isFavorite {
                 typeIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
             }
@@ -715,9 +720,9 @@ final class MediaPickerGridItemNode: GridItemNode {
         let backgroundSize = CGSize(width: self.bounds.width, height: floorToScreenPixels(self.bounds.height / 9.0 * 16.0))
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.bounds.height - backgroundSize.height) / 2.0)), size: backgroundSize)
         self.imageNode.frame = self.bounds
-        self.leftShadowNode.frame = CGRect(x: 0.0, y: self.bounds.height - leftShadowImage.size.height, width: min(leftShadowImage.size.width, self.bounds.width), height: leftShadowImage.size.height)
+        self.leftShadowNode.frame = CGRect(x: 0.0, y: 0.0, width: min(leftShadowImage.size.width, self.bounds.width), height: leftShadowImage.size.height)
         self.rightShadowNode.frame = CGRect(x: self.bounds.width - min(rightShadowImage.size.width, self.bounds.width), y: self.bounds.height - rightShadowImage.size.height, width: min(rightShadowImage.size.width, self.bounds.width), height: rightShadowImage.size.height)
-        self.typeIconNode.frame = CGRect(x: 0.0, y: self.bounds.height - 20.0, width: 19.0, height: 19.0)
+        self.typeIconNode.frame = CGRect(x: 0.0, y: 1.0, width: 19.0, height: 19.0)
         self.activateAreaNode.frame = self.bounds
         
         if self.durationNode.supernode != nil {

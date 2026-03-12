@@ -200,11 +200,11 @@ private enum SaveIncomingMediaEntry: ItemListNodeEntry {
         case let .typesHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .typePhotos(title, value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Settings/Menu/DataPhotos"), title: title, value: value, sectionId: self.section, style: .blocks, updated: { _ in
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.photosLightBlue, title: title, value: value, sectionId: self.section, style: .blocks, updated: { _ in
                 arguments.toggle(.photo)
             })
         case let .typeVideos(title, value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Settings/Menu/DataVideo"), title: title, value: value, sectionId: self.section, style: .blocks, updated: { _ in
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.videosBlue, title: title, value: value, sectionId: self.section, style: .blocks, updated: { _ in
                 arguments.toggle(.video)
             })
         case let .typesInfo(text):

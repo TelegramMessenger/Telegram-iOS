@@ -1190,11 +1190,22 @@
                                 dict[@"coverImage"] = image;
                                 
                                 if (livePhotoMode == TGMediaLivePhotoModeBounce) {
-                                    dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:true];
+                                    if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedHigh bounce:true sendAsGif:true];
+                                    } else {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:true];
+                                    }
                                 } else if (livePhotoMode == TGMediaLivePhotoModeLoop) {
-                                    dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:false];
+                                    if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedHigh bounce:false sendAsGif:true];
+                                    } else {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:false];
+                                    }
                                 } else {
                                     dict[@"livePhoto"] = @true;
+                                    if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedMedium bounce:false sendAsGif:false];
+                                    }
                                 }
                                 
                                 if (adjustments.paintingData.stickers.count > 0)

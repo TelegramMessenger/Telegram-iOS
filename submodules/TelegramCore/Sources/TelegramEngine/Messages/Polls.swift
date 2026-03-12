@@ -209,12 +209,12 @@ private final class PollResultsOptionContext {
     private var canLoadMore: Bool = true
     private var nextOffset: String?
     private var results: [PollResultsOptionState.Voter] = []
-    private var count: Int
+    private var count: Int?
     private var populateCache: Bool = true
     
     let state = Promise<PollResultsOptionState>()
     
-    init(queue: Queue, account: Account, pollId: MediaId, messageId: MessageId, opaqueIdentifier: Data, count: Int) {
+    init(queue: Queue, account: Account, pollId: MediaId, messageId: MessageId, opaqueIdentifier: Data, count: Int?) {
         self.queue = queue
         self.account = account
         self.pollId = pollId
@@ -385,7 +385,7 @@ public struct PollResultsOptionState: Equatable {
     public var isLoadingMore: Bool
     public var hasLoadedOnce: Bool
     public var canLoadMore: Bool
-    public var count: Int
+    public var count: Int?
 }
 
 public struct PollResultsState: Equatable {
@@ -403,11 +403,11 @@ private final class PollResultsContextImpl {
         self.queue = queue
         
         for option in poll.options {
-            var count = 0
+            var count: Int?
             if let voters = poll.results.voters {
                 for voter in voters {
                     if voter.opaqueIdentifier == option.opaqueIdentifier {
-                        count = Int(voter.count ?? 0)
+                        count = voter.count.flatMap(Int.init)
                     }
                 }
             }

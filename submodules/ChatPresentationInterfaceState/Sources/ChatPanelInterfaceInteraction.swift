@@ -195,6 +195,7 @@ public final class ChatPanelInterfaceInteraction {
     public let dismissForwardMessages: () -> Void
     public let dismissSuggestPost: () -> Void
     public let displayUndo: (UndoOverlayContent) -> Void
+    public let presentInputTextTranslation: (NSAttributedString, @escaping (NSAttributedString) -> Void) -> Void
     public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
@@ -321,6 +322,7 @@ public final class ChatPanelInterfaceInteraction {
         dismissForwardMessages: @escaping () -> Void,
         dismissSuggestPost: @escaping () -> Void,
         displayUndo: @escaping (UndoOverlayContent) -> Void,
+        presentInputTextTranslation: @escaping (NSAttributedString, @escaping (NSAttributedString) -> Void) -> Void,
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
@@ -450,6 +452,7 @@ public final class ChatPanelInterfaceInteraction {
         self.dismissForwardMessages = dismissForwardMessages
         self.dismissSuggestPost = dismissSuggestPost
         self.displayUndo = displayUndo
+        self.presentInputTextTranslation = presentInputTextTranslation
         self.sendEmoji = sendEmoji
         self.updateHistoryFilter = updateHistoryFilter
         self.updateChatLocationThread = updateChatLocationThread
@@ -587,6 +590,7 @@ public final class ChatPanelInterfaceInteraction {
         }, dismissForwardMessages: {
         }, dismissSuggestPost: {
         }, displayUndo: { _ in
+        }, presentInputTextTranslation: { _, _ in
         }, sendEmoji: { _, _, _ in
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in

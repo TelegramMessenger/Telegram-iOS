@@ -27,15 +27,17 @@ private final class AttachmentFileControllerArguments {
     let openFiles: () -> Void
     let scanDocument: () -> Void
     let expandSavedMusic: () -> Void
+    let expandRecentMusic: () -> Void
     let send: (Message) -> Void
    
-    init(context: AccountContext, isAudio: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, scanDocument: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, send: @escaping (Message) -> Void) {
+    init(context: AccountContext, isAudio: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, scanDocument: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, expandRecentMusic: @escaping () -> Void, send: @escaping (Message) -> Void) {
         self.context = context
         self.isAudio = isAudio
         self.openGallery = openGallery
         self.openFiles = openFiles
         self.scanDocument = scanDocument
         self.expandSavedMusic = expandSavedMusic
+        self.expandRecentMusic = expandRecentMusic
         self.send = send
     }
 }
@@ -44,6 +46,7 @@ private enum AttachmentFileSection: Int32 {
     case select
     case savedMusic
     case recent
+    case global
 }
 
 private func areMessagesEqual(_ lhsMessage: Message?, _ rhsMessage: Message?) -> Bool {
@@ -66,93 +69,132 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
     
     case savedHeader(PresentationTheme, String)
     case savedFile(Int32, PresentationTheme, Message?)
-    case showMore(PresentationTheme, String)
+    case savedShowMore(PresentationTheme, String)
     
     case recentHeader(PresentationTheme, String)
-    case file(Int32, PresentationTheme, Message?)
+    case recentFile(Int32, PresentationTheme, Message?)
+    case recentShowMore(PresentationTheme, String)
+    
+    case globalHeader(PresentationTheme, String)
+    case globalFile(Int32, PresentationTheme, Message?)
+    case globalShowMore(PresentationTheme, String)
   
     var section: ItemListSectionId {
         switch self {
-            case .selectFromGallery, .selectFromFiles, .scanDocument:
-                return AttachmentFileSection.select.rawValue
-            case .savedHeader, .savedFile, .showMore:
-                return AttachmentFileSection.savedMusic.rawValue
-            case .recentHeader, .file:
-                return AttachmentFileSection.recent.rawValue
+        case .selectFromGallery, .selectFromFiles, .scanDocument:
+            return AttachmentFileSection.select.rawValue
+        case .savedHeader, .savedFile, .savedShowMore:
+            return AttachmentFileSection.savedMusic.rawValue
+        case .recentHeader, .recentFile, .recentShowMore:
+            return AttachmentFileSection.recent.rawValue
+        case .globalHeader, .globalFile, .globalShowMore:
+            return AttachmentFileSection.global.rawValue
         }
     }
     
     var stableId: Int32 {
         switch self {
-            case .selectFromGallery:
-                return 0
-            case .selectFromFiles:
-                return 1
-            case .scanDocument:
-                return 2
-            case .savedHeader:
-                return 3
-            case let .savedFile(index, _, _):
-                return 4 + index
-            case .showMore:
-                return 9999
-            case .recentHeader:
-                return 10000
-            case let .file(index, _, _):
-                return 10001 + index
+        case .selectFromGallery:
+            return 0
+        case .selectFromFiles:
+            return 1
+        case .scanDocument:
+            return 2
+        case .savedHeader:
+            return 3
+        case let .savedFile(index, _, _):
+            return 4 + index
+        case .savedShowMore:
+            return 9999
+        case .recentHeader:
+            return 10000
+        case let .recentFile(index, _, _):
+            return 10001 + index
+        case .recentShowMore:
+            return 100000
+        case .globalHeader:
+            return 100001
+        case let .globalFile(index, _, _):
+            return 100002 + index
+        case .globalShowMore:
+            return 200000
         }
     }
     
     static func ==(lhs: AttachmentFileEntry, rhs: AttachmentFileEntry) -> Bool {
         switch lhs {
-            case let .selectFromGallery(lhsTheme, lhsText):
-                if case let .selectFromGallery(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .selectFromFiles(lhsTheme, lhsText):
-                if case let .selectFromFiles(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .scanDocument(lhsTheme, lhsText):
-                if case let .scanDocument(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .savedHeader(lhsTheme, lhsText):
-                if case let .savedHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .savedFile(lhsIndex, lhsTheme, lhsMessage):
-                if case let .savedFile(rhsIndex, rhsTheme, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage) {
-                    return true
-                } else {
-                    return false
-                }
-            case let .showMore(lhsTheme, lhsText):
-                if case let .showMore(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .recentHeader(lhsTheme, lhsText):
-                if case let .recentHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .file(lhsIndex, lhsTheme, lhsMessage):
-                if case let .file(rhsIndex, rhsTheme, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage) {
-                    return true
-                } else {
-                    return false
-                }
+        case let .selectFromGallery(lhsTheme, lhsText):
+            if case let .selectFromGallery(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .selectFromFiles(lhsTheme, lhsText):
+            if case let .selectFromFiles(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .scanDocument(lhsTheme, lhsText):
+            if case let .scanDocument(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .savedHeader(lhsTheme, lhsText):
+            if case let .savedHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .savedFile(lhsIndex, lhsTheme, lhsMessage):
+            if case let .savedFile(rhsIndex, rhsTheme, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage) {
+                return true
+            } else {
+                return false
+            }
+        case let .savedShowMore(lhsTheme, lhsText):
+            if case let .savedShowMore(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .recentHeader(lhsTheme, lhsText):
+            if case let .recentHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .recentFile(lhsIndex, lhsTheme, lhsMessage):
+            if case let .recentFile(rhsIndex, rhsTheme, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage) {
+                return true
+            } else {
+                return false
+            }
+        case let .recentShowMore(lhsTheme, lhsText):
+            if case let .recentShowMore(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .globalHeader(lhsTheme, lhsText):
+            if case let .globalHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .globalFile(lhsIndex, lhsTheme, lhsMessage):
+            if case let .globalFile(rhsIndex, rhsTheme, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage) {
+                return true
+            } else {
+                return false
+            }
+        case let .globalShowMore(lhsTheme, lhsText):
+            if case let .globalShowMore(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -163,45 +205,65 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! AttachmentFileControllerArguments
         switch self {
-            case let .selectFromGallery(_, text):
-                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.imageIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
-                    arguments.openGallery()
-                })
-            case let .selectFromFiles(_, text):
-                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.cloudIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
-                    arguments.openFiles()
-                })
-            case let .scanDocument(_, text):
-                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.scanIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
-                    arguments.scanDocument()
-                })
-            case let .savedHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .savedFile(_, _, message):
-                let interaction = ListMessageItemInteraction(openMessage: { message, _ in
-                    arguments.send(message)
-                    return false
-                }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+        case let .selectFromGallery(_, text):
+            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.imageIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
+                arguments.openGallery()
+            })
+        case let .selectFromFiles(_, text):
+            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.cloudIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
+                arguments.openFiles()
+            })
+        case let .scanDocument(_, text):
+            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.scanIcon(presentationData.theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
+                arguments.scanDocument()
+            })
+        case let .savedHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .savedFile(_, _, message):
+            let interaction = ListMessageItemInteraction(openMessage: { message, _ in
+                arguments.send(message)
+                return false
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
-                let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
-                let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
-                return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: arguments.context.account.peerId), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
-            case let .showMore(theme, text):
-                return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
-                    arguments.expandSavedMusic()
-                })
-            case let .recentHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .file(_, _, message):
-                let interaction = ListMessageItemInteraction(openMessage: { message, _ in
-                    arguments.send(message)
-                    return false
-                }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
+            let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: arguments.context.account.peerId), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+        case let .savedShowMore(theme, text):
+            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
+                arguments.expandSavedMusic()
+            })
+        case let .recentHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .recentFile(_, _, message):
+            let interaction = ListMessageItemInteraction(openMessage: { message, _ in
+                arguments.send(message)
+                return false
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
-                let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
-                let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
+            let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
+            let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
             
-                return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+        case let .recentShowMore(theme, text):
+            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
+                arguments.expandRecentMusic()
+            })
+        case let .globalHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .globalFile(_, _, message):
+            let interaction = ListMessageItemInteraction(openMessage: { message, _ in
+                arguments.send(message)
+                return false
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            
+            let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
+            let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
+            
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+        case let .globalShowMore(theme, text):
+            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
+                
+            })
         }
     }
 }
@@ -230,36 +292,49 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
     if case .audio = mode {
         if let savedMusic, savedMusic.count > 0 {
             entries.append(.savedHeader(presentationData.theme, presentationData.strings.MediaEditor_Audio_SavedMusic.uppercased()))
+          
             var savedMusic = savedMusic
-            var showMore = false
+            var hasShowMore = false
             if savedMusic.count > 4 && !state.savedMusicExpanded {
                 savedMusic = Array(savedMusic.prefix(3))
-                showMore = true
+                hasShowMore = true
             }
+            
             var i: Int32 = 0
             for file in savedMusic {
                 entries.append(.savedFile(i, presentationData.theme, file))
                 i += 1
             }
-            if showMore {
-                entries.append(.showMore(presentationData.theme, presentationData.strings.MediaEditor_Audio_ShowMore))
+            if hasShowMore {
+                entries.append(.savedShowMore(presentationData.theme, presentationData.strings.MediaEditor_Audio_ShowMore))
             }
         }
     }
     
-    if let recentDocuments = recentDocuments {
+    if let recentDocuments {
         if recentDocuments.count > 0 {
             entries.append(.recentHeader(presentationData.theme, listTitle.uppercased()))
+
+            var recentDocuments = recentDocuments
+            var hasShowMore = false
+            if !"".isEmpty, case .audio = mode, recentDocuments.count > 4 && !state.savedMusicExpanded {
+                recentDocuments = Array(recentDocuments.prefix(3))
+                hasShowMore = true
+            }
+            
             var i: Int32 = 0
             for file in recentDocuments {
-                entries.append(.file(i, presentationData.theme, file))
+                entries.append(.recentFile(i, presentationData.theme, file))
                 i += 1
+            }
+            if hasShowMore {
+                entries.append(.recentShowMore(presentationData.theme, presentationData.strings.MediaEditor_Audio_ShowMore))
             }
         }
     } else {
         entries.append(.recentHeader(presentationData.theme, listTitle.uppercased()))
         for i in 0 ..< 11 {
-            entries.append(.file(Int32(i), presentationData.theme, nil))
+            entries.append(.recentFile(Int32(i), presentationData.theme, nil))
         }
     }
 
@@ -353,6 +428,7 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
 private struct AttachmentFileControllerState: Equatable {
     var searching: Bool
     var savedMusicExpanded: Bool
+    var recentMusicExpanded: Bool
 }
 
 public enum AttachmentFileControllerMode {
@@ -372,8 +448,8 @@ public func makeAttachmentFileControllerImpl(
 ) -> AttachmentFileController {
     let actionsDisposable = DisposableSet()
     
-    let statePromise = ValuePromise(AttachmentFileControllerState(searching: false, savedMusicExpanded: false), ignoreRepeated: true)
-    let stateValue = Atomic(value: AttachmentFileControllerState(searching: false, savedMusicExpanded: false))
+    let statePromise = ValuePromise(AttachmentFileControllerState(searching: false, savedMusicExpanded: false, recentMusicExpanded: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: AttachmentFileControllerState(searching: false, savedMusicExpanded: false, recentMusicExpanded: false))
     let updateState: ((AttachmentFileControllerState) -> AttachmentFileControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -400,6 +476,13 @@ public func makeAttachmentFileControllerImpl(
             updateState { state in
                 var updatedState = state
                 updatedState.savedMusicExpanded = true
+                return updatedState
+            }
+        },
+        expandRecentMusic: {
+            updateState { state in
+                var updatedState = state
+                updatedState.recentMusicExpanded = true
                 return updatedState
             }
         },

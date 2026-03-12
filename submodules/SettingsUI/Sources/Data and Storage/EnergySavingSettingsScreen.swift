@@ -38,47 +38,47 @@ public enum EnergySavingItemType: CaseIterable {
         }
     }
     
-    func title(strings: PresentationStrings) -> (String, String, String) {
+    func title(strings: PresentationStrings) -> (UIImage?, String, String) {
         switch self {
         case .autoplayVideo:
             return (
-                "Settings/Power/PowerIconVideo",
+                PresentationResourcesSettings.videos,
                 strings.PowerSavingScreen_OptionAutoplayVideoTitle,
                 strings.PowerSavingScreen_OptionAutoplayVideoText
             )
         case .autoplayGif:
             return (
-                "Settings/Power/PowerIconGif",
+                PresentationResourcesSettings.gifs,
                 strings.PowerSavingScreen_OptionAutoplayGifTitle,
                 strings.PowerSavingScreen_OptionAutoplayGifText
             )
         case .loopStickers:
             return (
-                "Settings/Power/PowerIconStickers",
+                PresentationResourcesSettings.stickersGreen,
                 strings.PowerSavingScreen_OptionAutoplayStickersTitle,
                 strings.PowerSavingScreen_OptionAutoplayStickersText
             )
         case .loopEmoji:
             return (
-                "Settings/Power/PowerIconEmoji",
+                PresentationResourcesSettings.emoji,
                 strings.PowerSavingScreen_OptionAutoplayEmojiTitle,
                 strings.PowerSavingScreen_OptionAutoplayEmojiText
             )
         case .fullTranslucency:
             return (
-                "Settings/Power/PowerIconEffects",
+                PresentationResourcesSettings.effects,
                 strings.PowerSavingScreen_OptionAutoplayEffectsTitle,
                 strings.PowerSavingScreen_OptionAutoplayEffectsText
             )
         case .extendBackgroundWork:
             return (
-                "Settings/Power/PowerIconBackgroundTime",
+                PresentationResourcesSettings.clock,
                 strings.PowerSavingScreen_OptionBackgroundTitle,
                 strings.PowerSavingScreen_OptionBackgroundText
             )
         case .autodownloadInBackground:
             return (
-                "Settings/Power/PowerIconMedia",
+                PresentationResourcesSettings.photosBlue,
                 strings.PowerSavingScreen_OptionPreloadTitle,
                 strings.PowerSavingScreen_OptionPreloadText
             )
@@ -204,8 +204,8 @@ private enum EnergeSavingSettingsScreenEntry: ItemListNodeEntry {
         case .itemsHeader:
             return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.PowerSavingScreen_OptionsHeader, sectionId: self.section)
         case let .item(_, type, value, enabled):
-            let (iconName, title, text) = type.title(strings: presentationData.strings)
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: iconName)?.precomposed(), title: title, text: text, value: value, enableInteractiveChanges: true, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
+            let (icon, title, text) = type.title(strings: presentationData.strings)
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: icon, title: title, text: text, value: value, enableInteractiveChanges: true, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleItem(type)
             }, activatedWhileDisabled: {
                 arguments.displayDisabledTooltip()

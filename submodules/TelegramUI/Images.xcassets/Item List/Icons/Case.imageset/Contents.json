@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "suitcase.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

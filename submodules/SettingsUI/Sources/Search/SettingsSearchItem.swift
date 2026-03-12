@@ -21,7 +21,7 @@ extension SettingsSearchableItemIcon {
     func image() -> UIImage? {
         switch self {
             case .profile:
-                return PresentationResourcesSettings.editProfile
+                return PresentationResourcesSettings.privateChats
             case .proxy:
                 return PresentationResourcesSettings.proxy
             case .savedMessages:

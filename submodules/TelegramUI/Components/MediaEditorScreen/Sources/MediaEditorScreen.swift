@@ -7745,6 +7745,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             self.stickerResultController?.disappeared = nil
                         }
                         
+                        if self.node.mediaEditor?.values.hasChanges == true {
+                            print()
+                        }
+                        
                         let _ = (imagesReady.get()
                         |> filter { $0 }
                         |> take(1)

@@ -89,7 +89,7 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
     private let leftFadeNode: ASDisplayNode
     private let rightFadeNode: ASDisplayNode
     private var highlightedSide: Bool?
-    private var activeSide: Bool?
+    private var activeSide: GalleryItemNode.ActiveEdge?
     private var canPerformSideNavigationAction: Bool = false
     private var sideActionInitialPosition: CGPoint?
     
@@ -208,6 +208,10 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
                 activeSide = true
             }
             
+            if activeSide == nil, let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .middle) {
+                activeSide = true
+            }
+            
             if !strongSelf.pagingEnabled {
                 highlightedSide = nil
             }
@@ -233,7 +237,7 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
             let size = strongSelf.bounds
             
             var highlightedSide: Bool?
-            var activeSide: Bool?
+            var activeSide: GalleryItemNode.ActiveEdge?
             if let point {
                 if point.x < edgeWidth(width: size.width) {
                     if strongSelf.canGoToPreviousItem() {
@@ -249,9 +253,11 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
                     }
                 }
                 if point.x < activeEdgeWidth(width: size.width), let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .left) {
-                    activeSide = false
+                    activeSide = .left
                 } else if point.x > 0.0, let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .right) {
-                    activeSide = true
+                    activeSide = .right
+                } else if let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .middle) {
+                    activeSide = .middle
                 }
             }
             
@@ -303,7 +309,7 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
                                 return
                             }
                             if let centralIndex = self.centralItemIndex, let itemNode = self.visibleItemNode(at: centralIndex) {
-                                itemNode.setActiveEdgeAction(edge: activeSide ? .right : .left)
+                                itemNode.setActiveEdgeAction(edge: activeSide)
                             }
                             
                             self.canPerformSideNavigationAction = false

@@ -179,7 +179,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
                 let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
                 iconSignal = instantPageImageFile(account: context.account, userLocation: .other, fileReference: fileReference, fetched: true)
                 |> map { generator -> UIImage? in
-                    let size = CGSize(width: 29.0, height: 29.0)
+                    let size = CGSize(width: 30.0, height: 30.0)
                     let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: .zero))
                     return context?.generateImage()
                 }

@@ -301,7 +301,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         let currentTime = Int32(CFAbsoluteTimeGetCurrent())
         var currentAd: (Int32, Message?)?
         
-        for (time, maybeMessage) in adSchedule {
+        for (time, maybeMessage) in self.adSchedule {
             if currentTime > time {
                 currentAd = (time, maybeMessage)
             }
@@ -954,6 +954,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var isAnimatingOut: Bool = false
     private var isLivePhoto = false
     private var didAutoplayLivePhotoOnce = false
+    private var isPlayingLivePhotoByHolding = false
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
@@ -1365,6 +1366,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.dismissOnOrientationChange = item.landscape
             self.isLivePhoto = false
             self.didAutoplayLivePhotoOnce = false
+            self.isPlayingLivePhotoByHolding = false
             
             var hasLinkedStickers = false
             if let content = item.content as? NativeVideoContent {
@@ -1701,6 +1703,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     initialBuffering = true
                                 }
                                 isPaused = !whilePlaying
+                                if strongSelf.isPlayingLivePhotoByHolding {
+                                    isPaused = false
+                                }
                                 var isStreaming = false
                                 if let fetchStatus = strongSelf.fetchStatus {
                                     switch fetchStatus {
@@ -1824,7 +1829,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if case let .message(message, _) = item.contentInfo, let content = item.content as? NativeVideoContent, let image = message.media.first(where: { $0 is TelegramMediaImage }), let imageReference = content.fileReference.abstract.withUpdatedMedia(image).concrete(TelegramMediaImage.self) {
                 let imageNode = TransformImageNode()
-                imageNode.alpha = 0.0
+                imageNode.alpha = 1.0
                 imageNode.isUserInteractionEnabled = false
                 imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: content.userLocation, photoReference: imageReference, synchronousLoad: true, highQuality: true))
                 imageNode.frame = CGRect(origin: .zero, size: videoSize)
@@ -1919,9 +1924,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                         
                         if strongSelf.isLivePhoto {
-                            if let imageNode = strongSelf.imageNode {
-                                imageNode.alpha = 1.0
-                                imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                            if !strongSelf.isPlayingLivePhotoByHolding {
+                                strongSelf.setLivePhotoVideoVisible(false, animated: true)
                             }
                         } else if let snapshotView = videoNode?.view.snapshotView(afterScreenUpdates: false) {
                             videoNode?.view.addSubview(snapshotView)
@@ -1930,8 +1934,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             })
                         }
                         
-                        videoNode?.seek(0.0)
-                                                
+                        if !strongSelf.isLivePhoto {
+                            videoNode?.seek(0.0)
+                        } else if strongSelf.isPlayingLivePhotoByHolding {
+                            videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .loop)
+                        }
+                        
                         if strongSelf.actionAtEnd == .stop && strongSelf.isCentral == true {
                             strongSelf.isPlayingPromise.set(false)
                             strongSelf.isPlaying = false
@@ -2020,12 +2028,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 livePhotoIconNode = ASImageNode()
                 livePhotoIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveOn"), color: .white)
-                self.addSubnode(livePhotoIconNode)
+                //self.addSubnode(livePhotoIconNode)
                 self.livePhotoIconNode = livePhotoIconNode
             }
             
             if let icon = livePhotoIconNode.image {
-                livePhotoIconNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 8.0 + 169.0), size: icon.size)
+                livePhotoIconNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 8.0), size: icon.size)
             }
         } else if let livePhotoIconNode = self.livePhotoIconNode {
             self.livePhotoIconNode = nil
@@ -2102,9 +2110,46 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return false
         }
         self.didAutoplayLivePhotoOnce = true
-        videoNode.alpha = 1.0
+        self.setLivePhotoVideoVisible(true, animated: true)
         videoNode.continuePlayingWithoutSound(actionAtEnd: .stop)
         return true
+    }
+    
+    private func setLivePhotoVideoVisible(_ isVisible: Bool, animated: Bool) {
+        guard let imageNode = self.imageNode else {
+            return
+        }
+        let targetAlpha: CGFloat = isVisible ? 0.0 : 1.0
+        guard imageNode.alpha != targetAlpha else {
+            return
+        }
+        
+        let previousAlpha = imageNode.alpha
+        imageNode.layer.removeAnimation(forKey: "opacity")
+        imageNode.alpha = targetAlpha
+        if animated {
+            imageNode.layer.animateAlpha(from: previousAlpha, to: targetAlpha, duration: 0.2)
+        }
+    }
+    
+    private func updateLivePhotoHoldPlayback(isActive: Bool, animated: Bool) {
+        guard self.isLivePhoto, let videoNode = self.videoNode else {
+            return
+        }
+        guard self.isPlayingLivePhotoByHolding != isActive else {
+            return
+        }
+        
+        self.isPlayingLivePhotoByHolding = isActive
+        if isActive {
+            self.setLivePhotoVideoVisible(true, animated: animated)
+            videoNode.seek(0.0)
+            videoNode.play()
+        } else {
+            videoNode.pause()
+            videoNode.seek(0.0)
+            self.setLivePhotoVideoVisible(false, animated: animated)
+        }
     }
     
     override func centralityUpdated(isCentral: Bool) {
@@ -2146,6 +2191,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                 } else {
+                    self.updateLivePhotoHoldPlayback(isActive: false, animated: false)
                     self.isPlayingPromise.set(false)
                     self.isPlaying = false
                     
@@ -2182,11 +2228,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if self.skipInitialPause {
                             self.skipInitialPause = false
                         } else {
+                            self.updateLivePhotoHoldPlayback(isActive: false, animated: false)
                             self.ignorePauseStatus = true
                             videoNode.pause()
                             videoNode.seek(0.0)
                         }
                     } else {
+                        self.updateLivePhotoHoldPlayback(isActive: false, animated: false)
                         if let status = self.playerStatusValue {
                             self.maybeStorePlaybackStatus(status: status)
                         }
@@ -2297,7 +2345,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd {
         if self.isLivePhoto {
-            return .stop
+            return self.isPlayingLivePhotoByHolding ? .loop : .stop
         }
         if let item = self.item {
             if !item.isSecret, let content = item.content as? NativeVideoContent, content.duration <= 30 {
@@ -3980,7 +4028,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func hasActiveEdgeAction(edge: ActiveEdge) -> Bool {
         if case .middle = edge {
             return self.isLivePhoto
-        } else if case .right = edge {
+        } else if case .right = edge, !self.isLivePhoto {
             if let playerStatusValue = self.playerStatusValue, case .playing = playerStatusValue.status {
                 return true
             } else {
@@ -3996,7 +4044,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         if let edge, case .middle = edge {
-            print()
+            self.updateLivePhotoHoldPlayback(isActive: true, animated: true)
         } else if let edge, case .right = edge {
             let effectiveRate: Double
             if let current = self.activeEdgeRateState {
@@ -4010,9 +4058,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.activeEdgeRateState = (playbackRate, effectiveRate)
             }
             videoNode.setBaseRate(effectiveRate)
-        } else if let (initialRate, _) = self.activeEdgeRateState {
-            self.activeEdgeRateState = nil
-            videoNode.setBaseRate(initialRate)
+        } else {
+            self.updateLivePhotoHoldPlayback(isActive: false, animated: true)
+            if let (initialRate, _) = self.activeEdgeRateState {
+                self.activeEdgeRateState = nil
+                videoNode.setBaseRate(initialRate)
+            }
         }
         
         if let validLayout = self.validLayout {

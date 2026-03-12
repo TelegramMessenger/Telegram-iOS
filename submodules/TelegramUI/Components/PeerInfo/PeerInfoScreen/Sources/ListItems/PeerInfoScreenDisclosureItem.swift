@@ -233,9 +233,9 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
                         }
                     }))
                 }
-                iconSize = CGSize(width: 29.0, height: 29.0)
+                iconSize = CGSize(width: 30.0, height: 30.0)
             } else {
-                iconSize = CGSize(width: 29.0, height: 29.0)
+                iconSize = CGSize(width: 30.0, height: 30.0)
             }
             let iconFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: self.iconNode, frame: iconFrame)

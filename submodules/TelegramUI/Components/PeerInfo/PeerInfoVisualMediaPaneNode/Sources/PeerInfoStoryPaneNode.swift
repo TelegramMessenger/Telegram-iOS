@@ -642,6 +642,7 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
             durationLayer.removeFromSuperlayer()
         }
         
+        
         if let topRightIcon {
             if let privacyTypeLayer = self.privacyTypeLayer {
                 privacyTypeLayer.update(topRightIcon: topRightIcon, isMin: isMin)
