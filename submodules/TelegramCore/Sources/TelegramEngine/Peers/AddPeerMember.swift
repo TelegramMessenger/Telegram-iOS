@@ -350,7 +350,7 @@ public enum SendBotRequestedPeerError {
     case generic
 }
 
-func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId: MessageId, buttonId: Int32, requestedPeerIds: [PeerId]) -> Signal<Void, SendBotRequestedPeerError> {
+func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId: MessageId?, requestId: String?, buttonId: Int32, requestedPeerIds: [PeerId]) -> Signal<Void, SendBotRequestedPeerError> {
     return account.postbox.transaction { transaction -> Signal<Void, SendBotRequestedPeerError> in
         if let peer = transaction.getPeer(peerId) {
             var inputRequestedPeers: [Api.InputPeer] = []
@@ -360,7 +360,16 @@ func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId:
                 }
             }
             if let inputPeer = apiInputPeer(peer), !inputRequestedPeers.isEmpty {
-                let signal = account.network.request(Api.functions.messages.sendBotRequestedPeer(peer: inputPeer, msgId: messageId.id, buttonId: buttonId, requestedPeers: inputRequestedPeers))
+                var flags: Int32 = 0
+                var msgId: Int32?
+                if let messageId = messageId {
+                    flags |= (1 << 0)
+                    msgId = messageId.id
+                }
+                if let _ = requestId {
+                    flags |= (1 << 1)
+                }
+                let signal = account.network.request(Api.functions.messages.sendBotRequestedPeer(flags: flags, peer: inputPeer, msgId: msgId, requestId: requestId, buttonId: buttonId, requestedPeers: inputRequestedPeers))
                 |> mapError { error -> SendBotRequestedPeerError in
                     return .generic
                 }
@@ -374,4 +383,65 @@ func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId:
     }
     |> castError(SendBotRequestedPeerError.self)
     |> switchToLatest
+}
+
+public enum CreateBotError {
+    case generic
+}
+
+func _internal_createBot(account: Account, name: String, username: String, managerPeerId: PeerId, viaDeeplink: Bool) -> Signal<EnginePeer, CreateBotError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        if let peer = transaction.getPeer(managerPeerId) {
+            return apiInputUser(peer)
+        }
+        return nil
+    }
+    |> castError(CreateBotError.self)
+    |> mapToSignal { inputUser -> Signal<EnginePeer, CreateBotError> in
+        guard let inputUser = inputUser else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        if viaDeeplink {
+            flags |= (1 << 0)
+        }
+        return account.network.request(Api.functions.bots.createBot(flags: flags, name: name, username: username, managerId: inputUser))
+        |> mapError { _ -> CreateBotError in
+            return .generic
+        }
+        |> mapToSignal { apiUser -> Signal<EnginePeer, CreateBotError> in
+            return account.postbox.transaction { transaction -> EnginePeer in
+                let user = TelegramUser(user: apiUser)
+                updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(transaction: transaction, chats: [], users: [apiUser]))
+                return EnginePeer(user)
+            }
+            |> castError(CreateBotError.self)
+        }
+    }
+}
+
+public enum GetRequestedWebViewButtonError {
+    case generic
+}
+
+func _internal_getRequestedWebViewButton(account: Account, botId: PeerId, requestId: String) -> Signal<ReplyMarkupButton, GetRequestedWebViewButtonError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        if let peer = transaction.getPeer(botId) {
+            return apiInputUser(peer)
+        }
+        return nil
+    }
+    |> castError(GetRequestedWebViewButtonError.self)
+    |> mapToSignal { inputUser -> Signal<ReplyMarkupButton, GetRequestedWebViewButtonError> in
+        guard let inputUser = inputUser else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.bots.getRequestedWebViewButton(bot: inputUser, requestId: requestId))
+        |> mapError { _ -> GetRequestedWebViewButtonError in
+            return .generic
+        }
+        |> map { apiButton -> ReplyMarkupButton in
+            return ReplyMarkupButton(apiButton: apiButton)
+        }
+    }
 }

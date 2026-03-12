@@ -126,6 +126,11 @@ extension ReplyMarkupButton {
                     userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
                     botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
                 ))
+            case let .requestPeerTypeCreateBot(data):
+                mappedPeerType = .createBot(ReplyMarkupButtonRequestPeerType.CreateBot(
+                    suggestedName: data.suggestedName,
+                    suggestedUsername: data.suggestedUsername
+                ))
             }
             self.init(title: text, titleWhenForwarded: nil, action: .requestPeer(peerType: mappedPeerType, buttonId: buttonId, maxQuantity: maxQuantity), style: keyboardButtonRequestPeerData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))
         case let .inputKeyboardButtonRequestPeer(inputKeyboardButtonRequestPeerData):
@@ -155,6 +160,11 @@ extension ReplyMarkupButton {
                     hasUsername: hasUsername.flatMap({ $0 == .boolTrue }),
                     userAdminRights: userAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:)),
                     botAdminRights: botAdminRights.flatMap(TelegramChatAdminRights.init(apiAdminRights:))
+                ))
+            case let .requestPeerTypeCreateBot(data):
+                mappedPeerType = .createBot(ReplyMarkupButtonRequestPeerType.CreateBot(
+                    suggestedName: data.suggestedName,
+                    suggestedUsername: data.suggestedUsername
                 ))
             }
             self.init(title: text, titleWhenForwarded: nil, action: .requestPeer(peerType: mappedPeerType, buttonId: buttonId, maxQuantity: maxQuantity), style: inputKeyboardButtonRequestPeerData.style.flatMap(ReplyMarkupButton.Style.init(apiStyle:)))

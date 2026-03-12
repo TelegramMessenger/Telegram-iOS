@@ -7,12 +7,14 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         case user = "u"
         case group = "g"
         case channel = "c"
+        case createBot = "cb"
     }
-    
+
     enum Discriminator: Int32 {
         case user = 0
         case group = 1
         case channel = 2
+        case createBot = 3
     }
     
     public struct User: Codable, Equatable {
@@ -144,10 +146,26 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         }
     }
     
+    public struct CreateBot: Codable, Equatable {
+        enum CodingKeys: String, CodingKey {
+            case suggestedName = "sn"
+            case suggestedUsername = "su"
+        }
+
+        public var suggestedName: String?
+        public var suggestedUsername: String?
+
+        public init(suggestedName: String?, suggestedUsername: String?) {
+            self.suggestedName = suggestedName
+            self.suggestedUsername = suggestedUsername
+        }
+    }
+
     case user(User)
     case group(Group)
     case channel(Channel)
-    
+    case createBot(CreateBot)
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
@@ -158,6 +176,8 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
             self = .group(try container.decode(Group.self, forKey: .group))
         case Discriminator.channel.rawValue:
             self = .channel(try container.decode(Channel.self, forKey: .channel))
+        case Discriminator.createBot.rawValue:
+            self = .createBot(try container.decode(CreateBot.self, forKey: .createBot))
         default:
             assertionFailure()
             self = .user(User(isBot: nil, isPremium: nil))
@@ -177,6 +197,9 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
         case let .channel(channel):
             try container.encode(Discriminator.channel.rawValue, forKey: .discriminator)
             try container.encode(channel, forKey: .channel)
+        case let .createBot(createBot):
+            try container.encode(Discriminator.createBot.rawValue, forKey: .discriminator)
+            try container.encode(createBot, forKey: .createBot)
         }
     }
 }
