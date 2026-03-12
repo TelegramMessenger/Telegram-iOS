@@ -354,6 +354,17 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
             } else if let file = media as? TelegramMediaFile,
                       let resource = file.resource as? CloudDocumentMediaResource {
                 return .inputMediaDocument(.init(flags: 0, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))), videoCover: nil, videoTimestamp: nil, ttlSeconds: nil, query: nil))
+            } else if let map = media as? TelegramMediaMap {
+                var geoFlags: Int32 = 0
+                if map.accuracyRadius != nil {
+                    geoFlags |= 1 << 0
+                }
+                let geoPoint = Api.InputGeoPoint.inputGeoPoint(.init(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })))
+                if let venue = map.venue {
+                    return .inputMediaVenue(.init(geoPoint: geoPoint, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? ""))
+                } else {
+                    return .inputMediaGeoPoint(.init(geoPoint: geoPoint))
+                }
             }
             return nil
         }
