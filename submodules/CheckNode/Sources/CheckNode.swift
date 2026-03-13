@@ -56,19 +56,21 @@ public extension CheckNodeTheme {
     }
 }
 
-public enum CheckNodeContent {
-    case check
+public enum CheckNodeContent: Equatable {
+    case check(isRectangle: Bool)
     case counter(Int)
 }
 
 private final class CheckNodeParameters: NSObject {
+    let isRectangle: Bool
     let theme: CheckNodeTheme
     let content: CheckNodeContent
     let animationProgress: CGFloat
     let selected: Bool
     let animatingOut: Bool
 
-    init(theme: CheckNodeTheme, content: CheckNodeContent, animationProgress: CGFloat, selected: Bool, animatingOut: Bool) {
+    init(isRectangle: Bool, theme: CheckNodeTheme, content: CheckNodeContent, animationProgress: CGFloat, selected: Bool, animatingOut: Bool) {
+        self.isRectangle = isRectangle
         self.theme = theme
         self.content = content
         self.animationProgress = animationProgress
@@ -86,7 +88,7 @@ public class CheckNode: ASDisplayNode {
         }
     }
     
-    public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
+    public init(theme: CheckNodeTheme, content: CheckNodeContent = .check(isRectangle: false)) {
         self.theme = theme
         self.content = content
     
@@ -161,7 +163,7 @@ public class CheckNode: ASDisplayNode {
     }
 
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return CheckNodeParameters(theme: self.theme, content: self.content, animationProgress: self.animationProgress, selected: self.selected, animatingOut: self.animatingOut)
+        return CheckNodeParameters(isRectangle: self.content == .check(isRectangle: true), theme: self.theme, content: self.content, animationProgress: self.animationProgress, selected: self.selected, animatingOut: self.animatingOut)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -200,7 +202,7 @@ public class InteractiveCheckNode: CheckNode {
     
     public var valueChanged: ((Bool) -> Void)?
     
-    override public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
+    override public init(theme: CheckNodeTheme, content: CheckNodeContent = .check(isRectangle: false)) {
         self.buttonNode = HighlightTrackingButtonNode()
         
         super.init(theme: theme, content: content)
@@ -250,7 +252,7 @@ public class CheckLayer: CALayer {
 
     public override init() {
         self.theme = CheckNodeTheme(backgroundColor: .white, strokeColor: .blue, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false)
-        self.content = .check
+        self.content = .check(isRectangle: false)
         
         super.init()
         
@@ -270,7 +272,7 @@ public class CheckLayer: CALayer {
         self.isOpaque = false
     }
     
-    public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
+    public init(theme: CheckNodeTheme, content: CheckNodeContent = .check(isRectangle: false)) {
         self.theme = theme
         self.content = content
 
@@ -364,7 +366,7 @@ public class CheckLayer: CALayer {
             CheckLayer.drawContents(
                 context: context,
                 size: size,
-                parameters: CheckNodeParameters(theme: self.theme, content: self.content, animationProgress: self.animationProgress, selected: self.selected, animatingOut: self.animatingOut)
+                parameters: CheckNodeParameters(isRectangle: self.content == .check(isRectangle: true), theme: self.theme, content: self.content, animationProgress: self.animationProgress, selected: self.selected, animatingOut: self.animatingOut)
             )
         })?.cgImage
     }
@@ -414,13 +416,24 @@ public class CheckLayer: CALayer {
                 let fillProgress: CGFloat = parameters.animationProgress
                 
                 context.setFillColor(parameters.theme.backgroundColor.mixedWith(parameters.theme.borderColor, alpha: 1.0 - fillProgress).cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                
+                if parameters.isRectangle {
+                    context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 7.0).cgPath)
+                    context.fillPath()
+                } else {
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                }
                 
                 let innerDiameter: CGFloat = (fillProgress * 0.0) + (1.0 - fillProgress) * (size.width - borderWidth * 2.0)
                 
                 context.setBlendMode(.copy)
                 context.setFillColor(UIColor.clear.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: (size.width - innerDiameter) * 0.5, y: (size.height - innerDiameter) * 0.5), size: CGSize(width: innerDiameter, height: innerDiameter)))
+                if parameters.isRectangle {
+                    context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: (size.width - innerDiameter) * 0.5, y: (size.height - innerDiameter) * 0.5), size: CGSize(width: innerDiameter, height: innerDiameter)), cornerRadius: 6.0).cgPath)
+                    context.fillPath()
+                } else {
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: (size.width - innerDiameter) * 0.5, y: (size.height - innerDiameter) * 0.5), size: CGSize(width: innerDiameter, height: innerDiameter)))
+                }
                 context.setBlendMode(.normal)
             }
         } else {

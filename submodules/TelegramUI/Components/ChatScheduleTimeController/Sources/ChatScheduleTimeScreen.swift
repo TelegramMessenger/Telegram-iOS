@@ -225,6 +225,9 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                 title = strings.Conversation_SetReminder_Title
             case .format:
                 title = strings.Conversation_FormatDate_Title
+            case .poll:
+                //TODO:localize
+                title = "Deadline"
             }
             let titleSize = self.title.update(
                 transition: transition,
@@ -384,6 +387,8 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             var repeatValueFrame = CGRect()
             if case .format = component.mode {
                 contentHeight += 8.0
+            } else if case .poll = component.mode {
+                contentHeight += 8.0
             } else {
                 transition.setFrame(layer: self.bottomSeparator, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: UIScreenPixel)))
                 self.bottomSeparator.backgroundColor = environment.theme.list.itemBlocksSeparatorColor.cgColor
@@ -491,6 +496,9 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                 }
             case .format:
                 buttonTitle = component.currentTime != nil ? strings.Conversation_FormatDate_EditDate : strings.Conversation_FormatDate_AddDate
+            case .poll:
+                //TODO:localize
+                buttonTitle = "Set Deadline"
             }
                 
             let buttonSideInset: CGFloat = 30.0
@@ -930,6 +938,7 @@ public class ChatScheduleTimeScreen: ViewControllerComponentContainer {
         case scheduledMessages(sendWhenOnlineAvailable: Bool)
         case reminders
         case format
+        case poll
     }
     
     public struct Result {

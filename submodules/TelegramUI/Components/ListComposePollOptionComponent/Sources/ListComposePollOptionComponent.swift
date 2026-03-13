@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import TelegramCore
 import CheckNode
 import ListSectionComponent
 import ComponentFlow
@@ -12,7 +13,13 @@ import MultilineTextComponent
 import PresentationDataUtils
 import LottieComponent
 import PlainButtonComponent
+import BundleIconComponent
 import SwiftSignalKit
+import PhotoResources
+import LocationResources
+import SemanticStatusNode
+import EmojiTextAttachmentView
+import TextFormat
 
 public final class ListComposePollOptionComponent: Component {
     public enum Style {
@@ -34,15 +41,45 @@ public final class ListComposePollOptionComponent: Component {
     
     public final class Selection: Equatable {
         public let isSelected: Bool
+        public let isMultiSelection: Bool
         public let toggle: () -> Void
         
-        public init(isSelected: Bool, toggle: @escaping () -> Void) {
+        public init(isSelected: Bool, isMultiSelection: Bool = false, toggle: @escaping () -> Void) {
             self.isSelected = isSelected
+            self.isMultiSelection = isMultiSelection
             self.toggle = toggle
         }
         
         public static func ==(lhs: Selection, rhs: Selection) -> Bool {
             if lhs.isSelected != rhs.isSelected {
+                return false
+            }
+            if lhs.isMultiSelection != rhs.isMultiSelection {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public final class Attachment: Equatable {
+        public let media: AnyMediaReference?
+        public let progress: CGFloat?
+        public let alwaysDisplayAttachButton: Bool
+        
+        public init(media: AnyMediaReference?, progress: CGFloat?, alwaysDisplayAttachButton: Bool) {
+            self.media = media
+            self.progress = progress
+            self.alwaysDisplayAttachButton = alwaysDisplayAttachButton
+        }
+        
+        public static func ==(lhs: Attachment, rhs: Attachment) -> Bool {
+            if lhs.media != rhs.media {
+                return false
+            }
+            if lhs.progress != rhs.progress {
+                return false
+            }
+            if lhs.alwaysDisplayAttachButton != rhs.alwaysDisplayAttachButton {
                 return false
             }
             return true
@@ -83,8 +120,11 @@ public final class ListComposePollOptionComponent: Component {
     public let resetText: ResetText?
     public let assumeIsEditing: Bool
     public let characterLimit: Int?
+    public let hasLeftInset: Bool
     public let enableInlineAnimations: Bool
     public let canReorder: Bool
+    public let canAdd: Bool
+    public let attachment: Attachment?
     public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
@@ -92,6 +132,7 @@ public final class ListComposePollOptionComponent: Component {
     public let inputMode: InputMode?
     public let alwaysDisplayInputModeSelector: Bool
     public let toggleInputMode: (() -> Void)?
+    public let attachAction: (() -> Void)?
     public let deleteAction: (() -> Void)?
     public let paste: ((TextFieldComponent.PasteData) -> Void)?
     public let tag: AnyObject?
@@ -108,7 +149,10 @@ public final class ListComposePollOptionComponent: Component {
         assumeIsEditing: Bool = false,
         characterLimit: Int,
         enableInlineAnimations: Bool = true,
+        hasLeftInset: Bool = false,
         canReorder: Bool = false,
+        canAdd: Bool = false,
+        attachment: Attachment? = nil,
         emptyLineHandling: TextFieldComponent.EmptyLineHandling,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
@@ -116,6 +160,7 @@ public final class ListComposePollOptionComponent: Component {
         inputMode: InputMode?,
         alwaysDisplayInputModeSelector: Bool = false,
         toggleInputMode: (() -> Void)?,
+        attachAction: (() -> Void)? = nil,
         deleteAction: (() -> Void)? = nil,
         paste: ((TextFieldComponent.PasteData) -> Void)? = nil,
         tag: AnyObject? = nil
@@ -131,7 +176,10 @@ public final class ListComposePollOptionComponent: Component {
         self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
         self.enableInlineAnimations = enableInlineAnimations
+        self.hasLeftInset = hasLeftInset
         self.canReorder = canReorder
+        self.canAdd = canAdd
+        self.attachment = attachment
         self.emptyLineHandling = emptyLineHandling
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
@@ -139,6 +187,7 @@ public final class ListComposePollOptionComponent: Component {
         self.inputMode = inputMode
         self.alwaysDisplayInputModeSelector = alwaysDisplayInputModeSelector
         self.toggleInputMode = toggleInputMode
+        self.attachAction = attachAction
         self.deleteAction = deleteAction
         self.paste = paste
         self.tag = tag
@@ -178,7 +227,16 @@ public final class ListComposePollOptionComponent: Component {
         if lhs.enableInlineAnimations != rhs.enableInlineAnimations {
             return false
         }
+        if lhs.hasLeftInset != rhs.hasLeftInset {
+            return false
+        }
         if lhs.canReorder != rhs.canReorder {
+            return false
+        }
+        if lhs.canAdd != rhs.canAdd {
+            return false
+        }
+        if lhs.attachment != rhs.attachment {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
@@ -202,6 +260,7 @@ public final class ListComposePollOptionComponent: Component {
     private final class CheckView: HighlightTrackingButton {
         private var checkLayer: CheckLayer?
         private var theme: PresentationTheme?
+        private var isRectangle = false
         
         var action: (() -> Void)?
         
@@ -251,20 +310,25 @@ public final class ListComposePollOptionComponent: Component {
             self.action?()
         }
         
-        func update(size: CGSize, theme: PresentationTheme, isSelected: Bool, transition: ComponentTransition) {
+        func update(size: CGSize, isRectangle: Bool, theme: PresentationTheme, isSelected: Bool, transition: ComponentTransition) {
             let checkLayer: CheckLayer
             if let current = self.checkLayer {
                 checkLayer = current
             } else {
-                checkLayer = CheckLayer(theme: CheckNodeTheme(theme: theme, style: .plain), content: .check)
+                checkLayer = CheckLayer(theme: CheckNodeTheme(theme: theme, style: .plain), content: .check(isRectangle: isRectangle))
                 self.checkLayer = checkLayer
                 self.layer.addSublayer(checkLayer)
             }
-            
+                        
             if self.theme !== theme {
                 self.theme = theme
                 
                 checkLayer.theme = CheckNodeTheme(theme: theme, style: .plain)
+            }
+            
+            if self.isRectangle != isRectangle {
+                self.isRectangle = isRectangle
+                checkLayer.content = .check(isRectangle: isRectangle)
             }
             
             checkLayer.frame = CGRect(origin: CGPoint(), size: size)
@@ -385,6 +449,13 @@ public final class ListComposePollOptionComponent: Component {
         
         private var modeSelector: ComponentView<Empty>?
         private var reorderIconView: UIImageView?
+        private var addIconView: UIImageView?
+        
+        private var attachButton: ComponentView<Empty>?
+        private var imageNode: TransformImageNode?
+        private var statusNode: SemanticStatusNode?
+        private var animationLayer: InlineStickerItemLayer?
+        private let imageButton = HighlightTrackingButton()
         
         private var checkView: CheckView?
         
@@ -395,6 +466,8 @@ public final class ListComposePollOptionComponent: Component {
         private var recognizer: RevealOptionsGestureRecognizer?
         
         private var customPlaceholder: ComponentView<Empty>?
+        
+        private var appliedMedia: AnyMediaReference?
         
         private var component: ListComposePollOptionComponent?
         private weak var state: EmptyComponentState?
@@ -430,6 +503,25 @@ public final class ListComposePollOptionComponent: Component {
                 
         public override init(frame: CGRect) {
             super.init(frame: CGRect())
+            
+            self.imageButton.highligthedChanged = { [weak self] highlighted in
+                guard let self else {
+                    return
+                }
+                if highlighted {
+                    self.imageNode?.layer.removeAnimation(forKey: "opacity")
+                    self.imageNode?.alpha = 0.4
+                    
+                    self.animationLayer?.removeAnimation(forKey: "opacity")
+                    self.animationLayer?.opacity = 0.4
+                } else {
+                    self.imageNode?.alpha = 1.0
+                    self.imageNode?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    self.animationLayer?.opacity = 1.0
+                    self.animationLayer?.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
         }
         
         required public init?(coder: NSCoder) {
@@ -551,6 +643,13 @@ public final class ListComposePollOptionComponent: Component {
                 self.component?.deleteAction?()
             }
         }
+        
+        @objc private func imageButtonPressed() {
+            guard let component = self.component else {
+                return
+            }
+            component.attachAction?()
+        }
                 
         func update(component: ListComposePollOptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
@@ -570,6 +669,10 @@ public final class ListComposePollOptionComponent: Component {
             var rightInset: CGFloat = 16.0
             let modeSelectorSize = CGSize(width: 32.0, height: 32.0)
             
+            if component.hasLeftInset {
+                leftInset += 46.0
+            }
+            
             if component.selection != nil {
                 leftInset += 34.0
             }
@@ -578,8 +681,8 @@ public final class ListComposePollOptionComponent: Component {
                 rightInset += 34.0
             }
             
-            if component.canReorder {
-                rightInset += 16.0
+            if component.attachment != nil {
+                rightInset += 28.0
             }
             
             let textFieldSize = self.textField.update(
@@ -641,8 +744,89 @@ public final class ListComposePollOptionComponent: Component {
             )
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height - 1.0)
-            let textFieldFrame = CGRect(origin: CGPoint(x: leftInset - 16.0 + self.revealOffset, y: 0.0), size: textFieldSize)
             
+            var hasReorderIcon = false
+            if component.canReorder, let externalState = component.externalState, externalState.hasText {
+                var reorderIconTransition = transition
+                let reorderIconView: UIImageView
+                if let current = self.reorderIconView {
+                    reorderIconView = current
+                } else {
+                    reorderIconTransition = reorderIconTransition.withAnimation(.none)
+                    reorderIconView = UIImageView()
+                    self.reorderIconView = reorderIconView
+                    self.addSubview(reorderIconView)
+                    
+                    if !transition.animation.isImmediate {
+                        transition.animateAlpha(view: reorderIconView, from: 0.0, to: 1.0)
+                        transition.animateScale(view: reorderIconView, from: 0.001, to: 1.0)
+                    }
+                }
+                reorderIconView.image = PresentationResourcesItemList.itemListReorderIndicatorIcon(component.theme)
+                
+                var reorderIconSize = CGSize()
+                if let icon = reorderIconView.image {
+                    reorderIconSize = icon.size
+                }
+                
+                let reorderIconFrame = CGRect(origin: CGPoint(x: 22.0 + self.revealOffset, y: floor((size.height - reorderIconSize.height) * 0.5)), size: reorderIconSize)
+                reorderIconTransition.setPosition(view: reorderIconView, position: reorderIconFrame.center)
+                reorderIconTransition.setBounds(view: reorderIconView, bounds: CGRect(origin: CGPoint(), size: reorderIconFrame.size))
+                
+                hasReorderIcon = true
+            } else if let reorderIconView = self.reorderIconView {
+                self.reorderIconView = nil
+                if !transition.animation.isImmediate {
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                    alphaTransition.setAlpha(view: reorderIconView, alpha: 0.0, completion: { [weak reorderIconView] _ in
+                        reorderIconView?.removeFromSuperview()
+                    })
+                    alphaTransition.setScale(view: reorderIconView, scale: 0.001)
+                } else {
+                    reorderIconView.removeFromSuperview()
+                }
+            }
+            
+            if component.canAdd, !hasReorderIcon {
+                var addIconTransition = transition
+                let addIconView: UIImageView
+                if let current = self.addIconView {
+                    addIconView = current
+                } else {
+                    addIconTransition = addIconTransition.withAnimation(.none)
+                    addIconView = UIImageView()
+                    self.addIconView = addIconView
+                    self.addSubview(addIconView)
+                    
+                    if !transition.animation.isImmediate {
+                        transition.animateAlpha(view: addIconView, from: 0.0, to: 1.0)
+                        transition.animateScale(view: addIconView, from: 0.001, to: 1.0)
+                    }
+                }
+                addIconView.image = PresentationResourcesItemList.itemListAddIndicatorIcon(component.theme)
+                
+                var addIconSize = CGSize()
+                if let icon = addIconView.image {
+                    addIconSize = icon.size
+                }
+                
+                let addIconFrame = CGRect(origin: CGPoint(x: 22.0 + self.revealOffset, y: floor((size.height - addIconSize.height) * 0.5)), size: addIconSize)
+                addIconTransition.setPosition(view: addIconView, position: addIconFrame.center)
+                addIconTransition.setBounds(view: addIconView, bounds: CGRect(origin: CGPoint(), size: addIconFrame.size))
+            } else if let addIconView = self.addIconView {
+                self.addIconView = nil
+                if !transition.animation.isImmediate {
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                    alphaTransition.setAlpha(view: addIconView, alpha: 0.0, completion: { [weak addIconView] _ in
+                        addIconView?.removeFromSuperview()
+                    })
+                    alphaTransition.setScale(view: addIconView, scale: 0.001)
+                } else {
+                    addIconView.removeFromSuperview()
+                }
+            }
+            
+            let textFieldFrame = CGRect(origin: CGPoint(x: leftInset - 16.0 + self.revealOffset, y: 0.0), size: textFieldSize)
             if let textFieldView = self.textField.view {
                 if textFieldView.superview == nil {
                     self.addSubview(textFieldView)
@@ -673,17 +857,17 @@ public final class ListComposePollOptionComponent: Component {
                     }
                 }
                 let checkSize = CGSize(width: 22.0, height: 22.0)
-                let checkFrame = CGRect(origin: CGPoint(x: floor((leftInset - checkSize.width) * 0.5) + self.revealOffset, y: floor((size.height - checkSize.height) * 0.5)), size: checkSize)
+                let checkFrame = CGRect(origin: CGPoint(x: leftInset - checkSize.width - 20.0 + self.revealOffset, y: floor((size.height - checkSize.height) * 0.5)), size: checkSize)
                 
                 if animateIn {
                     checkView.frame = CGRect(origin: CGPoint(x: -checkSize.width, y: self.bounds.height == 0.0 ? checkFrame.minY : floor((self.bounds.height - checkSize.height) * 0.5)), size: checkFrame.size)
                     transition.setPosition(view: checkView, position: checkFrame.center)
                     transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
+                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
                 } else {
                     transition.setPosition(view: checkView, position: checkFrame.center)
                     transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, theme: component.theme, isSelected: selection.isSelected, transition: transition)
+                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, theme: component.theme, isSelected: selection.isSelected, transition: transition)
                 }
             } else if let checkView = self.checkView {
                 self.checkView = nil
@@ -692,40 +876,237 @@ public final class ListComposePollOptionComponent: Component {
                 })
             }
                 
-            var rightIconsInset: CGFloat = 0.0
-            if component.canReorder, let externalState = component.externalState, externalState.hasText {
-                var reorderIconTransition = transition
-                let reorderIconView: UIImageView
-                if let current = self.reorderIconView {
-                    reorderIconView = current
+            var rightIconsInset: CGFloat = 16.0
+            let minHeight: CGFloat = 52.0
+            
+            if let attachment = component.attachment, attachment.alwaysDisplayAttachButton || component.externalState?.hasText == true {
+                var attachButtonTransition = transition
+                let attachButton: ComponentView<Empty>
+                if let current = self.attachButton {
+                    attachButton = current
                 } else {
-                    reorderIconTransition = reorderIconTransition.withAnimation(.none)
-                    reorderIconView = UIImageView()
-                    self.reorderIconView = reorderIconView
-                    self.addSubview(reorderIconView)
+                    attachButtonTransition = attachButtonTransition.withAnimation(.none)
+                    attachButton = ComponentView()
+                    self.attachButton = attachButton
                 }
-                reorderIconView.image = PresentationResourcesItemList.itemListReorderIndicatorIcon(component.theme)
-                
-                var reorderIconSize = CGSize()
-                if let icon = reorderIconView.image {
-                    reorderIconSize = icon.size
+               
+                let attachButtonSize = attachButton.update(
+                    transition: attachButtonTransition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Chat/Input/Text/IconAttachment",
+                            tintColor: component.theme.chat.inputPanel.inputControlColor.blitOver(component.theme.list.itemBlocksBackgroundColor, alpha: 1.0),
+                            maxSize: CGSize(width: 25.0, height: 25.0)
+                        )),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.attachAction?()
+                        },
+                        animateScale: false
+                    )),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                let attachButtonFrame = CGRect(origin: CGPoint(x: size.width - rightIconsInset - 7.0 - attachButtonSize.width + self.revealOffset, y: size.height - minHeight + floor((minHeight - attachButtonSize.height) * 0.5)), size: attachButtonSize)
+                if let attachButtonView = attachButton.view as? PlainButtonComponent.View {
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                    
+                    if attachButtonView.superview == nil {
+                        self.addSubview(attachButtonView)
+                        ComponentTransition.immediate.setAlpha(view: attachButtonView, alpha: 0.0)
+                        ComponentTransition.immediate.setScale(view: attachButtonView, scale: 0.001)
+                    }
+                    
+                    attachButtonTransition.setPosition(view: attachButtonView, position: attachButtonFrame.center)
+                    attachButtonTransition.setBounds(view: attachButtonView, bounds: CGRect(origin: CGPoint(), size: attachButtonFrame.size))
+                    
+                    let displaySelector = attachment.media == nil
+                    alphaTransition.setAlpha(view: attachButtonView, alpha: displaySelector ? 1.0 : 0.0)
+                    alphaTransition.setScale(view: attachButtonView, scale: displaySelector ? 1.0 : 0.001)
                 }
                 
-                let reorderIconFrame = CGRect(origin: CGPoint(x: size.width - 14.0 - reorderIconSize.width + self.revealOffset, y: floor((size.height - reorderIconSize.height) * 0.5)), size: reorderIconSize)
-                reorderIconTransition.setPosition(view: reorderIconView, position: reorderIconFrame.center)
-                reorderIconTransition.setBounds(view: reorderIconView, bounds: CGRect(origin: CGPoint(), size: reorderIconFrame.size))
+                rightIconsInset += 42.0
+            } else if let attachButton = self.attachButton {
+                self.attachButton = nil
+                if let attachButtonView = attachButton.view {
+                    if !transition.animation.isImmediate {
+                            let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                        alphaTransition.setAlpha(view: attachButtonView, alpha: 0.0, completion: { [weak attachButtonView] _ in
+                            attachButtonView?.removeFromSuperview()
+                        })
+                        alphaTransition.setScale(view: attachButtonView, scale: 0.001)
+                    } else {
+                        attachButtonView.removeFromSuperview()
+                    }
+                }
+            }
+            
+            let imageNodeSize = CGSize(width: 40.0, height: 40.0)
+            let imageNodeFrame = CGRect(origin: CGPoint(x: size.width - 16.0 - imageNodeSize.width + self.revealOffset, y: size.height - minHeight + floor((minHeight - imageNodeSize.height) * 0.5)), size: imageNodeSize)
+            
+            var isSticker = false
+            if let attachment = component.attachment, let file = attachment.media?.media as? TelegramMediaFile, file.isSticker {
+                isSticker = true
                 
-                rightIconsInset += 36.0
-            } else if let reorderIconView = self.reorderIconView {
-                self.reorderIconView = nil
+                let animationSize = CGSize(width: 40.0, height: 40.0)
+                let animationLayer: InlineStickerItemLayer
+                if let current = self.animationLayer {
+                    animationLayer = current
+                } else {
+                    if let animationLayer = self.animationLayer {
+                        self.animationLayer = nil
+                        animationLayer.removeFromSuperlayer()
+                    }
+                    animationLayer = InlineStickerItemLayer(
+                        context: component.context,
+                        userLocation: .other,
+                        attemptSynchronousLoad: true,
+                        emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file, custom: nil, enableAnimation: true),
+                        file: file,
+                        cache: component.context.animationCache,
+                        renderer: component.context.animationRenderer,
+                        unique: false,
+                        placeholderColor: component.theme.list.mediaPlaceholderColor,
+                        pointSize: CGSize(width: animationSize.width * 2.0, height: animationSize.height * 2.0),
+                        dynamicColor: nil,
+                        loopCount: 2
+                    )
+                    self.animationLayer = animationLayer
+                    self.layer.addSublayer(animationLayer)
+                }
+                animationLayer.frame = imageNodeFrame
+                
+                if self.imageButton.superview == nil {
+                    self.imageButton.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
+                    self.addSubview(self.imageButton)
+                }
+                self.imageButton.frame = imageNodeFrame
+            } else if let animationLayer = self.animationLayer {
+                self.imageNode = nil
                 if !transition.animation.isImmediate {
                     let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
-                    alphaTransition.setAlpha(view: reorderIconView, alpha: 0.0, completion: { [weak reorderIconView] _ in
-                        reorderIconView?.removeFromSuperview()
+                    alphaTransition.setAlpha(layer: animationLayer, alpha: 0.0, completion: { [weak animationLayer] _ in
+                        animationLayer?.removeFromSuperlayer()
                     })
-                    alphaTransition.setScale(view: reorderIconView, scale: 0.001)
+                    alphaTransition.setScale(layer: animationLayer, scale: 0.001)
                 } else {
-                    reorderIconView.removeFromSuperview()
+                    animationLayer.removeFromSuperlayer()
+                }
+                self.imageButton.removeFromSuperview()
+            }
+            
+            if let attachment = component.attachment, let media = attachment.media, !isSticker {
+                var imageNodeTransition = transition
+                let imageNode: TransformImageNode
+                if let current = self.imageNode {
+                    imageNode = current
+                } else {
+                    imageNodeTransition = imageNodeTransition.withAnimation(.none)
+                    imageNode = TransformImageNode()
+                    imageNode.isUserInteractionEnabled = false
+                    self.imageNode = imageNode
+                    self.addSubview(imageNode.view)
+                }
+                
+                imageNodeTransition.setPosition(view: imageNode.view, position: imageNodeFrame.center)
+                imageNodeTransition.setBounds(view: imageNode.view, bounds: CGRect(origin: CGPoint(), size: imageNodeFrame.size))
+                
+                var imageSize = imageNodeSize
+                var updateMedia = false
+                if self.appliedMedia != media {
+                    self.appliedMedia = media
+                    updateMedia = true
+                }
+                if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations), let photoReference = media.concrete(TelegramMediaImage.self) {
+                    imageSize = largest.dimensions.cgSize.aspectFilled(imageNodeSize)
+                    
+                    if updateMedia {
+                        imageNode.setSignal(chatMessagePhoto(postbox: component.context.account.postbox, userLocation: .other, photoReference: photoReference))
+                    }
+                } else if let file = media.media as? TelegramMediaFile, let fileReference = media.concrete(TelegramMediaFile.self) {
+                    if let dimensions = file.dimensions {
+                        imageSize = dimensions.cgSize.aspectFilled(imageNodeSize)
+                    }
+                    if file.mimeType.hasPrefix("image/") {
+                        if updateMedia {
+                            imageNode.setSignal(instantPageImageFile(account: component.context.account, userLocation: .other, fileReference: fileReference, fetched: true))
+                        }
+                    } else {
+                        if updateMedia {
+                            imageNode.setSignal(chatMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: fileReference))
+                        }
+                    }
+                } else if let map = media.media as? TelegramMediaMap {
+                    imageSize = CGSize(width: 40.0, height: 40.0)
+                    if updateMedia {
+                        let resource = MapSnapshotMediaResource(latitude: map.latitude, longitude: map.longitude, width: Int32(imageSize.width), height: Int32(imageSize.height))
+                        imageNode.setSignal(chatMapSnapshotImage(engine: component.context.engine, resource: resource))
+                    }
+                }
+                
+                let cornerRadius: CGFloat = 10.0
+                let makeLayout = imageNode.asyncLayout()
+                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: cornerRadius), imageSize: imageSize, boundingSize: imageNodeSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))
+                apply()
+            
+                if self.imageButton.superview == nil {
+                    self.imageButton.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
+                    self.addSubview(self.imageButton)
+                }
+                self.imageButton.frame = imageNodeFrame
+                
+                if let progress = attachment.progress {
+                    let statusNode: SemanticStatusNode
+                    if let current = self.statusNode {
+                        statusNode = current
+                    } else {
+                        statusNode = SemanticStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.5), foregroundNodeColor: .white)
+                        self.statusNode = statusNode
+                        self.addSubview(statusNode.view)
+                    }
+                    
+                    let progressFrame = imageNodeFrame.insetBy(dx: 6.0, dy: 6.0)
+                    statusNode.frame = progressFrame
+                    statusNode.transitionToState(.progress(value: max(0.027, min(1.0, progress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 1.0 + UIScreenPixel), animateRotation: false), updateCutout: false)
+                } else if let statusNode = self.statusNode {
+                    self.statusNode = nil
+                    if !transition.animation.isImmediate {
+                        let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                        alphaTransition.setAlpha(view: statusNode.view, alpha: 0.0, completion: { [weak statusNode] _ in
+                            statusNode?.view.removeFromSuperview()
+                        })
+                        alphaTransition.setScale(view: statusNode.view, scale: 0.001)
+                    } else {
+                        statusNode.view.removeFromSuperview()
+                    }
+                }
+            } else if let imageNode = self.imageNode {
+                self.imageNode = nil
+                if !transition.animation.isImmediate {
+                    let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                    alphaTransition.setAlpha(view: imageNode.view, alpha: 0.0, completion: { [weak imageNode] _ in
+                        imageNode?.view.removeFromSuperview()
+                    })
+                    alphaTransition.setScale(view: imageNode.view, scale: 0.001)
+                } else {
+                    imageNode.view.removeFromSuperview()
+                }
+                self.imageButton.removeFromSuperview()
+                
+                if let statusNode = self.statusNode {
+                    self.statusNode = nil
+                    if !transition.animation.isImmediate {
+                        let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                        alphaTransition.setAlpha(view: statusNode.view, alpha: 0.0, completion: { [weak statusNode] _ in
+                            statusNode?.view.removeFromSuperview()
+                        })
+                        alphaTransition.setScale(view: statusNode.view, scale: 0.001)
+                    } else {
+                        statusNode.view.removeFromSuperview()
+                    }
                 }
             }
             
@@ -775,7 +1156,7 @@ public final class ListComposePollOptionComponent: Component {
                     environment: {},
                     containerSize: modeSelectorSize
                 )
-                let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - rightIconsInset - 4.0 - modeSelectorSize.width + self.revealOffset, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
+                let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - rightIconsInset - 4.0 - modeSelectorSize.width + self.revealOffset, y: size.height - minHeight + floor((minHeight - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
                 if let modeSelectorView = modeSelector.view as? PlainButtonComponent.View {
                     let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     
@@ -880,6 +1261,10 @@ public final class ListComposePollOptionComponent: Component {
             }
             var leftInset: CGFloat = 16.0
             let rightInset: CGFloat = 16.0
+            
+            if component.hasLeftInset {
+                leftInset += 46.0
+            }
             
             if component.selection != nil {
                 leftInset += 34.0

@@ -1623,8 +1623,8 @@ final class ComposeTodoScreenComponent: Component {
                         }
                         if let input = self.validatedInput() {
                             controller.completion(input)
+                            controller.dismiss()
                         }
-                        controller.dismiss()
                     }
                 )),
                 environment: {},

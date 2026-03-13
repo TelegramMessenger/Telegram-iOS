@@ -112,7 +112,7 @@ swift_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/ActionSheetPeerItem:ActionSheetPeerItem",
-        "//submodules/ComposePollUI:ComposePollUI",
+        "//submodules/TelegramUI/Components/ComposePollScreen",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TouchDownGesture:TouchDownGesture",

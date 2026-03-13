@@ -42,7 +42,7 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
         "//submodules/TelegramUI/Components/ListComposePollOptionComponent",
-        "//submodules/ComposePollUI",
+        "//submodules/TelegramUI/Components/ComposePollScreen",
         "//submodules/Markdown",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
     ],

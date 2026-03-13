@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ComposePollUI",
-    module_name = "ComposePollUI",
+    name = "ComposePollScreen",
+    module_name = "ComposePollScreen",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -21,7 +21,6 @@ swift_library(
         "//submodules/PresentationDataUtils",
         "//submodules/TextFormat",
         "//submodules/ObjCRuntimeUtils",
-        "//submodules/AttachmentUI",
         "//submodules/TextInputMenu",
         "//submodules/ComponentFlow",
         "//submodules/Components/ComponentDisplayAdapters",
@@ -43,6 +42,17 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
         "//submodules/TelegramUI/Components/ListComposePollOptionComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/LegacyComponents",
+        "//submodules/LegacyUI",
+        "//submodules/AttachmentUI",
+        "//submodules/MediaPickerUI",
+        "//submodules/TelegramUI/Components/LegacyCamera",
+        "//submodules/LegacyMediaPickerUI",
+        "//submodules/LocationUI",
+        "//submodules/TelegramUI/Components/AttachmentFileController",
+        "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
+        "//submodules/TelegramUI/Components/ChatScheduleTimeController",
+        "//submodules/ContextUI",
     ],
     visibility = [
         "//visibility:public",

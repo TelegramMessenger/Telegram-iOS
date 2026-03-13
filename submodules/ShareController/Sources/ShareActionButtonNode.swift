@@ -139,7 +139,7 @@ public final class ShareStartAtTimestampNode: HighlightTrackingButtonNode {
         self.titleTextColor = titleTextColor
         self.checkNodeTheme = checkNodeTheme
         
-        self.checkNode = CheckNode(theme: checkNodeTheme, content: .check)
+        self.checkNode = CheckNode(theme: checkNodeTheme, content: .check(isRectangle: false))
         self.checkNode.isUserInteractionEnabled = false
         
         self.titleTextNode = TextNode()

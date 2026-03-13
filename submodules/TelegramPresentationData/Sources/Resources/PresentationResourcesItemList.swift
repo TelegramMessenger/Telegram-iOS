@@ -146,6 +146,20 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func itemListAddIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListAddIndicatorIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 17.0, height: 15.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.list.itemBlocksSeparatorColor.cgColor)
+
+                let lineHeight = 1.0 + UIScreenPixel
+                context.addPath(CGPath(roundedRect: CGRect(x: 1.0, y: 7.0, width: 15.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.addPath(CGPath(roundedRect: CGRect(x: 8.0, y: 0.0, width: lineHeight, height: 15.0), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.fillPath()
+            })
+        })
+    }
+    
     public static func linkIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListLinkIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Contact List/LinkActionIcon"), color: theme.list.itemAccentColor)

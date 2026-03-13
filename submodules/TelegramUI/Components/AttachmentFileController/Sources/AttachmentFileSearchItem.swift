@@ -524,48 +524,53 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         return messages
                     }
                 )
-                globalMusic = .single(nil)
-                |> then(
-                    context.engine.peers.resolvePeerByName(name: "lybot", referrer: nil)
-                    |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
-                        guard case let .result(result) = result else {
-                            return .complete()
+                
+                if let data = context.currentAppConfiguration.with({ $0 }).data, let searchBot = data["music_search_username"] as? String, !searchBot.isEmpty {
+                    globalMusic = .single(nil)
+                    |> then(
+                        context.engine.peers.resolvePeerByName(name: searchBot, referrer: nil)
+                        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                            guard case let .result(result) = result else {
+                                return .complete()
+                            }
+                            return .single(result)
                         }
-                        return .single(result)
-                    }
-                    |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
-                        guard let peer = peer else {
-                            return .single(nil)
-                        }
-                        return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query, offset: "")
-                        |> map { results -> ChatContextResultCollection? in
-                            return results?.results
-                        }
-                        |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
-                            return .single(nil)
-                        }
-                    }
-                    |> map { contextResult in
-                        guard let results = contextResult?.results else {
-                            return []
-                        }
-                        let peerId = context.account.peerId
-                        var messages: [Message] = []
-                        let peers = SimpleDictionary<PeerId, Peer>()
-                        for result in results {
-                            switch result {
-                            case let .internalReference(internalReference):
-                                if let file = internalReference.file {
-                                    let stableId = UInt32(clamping: file.fileId.id % Int64(Int32.max))
-                                    messages.append(Message(stableId: stableId, stableVersion: 0, id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: Int32(stableId)), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [.music], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
-                                }
-                            default:
-                                break
+                        |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
+                            guard let peer = peer else {
+                                return .single(nil)
+                            }
+                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query, offset: "")
+                            |> map { results -> ChatContextResultCollection? in
+                                return results?.results
+                            }
+                            |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+                                return .single(nil)
                             }
                         }
-                        return messages
-                    }
-                )
+                        |> map { contextResult in
+                            guard let results = contextResult?.results else {
+                                return []
+                            }
+                            let peerId = context.account.peerId
+                            var messages: [Message] = []
+                            let peers = SimpleDictionary<PeerId, Peer>()
+                            for result in results {
+                                switch result {
+                                case let .internalReference(internalReference):
+                                    if let file = internalReference.file {
+                                        let stableId = UInt32(clamping: file.fileId.id % Int64(Int32.max))
+                                        messages.append(Message(stableId: stableId, stableVersion: 0, id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: Int32(stableId)), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [.music], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:]))
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                            return messages
+                        }
+                    )
+                } else {
+                    globalMusic = .single(nil)
+                }
             }
             
             updateActivity(true)

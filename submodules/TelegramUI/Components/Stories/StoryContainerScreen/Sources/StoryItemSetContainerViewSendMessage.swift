@@ -15,7 +15,6 @@ import ChatEntityKeyboardInputNode
 import ChatScheduleTimeController
 import TextFormat
 import PhoneNumberFormat
-import ComposePollUI
 import TelegramIntents
 import LegacyUI
 import WebSearchUI

@@ -21,8 +21,6 @@ import DeviceLocationManager
 import ShareController
 import UrlEscaping
 import ContextUI
-import ComposePollUI
-import ComposeTodoScreen
 import AlertUI
 import PresentationDataUtils
 import UndoUI
@@ -4625,6 +4623,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 createNewGroupImpl = { [weak controller] in
                     switch peerType {
+                    case .createBot:
+                        break
                     case .user:
                         break
                     case let .group(group):

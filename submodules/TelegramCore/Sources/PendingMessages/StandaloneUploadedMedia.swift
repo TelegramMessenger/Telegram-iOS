@@ -52,8 +52,8 @@ private func uploadedThumbnail(network: Network, postbox: Postbox, data: Data) -
     }
 }
 
-public func standaloneUploadedImage(postbox: Postbox, network: Network, peerId: PeerId, text: String, data: Data, thumbnailData: Data? = nil, dimensions: PixelDimensions) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    return multipartUpload(network: network, postbox: postbox, source: .data(data), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+public func standaloneUploadedImage(postbox: Postbox, network: Network, peerId: PeerId, text: String, source: MultipartUploadSource, thumbnailData: Data? = nil, dimensions: PixelDimensions) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
+    return multipartUpload(network: network, postbox: postbox, source: source, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
     |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
         switch next {
@@ -103,7 +103,7 @@ public func standaloneUploadedImage(postbox: Postbox, network: Network, peerId: 
                         switch result {
                             case let .encryptedFile(encryptedFileData):
                                 let (id, accessHash, size, dcId) = (encryptedFileData.id, encryptedFileData.accessHash, encryptedFileData.size, encryptedFileData.dcId)
-                                return .single(.result(.media(.standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: SecretFileMediaResource(fileId: id, accessHash: accessHash, containerSize: size, decryptedSize: Int64(data.count), datacenterId: Int(dcId), key: key), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])))))
+                                return .single(.result(.media(.standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: SecretFileMediaResource(fileId: id, accessHash: accessHash, containerSize: size, decryptedSize: size, datacenterId: Int(dcId), key: key), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])))))
                             case .encryptedFileEmpty:
                                 return .fail(.generic)
                         }

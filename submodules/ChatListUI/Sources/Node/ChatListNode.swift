@@ -2328,6 +2328,8 @@ public final class ChatListNode: ListViewImpl {
                                     } else {
                                         match = false
                                     }
+                                case .createBot:
+                                    break
                                 }
                                 if match {
                                     return true

@@ -323,7 +323,7 @@ public final class ListActionItemComponent: Component {
             if let current = self.checkLayer {
                 checkLayer = current
             } else {
-                checkLayer = CheckLayer(theme: CheckNodeTheme(theme: theme, style: .plain), content: .check)
+                checkLayer = CheckLayer(theme: CheckNodeTheme(theme: theme, style: .plain), content: .check(isRectangle: false))
                 self.checkLayer = checkLayer
                 self.layer.addSublayer(checkLayer)
             }

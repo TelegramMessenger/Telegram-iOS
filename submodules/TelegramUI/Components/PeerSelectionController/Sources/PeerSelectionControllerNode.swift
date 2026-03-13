@@ -1210,6 +1210,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         emptyText = ""
                     }
                     emptyButtonText = self.presentationData.strings.RequestPeer_CreateNewGroup
+                case .createBot:
+                    emptyTitle = ""
+                    emptyText = ""
+                    emptyButtonText = ""
                 }
                 
                 self.emptyTitleNode.attributedText = NSAttributedString(string: emptyTitle, font: Font.semibold(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
@@ -1863,6 +1867,8 @@ private func stringForRequestPeerType(strings: PresentationStrings, peerType: Re
                 append(rightsString)
             }
         }
+    case .createBot:
+        break
     }
     if lines.isEmpty {
         return nil

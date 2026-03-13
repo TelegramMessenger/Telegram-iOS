@@ -104,6 +104,8 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             for media in item.message.media {
                 if let telegramFile = media as? TelegramMediaFile {
                     selectedFile = telegramFile
+                } else if let poll = media as? TelegramMediaPoll, let telegramFile = poll.attachedMedia as? TelegramMediaFile {
+                    selectedFile = telegramFile
                 }
             }
             if let updatingMedia = item.attributes.updatingMedia, case let .update(media) = updatingMedia.media, let file = media.media as? TelegramMediaFile {

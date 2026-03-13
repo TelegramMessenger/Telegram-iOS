@@ -34,7 +34,6 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatTimerScreen",
         "//submodules/TextFormat",
         "//submodules/PhoneNumberFormat",
-        "//submodules/ComposePollUI",
         "//submodules/TelegramIntents",
         "//submodules/LegacyUI",
         "//submodules/WebSearchUI",

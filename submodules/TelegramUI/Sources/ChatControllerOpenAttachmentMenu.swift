@@ -34,7 +34,7 @@ import MediaEditorScreen
 import CameraScreen
 import ShareController
 import ComposeTodoScreen
-import ComposePollUI
+import ComposePollScreen
 import Photos
 import AttachmentFileController
 
@@ -1291,26 +1291,6 @@ extension ChatControllerImpl {
                 self?.openCamera(cameraView: nil)
             }
         }
-        controller.presentWebSearch = { [weak self, weak controller] mediaGroups, activateOnDisplay in
-            self?.presentWebSearch(editingMessage: false, attachment: true, activateOnDisplay: activateOnDisplay, present: { [weak controller] c, a in
-                controller?.present(c, in: .current)
-                if let webSearchController = c as? WebSearchController {
-                    webSearchController.searchingUpdated = { [weak mediaGroups] searching in
-                        if let mediaGroups = mediaGroups, mediaGroups.isNodeLoaded {
-                            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-                            transition.updateAlpha(node: mediaGroups.displayNode, alpha: searching ? 0.0 : 1.0)
-                            mediaGroups.displayNode.isUserInteractionEnabled = !searching
-                        }
-                    }
-                    webSearchController.present(mediaGroups, in: .current)
-                    webSearchController.dismissed = {
-                        updateMediaPickerContext(mediaPickerContext)
-                    }
-                    controller?.webSearchController = webSearchController
-                    updateMediaPickerContext(webSearchController.mediaPickerContext)
-                }
-            })
-        }
         controller.presentSchedulePicker = { [weak self] media, done in
             if let strongSelf = self {
                 strongSelf.presentScheduleTimePicker(style: media ? .media : .default, completion: { [weak self] time, repeatPeriod in
@@ -2049,9 +2029,15 @@ extension ChatControllerImpl {
                             })
                         }
                     }, nil)
+                    
+                    var attributes: [MessageAttribute] = []
+                    if !poll.description.entities.isEmpty {
+                        attributes.append(TextEntitiesMessageAttribute(entities: poll.description.entities))
+                    }
+                    
                     let message: EnqueueMessage = .message(
-                        text: "",
-                        attributes: [],
+                        text: poll.description.string,
+                        attributes: attributes,
                         inlineStickers: [:],
                         mediaReference: .standalone(media: TelegramMediaPoll(
                             pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min...Int64.max)),
@@ -2063,7 +2049,12 @@ extension ChatControllerImpl {
                             correctAnswers: poll.correctAnswers,
                             results: poll.results,
                             isClosed: false,
-                            deadlineTimeout: poll.deadlineTimeout
+                            deadlineTimeout: poll.deadlineTimeout,
+                            openAnswers: poll.openAnswers,
+                            revotingDisabled: poll.revotingDisabled,
+                            shuffleAnswers: poll.shuffleAnswers,
+                            hideResultsUntilClose: poll.hideResultsUntilClose,
+                            attachedMedia: poll.media?.media
                         )),
                         threadId: self.chatLocation.threadId,
                         replyToMessageId: nil,

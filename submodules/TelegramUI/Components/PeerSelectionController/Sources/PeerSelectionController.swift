@@ -136,6 +136,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                     self.customTitle = self.presentationData.strings.RequestPeer_ChooseGroupTitle
                 case .channel:
                     self.customTitle = self.presentationData.strings.RequestPeer_ChooseChannelTitle
+                case .createBot:
+                    break
                 }
             } else {
                 self.customTitle = self.presentationData.strings.ChatImport_Title

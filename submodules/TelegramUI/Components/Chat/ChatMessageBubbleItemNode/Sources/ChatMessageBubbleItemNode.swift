@@ -131,6 +131,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     var hasSeparateCommentsButton = false
     
     var addedPriceInfo = false
+    var addedPollMedia = false
     
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
@@ -283,7 +284,22 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.removeAll()
                 result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 return (result, false, true)
-            } else if let _ = media as? TelegramMediaPoll {
+            } else if let poll = media as? TelegramMediaPoll {
+                if let attachedMedia = poll.attachedMedia {
+                    if let _ = attachedMedia as? TelegramMediaImage {
+                        result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                    } else if let file = attachedMedia as? TelegramMediaFile {
+                        let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
+                        if isVideo {
+                            result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                        } else {
+                            result.append((message, ChatMessageFileBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                        }
+                    } else if let _ =  attachedMedia as? TelegramMediaMap {
+                        result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                    }
+                    addedPollMedia = true
+                }
                 result.append((message, ChatMessagePollBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
             } else if let _ = media as? TelegramMediaTodo {
@@ -318,10 +334,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                         isMediaInverted = updatingMedia.invertMediaAttribute != nil
                     } else if let _ = message.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
                         isMediaInverted = true
+                    } else if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                        isMediaInverted = true
                     }
                     
                     if isMediaInverted {
-                        result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: addedPriceInfo ? 1 : 0)
+                        result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: addedPriceInfo || addedPollMedia ? 1 : 0)
                     } else {
                         result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)))
                         needReactions = false

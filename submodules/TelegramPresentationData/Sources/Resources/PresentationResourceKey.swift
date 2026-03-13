@@ -50,6 +50,7 @@ public enum PresentationResourceKey: Int32 {
     case itemListDeleteIcon
     case itemListDeleteIndicatorIcon
     case itemListReorderIndicatorIcon
+    case itemListAddIndicatorIcon
     case itemListLinkIcon
     case itemListAddPersonIcon
     case itemListCreateGroupIcon

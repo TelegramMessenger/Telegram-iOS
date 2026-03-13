@@ -167,6 +167,12 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         }
         
         public enum AssetsMode: Equatable {
+            public enum PollMode: Equatable {
+                case description
+                case quizAnswer
+                case option
+            }
+            
             case `default`
             case wallpaper
             case story
@@ -174,6 +180,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             case cover
             case createSticker
             case createAvatar
+            case poll(PollMode)
         }
         
         case assets(PHAssetCollection?, AssetsMode)
@@ -2037,6 +2044,17 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.titleView.title = presentationData.strings.MediaPicker_AddImage
                 case .cover:
                     self.titleView.title = presentationData.strings.MediaPicker_ChooseCover
+                case let .poll(pollMode):
+                    self.titleView.title = presentationData.strings.MediaPicker_Recents
+                    switch pollMode {
+                    case .description:
+                        self.titleView.subtitle = "Add media to the poll description"
+                    case .quizAnswer:
+                        self.titleView.subtitle = "Add media to the quiz explanation"
+                    case .option:
+                        self.titleView.subtitle = "Add media to this option"
+                    }
+                    self.titleView.isEnabled = true
                 }
             }
         } else {

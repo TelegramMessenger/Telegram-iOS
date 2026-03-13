@@ -187,6 +187,13 @@ public enum TelegramMediaPollKind: Equatable, PostboxCoding {
             encoder.encodeInt32(multipleAnswers ? 1 : 0, forKey: "m")
         }
     }
+    
+    public var multipleAnswers: Bool {
+        switch self {
+        case let .poll(multipleAnswers), let .quiz(multipleAnswers):
+            return multipleAnswers
+        }
+    }
 }
 
 public final class TelegramMediaPoll: Media, Equatable {

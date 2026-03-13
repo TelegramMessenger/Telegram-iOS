@@ -1780,6 +1780,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = NSAttributedString(string: strings.Notification_CopyProtection_Request(peerName).string, font: titleFont, textColor: primaryTextColor)
                 }
+            case .managedBotCreated:
+                attributedString = nil
             case .unknown:
                 attributedString = nil
             }

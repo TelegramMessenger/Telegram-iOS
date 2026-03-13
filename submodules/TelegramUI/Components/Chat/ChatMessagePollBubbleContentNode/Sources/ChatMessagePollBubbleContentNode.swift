@@ -526,7 +526,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         
         return { context, presentationData, message, poll, option, translation, optionResult, constrainedWidth in
             let leftInset: CGFloat = 50.0
-            let rightInset: CGFloat = 12.0
+            let rightInset: CGFloat = 10.0
             
             let incoming = message.effectivelyIncoming(context.account.peerId)
             
@@ -559,7 +559,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             
             let shouldHaveRadioNode = optionResult == nil
             let isSelectable: Bool
-            if shouldHaveRadioNode, case .poll(multipleAnswers: true) = poll.kind, !Namespaces.Message.allNonRegular.contains(message.id.namespace) {
+            if shouldHaveRadioNode, poll.kind.multipleAnswers, !Namespaces.Message.allNonRegular.contains(message.id.namespace) {
                 isSelectable = true
             } else {
                 isSelectable = false
@@ -617,7 +617,13 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                             fillColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar
                         }
                         context.setFillColor(fillColor.cgColor)
-                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                        
+                        if poll.kind.multipleAnswers {
+                            context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 4.0).cgPath)
+                            context.fillPath()
+                        } else {
+                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                        }
                         
                         let strokeColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground
                         if strokeColor.alpha.isZero {
@@ -689,9 +695,9 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     ))
                     let titleNodeFrame: CGRect
                     if titleLayout.hasRTL {
-                        titleNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - titleLayout.size.width, y: 11.0), size: titleLayout.size)
+                        titleNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - titleLayout.size.width, y: 12.0), size: titleLayout.size)
                     } else {
-                        titleNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                        titleNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
                     }
                     if node.titleNode !== titleNode {
                         node.titleNode = titleNode
@@ -718,7 +724,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                         let radioSize: CGFloat = 22.0
                         radioNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: CGSize(width: radioSize, height: radioSize))
-                        radioNode.update(isRectangle: poll.kind == .poll(multipleAnswers: true), staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, fillColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable, isAnimating: inProgress)
+                        radioNode.update(isRectangle: poll.kind.multipleAnswers, staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, fillColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable, isAnimating: inProgress)
                     } else if let radioNode = node.radioNode {
                         node.radioNode = nil
                         if animated {
@@ -754,7 +760,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         node.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: contentHeight + UIScreenPixel))
                     }
                     node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
-                    node.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
+                    node.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - leftInset - rightInset, height: UIScreenPixel))
                     
                     if node.resultBarNode.image == nil || updatedResultIcon {
                         var isQuiz = false
@@ -1269,6 +1275,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     votersString = " "
                 }
                 let (votersLayout, votersApply) = makeVotersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: votersString ?? "", font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
+                
+                
                 
                 let (buttonSubmitInactiveTextLayout, buttonSubmitInactiveTextApply) = makeSubmitInactiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.accentControlDisabledColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 let (buttonSubmitActiveTextLayout, buttonSubmitActiveTextApply) = makeSubmitActiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.polls.bar), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))

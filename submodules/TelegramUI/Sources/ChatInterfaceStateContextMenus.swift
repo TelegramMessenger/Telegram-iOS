@@ -1589,7 +1589,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     hasSelected = true
                 }
             }
-            if hasSelected, case .poll = activePoll.kind {
+            if hasSelected, !activePoll.revotingDisabled {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_UnvotePoll, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unvote"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
