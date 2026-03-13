@@ -2032,7 +2032,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             messageTransitionNode.bounds = previousMessageTransitionNode.bounds
             messageTransitionNode.transform = previousMessageTransitionNode.transform
             
-            self.wrappingNode.contentNode.insertSubnode(self.messageTransitionNode, aboveSubnode: previousMessageTransitionNode)
+            previousMessageTransitionNode.supernode?.insertSubnode(self.messageTransitionNode, aboveSubnode: previousMessageTransitionNode)
             
             self.emptyType = nil
             self.isLoadingValue = false
