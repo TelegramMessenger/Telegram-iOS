@@ -17,6 +17,18 @@ import UndoUI
 import SwiftUI
 import ResizableSheetComponent
 import GlassBarButtonComponent
+import ListSectionComponent
+import ListActionItemComponent
+import PlainButtonComponent
+import ButtonComponent
+import TextFormat
+import Pasteboard
+import ContextUI
+import TranslationLanguagesContextMenuContent
+import TelegramUIPreferences
+import Markdown
+
+private let translateToTag = GenericComponentViewTag()
 
 private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage {
     return generateImage(size, rotatedContext: { size, context in
@@ -42,19 +54,37 @@ private final class SheetContent: CombinedComponent {
     let entities: [MessageTextEntity]
     let fromLanguage: String?
     let toLanguage: String
-    let copyTranslation: ((String) -> Void)?
+    let copyTranslation: ((String, [MessageTextEntity]) -> Void)?
+    let replaceText: ((String, [MessageTextEntity]) -> Void)?
+    let translateChat: ((String, String) -> Void)?
     let changeLanguage: (String, String, @escaping (String, String) -> Void) -> Void
     let expand: () -> Void
+    let dismiss: () -> Void
     
-    init(context: AccountContext, text: String, entities: [MessageTextEntity], fromLanguage: String?, toLanguage: String, copyTranslation: ((String) -> Void)?, changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void, expand: @escaping () -> Void) {
+    init(
+        context: AccountContext,
+        text: String,
+        entities: [MessageTextEntity],
+        fromLanguage: String?,
+        toLanguage: String,
+        copyTranslation: ((String, [MessageTextEntity]) -> Void)?,
+        replaceText: ((String, [MessageTextEntity]) -> Void)?,
+        translateChat: ((String, String) -> Void)?,
+        changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void,
+        expand: @escaping () -> Void,
+        dismiss: @escaping () -> Void
+    ) {
         self.context = context
         self.text = text
         self.entities = entities
         self.fromLanguage = fromLanguage
         self.toLanguage = toLanguage
         self.copyTranslation = copyTranslation
+        self.replaceText = replaceText
+        self.translateChat = translateChat
         self.changeLanguage = changeLanguage
         self.expand = expand
+        self.dismiss = dismiss
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
@@ -81,10 +111,13 @@ private final class SheetContent: CombinedComponent {
         
         var fromLanguage: String?
         let text: String
+        let entities: [MessageTextEntity]
         var textExpanded: Bool = false
         
         var toLanguage: String
-        var translatedText: String?
+        var tone: TranslationTone = .neutral
+        
+        var translatedText: (String, [MessageTextEntity])?
         
         private let expand: () -> Void
         
@@ -99,9 +132,12 @@ private final class SheetContent: CombinedComponent {
         
         private let useAlternativeTranslation: Bool
         
-        init(context: AccountContext, fromLanguage: String?, text: String, toLanguage: String, expand: @escaping () -> Void) {
+        weak var controller: TranslateScreen?
+        
+        init(context: AccountContext, fromLanguage: String?, text: String, entities: [MessageTextEntity], toLanguage: String, expand: @escaping () -> Void) {
             self.context = context
             self.text = text
+            self.entities = entities
             self.fromLanguage = fromLanguage
             self.toLanguage = toLanguage
             self.expand = expand
@@ -119,11 +155,11 @@ private final class SheetContent: CombinedComponent {
             
             super.init()
                         
-            self.translationDisposable.set((self.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
+            self.translationDisposable.set((self.translate(text: text, entities: entities, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = text?.0
+                strongSelf.translatedText = text
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -135,12 +171,31 @@ private final class SheetContent: CombinedComponent {
             self.translationDisposable.dispose()
         }
         
-        func translate(text: String, fromLang: String?, toLang: String) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
+        func translate(text: String, entities: [MessageTextEntity], fromLang: String?, toLang: String) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
             if self.useAlternativeTranslation {
                 return alternativeTranslateText(text: text, fromLang: fromLang, toLang: toLang)
             } else {
-                return self.context.engine.messages.translate(text: text, toLang: toLang)
+                return self.context.engine.messages.translate(text: text, toLang: toLang, entities: entities, tone: self.tone)
             }
+        }
+        
+        func changeTone(_ tone: TranslationTone) {
+            guard self.tone != tone else {
+                return
+            }
+            self.tone = tone
+            self.translatedText = nil
+            self.updated(transition: .immediate)
+            
+            self.translationDisposable.set((self.translate(text: self.text, entities: self.entities, fromLang: self.fromLanguage, toLang: self.toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.translatedText = text
+                strongSelf.updated(transition: .immediate)
+            }, error: { error in
+                
+            }))
         }
         
         func changeLanguage(fromLanguage: String, toLanguage: String) {
@@ -152,11 +207,11 @@ private final class SheetContent: CombinedComponent {
             self.translatedText = nil
             self.updated(transition: .immediate)
             
-            self.translationDisposable.set((self.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
+            self.translationDisposable.set((self.translate(text: self.text, entities: self.entities, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = text?.0
+                strongSelf.translatedText = text
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -210,7 +265,7 @@ private final class SheetContent: CombinedComponent {
                 self.isSpeakingOriginalText = false
                 
                 self.isSpeakingTranslatedText = true
-                self.speechHolder = speakText(context: self.context, text: translatedText)
+                self.speechHolder = speakText(context: self.context, text: translatedText.0)
                 self.speechHolder?.completion = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -221,16 +276,154 @@ private final class SheetContent: CombinedComponent {
             }
             self.updated(transition: .immediate)
         }
+        
+        func presentLanguageSelection() {
+            guard let controller = self.controller else {
+                return
+            }
+            
+            guard let sourceView = controller.node.hostView.findTaggedView(tag: translateToTag) else {
+                return
+            }
+                
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            var languageCode = presentationData.strings.baseLanguageCode
+            let rawSuffix = "-raw"
+            if languageCode.hasSuffix(rawSuffix) {
+                languageCode = String(languageCode.dropLast(rawSuffix.count))
+            }
+            
+            let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                guard let self else {
+                    return
+                }
+                let settings: TranslationSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                    settings = current
+                } else {
+                    settings = TranslationSettings.defaultSettings
+                }
+                
+                var addedLanguages = Set<String>()
+                
+                var topLanguages: [String] = []
+                let langCode = normalizeTranslationLanguage(languageCode)
+                
+                topLanguages.append("tone_formal")
+                topLanguages.append("tone_neutral")
+                topLanguages.append("tone_casual")
+                
+                topLanguages.append("")
+                
+                var ignoredLanguages: Set<String>
+                if let current = settings.ignoredLanguages {
+                    ignoredLanguages = Set(current)
+                } else {
+                    ignoredLanguages = Set([langCode])
+                    for language in systemLanguageCodes() {
+                        ignoredLanguages.insert(language)
+                    }
+                }
+                for code in supportedTranslationLanguages {
+                    if ignoredLanguages.contains(code) {
+                        topLanguages.append(code)
+                    }
+                }
+                
+                topLanguages.append(" ")
+                                
+                var languages: [(String, String)] = []
+                let languageLocale = Locale(identifier: langCode)
+                
+                for code in topLanguages {
+                    if !addedLanguages.contains(code) {
+                        let displayTitle: String
+                        if code.hasPrefix("tone_") {
+                            switch code {
+                            case "tone_formal":
+                                displayTitle = "Formal"
+                            case "tone_neutral":
+                                displayTitle = "Neutral"
+                            case "tone_casual":
+                                displayTitle = "Casual"
+                            default:
+                                displayTitle = ""
+                            }
+                        } else {
+                            displayTitle = languageLocale.localizedString(forLanguageCode: code) ?? ""
+                        }
+                        
+                        let value = (code, displayTitle)
+                        if code == languageCode {
+                            languages.insert(value, at: 4)
+                        } else {
+                            languages.append(value)
+                        }
+                        addedLanguages.insert(code)
+                    }
+                }
+                
+                for code in supportedTranslationLanguages {
+                    if !addedLanguages.contains(code) {
+                        let displayTitle = languageLocale.localizedString(forLanguageCode: code) ?? ""
+                        let value = (code, displayTitle)
+                        if code == languageCode {
+                            languages.insert(value, at: 4)
+                        } else {
+                            languages.append(value)
+                        }
+                        addedLanguages.insert(code)
+                    }
+                }
+                
+                var selectedLanguages = Set<String>()
+                selectedLanguages.insert("tone_\(self.tone.rawValue)")
+                selectedLanguages.insert(self.toLanguage)
+                
+                var dismissImpl: (() -> Void)?
+                let items = ContextController.Items(
+                    content: .custom(
+                        TranslationLanguagesContextMenuContent(
+                            context: self.context,
+                            languages: languages,
+                            selectedLanguages: selectedLanguages,
+                            back: nil,
+                            selectLanguage: { [weak self] language in
+                                guard let self else {
+                                    return
+                                }
+                                if language.hasPrefix("tone_") {
+                                    let tone = String(language.dropFirst(5))
+                                    self.changeTone(TranslationTone(rawValue: tone)!)
+                                } else {
+                                    self.changeLanguage(fromLanguage: self.fromLanguage ?? "", toLanguage: language)
+                                }
+                                dismissImpl?()
+                            }
+                        )
+                    )
+                )
+                
+                let contextController = makeContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(items), gesture: nil)
+                controller.presentInGlobalOverlay(contextController)
+                
+                dismissImpl = { [weak contextController] in
+                    contextController?.dismiss()
+                }
+            })
+        }
     }
     
     func makeState() -> State {
-        return State(context: self.context, fromLanguage: self.fromLanguage, text: self.text, toLanguage: self.toLanguage, expand: self.expand)
+        return State(context: self.context, fromLanguage: self.fromLanguage, text: self.text, entities: self.entities, toLanguage: self.toLanguage, expand: self.expand)
     }
     
     static var body: Body {
         let textBackground = Child(RoundedRectangle.self)
         
-        let originalTitle = Child(MultilineTextComponent.self)
+        let originalTitle = Child(PlainButtonComponent.self)
         let originalText = Child(MultilineTextComponent.self)
         
         let originalMoreBackground = Child(Image.self)
@@ -238,29 +431,43 @@ private final class SheetContent: CombinedComponent {
         
         let originalSpeakButton = Child(Button.self)
         
-        let translationTitle = Child(MultilineTextComponent.self)
+        let translationTitle = Child(PlainButtonComponent.self)
         let translationText = Child(MultilineTextComponent.self)
         let translationPlaceholder = Child(RoundedRectangle.self)
         let translationSpeakButton = Child(Button.self)
         
-        let copyButton = Child(TranslateButtonComponent.self)
-        let changeLanguageButton = Child(TranslateButtonComponent.self)
-        
         let textStripe = Child(Rectangle.self)
+//        let textSection = Child(ListSectionComponent.self)
+        let actionsSection = Child(ListSectionComponent.self)
 
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let state = context.state
             let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
+            let presentationData = context.component.context.sharedContext.currentPresentationData.with { $0 }
+            let component = context.component
             
-            let topInset: CGFloat = environment.navigationHeight - 35.0
-            let sideInset: CGFloat = 20.0 + environment.safeInsets.left
+            if state.controller == nil {
+                state.controller = environment.controller() as? TranslateScreen
+            }
+            
+            let sideInset: CGFloat = 16.0
+            
+            
             let textTopInset: CGFloat = 16.0
-            let textSideInset: CGFloat = 20.0
             let textSpacing: CGFloat = 5.0
             let itemSpacing: CGFloat = 20.0
-            let itemHeight: CGFloat = 52.0
+            let textSideInset: CGFloat = 16.0
+
+            
+            var contentHeight: CGFloat = 82.0
+            
+            let textFont = Font.regular(20.0)
+            let boldTextFont = Font.semibold(20.0)
+            let italicTextFont = Font.with(size: 20.0, weight: .regular, traits: .italic)
+            let boldItalicTextFont = Font.semiboldItalic(20.0)
+            let fixedTextFont = Font.with(size: 20.0, design: .monospace)
             
             var languageCode = environment.strings.baseLanguageCode
             let rawSuffix = "-raw"
@@ -274,19 +481,44 @@ private final class SheetContent: CombinedComponent {
             } else {
                 fromLanguage = ""
             }
+            
+            let _ = sideInset
+            let _ = fromLanguage
+            
+            let originalTitleString = parseMarkdownIntoAttributedString("Detected as **\(fromLanguage)**", attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.list.itemSecondaryTextColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.list.itemAccentColor), link: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.list.itemPrimaryTextColor), linkAttribute: { _ in return nil }))
+            
             let originalTitle = originalTitle.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: fromLanguage, font: Font.medium(13.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .natural)),
-                    horizontalAlignment: .natural,
-                    maximumNumberOfLines: 1
+                component: PlainButtonComponent(
+                    content: AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(id: "label", component: AnyComponent(
+                                MultilineTextComponent(
+                                    text: .plain(originalTitleString),
+                                    horizontalAlignment: .natural,
+                                    maximumNumberOfLines: 1
+                                )
+                            )),
+                            AnyComponentWithIdentity(id: "icon", component: AnyComponent(
+                                BundleIconComponent(name: "Item List/ContextDisclosureArrow", tintColor: theme.list.itemAccentColor, maxSize: CGSize(width: 8.0, height: 11.0))
+                            ))
+                        ], spacing: 3.0)
+                    ),
+                    action: {
+                        component.changeLanguage(state.fromLanguage ?? "", state.toLanguage, { fromLang, toLang in
+                            state.changeLanguage(fromLanguage: fromLang, toLanguage: toLang)
+                        })
+                    },
+                    animateScale: false
                 ),
                 availableSize: CGSize(width: context.availableSize.width - (sideInset + textSideInset) * 2.0, height: CGFloat.greatestFiniteMagnitude),
                 transition: .immediate
             )
+            
+            let originalAttributedText = stringWithAppliedEntities(state.text, entities: state.entities, baseColor: theme.list.itemPrimaryTextColor, linkColor: theme.list.itemPrimaryTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldTextFont, italicFont: italicTextFont, boldItalicFont: boldItalicTextFont, fixedFont: fixedTextFont, blockQuoteFont: textFont, message: nil)
                         
             let originalText = originalText.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: state.text, font: Font.medium(20.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .natural)),
+                    text: .plain(originalAttributedText),
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: state.textExpanded ? 0 : 1,
                     lineSpacing: 0.1
@@ -295,12 +527,34 @@ private final class SheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let toLanguage = locale.localizedString(forLanguageCode: state.toLanguage) ?? ""
+            var toLanguage = locale.localizedString(forLanguageCode: state.toLanguage) ?? ""
+            if state.tone != .neutral {
+                toLanguage += " (\(state.tone.rawValue.capitalized))"
+            }
             let translationTitle = translationTitle.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: toLanguage, font: Font.medium(13.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .natural)),
-                    horizontalAlignment: .natural,
-                    maximumNumberOfLines: 1
+                component: PlainButtonComponent(
+                    content: AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(id: "label", component: AnyComponent(
+                                MultilineTextComponent(
+                                    text: .plain(NSAttributedString(string: toLanguage, font: Font.semibold(13.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .natural)),
+                                    horizontalAlignment: .natural,
+                                    maximumNumberOfLines: 1
+                                )
+                            )),
+                            AnyComponentWithIdentity(id: "icon", component: AnyComponent(
+                                BundleIconComponent(name: "Item List/ContextDisclosureArrow", tintColor: theme.list.itemAccentColor, maxSize: CGSize(width: 8.0, height: 11.0))
+                            ))
+                        ], spacing: 3.0)
+                    ),
+                    action: { [weak state] in
+                        state?.presentLanguageSelection()
+//                        component.changeLanguage(state.fromLanguage ?? "", state.toLanguage, { fromLang, toLang in
+//                            state.changeLanguage(fromLanguage: fromLang, toLanguage: toLang)
+//                        })
+                    },
+                    animateScale: false,
+                    tag: translateToTag
                 ),
                 availableSize: CGSize(width: context.availableSize.width - (sideInset + textSideInset) * 2.0, height: CGFloat.greatestFiniteMagnitude),
                 transition: .immediate
@@ -311,9 +565,11 @@ private final class SheetContent: CombinedComponent {
             var maybeTranslationText: _UpdatedChildComponent? = nil
             var maybeTranslationPlaceholder: _UpdatedChildComponent? = nil
             if let translatedText = state.translatedText {
+                let attributedText = stringWithAppliedEntities(translatedText.0, entities: translatedText.1, baseColor: theme.list.itemAccentColor, linkColor: theme.list.itemAccentColor, baseFont: textFont, linkFont: textFont, boldFont: boldTextFont, italicFont: italicTextFont, boldItalicFont: boldItalicTextFont, fixedFont: fixedTextFont, blockQuoteFont: textFont, message: nil)
+                
                 maybeTranslationText = translationText.update(
                     component: MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: translatedText, font: Font.medium(20.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .natural)),
+                        text: .plain(attributedText),
                         horizontalAlignment: .natural,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.1
@@ -331,6 +587,7 @@ private final class SheetContent: CombinedComponent {
                 translationTextHeight = 22.0
             }
             
+            let topInset = contentHeight
             let textBackgroundOrigin = CGPoint(x: sideInset, y: topInset)
                 
             let textStripe = textStripe.update(
@@ -428,11 +685,11 @@ private final class SheetContent: CombinedComponent {
                 )
                 
                 context.add(originalMoreBackground
-                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalMoreBackground.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalMoreBackground.size.height / 2.0 - 1.0))
+                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalMoreBackground.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalMoreBackground.size.height / 2.0 + 2.0))
                 )
                 
                 context.add(originalMoreButton
-                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalMoreButton.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height / 2.0 - 1.0))
+                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalMoreButton.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height / 2.0 + 1.0 - UIScreenPixel))
                 )
             }
             
@@ -482,56 +739,123 @@ private final class SheetContent: CombinedComponent {
                 )
             }
             
-            let buttonsSpacing: CGFloat = 20.0
-            let smallSectionSpacing: CGFloat = 20.0
+            contentHeight += textBackgroundSize.height
+            contentHeight += 24.0
             
-            var buttonsHeight: CGFloat = 0.0
+//            let textSectionItems: [AnyComponentWithIdentity<Empty>] = []
+//            let textSection = textSection.update(
+//                component: ListSectionComponent(
+//                    theme: theme,
+//                    style: .glass,
+//                    header: nil,
+//                    footer: nil,
+//                    items: textSectionItems
+//                ),
+//                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+//                transition: context.transition
+//            )
+//            context.add(textSection
+//                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + textSection.size.height / 2.0))
+//            )
+//            contentHeight += textSection.size.height
+//            contentHeight += 24.0
             
-            let component = context.component
-            if component.copyTranslation != nil {
-                let copyButton = copyButton.update(
-                    component: TranslateButtonComponent(
-                        theme: theme,
-                        title: strings.Translate_CopyTranslation,
-                        icon: "Chat/Context Menu/Copy",
-                        isEnabled: state.translatedText != nil,
-                        action: { [weak component] in
-                            component?.copyTranslation?(state.translatedText ?? "")
-                        }
+            var actionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            if let replaceText = component.replaceText {
+                //TODO:localize
+                actionsSectionItems.append(AnyComponentWithIdentity(id: "replace", component: AnyComponent(ListActionItemComponent(
+                    theme: theme,
+                    style: .glass,
+                    title: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Replace with Translation",
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize),
+                                textColor: theme.list.itemAccentColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: itemHeight),
-                    transition: context.transition
-                )
-                context.add(copyButton
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + copyButton.size.height / 2.0))
-                )
-                buttonsHeight += copyButton.size.height + smallSectionSpacing
+                    leftIcon: .custom(AnyComponentWithIdentity(id: "icon", component: AnyComponent(BundleIconComponent(name: "Chat/Context Menu/Replace", tintColor: theme.list.itemAccentColor))), false),
+                    action: { [weak state] _ in
+                        guard let state else {
+                            return
+                        }
+                        replaceText(state.translatedText?.0 ?? state.text, state.translatedText?.1 ?? state.entities)
+                        component.dismiss()
+                    }
+                ))))
+            }
+            if let copyTranslation = component.copyTranslation {
+                actionsSectionItems.append(AnyComponentWithIdentity(id: "copy", component: AnyComponent(ListActionItemComponent(
+                    theme: theme,
+                    style: .glass,
+                    title: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: strings.Translate_CopyTranslation,
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize),
+                                textColor: theme.list.itemAccentColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )
+                    ),
+                    leftIcon: .custom(AnyComponentWithIdentity(id: "icon", component: AnyComponent(BundleIconComponent(name: "Chat/Context Menu/Copy", tintColor: theme.list.itemAccentColor))), false),
+                    action: { [weak state] _ in
+                        guard let state else {
+                            return
+                        }
+                        copyTranslation(state.translatedText?.0 ?? "", state.translatedText?.1 ?? [])
+                    }
+                ))))
+            }
+            if let translateChat = component.translateChat {
+                actionsSectionItems.append(AnyComponentWithIdentity(id: "translate", component: AnyComponent(ListActionItemComponent(
+                    theme: theme,
+                    style: .glass,
+                    title: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Translate Entire Chat",
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize),
+                                textColor: theme.list.itemAccentColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )
+                    ),
+                    leftIcon: .custom(AnyComponentWithIdentity(id: "icon", component: AnyComponent(BundleIconComponent(name: "Chat/Context Menu/Translate", tintColor: theme.list.itemAccentColor))), false),
+                    action: { [weak state] _ in
+                        guard let state else {
+                            return
+                        }
+                        translateChat(state.fromLanguage ?? "", state.toLanguage)
+                        component.dismiss()
+                    }
+                ))))
             }
             
-            let changeLanguageButton = changeLanguageButton.update(
-                component: TranslateButtonComponent(
-                    theme: theme,
-                    title: strings.Translate_ChangeLanguage,
-                    icon: "Chat/Context Menu/Translate",
-                    isEnabled: true,
-                    action: { [weak component] in
-                        component?.changeLanguage(state.fromLanguage ?? "", state.toLanguage, { fromLang, toLang in
-                            state.changeLanguage(fromLanguage: fromLang, toLanguage: toLang)
-                        })
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: itemHeight),
-                transition: context.transition
-            )
+            if !actionsSectionItems.isEmpty {
+                let actionsSection = actionsSection.update(
+                    component: ListSectionComponent(
+                        theme: theme,
+                        style: .glass,
+                        header: nil,
+                        footer: nil,
+                        items: actionsSectionItems
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                    transition: context.transition
+                )
+                context.add(actionsSection
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + actionsSection.size.height / 2.0))
+                )
+                contentHeight += actionsSection.size.height
+            }
+                        
+            contentHeight += 32.0
+            contentHeight += 52.0 + 30.0
             
-            context.add(changeLanguageButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + buttonsHeight + changeLanguageButton.size.height / 2.0))
-            )
-            buttonsHeight += changeLanguageButton.size.height
-            
-            let contentSize = CGSize(width: context.availableSize.width, height: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight + itemSpacing + buttonsSpacing + buttonsHeight + environment.safeInsets.bottom + 44.0)
-            
-            return contentSize
+            return CGSize(width: context.availableSize.width, height: contentHeight)
         }
     }
 }
@@ -544,8 +868,11 @@ private final class TranslateSheetComponent: CombinedComponent {
     private let entities: [MessageTextEntity]
     private let fromLanguage: String?
     private let toLanguage: String
-    private let copyTranslation: ((String) -> Void)?
+    private let copyTranslation: ((String, [MessageTextEntity]) -> Void)?
+    private let replaceText: ((String, [MessageTextEntity]) -> Void)?
+    private let translateChat: ((String, String) -> Void)?
     private let changeLanguage: (String, String, @escaping (String, String) -> Void) -> Void
+    private let openCocoonInfo: () -> Void
     
     init(
         context: AccountContext,
@@ -553,8 +880,11 @@ private final class TranslateSheetComponent: CombinedComponent {
         entities: [MessageTextEntity],
         fromLanguage: String?,
         toLanguage: String,
-        copyTranslation: ((String) -> Void)?,
-        changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void
+        copyTranslation: ((String, [MessageTextEntity]) -> Void)?,
+        replaceText: ((String, [MessageTextEntity]) -> Void)?,
+        translateChat: ((String, String) -> Void)? = nil,
+        changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void,
+        openCocoonInfo: @escaping () -> Void
     ) {
         self.context = context
         self.text = text
@@ -562,7 +892,10 @@ private final class TranslateSheetComponent: CombinedComponent {
         self.fromLanguage = fromLanguage
         self.toLanguage = toLanguage
         self.copyTranslation = copyTranslation
+        self.replaceText = replaceText
+        self.translateChat = translateChat
         self.changeLanguage = changeLanguage
+        self.openCocoonInfo = openCocoonInfo
     }
     
     static func ==(lhs: TranslateSheetComponent, rhs: TranslateSheetComponent) -> Bool {
@@ -593,6 +926,9 @@ private final class TranslateSheetComponent: CombinedComponent {
             }
             
             let theme = environment.theme.withModalBlocksBackground()
+            let strings = environment.strings
+            
+            let openCocoonInfo = context.component.openCocoonInfo
             
             let sheet = sheet.update(
                 component: ResizableSheetComponent<EnvironmentType>(
@@ -603,11 +939,24 @@ private final class TranslateSheetComponent: CombinedComponent {
                         fromLanguage: context.component.fromLanguage,
                         toLanguage: context.component.toLanguage,
                         copyTranslation: context.component.copyTranslation,
+                        replaceText: context.component.replaceText,
+                        translateChat: context.component.translateChat,
                         changeLanguage: context.component.changeLanguage,
-                        expand: {}
+                        expand: {},
+                        dismiss: {
+                            dismiss(true)
+                        }
                     )),
                     titleItem: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Translate_Title, font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor)))
+                        VStack([
+                            //TODO:localize
+                            AnyComponentWithIdentity(id: "title", component: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: "Translation", font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor)))
+                            )),
+                            AnyComponentWithIdentity(id: "subtitle", component: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: "powered by Cocoon", font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)))
+                            ))
+                        ], spacing: 1.0)
                     ),
                     leftItem: AnyComponent(
                         GlassBarButtonComponent(
@@ -626,7 +975,48 @@ private final class TranslateSheetComponent: CombinedComponent {
                             }
                         )
                     ),
-                    bottomItem: nil,
+                    rightItem: AnyComponent(
+                        GlassBarButtonComponent(
+                            size: CGSize(width: 44.0, height: 44.0),
+                            backgroundColor: nil,
+                            isDark: theme.overallDarkAppearance,
+                            state: .glass,
+                            component: AnyComponentWithIdentity(id: "info", component: AnyComponent(
+                                BundleIconComponent(
+                                    name: "Navigation/Question",
+                                    tintColor: theme.chat.inputPanel.panelControlColor
+                                )
+                            )),
+                            action: { _ in
+                                openCocoonInfo()
+                            }
+                        )
+                    ),
+                    bottomItem: AnyComponent(
+                        ButtonComponent(
+                            background: ButtonComponent.Background(
+                                style: .glass,
+                                color: theme.list.itemCheckColors.fillColor,
+                                foreground: theme.list.itemCheckColors.foregroundColor,
+                                pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                            ),
+                            content: AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(
+                                    ButtonTextContentComponent(
+                                        text: strings.Common_OK,
+                                        badge: 0,
+                                        textColor: theme.list.itemCheckColors.foregroundColor,
+                                        badgeBackground: theme.list.itemCheckColors.foregroundColor,
+                                        badgeForeground: theme.list.itemCheckColors.fillColor
+                                    )
+                                )
+                            ),
+                            action: {
+                                dismiss(true)
+                            }
+                        )
+                    ),
                     backgroundColor: .color(theme.list.modalBlocksBackgroundColor),
                     animateOut: animateOut
                 ),
@@ -674,7 +1064,9 @@ public final class TranslateScreen: ViewControllerComponentContainer {
         canCopy: Bool,
         fromLanguage: String?,
         toLanguage: String? = nil,
-        ignoredLanguages: [String]? = nil
+        ignoredLanguages: [String]? = nil,
+        replaceText: ((String, [MessageTextEntity]) -> Void)? = nil,
+        translateChat: ((String, String) -> Void)? = nil
     ) {
         self.context = context
         
@@ -701,12 +1093,18 @@ public final class TranslateScreen: ViewControllerComponentContainer {
             } else {
                 toLanguage = "en"
             }
+            if toLanguage == "en" && fromLanguage == "en" {
+                if let anyOtherLanguage = NSLocale.preferredLanguages.first(where: { !$0.hasPrefix("en-") }) {
+                    toLanguage = anyOtherLanguage
+                }
+            }
         }
         
         toLanguage = normalizeTranslationLanguage(toLanguage)
         
-        var copyTranslationImpl: ((String) -> Void)?
+        var copyTranslationImpl: ((String, [MessageTextEntity]) -> Void)?
         var changeLanguageImpl: ((String, String, @escaping (String, String) -> Void) -> Void)?
+        var openCocoonInfoImpl: (() -> Void)?
         
         super.init(
             context: context,
@@ -716,11 +1114,16 @@ public final class TranslateScreen: ViewControllerComponentContainer {
                 entities: entities,
                 fromLanguage: fromLanguage,
                 toLanguage: toLanguage,
-                copyTranslation: !canCopy ? nil : { text in
-                    copyTranslationImpl?(text)
+                copyTranslation: !canCopy ? nil : { text, entities in
+                    copyTranslationImpl?(text, entities)
                 },
+                replaceText: replaceText,
+                translateChat: translateChat,
                 changeLanguage: { fromLang, toLang, completion in
                     changeLanguageImpl?(fromLang, toLang, completion)
+                },
+                openCocoonInfo: {
+                    openCocoonInfoImpl?()
                 }
             ),
             navigationBarAppearance: .none,
@@ -733,18 +1136,19 @@ public final class TranslateScreen: ViewControllerComponentContainer {
         self.blocksBackgroundWhenInOverlay = true
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        copyTranslationImpl = { [weak self] text in
-            UIPasteboard.general.string = text
+        copyTranslationImpl = { [weak self] text, entities in
+            storeMessageTextInPasteboard(text, entities: entities)
+            
             let content = UndoOverlayContent.copy(text: presentationData.strings.Conversation_TextCopied)
             self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-            self?.dismiss(animated: true, completion: nil)
+            self?.dismissAnimated()
         }
-        
+
         changeLanguageImpl = { [weak self] fromLang, toLang, completion in
             let pushController = self?.pushController
             let presentController = self?.presentController
             let controller = languageSelectionController(context: context, forceTheme: forceTheme, fromLanguage: fromLang, toLanguage: toLang, completion: { fromLang, toLang in
-                let controller = TranslateScreen(context: context, forceTheme: forceTheme, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, ignoredLanguages: ignoredLanguages)
+                let controller = TranslateScreen(context: context, forceTheme: forceTheme, text: text, entities: entities, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, ignoredLanguages: ignoredLanguages, replaceText: replaceText)
                 controller.pushController = pushController ?? { _ in }
                 controller.presentController = presentController ?? { _ in }
                 presentController?(controller)
@@ -753,6 +1157,11 @@ public final class TranslateScreen: ViewControllerComponentContainer {
             self?.dismissAnimated()
             
             pushController?(controller)
+        }
+        
+        openCocoonInfoImpl = { [weak self] in
+            let controller = context.sharedContext.makeCocoonInfoScreen(context: context)
+            self?.pushController(controller)
         }
     }
         
@@ -776,6 +1185,8 @@ public func presentTranslateScreen(
     toLanguage: String? = nil,
     isExpanded: Bool = false,
     ignoredLanguages: [String]? = nil,
+    replaceText: ((String, [MessageTextEntity]) -> Void)? = nil,
+    translateChat: ((String, String) -> Void)? = nil,
     pushController: @escaping (ViewController) -> Void = { _ in },
     presentController: @escaping (ViewController) -> Void = { _ in },
     wasDismissed: (() -> Void)? = nil,
@@ -795,7 +1206,7 @@ public func presentTranslateScreen(
     if useSystemTranslation {
         presentSystemTranslateScreen(context: context, text: text)
     } else {
-        let controller = TranslateScreen(context: context, text: text, canCopy: canCopy, fromLanguage: fromLanguage, toLanguage: toLanguage, ignoredLanguages: ignoredLanguages)
+        let controller = TranslateScreen(context: context, text: text, entities: entities, canCopy: canCopy, fromLanguage: fromLanguage, toLanguage: toLanguage, ignoredLanguages: ignoredLanguages, replaceText: replaceText, translateChat: translateChat)
         controller.pushController = pushController
         controller.presentController = presentController
         controller.wasDismissed = wasDismissed
@@ -846,5 +1257,19 @@ struct TranslateScreenHostingView: View {
                     handler()
                 }
             }
+    }
+}
+
+private final class GiftViewContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceView: UIView
+    
+    init(controller: ViewController, sourceView: UIView) {
+        self.controller = controller
+        self.sourceView = sourceView
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

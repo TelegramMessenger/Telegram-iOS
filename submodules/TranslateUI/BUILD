@@ -34,6 +34,13 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/Components/ResizableSheetComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/ListActionItemComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TextFormat",
+        "//submodules/Pasteboard",
+        "//submodules/TelegramUI/Components/TranslationLanguagesContextMenuContent",
     ],
     visibility = [
         "//visibility:public",

@@ -797,71 +797,71 @@ public enum PremiumPerk: CaseIterable {
     var iconName: String {
         switch self {
         case .doubleLimits:
-            return "Premium/Perk/Limits"
+            return "Item List/Icons/X2"
         case .moreUpload:
-            return "Premium/Perk/Upload"
+            return "Item List/Icons/File"
         case .fasterDownload:
-            return "Premium/Perk/Speed"
+            return "Item List/Icons/Speed"
         case .voiceToText:
-            return "Premium/Perk/Voice"
+            return "Item List/Icons/Microphone"
         case .noAds:
-            return "Premium/Perk/NoAds"
+            return "Item List/Icons/NoAds"
         case .uniqueReactions:
-            return "Premium/Perk/Reactions"
+            return "Item List/Icons/Reactions"
         case .premiumStickers:
-            return "Premium/Perk/Stickers"
+            return "Item List/Icons/Sticker"
         case .advancedChatManagement:
-            return "Premium/Perk/Chat"
+            return "Item List/Icons/Chat"
         case .profileBadge:
-            return "Premium/Perk/Badge"
+            return "Item List/Icons/Premium"
         case .animatedUserpics:
-            return "Premium/Perk/Avatar"
+            return "Item List/Icons/Play"
         case .appIcons:
-            return "Premium/Perk/AppIcon"
+            return "Item List/Icons/Icons"
         case .animatedEmoji:
-            return "Premium/Perk/Emoji"
+            return "Item List/Icons/Emoji"
         case .emojiStatus:
-            return "Premium/Perk/Status"
+            return "Item List/Icons/Hand"
         case .translation:
-            return "Premium/Perk/Translation"
+            return "Item List/Icons/Translation"
         case .stories:
-            return "Premium/Perk/Stories"
+            return "Item List/Icons/Stories"
         case .colors:
-            return "Premium/Perk/Colors"
+            return "Item List/Icons/Brush"
         case .wallpapers:
-            return "Premium/Perk/Wallpapers"
+            return "Item List/Icons/Wallpaper"
         case .messageTags:
-            return "Premium/Perk/MessageTags"
+            return "Item List/Icons/Tag"
         case .lastSeen:
-            return "Premium/Perk/LastSeen"
+            return "Item List/Icons/LastSeen"
         case .messagePrivacy:
-            return "Premium/Perk/MessagePrivacy"
+            return "Item List/Icons/LockBubble"
         case .folderTags:
             return "Premium/Perk/MessageTags"
         case .business:
             return "Premium/Perk/Business"
         case .messageEffects:
-            return "Premium/Perk/MessageEffects"
+            return "Item List/Icons/MessageEffect"
         case .todo:
-            return "Premium/Perk/Todo"
+            return "Item List/Icons/Checkbox"
         case .copyProtection:
-            return "Premium/Perk/NoForward"
+            return "Item List/Icons/NoForward"
         case .businessLocation:
-            return "Premium/BusinessPerk/Location"
+            return "Item List/Icons/Location"
         case .businessHours:
-            return "Premium/BusinessPerk/Hours"
+            return "Item List/Icons/Clock"
         case .businessQuickReplies:
-            return "Premium/BusinessPerk/Replies"
+            return "Item List/Icons/Share"
         case .businessGreetingMessage:
-            return "Premium/BusinessPerk/Greetings"
+            return "Item List/Icons/Hand"
         case .businessAwayMessage:
-            return "Premium/BusinessPerk/Away"
+            return "Item List/Icons/Away"
         case .businessChatBots:
-            return "Premium/BusinessPerk/Chatbots"
+            return "Item List/Icons/Chatbot"
         case .businessIntro:
-            return "Premium/BusinessPerk/Intro"
+            return "Item List/Icons/Intro"
         case .businessLinks:
-            return "Premium/BusinessPerk/Links"
+            return "Item List/Icons/Link"
         }
     }
 }
@@ -2552,7 +2552,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                             backgroundColor: UIColor(rgb: 0x676bff),
                             foregroundColor: .white,
-                            iconName: "Premium/BusinessPerk/Status"
+                            iconName: "Item List/Icons/Case"
                         ))), false),
                         icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
                             context: accountContext,
@@ -2595,7 +2595,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                         backgroundColor: UIColor(rgb: 0x4492ff),
                         foregroundColor: .white,
-                        iconName: "Premium/BusinessPerk/Tag"
+                        iconName: "Item List/Icons/Tag"
                     ))), false),
                     action: { _ in
                         guard let accountContext else {
@@ -2630,7 +2630,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                         backgroundColor: UIColor(rgb: 0x41a6a5),
                         foregroundColor: .white,
-                        iconName: "Premium/Perk/Stories"
+                        iconName: "Item List/Icons/Stories"
                     ))), false),
                     action: {  _ in
                         guard let accountContext else {

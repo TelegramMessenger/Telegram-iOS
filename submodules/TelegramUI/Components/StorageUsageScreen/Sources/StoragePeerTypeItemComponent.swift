@@ -21,7 +21,7 @@ final class StoragePeerTypeItemComponent: Component {
     }
     
     let theme: PresentationTheme
-    let iconName: String
+    let icon: UIImage
     let title: String
     let subtitle: String?
     let value: String
@@ -30,7 +30,7 @@ final class StoragePeerTypeItemComponent: Component {
     
     init(
         theme: PresentationTheme,
-        iconName: String,
+        icon: UIImage,
         title: String,
         subtitle: String?,
         value: String,
@@ -38,7 +38,7 @@ final class StoragePeerTypeItemComponent: Component {
         action: @escaping (View) -> Void
     ) {
         self.theme = theme
-        self.iconName = iconName
+        self.icon = icon
         self.title = title
         self.subtitle = subtitle
         self.value = value
@@ -50,7 +50,7 @@ final class StoragePeerTypeItemComponent: Component {
         if lhs.theme !== rhs.theme {
             return false
         }
-        if lhs.iconName != rhs.iconName {
+        if lhs.icon !== rhs.icon {
             return false
         }
         if lhs.title != rhs.title {
@@ -252,9 +252,9 @@ final class StoragePeerTypeItemComponent: Component {
                 labelView.bounds = CGRect(origin: CGPoint(), size: labelFrame.size)
             }
             
-            if themeUpdated || previousComponent?.iconName != component.iconName {
+            if themeUpdated || previousComponent?.icon !== component.icon {
                 self.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
-                self.iconView.image = UIImage(bundleImageName: component.iconName)
+                self.iconView.image = component.icon
              
                 if component.value.isEmpty {
                     self.arrowIconView.image = PresentationResourcesItemList.disclosureArrowImage(component.theme)

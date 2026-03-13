@@ -956,13 +956,12 @@
     bool isHighQualityPhoto = editingContext.isHighQualityPhoto;
     
     NSNumber *price;
-    bool hasAnyTimers = false;
     if (editingContext != nil || grouping)
     {
         for (TGMediaAsset *asset in selectedItems)
         {
             if ([editingContext timerForItem:asset] != nil) {
-                hasAnyTimers = true;
+                grouping = false;
             }
             if (price == nil) {
                 price = [editingContext priceForItem:asset];
@@ -975,6 +974,9 @@
                 }
             }
             if (adjustments.paintingData.hasAnimation) {
+                grouping = false;
+            }
+            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
                 grouping = false;
             }
         }
@@ -1072,7 +1074,7 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
-                        else if (groupedId != nil && !hasAnyTimers)
+                        else if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
                         if (price != nil)
@@ -1190,18 +1192,29 @@
                                 dict[@"coverImage"] = image;
                                 
                                 if (livePhotoMode == TGMediaLivePhotoModeBounce) {
-                                    dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:true];
+                                    if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedHigh bounce:true sendAsGif:true];
+                                    } else {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:true];
+                                    }
                                 } else if (livePhotoMode == TGMediaLivePhotoModeLoop) {
-                                    dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:false];
+                                    if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedHigh bounce:false sendAsGif:true];
+                                    } else {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:false];
+                                    }
                                 } else {
                                     dict[@"livePhoto"] = @true;
+                                    if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedMedium bounce:false sendAsGif:false];
+                                    }
                                 }
                                 
                                 if (adjustments.paintingData.stickers.count > 0)
                                     dict[@"stickers"] = adjustments.paintingData.stickers;
                                 if (timer != nil)
                                     dict[@"timer"] = timer;
-                                else if (groupedId != nil && !hasAnyTimers)
+                                else if (groupedId != nil)
                                     dict[@"groupedId"] = groupedId;
                                 
                                 if (price != nil)
@@ -1261,7 +1274,7 @@
                             
                             if (timer != nil)
                                 dict[@"timer"] = timer;
-                            else if (groupedId != nil && !hasAnyTimers)
+                            else if (groupedId != nil)
                                 dict[@"groupedId"] = groupedId;
                             
                             if (price != nil)
@@ -1387,7 +1400,7 @@
                         
                         if (timer != nil)
                             dict[@"timer"] = timer;
-                        else if (groupedId != nil && !hasAnyTimers)
+                        else if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
                         if (price != nil)
@@ -1514,13 +1527,12 @@
     NSInteger num = 0;
     bool grouping = selectionContext.grouping;
     
-    bool hasAnyTimers = false;
     if (editingContext != nil || grouping)
     {
         for (id<TGMediaEditableItem> asset in selectedItems)
         {
             if ([editingContext timerForItem:asset] != nil) {
-                hasAnyTimers = true;
+                grouping = false;
             }
             id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
             if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]]) {
@@ -1530,6 +1542,9 @@
                 }
             }
             if (adjustments.paintingData.hasAnimation) {
+                grouping = false;
+            }
+            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
                 grouping = false;
             }
         }
@@ -1586,7 +1601,7 @@
                     if (timer != nil)
                         dict[@"timer"] = timer;
                     
-                    if (groupedId != nil && !hasAnyTimers)
+                    if (groupedId != nil)
                         dict[@"groupedId"] = groupedId;
                     
                     if (spoiler) {
@@ -1637,7 +1652,7 @@
                     if (timer != nil)
                         dict[@"timer"] = timer;
                     
-                    if (groupedId != nil && !hasAnyTimers)
+                    if (groupedId != nil)
                         dict[@"groupedId"] = groupedId;
                     
                     if (spoiler) {
@@ -1717,7 +1732,7 @@
                         dict[@"stickers"] = adjustments.paintingData.stickers;
                     if (timer != nil)
                         dict[@"timer"] = timer;
-                    else if (groupedId != nil && !hasAnyTimers)
+                    else if (groupedId != nil)
                         dict[@"groupedId"] = groupedId;
                     
                     if (spoiler) {

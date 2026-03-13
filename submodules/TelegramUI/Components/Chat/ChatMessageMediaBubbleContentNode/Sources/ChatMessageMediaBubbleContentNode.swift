@@ -125,6 +125,10 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {
                             automaticDownload = .full
                         }
+                        
+                        if let _ = telegramImage.video {
+                            automaticPlayback = true
+                        }
                     } else if let telegramStory = media as? TelegramMediaStory {
                         selectedMedia = telegramStory
                         if let storyMedia = item.message.associatedStories[telegramStory.storyId], case let .item(storyItem) = storyMedia.get(Stories.StoredItem.self), let media = storyItem.media {

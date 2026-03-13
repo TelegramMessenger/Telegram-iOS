@@ -341,6 +341,11 @@
                 TGMediaPickerGalleryVideoItemView *videoItemView = (TGMediaPickerGalleryVideoItemView *)strongSelf->_currentItemView;
                 [videoItemView returnFromEditing];
             }
+            else if ([currentItemView isKindOfClass:[TGMediaPickerGalleryPhotoItemView class]])
+            {
+                TGMediaPickerGalleryPhotoItemView *photoItemView = (TGMediaPickerGalleryPhotoItemView *)strongSelf->_currentItemView;
+                [photoItemView returnFromEditing];
+            }
             
             [strongSelf setSelectionInterfaceHidden:false delay:0.25 animated:true];
             [strongSelf setItemHeaderViewHidden:false animated:true];
@@ -751,10 +756,6 @@
     [_muteButton setImage:muteIcon forState:UIControlStateNormal];
     [_muteButton setImage:muteActiveIcon forState:UIControlStateSelected];
     [_muteButton setImage:muteActiveIcon forState:UIControlStateSelected | UIControlStateHighlighted];
-    
-    if (@"".length == 0) {
-        hasLivePhotoButton = false;
-    }
     
     [_captionMixin setLivePhotoHidden:!hasLivePhotoButton];
     

@@ -682,7 +682,9 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             if let view = view as? UIScrollView {
                 if view.description.contains("WKChildScroll") {
                     return nil
-                } else {
+                } else if view is UITextView {
+                } else if view.frame.height > 0.0 && view.frame.width / view.frame.height > 2.5 {
+                }  else {
                     return (view, nil)
                 }
             }

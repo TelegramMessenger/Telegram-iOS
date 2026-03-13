@@ -4469,6 +4469,33 @@ extension ChatControllerImpl {
                 return
             }
             self.controllerInteraction?.displayUndo(content)
+        }, presentInputTextTranslation: { [weak self] text, replace in
+            let _ = self
+            guard let self else {
+                return
+            }
+            let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: true, ignoredLanguages: nil)
+            
+            let entities = generateChatInputTextEntities(text)
+            presentTranslateScreen(
+                context: self.context,
+                text: text.string,
+                entities: entities,
+                canCopy: true,
+                fromLanguage: language,
+                replaceText: { text, entities in
+                    replace(chatInputStateStringWithAppliedEntities(text, entities: entities))
+                },
+                pushController: { [weak self] c in
+                    self?.push(c)
+                },
+                presentController: { [weak self] c in
+                    self?.present(c, in: .window(.root))
+                },
+                display: { [weak self] c in
+                    self?.push(c)
+                }
+            )
         }, sendEmoji: { [weak self] text, attribute, immediately in
             guard let self else {
                 return

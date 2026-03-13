@@ -27,6 +27,7 @@ swift_library(
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramNotices",
         "//submodules/PremiumUI",
+        "//submodules/TelegramUI/Components/TranslationLanguagesContextMenuContent",
     ],
     visibility = [
         "//visibility:public",

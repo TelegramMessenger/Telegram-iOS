@@ -1042,7 +1042,7 @@ final class DataUsageScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(StoragePeerTypeItemComponent(
                         theme: environment.theme,
-                        iconName: self.selectedStats == .mobile ? "Settings/Menu/Cellular" : "Settings/Menu/WiFi",
+                        icon: self.selectedStats == .mobile ? PresentationResourcesSettings.cellular! : PresentationResourcesSettings.wifi!,
                         title: environment.strings.DataUsage_AutoDownloadSettings,
                         subtitle: stringForAutoDownloadSetting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator, settings: self.mediaAutoDownloadSettings, isCellular: self.selectedStats == .mobile),
                         value: "",

@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/TelegramPresentationData",
         "//submodules/ComponentFlow",
+        "//submodules/TelegramCore",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/SliderComponent",
         "//submodules/TelegramUI/Components/ListSectionComponent",

@@ -756,6 +756,8 @@ public final class ChatTextInputPanelComponent: Component {
                     },
                     displayUndo: { _ in
                     },
+                    presentInputTextTranslation: { _, _ in
+                    },
                     sendEmoji: { _, _, _ in
                     },
                     updateHistoryFilter: { _ in

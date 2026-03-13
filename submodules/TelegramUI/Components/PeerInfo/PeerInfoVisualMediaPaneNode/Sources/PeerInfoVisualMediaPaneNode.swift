@@ -308,7 +308,7 @@ private protocol ItemLayer: SparseItemGridLayer {
     var hasContents: Bool { get set }
     func setSpoilerContents(_ contents: Any?)
     
-    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat)
+    func updateDuration(duration: Int32?, isLivePhoto: Bool, isMin: Bool, minFactor: CGFloat)
     func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool)
     func updateHasSpoiler(hasSpoiler: Bool)
     
@@ -318,6 +318,7 @@ private protocol ItemLayer: SparseItemGridLayer {
 
 private final class GenericItemLayer: CALayer, ItemLayer {
     var item: VisualMediaItem?
+    var livePhotoLayer: SimpleLayer?
     var durationLayer: DurationLayer?
     var rightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
@@ -369,9 +370,27 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         self.item = item
     }
 
-    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
+    func updateDuration(duration: Int32?, isLivePhoto: Bool, isMin: Bool, minFactor: CGFloat) {
         self.minFactor = minFactor
 
+        if isLivePhoto && !isMin {
+            if let _ = self.livePhotoLayer {
+                
+            } else {
+                let livePhotoLayer = SimpleLayer()
+                livePhotoLayer.contentsGravity = .topLeft
+                livePhotoLayer.contentsScale = UIScreenScale
+                livePhotoLayer.contents = livePhotoImage.cgImage
+                self.addSublayer(livePhotoLayer)
+                livePhotoLayer.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: livePhotoImage.size)
+                livePhotoLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
+                self.livePhotoLayer = livePhotoLayer
+            }
+        } else if let livePhotoLayer = self.livePhotoLayer {
+            self.livePhotoLayer = nil
+            livePhotoLayer.removeFromSuperlayer()
+        }
+        
         if let duration {
             if let durationLayer = self.durationLayer {
                 durationLayer.update(duration: duration, isMin: isMin)
@@ -970,12 +989,15 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     }
 
                     var duration: Int32?
+                    var isLivePhoto = false
                     var isMin: Bool = false
-                    if let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
+                    if let image = selectedMedia as? TelegramMediaImage, let _ = image.video {
+                        isLivePhoto = true
+                    } else if let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
                         duration = file.duration.flatMap { Int32(floor($0)) }
                         isMin = layer.bounds.width < 80.0
                     }
-                    layer.updateDuration(duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
+                    layer.updateDuration(duration: duration, isLivePhoto: isLivePhoto, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
                 }
 
                 if let selectionState = self.chatControllerInteraction.selectionState {
@@ -2411,3 +2433,15 @@ private class MediaListSelectionRecognizer: UIPanGestureRecognizer {
         }
     }
 }
+
+private let livePhotoImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Chat/Message/LivePhoto")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()

@@ -172,6 +172,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, dismissForwardMessages: {
         }, dismissSuggestPost: {
         }, displayUndo: { _ in
+        }, presentInputTextTranslation: { _, _ in
         }, sendEmoji: { _, _, _ in
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in

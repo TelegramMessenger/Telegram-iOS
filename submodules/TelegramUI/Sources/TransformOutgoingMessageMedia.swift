@@ -175,7 +175,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                 let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                                 postbox.mediaBox.storeResourceData(thumbnailResource.id, data: smallestData)
                                 representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(smallestSize), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
-                                let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference, flags: [])
+                                let updatedImage = TelegramMediaImage(imageId: image.imageId, representations: representations, immediateThumbnailData: image.immediateThumbnailData, reference: image.reference, partialReference: image.partialReference, flags: [], video: image.video)
                                 return .single(media.withUpdatedMedia(updatedImage))
                             }
                         }

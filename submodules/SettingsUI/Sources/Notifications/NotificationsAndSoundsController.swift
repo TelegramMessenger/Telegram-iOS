@@ -450,15 +450,15 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
             case let .categoriesHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .privateChats(_, title, subtitle, label):
-                return NotificationsCategoryItemListItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Settings/Menu/EditProfile"), title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
+                return NotificationsCategoryItemListItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.privateChats, title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
                     arguments.openPeerCategory(.privateChat)
                 })
             case let .groupChats(_, title, subtitle, label):
-                return NotificationsCategoryItemListItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Settings/Menu/GroupChats"), title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
+                return NotificationsCategoryItemListItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.groups, title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
                     arguments.openPeerCategory(.group)
                 })
             case let .channels(_, title, subtitle, label):
-                return NotificationsCategoryItemListItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Settings/Menu/Channels"), title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
+                return NotificationsCategoryItemListItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.channels, title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
                     arguments.openPeerCategory(.channel)
                 })
             case let .stories(_, title, subtitle, label):

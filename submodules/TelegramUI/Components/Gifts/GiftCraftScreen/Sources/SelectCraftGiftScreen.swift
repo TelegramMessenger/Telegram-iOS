@@ -465,7 +465,6 @@ final class SelectGiftPageContent: Component {
                         statusBarHeight: contentHeight - 62.0,
                         navigationHeight: 0.0,
                         overNavigationContainer: self,
-                        starsContext: component.context.starsContext!,
                         peerId: component.context.account.peerId,
                         gift: component.genericGift,
                         isPlain: true,

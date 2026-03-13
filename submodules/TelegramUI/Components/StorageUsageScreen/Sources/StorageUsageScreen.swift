@@ -1830,23 +1830,23 @@ final class StorageUsageScreenComponent: Component {
                     
                     let mappedCategory: CacheStorageSettings.PeerStorageCategory
                     
-                    let iconName: String
+                    let icon: UIImage?
                     let title: String
                     switch i {
                     case 0:
-                        iconName = "Settings/Menu/EditProfile"
+                        icon = PresentationResourcesSettings.privateChats
                         title = environment.strings.Notifications_PrivateChats
                         mappedCategory = .privateChats
                     case 1:
-                        iconName = "Settings/Menu/GroupChats"
+                        icon = PresentationResourcesSettings.groups
                         title = environment.strings.Notifications_GroupChats
                         mappedCategory = .groups
                     case 3:
-                        iconName = "Settings/Menu/Stories"
+                        icon = PresentationResourcesSettings.stories
                         title = environment.strings.Notifications_Stories
                         mappedCategory = .stories
                     default:
-                        iconName = "Settings/Menu/Channels"
+                        icon = PresentationResourcesSettings.channels
                         title = environment.strings.Notifications_Channels
                         mappedCategory = .channels
                     }
@@ -1870,7 +1870,7 @@ final class StorageUsageScreenComponent: Component {
                         transition: transition,
                         component: AnyComponent(StoragePeerTypeItemComponent(
                             theme: environment.theme,
-                            iconName: iconName,
+                            icon: icon!,
                             title: title,
                             subtitle: subtitle,
                             value: optionText,

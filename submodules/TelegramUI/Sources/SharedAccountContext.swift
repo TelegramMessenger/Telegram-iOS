@@ -2452,7 +2452,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             },
             editScheduledMessagesTime: { _ in
             },
-            performTextSelectionAction: { _, _, _, _ in
+            performTextSelectionAction: { _, _, _, _, _ in
             },
             displayImportedMessageTooltip: { _ in
             },
@@ -3542,10 +3542,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeGiftStoreController(context: AccountContext, peerId: EnginePeer.Id, gift: StarGift.Gift) -> ViewController {
-        guard let starsContext = context.starsContext else {
-            fatalError()
-        }
-        let controller = GiftStoreScreen(context: context, starsContext: starsContext, peerId: peerId, gift: gift)
+        let controller = GiftStoreScreen(context: context, peerId: peerId, gift: gift)
         return controller
     }
     

@@ -530,14 +530,14 @@ private func chatReplyOptions(selfController: ChatControllerImpl, sourceView: UI
     
     let items = generateChatReplyOptionItems(selfController: selfController, chatController: chatController)
     
-    chatController.performTextSelectionAction = { [weak selfController] message, canCopy, text, action in
+    chatController.performTextSelectionAction = { [weak selfController] message, canCopy, text, entities, action in
         guard let selfController, let contextController = getContextController() else {
             return
         }
         
         contextController.dismiss()
         
-        selfController.controllerInteraction?.performTextSelectionAction(message, canCopy, text, action)
+        selfController.controllerInteraction?.performTextSelectionAction(message, canCopy, text, entities, action)
     }
     
     return ContextController.Source(

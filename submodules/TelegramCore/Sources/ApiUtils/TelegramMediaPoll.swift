@@ -18,11 +18,22 @@ extension TelegramMediaPollOption {
             }
             
             self.init(text: answerText, entities: answerEntities, opaqueIdentifier: option.makeData())
+        case let .inputPollAnswer(inputPollAnswerData):
+            let text = inputPollAnswerData.text
+            let answerText: String
+            let answerEntities: [MessageTextEntity]
+            switch text {
+            case let .textWithEntities(textWithEntitiesData):
+                let (text, entities) = (textWithEntitiesData.text, textWithEntitiesData.entities)
+                answerText = text
+                answerEntities = messageTextEntitiesFromApiEntities(entities)
+            }
+            self.init(text: answerText, entities: answerEntities, opaqueIdentifier: Data())
         }
     }
     
     var apiOption: Api.PollAnswer {
-        return .pollAnswer(.init(text: .textWithEntities(.init(text: self.text, entities: apiEntitiesFromMessageTextEntities(self.entities, associatedPeers: SimpleDictionary()))), option: Buffer(data: self.opaqueIdentifier)))
+        return .pollAnswer(.init(flags: 0, text: .textWithEntities(.init(text: self.text, entities: apiEntitiesFromMessageTextEntities(self.entities, associatedPeers: SimpleDictionary()))), option: Buffer(data: self.opaqueIdentifier), media: nil))
     }
 }
 

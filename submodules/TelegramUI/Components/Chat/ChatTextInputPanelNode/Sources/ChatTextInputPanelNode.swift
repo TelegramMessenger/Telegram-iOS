@@ -4711,8 +4711,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             } else {
                 return ASEditableTextNodeTargetForAction(target: nil)
             }
-        }
-        else if action == makeSelectorFromString("_accessibilitySpeakLanguageSelection:") || action == makeSelectorFromString("_accessibilityPauseSpeaking:") || action == makeSelectorFromString("_accessibilitySpeakSentence:") {
+        } else if action == makeSelectorFromString("_accessibilitySpeakLanguageSelection:") || action == makeSelectorFromString("_accessibilityPauseSpeaking:") || action == makeSelectorFromString("_accessibilitySpeakSentence:") {
             return ASEditableTextNodeTargetForAction(target: nil)
         } else if action == makeSelectorFromString("_showTextStyleOptions:") {
             if #available(iOS 16.0, *) {
@@ -4726,6 +4725,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 } else {
                     return ASEditableTextNodeTargetForAction(target: nil)
                 }
+            }
+        } else if action == makeSelectorFromString("_translate:") {
+            if let textInputNode = self.textInputNode, textInputNode.selectedRange.length > 0 {
+                return ASEditableTextNodeTargetForAction(target: self)
+            } else {
+                return ASEditableTextNodeTargetForAction(target: nil)
             }
         } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) || action == #selector(self.formatAttributesSpoiler(_:)) || action == #selector(self.formatAttributesQuote(_:)) || action == #selector(self.formatAttributesCodeBlock(_:)) {
             if case .format = self.inputMenu.state {
@@ -4901,6 +4906,28 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             UIMenuController.shared.isMenuVisible = false
             UIMenuController.shared.update()
         }
+    }
+    
+    @objc public func _translate(_ sender: Any) {
+        var text = NSAttributedString()
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count))
+            return (current, inputMode)
+        }
+        self.interfaceInteraction?.presentInputTextTranslation(text, { [weak self] attributedString in
+            guard let self else {
+                return
+            }
+            self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                if let inputText = current.inputText.mutableCopy() as? NSMutableAttributedString {
+                    inputText.replaceCharacters(in: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count), with: attributedString)
+                    let updatedRange = current.selectionRange.lowerBound + attributedString.length
+                    return (ChatTextInputState(inputText: inputText, selectionRange: updatedRange ..< updatedRange), .text)
+                } else {
+                    return (ChatTextInputState(inputText: attributedString), inputMode)
+                }
+            }
+        })
     }
     
     @objc public func _showTextStyleOptions(_ sender: Any) {
