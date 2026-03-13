@@ -19,6 +19,8 @@ def _plist_fragment(ctx):
     for key in found_keys:
         value = ctx.var.get(key, None)
         if value == None:
+            value = ctx.attr.defaults.get(key, None)
+        if value == None:
             fail("Expected value for --define={} was not found".format(key))
         resolved_values[key] = value
 
@@ -38,6 +40,7 @@ plist_fragment = rule(
     attrs = {
         "extension": attr.string(mandatory = True),
         "template": attr.string(mandatory = True),
+        "defaults": attr.string_dict(),
     },
     outputs = {
         "out": "%{name}.%{extension}"

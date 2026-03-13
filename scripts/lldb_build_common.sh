@@ -10,12 +10,9 @@ WORKSPACE_ROOT=$(pwd)
 BAZEL_CMD="./build-input/bazel-8.4.2-darwin-arm64"
 
 export ADDITIONAL_FLAGS=()
-TELEGRAM_VERSION=$(python3 -c "import json; print(json.load(open('${WORKSPACE_ROOT}/versions.json'))['app'])")
 
 ADDITIONAL_FLAGS+=("--keep_going")
 ADDITIONAL_FLAGS+=("--color=yes")
-ADDITIONAL_FLAGS+=("--define=telegramVersion=${TELEGRAM_VERSION}")
-ADDITIONAL_FLAGS+=("--define=buildNumber=100000")
 
 if [ -n "${BAZEL_EXTRA_BUILD_FLAGS:-}" ]; then
   ADDITIONAL_FLAGS+=("${BAZEL_EXTRA_BUILD_FLAGS[@]}")

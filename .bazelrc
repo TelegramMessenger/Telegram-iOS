@@ -22,14 +22,36 @@ build --strategy=SwiftCompile=worker
 
 #common --registry=https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/
 
-# SourceKit BSP: Swift indexing features
-common --features=swift.index_while_building
-common --features=swift.use_global_index_store
-common --features=swift.use_global_module_cache
-common --features=oso_prefix_is_pwd
+# rules_swift flags migration
+# --swiftcopt and --host_swiftcopt are deprecated
+common --flag_alias=swiftcopt=@build_bazel_rules_swift//swift:copt
+common --flag_alias=host_swiftcopt=@build_bazel_rules_swift//swift:exec_copt
+#common --swiftcopt=-whole-module-optimization
+#common --host_swiftcopt=-whole-module-optimization
 
-# SourceKit BSP: Index build config (used for background indexing)
+common --check_visibility=false
+
+# All of the following are Debug/Index setup configs inspired by the default rules_xcodeproj template
+
+common --verbose_failures
+common --cache_computed_file_digests=500000
+common --action_cache_store_output_metadata
+common --experimental_use_cpp_compile_action_args_params_file
+common --define=apple.experimental.tree_artifact_outputs=1
+common --features=apple.swizzle_absolute_xcttestsourcelocation
+common --features=oso_prefix_is_pwd
+common --features=relative_ast_path
+common --features=swift.cacheable_swiftmodules
+common --features=swift.index_while_building
+common --features=swift.use_global_module_cache
+common --features=swift.emit_swiftsourceinfo
+common --nolegacy_important_outputs
+build --noworker_sandboxing
+build --spawn_strategy=remote,worker,local
+
+# Only for BSP builds
 common:index_build --experimental_convenience_symlinks=ignore
+common:index_build --bes_backend= --bes_results_url=
 common:index_build --show_result=0
 common:index_build --noshow_loading_progress
 common:index_build --noshow_progress
@@ -37,3 +59,4 @@ common:index_build --noannounce_rc
 common:index_build --noshow_timestamps
 common:index_build --curses=no
 common:index_build --color=no
+
