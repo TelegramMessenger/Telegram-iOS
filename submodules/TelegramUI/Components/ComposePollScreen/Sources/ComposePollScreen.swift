@@ -810,10 +810,10 @@ final class ComposePollScreenComponent: Component {
             case .description:
                 availableButtons = [.gallery, .file, .location]
             default:
-                availableButtons = [.gallery, .location]
+                availableButtons = [.gallery, .sticker, .emoji, .location]
             }
             
-            presentPollAttachmentScreen(context: component.context, updatedPresentationData: nil, availableButtons: availableButtons, present: { [weak self] c in
+            presentPollAttachmentScreen(context: component.context, updatedPresentationData: nil, availableButtons: availableButtons, inputMediaNodeData: self.inputMediaNodeDataPromise.get() |> map(Optional.init), present: { [weak self] c in
                 (self?.environment?.controller() as? ComposePollScreen)?.parentController()?.push(c)
             }, completion: { [weak self] media in
                 guard let self else {
@@ -1073,7 +1073,7 @@ final class ComposePollScreenComponent: Component {
                         areCustomEmojiEnabled: true,
                         hasTrending: false,
                         hasSearch: true,
-                        hasStickers: false,
+                        hasStickers: true,
                         hasGifs: false,
                         hideBackground: true,
                         maskEdge: .fade,
@@ -1085,7 +1085,9 @@ final class ComposePollScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    self.inputMediaNodeData = value
+                    var inputData = value
+                    inputData.stickers = nil
+                    self.inputMediaNodeData = inputData
                 })
                 
                 self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
@@ -1374,6 +1376,7 @@ final class ComposePollScreenComponent: Component {
                     optionSelection = ListComposePollOptionComponent.Selection(
                         isSelected: self.selectedQuizOptionIds.contains(optionId),
                         isMultiSelection: self.effectiveIsMultiAnswer,
+                        isQuiz: self.isQuiz,
                         toggle: { [weak self] in
                             guard let self else {
                                 return
@@ -1808,6 +1811,9 @@ final class ComposePollScreenComponent: Component {
                 accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.canAddOptions, action: { [weak self] _ in
                     guard let self else {
                         return
+                    }
+                    if !self.canAddOptions && self.isAnonymous {
+                        self.isAnonymous = false
                     }
                     self.canAddOptions = !self.canAddOptions
                     self.state?.updated(transition: .spring(duration: 0.4))

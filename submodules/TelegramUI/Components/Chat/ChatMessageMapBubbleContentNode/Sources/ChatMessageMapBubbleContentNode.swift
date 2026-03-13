@@ -89,6 +89,8 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             activeLiveBroadcastingTimeout = liveBroadcastingTimeout
                         }
                     }
+                } else if let poll = media as? TelegramMediaPoll, let telegramMap = poll.attachedMedia as? TelegramMediaMap {
+                    selectedMedia = telegramMap
                 }
             }
             

@@ -30,6 +30,8 @@ public enum AttachmentButtonType: Equatable {
     case poll
     case app(AttachMenuBot)
     case gift
+    case sticker
+    case emoji
     case standalone
     
     public var key: String {
@@ -52,6 +54,10 @@ public enum AttachmentButtonType: Equatable {
             return "app_\(bot.shortName)"
         case .gift:
             return "gift"
+        case .sticker:
+            return "sticker"
+        case .emoji:
+            return "emoji"
         case .standalone:
             return "standalone"
         }
@@ -109,6 +115,18 @@ public enum AttachmentButtonType: Equatable {
             }
         case .gift:
             if case .gift = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .sticker:
+            if case .sticker = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .emoji:
+            if case .emoji = rhs {
                 return true
             } else {
                 return false

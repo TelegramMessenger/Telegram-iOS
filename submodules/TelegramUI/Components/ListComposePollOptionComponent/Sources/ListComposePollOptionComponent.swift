@@ -42,11 +42,13 @@ public final class ListComposePollOptionComponent: Component {
     public final class Selection: Equatable {
         public let isSelected: Bool
         public let isMultiSelection: Bool
+        public let isQuiz: Bool
         public let toggle: () -> Void
         
-        public init(isSelected: Bool, isMultiSelection: Bool = false, toggle: @escaping () -> Void) {
+        public init(isSelected: Bool, isMultiSelection: Bool = false, isQuiz: Bool = false, toggle: @escaping () -> Void) {
             self.isSelected = isSelected
             self.isMultiSelection = isMultiSelection
+            self.isQuiz = isQuiz
             self.toggle = toggle
         }
         
@@ -55,6 +57,9 @@ public final class ListComposePollOptionComponent: Component {
                 return false
             }
             if lhs.isMultiSelection != rhs.isMultiSelection {
+                return false
+            }
+            if lhs.isQuiz != rhs.isQuiz {
                 return false
             }
             return true
@@ -261,6 +266,7 @@ public final class ListComposePollOptionComponent: Component {
         private var checkLayer: CheckLayer?
         private var theme: PresentationTheme?
         private var isRectangle = false
+        private var isQuiz = false
         
         var action: (() -> Void)?
         
@@ -310,7 +316,7 @@ public final class ListComposePollOptionComponent: Component {
             self.action?()
         }
         
-        func update(size: CGSize, isRectangle: Bool, theme: PresentationTheme, isSelected: Bool, transition: ComponentTransition) {
+        func update(size: CGSize, isRectangle: Bool, isQuiz: Bool, theme: PresentationTheme, isSelected: Bool, transition: ComponentTransition) {
             let checkLayer: CheckLayer
             if let current = self.checkLayer {
                 checkLayer = current
@@ -320,10 +326,17 @@ public final class ListComposePollOptionComponent: Component {
                 self.layer.addSublayer(checkLayer)
             }
                         
-            if self.theme !== theme {
+            if self.theme !== theme || self.isQuiz != isQuiz {
                 self.theme = theme
+                self.isQuiz = isQuiz
                 
-                checkLayer.theme = CheckNodeTheme(theme: theme, style: .plain)
+                let checkTheme: CheckNodeTheme
+                if isQuiz {
+                    checkTheme = CheckNodeTheme(backgroundColor: theme.chat.message.incoming.polls.barPositive, strokeColor: theme.list.itemCheckColors.foregroundColor, borderColor: theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false)
+                } else {
+                    checkTheme = CheckNodeTheme(theme: theme, style: .plain)
+                }
+                checkLayer.theme = checkTheme
             }
             
             if self.isRectangle != isRectangle {
@@ -863,11 +876,11 @@ public final class ListComposePollOptionComponent: Component {
                     checkView.frame = CGRect(origin: CGPoint(x: -checkSize.width, y: self.bounds.height == 0.0 ? checkFrame.minY : floor((self.bounds.height - checkSize.height) * 0.5)), size: checkFrame.size)
                     transition.setPosition(view: checkView, position: checkFrame.center)
                     transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
+                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
                 } else {
                     transition.setPosition(view: checkView, position: checkFrame.center)
                     transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, theme: component.theme, isSelected: selection.isSelected, transition: transition)
+                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: transition)
                 }
             } else if let checkView = self.checkView {
                 self.checkView = nil
@@ -948,7 +961,7 @@ public final class ListComposePollOptionComponent: Component {
             let imageNodeFrame = CGRect(origin: CGPoint(x: size.width - 16.0 - imageNodeSize.width + self.revealOffset, y: size.height - minHeight + floor((minHeight - imageNodeSize.height) * 0.5)), size: imageNodeSize)
             
             var isSticker = false
-            if let attachment = component.attachment, let file = attachment.media?.media as? TelegramMediaFile, file.isSticker {
+            if let attachment = component.attachment, let file = attachment.media?.media as? TelegramMediaFile, file.isSticker || file.isCustomEmoji {
                 isSticker = true
                 
                 let animationSize = CGSize(width: 40.0, height: 40.0)
@@ -972,8 +985,9 @@ public final class ListComposePollOptionComponent: Component {
                         placeholderColor: component.theme.list.mediaPlaceholderColor,
                         pointSize: CGSize(width: animationSize.width * 2.0, height: animationSize.height * 2.0),
                         dynamicColor: nil,
-                        loopCount: 2
+                        loopCount: nil
                     )
+                    animationLayer.isVisibleForAnimations = true
                     self.animationLayer = animationLayer
                     self.layer.addSublayer(animationLayer)
                 }
@@ -1070,7 +1084,7 @@ public final class ListComposePollOptionComponent: Component {
                     
                     let progressFrame = imageNodeFrame.insetBy(dx: 6.0, dy: 6.0)
                     statusNode.frame = progressFrame
-                    statusNode.transitionToState(.progress(value: max(0.027, min(1.0, progress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 1.0 + UIScreenPixel), animateRotation: false), updateCutout: false)
+                    statusNode.transitionToState(.progress(value: max(0.027, min(1.0, progress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 2.0), animateRotation: false), updateCutout: false)
                 } else if let statusNode = self.statusNode {
                     self.statusNode = nil
                     if !transition.animation.isImmediate {

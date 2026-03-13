@@ -20,6 +20,7 @@ public func presentPollAttachmentScreen(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
     availableButtons: [AttachmentButtonType],
+    inputMediaNodeData: Signal<ChatEntityKeyboardInputNode.InputData?, NoError> = .single(nil),
     present: @escaping (ViewController) -> Void,
     completion: @escaping (AnyMediaReference) -> Void
 ) {
@@ -91,6 +92,32 @@ public func presentPollAttachmentScreen(
                 completion(.standalone(media: location))
             })
             controllerCompletion(controller, controller.mediaPickerContext)
+            return true
+        case .sticker:
+            let _ = (inputMediaNodeData
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { content in
+                guard let content = content?.stickers else {
+                    return
+                }
+                let controller = StickerAttachmentScreen(context: context, mode: .stickers(content), completion: { sticker in
+                    completion(sticker)
+                })
+                controllerCompletion(controller, controller.mediaPickerContext)
+            })
+            return true
+        case .emoji:
+            let _ = (inputMediaNodeData
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { content in
+                guard let content = content?.emoji else {
+                    return
+                }
+                let controller = StickerAttachmentScreen(context: context, mode: .emoji(content), completion: { sticker in
+                    completion(sticker)
+                })
+                controllerCompletion(controller, controller.mediaPickerContext)
+            })
             return true
         default:
             return false

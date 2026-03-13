@@ -53,6 +53,9 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/ContextUI",
+        "//submodules/Components/PagerComponent",
+        "//submodules/FeaturedStickersScreen",
+        "//submodules/TelegramNotices",
     ],
     visibility = [
         "//visibility:public",
