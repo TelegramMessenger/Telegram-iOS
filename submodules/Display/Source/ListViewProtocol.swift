@@ -30,6 +30,7 @@ public protocol ListView: ASDisplayNode {
 
     // MARK: - Read-only State Properties
     var insets: UIEdgeInsets { get }
+    var visibleSize: CGSize { get }
     var isTracking: Bool { get }
     var trackingOffset: CGFloat { get }
     var beganTrackingAtTopOrigin: Bool { get }

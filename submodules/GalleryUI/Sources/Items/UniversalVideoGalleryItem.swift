@@ -928,6 +928,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var scrubbingFrameDisposable: Disposable?
     
     private var isPlaying = false
+    private var hasStartedOnce = false
     private let isPlayingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private var areControlsVisible: Bool = true
@@ -1679,10 +1680,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     var isPlaying = false
                     var isPaused = true
                     var seekable = hintSeekable
-                    var hasStarted = false
+                    var hasStarted = strongSelf.hasStartedOnce
                     var displayProgress = true
                     if let value = value {
-                        hasStarted = value.timestamp > 0
+                        if value.timestamp > 0 {
+                            hasStarted = true
+                        }
                         
                         if let zoomableContent = strongSelf.zoomableContent, !value.dimensions.width.isZero && !value.dimensions.height.isZero {
                             let videoSize = CGSize(width: value.dimensions.width * 2.0, height: value.dimensions.height * 2.0)
@@ -1749,6 +1752,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             seekable = value.duration >= 30.0
                         }
                     }
+                    
+                    strongSelf.hasStartedOnce = hasStarted
                     
                     if !disablePlayerControls && strongSelf.isCentral == true && isPlaying {
                         strongSelf.isPlayingPromise.set(true)

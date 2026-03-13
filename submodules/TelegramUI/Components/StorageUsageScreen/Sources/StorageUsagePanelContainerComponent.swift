@@ -561,7 +561,7 @@ final class StorageUsagePanelContainerComponent: Component {
                 self.panelsBackgroundLayer.backgroundColor = component.theme.list.itemBlocksBackgroundColor.cgColor
                 self.topPanelSeparatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
                 self.topPanelBackgroundView.backgroundColor = component.theme.list.itemBlocksBackgroundColor
-                self.topPanelMergedBackgroundView.backgroundColor = component.theme.rootController.navigationBar.blurredBackgroundColor
+                self.topPanelMergedBackgroundView.backgroundColor = component.theme.list.blocksBackgroundColor
             }
             
             let topPanelCoverHeight: CGFloat = 10.0

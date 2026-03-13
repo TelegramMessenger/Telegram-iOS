@@ -325,6 +325,31 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
 }
 
 func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
+    #if DEBUG
+    if "".isEmpty {
+        return Signal { subscriber in
+            var value: Float = 0.0
+            subscriber.putNext(value)
+            let timer = SwiftSignalKit.Timer(timeout: 0.1, repeat: true, completion: {
+                if value != 1.0 {
+                    value += 0.1
+                    if value >= 1.0 {
+                        value = 1.0
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putNext(value)
+                    }
+                }
+            }, queue: .mainQueue())
+            timer.start()
+            return ActionDisposable {
+                timer.invalidate()
+            }
+        }
+    }
+    #endif
+    
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
         var includeResourceIds = Set<MediaResourceId>()

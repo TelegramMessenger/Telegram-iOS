@@ -96,23 +96,29 @@ func _internal_reinstateNoPaidMessagesException(account: Account, scopePeerId: P
         return (transaction.getPeer(scopePeerId).flatMap(apiInputPeer), transaction.getPeer(peerId).flatMap(apiInputUser))
     }
     |> mapToSignal { scopeInputPeer, inputUser -> Signal<Never, NoError> in
+        var scopeInputPeer = scopeInputPeer
         if scopePeerId != account.peerId {
             if scopeInputPeer == nil {
                 return .never()
             }
         } else {
-            return .never()
+            scopeInputPeer = nil
         }
         guard let inputUser else {
             return .never()
         }
         var flags: Int32 = 0
         flags |= (1 << 2)
-        flags |= (1 << 1)
+        if scopeInputPeer != nil {
+            flags |= (1 << 1)
+        }
         return account.network.request(Api.functions.account.toggleNoPaidMessagesException(flags: flags, parentPeer: scopeInputPeer, userId: inputUser))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         } |> mapToSignal { _ in
+            if scopePeerId == account.peerId {
+                account.viewTracker.forceUpdateCachedPeerData(peerId: peerId)
+            }
             return account.postbox.transaction { transaction -> Void in
                 if scopePeerId != account.peerId {
                     guard var data = transaction.getMessageHistoryThreadInfo(peerId: scopePeerId, threadId: peerId.toInt64())?.data.get(MessageHistoryThreadData.self) else {

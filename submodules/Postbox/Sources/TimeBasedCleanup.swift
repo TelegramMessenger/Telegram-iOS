@@ -198,87 +198,6 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
     return result
 }
 
-/*private func mapFiles(paths: [String], inodes: inout [InodeInfo], removeSize: UInt64, mainStoragePath: String, storageBox: StorageBox) {
-    var removedSize: UInt64 = 0
-    inodes.sort(by: { lhs, rhs in
-        return lhs.timestamp < rhs.timestamp
-    })
-    
-    var inodesToDelete = Set<__darwin_ino64_t>()
-    
-    for inode in inodes {
-        inodesToDelete.insert(inode.inode)
-        removedSize += UInt64(inode.size)
-        if removedSize >= removeSize {
-            break
-        }
-    }
-    
-    if inodesToDelete.isEmpty {
-        return
-    }
-    
-    let pathBuffer = malloc(2048).assumingMemoryBound(to: Int8.self)
-    defer {
-        free(pathBuffer)
-    }
-    
-    var unlinkedResourceIds: [Data] = []
-    
-    for path in paths {
-        let isMainPath = path == mainStoragePath
-        if let dp = opendir(path) {
-            while true {
-                guard let dirp = readdir(dp) else {
-                    break
-                }
-                
-                if strncmp(&dirp.pointee.d_name.0, ".", 1024) == 0 {
-                    continue
-                }
-                if strncmp(&dirp.pointee.d_name.0, "..", 1024) == 0 {
-                    continue
-                }
-                strncpy(pathBuffer, path, 1024)
-                strncat(pathBuffer, "/", 1024)
-                strncat(pathBuffer, &dirp.pointee.d_name.0, 1024)
-                
-                //puts(pathBuffer)
-                //puts("\n")
-                
-                var value = stat()
-                if stat(pathBuffer, &value) == 0 {
-                    if (((value.st_mode) & S_IFMT) == S_IFDIR) {
-                        if let subPath = String(data: Data(bytes: pathBuffer, count: strnlen(pathBuffer, 1024)), encoding: .utf8) {
-                            mapFiles(paths: <#T##[String]#>, inodes: &<#T##[InodeInfo]#>, removeSize: remov, mainStoragePath: mainStoragePath, storageBox: storageBox)
-                        }
-                    } else {
-                        if inodesToDelete.contains(value.st_ino) {
-                            if isMainPath {
-                                let nameLength = strnlen(&dirp.pointee.d_name.0, 1024)
-                                let nameData = Data(bytesNoCopy: &dirp.pointee.d_name.0, count: Int(nameLength), deallocator: .none)
-                                withExtendedLifetime(nameData, {
-                                    if let fileName = String(data: nameData, encoding: .utf8) {
-                                        if let idData = MediaBox.idForFileName(name: fileName).data(using: .utf8) {
-                                            unlinkedResourceIds.append(idData)
-                                        }
-                                    }
-                                })
-                            }
-                            unlink(pathBuffer)
-                        }
-                    }
-                }
-            }
-            closedir(dp)
-        }
-    }
-    
-    if !unlinkedResourceIds.isEmpty {
-        storageBox.remove(ids: unlinkedResourceIds)
-    }
-}*/
-
 private func statForDirectory(path: String) -> Int64 {
     if #available(macOS 10.13, *) {
         var s = darwin_dirstat()
@@ -482,10 +401,10 @@ private final class TimeBasedCleanupImpl {
                         }
                         //let fileName = filePath.lastPathComponent
                         
-                        if remainingSize >= bytesLimit {
+                        if remainingSize <= Int64(bytesLimit) {
                             return false
                         }
-                        
+
                         return true
                     }
                 }

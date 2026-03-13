@@ -46,6 +46,7 @@ swift_library(
         "//submodules/SegmentedControlNode",
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/EdgeEffect",
     ],
     visibility = [
         "//visibility:public",

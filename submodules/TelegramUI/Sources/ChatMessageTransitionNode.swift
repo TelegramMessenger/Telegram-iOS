@@ -337,21 +337,25 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         private let source: ChatMessageTransitionNodeImpl.Source
         private let getContentAreaInScreenSpace: () -> CGRect
 
+        private let portalSourceView: PortalSourceView
         private let scrollingContainer: ASDisplayNode
         private let containerNode: ASDisplayNode
         private let clippingNode: ASDisplayNode
+        private var portalTargetView: PortalView?
 
         weak var overlayController: OverlayTransitionContainerController?
 
         var animationEnded: (() -> Void)?
         var updateAfterCompletion: Bool = false
 
-        init(itemNode: ChatMessageItemNodeProtocol, contextSourceNode: ContextExtractedContentContainingNode, source: ChatMessageTransitionNodeImpl.Source, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+        init(itemNode: ChatMessageItemNodeProtocol, contextSourceNode: ContextExtractedContentContainingNode, source: ChatMessageTransitionNodeImpl.Source, overlayContainerNode: ASDisplayNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+            self.portalSourceView = PortalSourceView()
+            
             self.itemNode = itemNode
             self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
 
             self.clippingNode = ASDisplayNode()
-            self.clippingNode.clipsToBounds = true
+            self.clippingNode.clipsToBounds = false
 
             self.scrollingContainer = ASDisplayNode()
             self.containerNode = ASDisplayNode()
@@ -359,10 +363,18 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             self.source = source
 
             super.init()
+            
+            self.view.addSubview(self.portalSourceView)
 
-            self.addSubnode(self.clippingNode)
+            self.portalSourceView.addSubview(self.clippingNode.view)
             self.clippingNode.addSubnode(self.scrollingContainer)
             self.scrollingContainer.addSubnode(self.containerNode)
+            
+            if let portalTargetView = PortalView(matchPosition: true) {
+                self.portalTargetView = portalTargetView
+                self.portalSourceView.addPortal(view: portalTargetView)
+                overlayContainerNode.view.addSubview(portalTargetView.view)
+            }
         }
 
         deinit {
@@ -374,6 +386,13 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         }
 
         func beginAnimation() {
+            if let portalTargetView = self.portalTargetView {
+                portalTargetView.view.alpha = 0.0
+                portalTargetView.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                
+                self.portalSourceView.layer.animateAlpha(from: 0.01, to: 1.0, duration: 0.12)
+            }
+            
             let verticalDuration: Double = ChatMessageTransitionNodeImpl.animationDuration
             let horizontalDuration: Double = verticalDuration
             let delay: Double = 0.0
@@ -970,6 +989,8 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
     private var decorationItemNodes: [DecorationItemNodeImpl] = []
     private var messageReactionContexts: [MessageReactionContext] = []
     private var customOffsetHandlers: [CustomOffsetHandlerImpl] = []
+    
+    public let overlayContainerNode: ASDisplayNode
 
     var hasScheduledTransitions: Bool {
         return !self.currentPendingItems.isEmpty
@@ -983,6 +1004,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         self.listNode = listNode
         self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
         self.onTransitionEvent = onTransitionEvent
+        self.overlayContainerNode = ASDisplayNode()
 
         super.init()
 
@@ -1066,7 +1088,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         }
 
         if let contextSourceNode = contextSourceNode {
-            let animatingItemNode = AnimatingItemNode(itemNode: itemNode, contextSourceNode: contextSourceNode, source: source, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
+            let animatingItemNode = AnimatingItemNode(itemNode: itemNode, contextSourceNode: contextSourceNode, source: source, overlayContainerNode: self.overlayContainerNode, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
             animatingItemNode.updateLayout(size: self.bounds.size)
             
             self.animatingItemNodes.append(animatingItemNode)

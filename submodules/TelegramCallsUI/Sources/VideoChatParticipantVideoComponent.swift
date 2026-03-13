@@ -213,6 +213,10 @@ final class VideoChatParticipantVideoComponent: Component {
         private var referenceLocation: ReferenceLocation?
         private var loadingEffectView: VideoChatVideoLoadingEffectView?
         
+        public var isPinchToZoomActive: Bool {
+            return self.pinchContainerNode.isActive
+        }
+        
         override init(frame: CGRect) {
             self.backgroundGradientView = UIImageView()
             self.pinchContainerNode = PinchSourceContainerNode()

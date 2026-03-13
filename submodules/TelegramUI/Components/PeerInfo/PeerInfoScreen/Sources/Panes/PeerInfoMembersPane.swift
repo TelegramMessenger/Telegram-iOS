@@ -286,6 +286,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     
     weak var parentController: ViewController?
     
+    private let listBackgroundView: UIImageView
+    private let listMaskView: UIImageView
     private let listNode: ListView
     private var currentEntries: [PeerMembersListEntry] = []
     private var enclosingPeer: Peer?
@@ -295,6 +297,8 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     
     private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool)?
     private let presentationDataPromise = Promise<PresentationData>()
+    
+    private var ignoreListBackgroundUpdates: Bool = false
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -325,10 +329,24 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
+        self.listBackgroundView = UIImageView()
+        self.listBackgroundView.image = generateStretchableFilledCircleImage(diameter: 26.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+        self.listMaskView = UIImageView()
+        self.listMaskView.image = generateImage(CGSize(width: 16.0 + 26.0 * 2.0 + 16.0, height: 26.0 * 2.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.white.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor.clear.cgColor)
+            context.setBlendMode(.copy)
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: CGSize(width: 26.0 * 2.0, height: 26.0 * 2.0)))
+        })?.stretchableImage(withLeftCapWidth: 16 + 26, topCapHeight: 26).withRenderingMode(.alwaysTemplate)
+        
         super.init()
         
         self.listNode.preloadPages = true
+        self.view.addSubview(self.listBackgroundView)
         self.addSubnode(self.listNode)
+        self.view.addSubview(self.listMaskView)
         
         self.disposable = (combineLatest(queue: .mainQueue(),
             membersContext.state,
@@ -351,6 +369,23 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
             if case let .known(value) = offset, value < 100.0 {
                 strongSelf.membersContext.loadMore()
+            }
+        }
+        
+        self.listNode.visibleContentOffsetChanged = { [weak self] _, transition in
+            guard let self else {
+                return
+            }
+            if !self.ignoreListBackgroundUpdates {
+                self.updateListBackground(transition: transition)
+            }
+        }
+        self.listNode.displayedItemRangeChanged = { [weak self] _, _ in
+            guard let self else {
+                return
+            }
+            if !self.ignoreListBackgroundUpdates {
+                self.updateListBackground(transition: .immediate)
             }
         }
     }
@@ -376,6 +411,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.currentParams = (size, isScrollingLockedAtTop)
         self.presentationDataPromise.set(.single(presentationData))
         
+        self.ignoreListBackgroundUpdates = true
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
 
@@ -388,9 +424,15 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: duration), directionHint: .Up)
             }
         }
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset + 16.0, bottom: bottomInset, right: sideInset + 16.0), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
+        
+        self.ignoreListBackgroundUpdates = false
+        self.updateListBackground(transition: transition)
+        
+        self.listBackgroundView.tintColor = presentationData.theme.list.itemBlocksBackgroundColor
+        self.listMaskView.tintColor = presentationData.theme.list.blocksBackgroundColor
         
         if isFirstLayout, let enclosingPeer = self.enclosingPeer, let state = self.currentState {
             self.updateState(enclosingPeer: enclosingPeer, state: state, presentationData: presentationData)
@@ -469,6 +511,35 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 strongSelf.ready.set(.single(true))
             }
         })
+    }
+    
+    private func updateListBackground(transition: ContainedViewLayoutTransition) {
+        guard self.listNode.visibleSize.width != 0.0 else {
+            return
+        }
+        
+        var distanceToTop: CGFloat = -100.0
+        var distanceToBottom: CGFloat = -100.0
+        switch self.listNode.visibleContentOffset() {
+        case let .known(topOffset):
+            distanceToTop = -topOffset + self.listNode.insets.top
+        default:
+            break
+        }
+        switch self.listNode.visibleBottomContentOffset() {
+        case let .known(bottomOffset):
+            distanceToBottom = -bottomOffset + self.listNode.insets.bottom
+        default:
+            break
+        }
+        
+        distanceToTop = max(-100.0, distanceToTop)
+        distanceToBottom = max(-100.0, distanceToBottom)
+        
+        let listBackgroundFrame = CGRect(origin: CGPoint(x: 16.0, y: distanceToTop), size: CGSize(width: max(1.0, self.listNode.visibleSize.width - 16.0 * 2.0), height: max(1.0, self.listNode.visibleSize.height - distanceToBottom - distanceToTop)))
+        let listMaskFrame = CGRect(origin: CGPoint(x: 0.0, y: listBackgroundFrame.minY), size: CGSize(width: listBackgroundFrame.width + 16.0 * 2.0, height: listBackgroundFrame.height))
+        transition.updateFrame(view: self.listBackgroundView, frame: listBackgroundFrame)
+        transition.updateFrame(view: self.listMaskView, frame: listMaskFrame)
     }
     
     func findLoadedMessage(id: MessageId) -> Message? {

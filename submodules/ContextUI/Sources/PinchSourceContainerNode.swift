@@ -146,7 +146,7 @@ public final class PinchSourceContainerNode: ASDisplayNode, ASGestureRecognizerD
 
     public var maxPinchScale: CGFloat = 10.0
 
-    private var isActive: Bool = false
+    public private(set) var isActive: Bool = false
 
     public var activate: ((PinchSourceContainerNode) -> Void)?
     public var scaleUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?

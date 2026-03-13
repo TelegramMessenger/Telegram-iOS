@@ -838,6 +838,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.wrappingNode.contentNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.contentNode.addSubnode(self.backgroundNode)
         self.contentContainerNode.contentNode.addSubnode(self.historyNodeContainer)
+        
+        self.contentContainerNode.contentNode.addSubnode(self.messageTransitionNode)
+        
         self.contentContainerNode.contentNode.addSubnode(self.floatingTopicsPanelContainer)
         
         if let navigationBar = self.navigationBar {
@@ -863,8 +866,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.inputPanelContainerNode.addSubnode(self.inputPanelClippingNode)
         self.inputPanelContainerNode.addSubnode(self.inputPanelOverlayNode)
         self.inputPanelClippingNode.addSubnode(self.inputPanelBackgroundNode)
+        
+        self.wrappingNode.contentNode.addSubnode(self.messageTransitionNode.overlayContainerNode)
 
-        self.wrappingNode.contentNode.addSubnode(self.messageTransitionNode)
         self.contentContainerNode.contentNode.addSubnode(self.navigateButtons)
         self.wrappingNode.contentNode.addSubnode(self.presentationContextMarker)
         self.contentContainerNode.contentNode.addSubnode(self.contentDimNode)
@@ -2330,7 +2334,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     bottomBackgroundEdgeEffectNode = value
                     self.bottomBackgroundEdgeEffectNode = value
                     value.isUserInteractionEnabled = false
-                    self.historyNodeContainer.view.superview?.insertSubview(value.view, aboveSubview: self.historyNodeContainer.view)
+                    self.historyNodeContainer.view.superview?.insertSubview(value.view, aboveSubview: self.messageTransitionNode.view)
                 }
             }
         }
@@ -2531,7 +2535,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     topBackgroundEdgeEffectNode = value
                     self.topBackgroundEdgeEffectNode = value
                     value.isUserInteractionEnabled = false
-                    self.historyNodeContainer.view.superview?.insertSubview(value.view, aboveSubview: self.historyNodeContainer.view)
+                    self.historyNodeContainer.view.superview?.insertSubview(value.view, aboveSubview: self.messageTransitionNode.view)
                 }
             }
         }

@@ -187,8 +187,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.separatorNode)
+        //self.addSubnode(self.backgroundNode)
+        //self.addSubnode(self.separatorNode)
         self.addSubnode(self.selectionPanel)
     }
     
