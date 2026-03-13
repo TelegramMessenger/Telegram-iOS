@@ -153,7 +153,9 @@ class ChatImageGalleryItem: GalleryItem {
         
         node.setMessage(self.message, displayInfo: !self.displayInfoOnTop, translateToLanguage: self.translateToLanguage, peerIsCopyProtected: self.peerIsCopyProtected, isSecret: self.isSecret, location: self.location)
         for media in self.message.media {
-            if let paidContent = media as? TelegramMediaPaidContent {
+            if let poll = media as? TelegramMediaPoll, let image = poll.attachedMedia as? TelegramMediaImage {
+                node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))
+            } else if let paidContent = media as? TelegramMediaPaidContent {
                 let mediaIndex = self.mediaIndex ?? 0
                 if case let .full(fullMedia) = paidContent.extendedMedia[Int(mediaIndex)], let image = fullMedia as? TelegramMediaImage {
                     node.setImage(userLocation: .peer(self.message.id.peerId), imageReference: .message(message: MessageReference(self.message), media: image))

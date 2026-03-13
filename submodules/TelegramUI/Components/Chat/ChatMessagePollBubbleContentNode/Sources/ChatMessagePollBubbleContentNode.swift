@@ -371,6 +371,7 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
 
 private let percentageFont = Font.bold(14.5)
 private let percentageSmallFont = Font.bold(12.5)
+private let countFont = Font.regular(12.5)
 
 private func generatePercentageImage(presentationData: ChatPresentationData, incoming: Bool, value: Int, targetValue: Int) -> UIImage {
     return generateImage(CGSize(width: 42.0, height: 20.0), rotatedContext: { size, context in
@@ -399,10 +400,40 @@ private func generatePercentageAnimationImages(presentationData: ChatPresentatio
     return images
 }
 
+private func generateCountImage(presentationData: ChatPresentationData, incoming: Bool, value: Int32, targetValue: Int32) -> UIImage {
+    let targetString = "\(targetValue)"
+    let targetSize = (targetString as NSString).size(withAttributes: [.font: countFont])
+    let imageSize = CGSize(width: ceil(targetSize.width) + 2.0, height: 20.0)
+    return generateImage(imageSize, rotatedContext: { size, context in
+        UIGraphicsPushContext(context)
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        let string = NSAttributedString(
+            string: "\(value)",
+            font: countFont,
+            textColor: incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor,
+            paragraphAlignment: .right
+        )
+        string.draw(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: size))
+        UIGraphicsPopContext()
+    })!
+}
+
+private func generateCountAnimationImages(presentationData: ChatPresentationData, incoming: Bool, from fromValue: Int32, to toValue: Int32, duration: Double) -> [UIImage] {
+    let minimumFrameDuration = 1.0 / 40.0
+    let numberOfFrames = max(1, Int(duration / minimumFrameDuration))
+    var images: [UIImage] = []
+    for i in 0 ..< numberOfFrames {
+        let t = CGFloat(i) / CGFloat(numberOfFrames)
+        images.append(generateCountImage(presentationData: presentationData, incoming: incoming, value: Int32((1.0 - t) * CGFloat(fromValue) + t * CGFloat(toValue)), targetValue: toValue))
+    }
+    return images
+}
+
 private struct ChatMessagePollOptionResult: Equatable {
     let normalized: CGFloat
     let percent: Int
     let count: Int32
+    let recentVoterPeerIds: [PeerId]
 }
 
 private struct ChatMessagePollOptionSelection: Equatable {
@@ -414,14 +445,21 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private static let mediaSize = CGSize(width: 40.0, height: 40.0)
     private static let mediaSpacing: CGFloat = 2.0
     private static let mediaRightInset: CGFloat = 10.0
+    private static let avatarsSize = CGSize(width: MergedAvatarsNode.defaultMergedImageSize + MergedAvatarsNode.defaultMergedImageSpacing, height: MergedAvatarsNode.defaultMergedImageSize)
+    private static let avatarsSpacing: CGFloat = 6.0
+    private static let countSpacing: CGFloat = 6.0
     
     private let highlightedBackgroundNode: ASDisplayNode
     private(set) var radioNode: ChatMessagePollOptionRadioNode?
     private let percentageNode: ASDisplayNode
     private var percentageImage: UIImage?
+    private let countNode: ASDisplayNode
+    private var countImage: UIImage?
+    private let avatarsNode: MergedAvatarsNode
     fileprivate var titleNode: TextNodeWithEntities?
     private let buttonNode: HighlightTrackingButtonNode
     let separatorNode: ASDisplayNode
+    private let resultBarBackgroundNode: ASImageNode
     private let resultBarNode: ASImageNode
     private let resultBarIconNode: ASImageNode
     private var mediaNode: TransformImageNode?
@@ -429,6 +467,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private var mediaHidden = false
     private(set) var mediaFrame: CGRect?
     private var currentMedia: Media?
+    private var currentRecentVoterPeerIds: [PeerId] = []
     var option: TelegramMediaPollOption?
     private(set) var currentResult: ChatMessagePollOptionResult?
     private(set) var currentSelection: ChatMessagePollOptionSelection?
@@ -461,24 +500,39 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
+        self.resultBarBackgroundNode = ASImageNode()
+        self.resultBarBackgroundNode.isLayerBacked = true
+        self.resultBarBackgroundNode.alpha = 0.0
+        
         self.resultBarNode = ASImageNode()
         self.resultBarNode.isLayerBacked = true
         self.resultBarNode.alpha = 0.0
         
         self.resultBarIconNode = ASImageNode()
         self.resultBarIconNode.isLayerBacked = true
-        
+
         self.percentageNode = ASDisplayNode()
         self.percentageNode.alpha = 0.0
         self.percentageNode.isLayerBacked = true
+
+        self.countNode = ASDisplayNode()
+        self.countNode.alpha = 0.0
+        self.countNode.isLayerBacked = true
+        
+        self.avatarsNode = MergedAvatarsNode()
+        self.avatarsNode.alpha = 0.0
+        self.avatarsNode.isUserInteractionEnabled = false
         
         super.init()
                 
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.separatorNode)
+        self.addSubnode(self.resultBarBackgroundNode)
         self.addSubnode(self.resultBarNode)
         self.addSubnode(self.resultBarIconNode)
         self.addSubnode(self.percentageNode)
+        self.addSubnode(self.countNode)
+        self.addSubnode(self.avatarsNode)
         self.addSubnode(self.buttonNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
@@ -562,13 +616,19 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             let leftInset: CGFloat = 50.0
             let media = option.media
             let hasMedia = media != nil
+//            let hasRecentVoterAvatars = !(optionResult?.recentVoterPeerIds.isEmpty ?? true)
+//            let avatarsInset: CGFloat
+//            if hasRecentVoterAvatars {
+//                avatarsInset = ChatMessagePollOptionNode.avatarsSize.width + ChatMessagePollOptionNode.avatarsSpacing
+//            } else {
+//                avatarsInset = 0.0
+//            }
             let mediaInset: CGFloat
             if hasMedia {
                 mediaInset = ChatMessagePollOptionNode.mediaSize.width + ChatMessagePollOptionNode.mediaSpacing + ChatMessagePollOptionNode.mediaRightInset
             } else {
                 mediaInset = 0.0
             }
-            let rightInset: CGFloat = 10.0 + mediaInset
             
             let incoming = message.effectivelyIncoming(context.account.peerId)
             
@@ -594,11 +654,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                 blockQuoteFont: presentationData.messageFont,
                 message: message
             )
-            
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: optionAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
-            
-            let contentHeight: CGFloat = max(52.0, titleLayout.size.height + 28.0)
-            
+                        
             let shouldHaveRadioNode = optionResult == nil
             let isSelectable: Bool
             if shouldHaveRadioNode, poll.kind.multipleAnswers, !Namespaces.Message.allNonRegular.contains(message.id.namespace) {
@@ -608,12 +664,31 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             }
             
             let themeUpdated = presentationData.theme.theme !== currentTheme
-            
+
             var updatedPercentageImage: UIImage?
             if currentResult != optionResult || themeUpdated {
                 let value = optionResult?.percent ?? 0
                 updatedPercentageImage = generatePercentageImage(presentationData: presentationData, incoming: incoming, value: value, targetValue: value)
             }
+            
+            let displayCount = optionResult != nil
+            var updatedCountImage: UIImage?
+            if displayCount && (currentResult != optionResult || themeUpdated) {
+                let value = optionResult?.count ?? 0
+                updatedCountImage = generateCountImage(presentationData: presentationData, incoming: incoming, value: value, targetValue: value)
+            }
+//            let countInset: CGFloat
+//            if displayCount {
+//                let countImage = updatedCountImage ?? maybeNode?.countImage ?? generateCountImage(presentationData: presentationData, incoming: incoming, value: optionResult?.count ?? 0, targetValue: optionResult?.count ?? 0)
+//                countInset = countImage.size.width + ChatMessagePollOptionNode.countSpacing
+//            } else {
+//                countInset = 0.0
+//            }
+            let rightInset: CGFloat = 10.0 + mediaInset
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: optionAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            
+            let contentHeight: CGFloat = max(52.0, titleLayout.size.height + 28.0)
             
             var resultIcon: UIImage?
             var updatedResultIcon = false
@@ -702,6 +777,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.option = option
                     let previousMedia = node.currentMedia
                     node.currentMedia = media
+                    node.currentRecentVoterPeerIds = optionResult?.recentVoterPeerIds ?? []
                     let previousResult = node.currentResult
                     node.currentResult = optionResult
                     node.currentSelection = selection
@@ -779,7 +855,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                             radioNode.removeFromSupernode()
                         }
                     }
-                    
+
                     if let updatedPercentageImage = updatedPercentageImage {
                         node.percentageNode.contents = updatedPercentageImage.cgImage
                         node.percentageImage = updatedPercentageImage
@@ -799,13 +875,56 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                     }
                     
+                    if let updatedCountImage = updatedCountImage {
+                        node.countNode.contents = updatedCountImage.cgImage
+                        node.countImage = updatedCountImage
+                    }
+                    
+                    let recentVoterPeers: [Peer]
+                    if let optionResult {
+                        recentVoterPeers = optionResult.recentVoterPeerIds.compactMap { message.peers[$0] }
+                    } else {
+                        recentVoterPeers = []
+                    }
+                    
+                    var trailingOriginX = width - rightInset
+                    
                     let mediaFrame: CGRect?
                     if let _ = media {
                         mediaFrame = CGRect(origin: CGPoint(x: width - ChatMessagePollOptionNode.mediaRightInset - ChatMessagePollOptionNode.mediaSize.width, y: floor((contentHeight - ChatMessagePollOptionNode.mediaSize.height) * 0.5)), size: ChatMessagePollOptionNode.mediaSize)
+                        trailingOriginX = mediaFrame!.minX - 12.0
                     } else {
                         mediaFrame = nil
                     }
                     node.mediaFrame = mediaFrame
+                    
+                    if !recentVoterPeers.isEmpty {
+                        let avatarsFrame = CGRect(origin: CGPoint(x: trailingOriginX + 15.0 - ChatMessagePollOptionNode.avatarsSize.width, y: floor((contentHeight - ChatMessagePollOptionNode.avatarsSize.height) * 0.5)), size: ChatMessagePollOptionNode.avatarsSize)
+                        node.avatarsNode.frame = avatarsFrame
+                        node.avatarsNode.updateLayout(size: avatarsFrame.size)
+                        node.avatarsNode.update(context: context, peers: recentVoterPeers, synchronousLoad: attemptSynchronous, imageSize: MergedAvatarsNode.defaultMergedImageSize, imageSpacing: MergedAvatarsNode.defaultMergedImageSpacing, borderWidth: MergedAvatarsNode.defaultBorderWidth)
+                        node.avatarsNode.alpha = 1.0
+                        trailingOriginX = avatarsFrame.minX - ChatMessagePollOptionNode.avatarsSpacing
+                    } else {
+                        node.avatarsNode.update(context: context, peers: [], synchronousLoad: attemptSynchronous, imageSize: MergedAvatarsNode.defaultMergedImageSize, imageSpacing: MergedAvatarsNode.defaultMergedImageSpacing, borderWidth: MergedAvatarsNode.defaultBorderWidth)
+                        node.avatarsNode.alpha = 0.0
+                    }
+                    
+                    if let image = node.countImage, displayCount {
+                        let countFrame = CGRect(origin: CGPoint(x: trailingOriginX - image.size.width, y: floor((contentHeight - image.size.height) * 0.5)), size: image.size)
+                        node.countNode.frame = countFrame
+                        if animated && previousResult?.count != optionResult?.count {
+                            let countDuration = 0.27
+                            let images = generateCountAnimationImages(presentationData: presentationData, incoming: incoming, from: previousResult?.count ?? 0, to: optionResult?.count ?? 0, duration: countDuration)
+                            if !images.isEmpty {
+                                let animation = CAKeyframeAnimation(keyPath: "contents")
+                                animation.values = images.compactMap { $0.cgImage }
+                                animation.duration = countDuration * UIView.animationDurationFactor()
+                                animation.calculationMode = .discrete
+                                node.countNode.layer.add(animation, forKey: "image")
+                            }
+                        }
+                    }
                     
                     var isSticker = false
                     if let media, let mediaFrame, let file = media as? TelegramMediaFile, file.isSticker || file.isCustomEmoji {
@@ -906,6 +1025,10 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
                     node.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - leftInset - 10.0, height: UIScreenPixel))
                     
+                    if node.resultBarBackgroundNode.image == nil || themeUpdated {
+                        node.resultBarBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 4.0, color: optionTextColor.withMultipliedAlpha(0.07))
+                    }
+                    
                     if node.resultBarNode.image == nil || updatedResultIcon {
                         var isQuiz = false
                         if case .quiz = poll.kind {
@@ -940,24 +1063,36 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     }
                     
                     let minBarWidth: CGFloat = 6.0
+                    let maxBarWidth = width - leftInset - rightInset
                     let resultBarWidth = minBarWidth + floor((width - leftInset - rightInset - minBarWidth) * (optionResult?.normalized ?? 0.0))
                     let barFrame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - 6.0 - 1.0), size: CGSize(width: resultBarWidth, height: 4.0))
+                    node.resultBarBackgroundNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - 6.0 - 1.0), size: CGSize(width: maxBarWidth, height: 4.0))
                     node.resultBarNode.frame = barFrame
                     node.resultBarIconNode.frame = CGRect(origin: CGPoint(x: barFrame.minX - 6.0 - 16.0, y: barFrame.minY + floor((barFrame.height - 16.0) / 2.0)), size: CGSize(width: 16.0, height: 16.0))
+                    node.resultBarBackgroundNode.alpha = optionResult != nil ? 1.0 : 0.0
                     node.resultBarNode.alpha = optionResult != nil ? 1.0 : 0.0
                     node.percentageNode.alpha = optionResult != nil ? 1.0 : 0.0
+                    node.countNode.alpha = optionResult != nil ? 1.0 : 0.0
                     node.separatorNode.alpha = optionResult == nil ? 1.0 : 0.0
                     node.resultBarIconNode.alpha = optionResult != nil ? 1.0 : 0.0
                     if animated, currentResult != optionResult {
                         if (currentResult != nil) != (optionResult != nil) {
                             if optionResult != nil {
+                                node.resultBarBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                                 node.resultBarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                                 node.percentageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                node.countNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                if !recentVoterPeers.isEmpty {
+                                    node.avatarsNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
                                 node.separatorNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08)
                                 node.resultBarIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             } else {
+                                node.resultBarBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4)
                                 node.resultBarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4)
                                 node.percentageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                                node.countNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                                node.avatarsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                                 node.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 node.resultBarIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                             }
@@ -1031,6 +1166,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private let buttonNode: HighlightableButtonNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var optionNodes: [ChatMessagePollOptionNode] = []
+    private var shuffledOptionOpaqueIdentifiers: [Data]?
     private var shimmeringNodes: [ShimmeringLinkNode] = []
     private let temporaryHiddenMediaDisposable = MetaDisposable()
     
@@ -1164,6 +1300,37 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         return nil
+    }
+
+    private func resolvedOptionOrder(for poll: TelegramMediaPoll) -> (orderedOptions: [(Int, TelegramMediaPollOption)], shuffledOpaqueIdentifiers: [Data]?) {
+        let defaultOrderedOptions = Array(poll.options.enumerated()).map { ($0.offset, $0.element) }
+        guard poll.shuffleAnswers else {
+            return (defaultOrderedOptions, nil)
+        }
+        
+        let currentOpaqueIdentifiers = poll.options.map(\.opaqueIdentifier)
+        let resolvedOpaqueIdentifiers: [Data]
+        if let shuffledOptionOpaqueIdentifiers = self.shuffledOptionOpaqueIdentifiers, shuffledOptionOpaqueIdentifiers.count == currentOpaqueIdentifiers.count, Set(shuffledOptionOpaqueIdentifiers) == Set(currentOpaqueIdentifiers) {
+            resolvedOpaqueIdentifiers = shuffledOptionOpaqueIdentifiers
+        } else {
+            var generatedOpaqueIdentifiers = currentOpaqueIdentifiers
+            generatedOpaqueIdentifiers.shuffle()
+            resolvedOpaqueIdentifiers = generatedOpaqueIdentifiers
+        }
+        
+        let indicesByOpaqueIdentifier = Dictionary(uniqueKeysWithValues: poll.options.enumerated().map { ($0.element.opaqueIdentifier, $0.offset) })
+        let orderedOptions = resolvedOpaqueIdentifiers.compactMap { opaqueIdentifier -> (Int, TelegramMediaPollOption)? in
+            guard let index = indicesByOpaqueIdentifier[opaqueIdentifier] else {
+                return nil
+            }
+            return (index, poll.options[index])
+        }
+        
+        if orderedOptions.count == poll.options.count {
+            return (orderedOptions, resolvedOpaqueIdentifiers)
+        } else {
+            return (defaultOrderedOptions, currentOpaqueIdentifiers)
+        }
     }
     
     private func openOptionMedia(_ media: Media) {
@@ -1520,11 +1687,17 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 let (votersLayout, votersApply) = makeVotersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: votersString ?? "", font: labelsFont, textColor: messageTheme.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 
-                
+                let viewResultsString: String
+                if let poll = poll, let totalVoters = poll.results.totalVoters {
+                    //TODO:localize
+                    viewResultsString = "View Votes (\(totalVoters))"
+                } else {
+                    viewResultsString = item.presentationData.strings.MessagePoll_ViewResults
+                }
                 
                 let (buttonSubmitInactiveTextLayout, buttonSubmitInactiveTextApply) = makeSubmitInactiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.accentControlDisabledColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 let (buttonSubmitActiveTextLayout, buttonSubmitActiveTextApply) = makeSubmitActiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.polls.bar), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
-                let (buttonViewResultsTextLayout, buttonViewResultsTextApply) = makeViewResultsTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_ViewResults, font: Font.regular(17.0), textColor: messageTheme.polls.bar), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
+                let (buttonViewResultsTextLayout, buttonViewResultsTextApply) = makeViewResultsTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewResultsString, font: Font.regular(17.0), textColor: messageTheme.polls.bar), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
@@ -1554,7 +1727,13 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var pollOptionsFinalizeLayouts: [(CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)] = []
+                var orderedPollOptions: [(Int, TelegramMediaPollOption)] = []
+                var shuffledOptionOpaqueIdentifiers: [Data]?
                 if let poll = poll {
+                    let resolvedOptionOrder = self.resolvedOptionOrder(for: poll)
+                    orderedPollOptions = resolvedOptionOrder.orderedOptions
+                    shuffledOptionOpaqueIdentifiers = resolvedOptionOrder.shuffledOpaqueIdentifiers
+                    
                     var optionVoterCount: [Int: Int32] = [:]
                     var maxOptionVoterCount: Int32 = 0
                     var totalVoterCount: Int32 = 0
@@ -1593,8 +1772,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         optionVoterCounts = Array(repeating: 0, count: poll.options.count)
                     }
                     
-                    for i in 0 ..< poll.options.count {
-                        let option = poll.options[i]
+                    for (i, option) in orderedPollOptions {
                         
                         let makeLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ translation: TranslationMessageAttribute.Additional?, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)))
                         if let previous = previousOptionNodeLayouts[option.opaqueIdentifier] {
@@ -1603,14 +1781,21 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             makeLayout = ChatMessagePollOptionNode.asyncLayout(nil)
                         }
                         var optionResult: ChatMessagePollOptionResult?
+                        var recentVoterPeerIds: [PeerId] = []
+                        if case .public = poll.publicity, let voters = voters {
+                            for optionVoters in voters where optionVoters.opaqueIdentifier == option.opaqueIdentifier {
+                                recentVoterPeerIds = optionVoters.recentVoters
+                                break
+                            }
+                        }
                         if let count = optionVoterCount[i] {
                             if maxOptionVoterCount != 0 && totalVoterCount != 0 {
-                                optionResult = ChatMessagePollOptionResult(normalized: CGFloat(count) / CGFloat(maxOptionVoterCount), percent: optionVoterCounts[i], count: count)
+                                optionResult = ChatMessagePollOptionResult(normalized: CGFloat(count) / CGFloat(maxOptionVoterCount), percent: optionVoterCounts[i], count: count, recentVoterPeerIds: recentVoterPeerIds)
                             } else if isClosed {
-                                optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0)
+                                optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0, recentVoterPeerIds: recentVoterPeerIds)
                             }
                         } else if isClosed {
-                            optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0)
+                            optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0, recentVoterPeerIds: recentVoterPeerIds)
                         }
                         
                         var translation: TranslationMessageAttribute.Additional?
@@ -1718,9 +1903,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             for i in 0 ..< optionNodesSizesAndApply.count {
                                 let (size, apply) = optionNodesSizesAndApply[i]
                                 var isRequesting = false
-                                if let poll = poll, i < poll.options.count {
+                                if i < orderedPollOptions.count {
                                     if let inProgressOpaqueIds = item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] {
-                                        isRequesting = inProgressOpaqueIds.contains(poll.options[i].opaqueIdentifier)
+                                        isRequesting = inProgressOpaqueIds.contains(orderedPollOptions[i].1.opaqueIdentifier)
                                     }
                                 }
                                 let optionNode = apply(animation.isAnimated, isRequesting, synchronousLoad)
@@ -1760,6 +1945,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             strongSelf.optionNodes = updatedOptionNodes
+                            strongSelf.shuffledOptionOpaqueIdentifiers = shuffledOptionOpaqueIdentifiers
                             
                             if textLayout.hasRTL {
                                 strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right - additionalTextRightInset, y: textFrame.origin.y), size: textFrame.size)
@@ -1997,13 +2183,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         
         let disableAllActions = false
         
-        var hasSelection = false
-        switch poll.kind {
-        case .poll(true):
-            hasSelection = true
-        default:
-            break
-        }
+        var hasSelection = poll.kind.multipleAnswers
         
         var hasSelectedOptions = false
         for optionNode in self.optionNodes {

@@ -19,7 +19,11 @@ import DeviceAccess
 import TooltipUI
 
 func getLocation(from message: EngineMessage) -> TelegramMediaMap? {
-    return message.media.first(where: { $0 is TelegramMediaMap } ) as? TelegramMediaMap
+    if let poll = message.media.first(where: { $0 is TelegramMediaPoll } ) as? TelegramMediaPoll, let map = poll.attachedMedia as? TelegramMediaMap {
+        return map
+    } else {
+        return message.media.first(where: { $0 is TelegramMediaMap } ) as? TelegramMediaMap
+    }
 }
 
 private func areMessagesEqual(_ lhsMessage: EngineMessage, _ rhsMessage: EngineMessage) -> Bool {

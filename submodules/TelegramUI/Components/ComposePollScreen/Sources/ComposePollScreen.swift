@@ -924,7 +924,8 @@ final class ComposePollScreenComponent: Component {
                         self.pollDescriptionMedia = nil
                         self.state?.updated(transition: .easeInOut(duration: 0.25))
                     } else {
-                        
+                        self.pollDescriptionMedia = nil
+                        self.state?.updated(transition: .easeInOut(duration: 0.25))
                     }
                     return true
                 }
@@ -935,8 +936,10 @@ final class ComposePollScreenComponent: Component {
                         self.quizAnswerMedia = nil
                         self.state?.updated(transition: .easeInOut(duration: 0.25))
                     } else {
-                        
+                        self.quizAnswerMedia = nil
+                        self.state?.updated(transition: .easeInOut(duration: 0.25))
                     }
+                    self.state?.updated(transition: .easeInOut(duration: 0.25))
                     return true
                 }
             case let .pollOption(pollOption):
@@ -946,7 +949,8 @@ final class ComposePollScreenComponent: Component {
                         pollOption.media = nil
                         self.state?.updated(transition: .easeInOut(duration: 0.25))
                     } else {
-                        
+                        pollOption.media = nil
+                        self.state?.updated(transition: .easeInOut(duration: 0.25))
                     }
                     return true
                 }

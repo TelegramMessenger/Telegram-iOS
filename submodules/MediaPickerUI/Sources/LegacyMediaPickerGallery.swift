@@ -146,6 +146,9 @@ func presentLegacyMediaPickerGallery(
         return getCaptionPanelView()
     }
     paintStickersContext.livePhotoButton = {
+        if case .secretChat = peer {
+            return nil
+        }
         let livePhotoButton = LivePhotoButton()
         livePhotoButton.present = present
         livePhotoButton.context = context

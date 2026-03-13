@@ -205,8 +205,12 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         if item.presentationData.isPreview {
                             automaticDownload = .full
                         }
-                    } else if let poll = media as? TelegramMediaPoll, let image = poll.attachedMedia as? TelegramMediaImage {
-                        selectedMedia = image
+                    } else if let poll = media as? TelegramMediaPoll {
+                        if let image = poll.attachedMedia as? TelegramMediaImage {
+                            selectedMedia = image
+                        } else if let file = poll.attachedMedia as? TelegramMediaFile {
+                            selectedMedia = file
+                        }
                     }
                 }
             }
