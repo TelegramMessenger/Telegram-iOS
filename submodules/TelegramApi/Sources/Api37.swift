@@ -1,4 +1,205 @@
 public extension Api.payments {
+    enum ExportedInvoice: TypeConstructorDescription {
+        public class Cons_exportedInvoice: TypeConstructorDescription {
+            public var url: String
+            public init(url: String) {
+                self.url = url
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedInvoice", [("url", self.url as Any)])
+            }
+        }
+        case exportedInvoice(Cons_exportedInvoice)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .exportedInvoice(let _data):
+                if boxed {
+                    buffer.appendInt32(-1362048039)
+                }
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .exportedInvoice(let _data):
+                return ("exportedInvoice", [("url", _data.url as Any)])
+            }
+        }
+
+        public static func parse_exportedInvoice(_ reader: BufferReader) -> ExportedInvoice? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.payments.ExportedInvoice.exportedInvoice(Cons_exportedInvoice(url: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.payments {
+    enum GiveawayInfo: TypeConstructorDescription {
+        public class Cons_giveawayInfo: TypeConstructorDescription {
+            public var flags: Int32
+            public var startDate: Int32
+            public var joinedTooEarlyDate: Int32?
+            public var adminDisallowedChatId: Int64?
+            public var disallowedCountry: String?
+            public init(flags: Int32, startDate: Int32, joinedTooEarlyDate: Int32?, adminDisallowedChatId: Int64?, disallowedCountry: String?) {
+                self.flags = flags
+                self.startDate = startDate
+                self.joinedTooEarlyDate = joinedTooEarlyDate
+                self.adminDisallowedChatId = adminDisallowedChatId
+                self.disallowedCountry = disallowedCountry
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("giveawayInfo", [("flags", self.flags as Any), ("startDate", self.startDate as Any), ("joinedTooEarlyDate", self.joinedTooEarlyDate as Any), ("adminDisallowedChatId", self.adminDisallowedChatId as Any), ("disallowedCountry", self.disallowedCountry as Any)])
+            }
+        }
+        public class Cons_giveawayInfoResults: TypeConstructorDescription {
+            public var flags: Int32
+            public var startDate: Int32
+            public var giftCodeSlug: String?
+            public var starsPrize: Int64?
+            public var finishDate: Int32
+            public var winnersCount: Int32
+            public var activatedCount: Int32?
+            public init(flags: Int32, startDate: Int32, giftCodeSlug: String?, starsPrize: Int64?, finishDate: Int32, winnersCount: Int32, activatedCount: Int32?) {
+                self.flags = flags
+                self.startDate = startDate
+                self.giftCodeSlug = giftCodeSlug
+                self.starsPrize = starsPrize
+                self.finishDate = finishDate
+                self.winnersCount = winnersCount
+                self.activatedCount = activatedCount
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("giveawayInfoResults", [("flags", self.flags as Any), ("startDate", self.startDate as Any), ("giftCodeSlug", self.giftCodeSlug as Any), ("starsPrize", self.starsPrize as Any), ("finishDate", self.finishDate as Any), ("winnersCount", self.winnersCount as Any), ("activatedCount", self.activatedCount as Any)])
+            }
+        }
+        case giveawayInfo(Cons_giveawayInfo)
+        case giveawayInfoResults(Cons_giveawayInfoResults)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .giveawayInfo(let _data):
+                if boxed {
+                    buffer.appendInt32(1130879648)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt32(_data.startDate, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    serializeInt32(_data.joinedTooEarlyDate!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeInt64(_data.adminDisallowedChatId!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 4) != 0 {
+                    serializeString(_data.disallowedCountry!, buffer: buffer, boxed: false)
+                }
+                break
+            case .giveawayInfoResults(let _data):
+                if boxed {
+                    buffer.appendInt32(-512366993)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                serializeInt32(_data.startDate, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 3) != 0 {
+                    serializeString(_data.giftCodeSlug!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 4) != 0 {
+                    serializeInt64(_data.starsPrize!, buffer: buffer, boxed: false)
+                }
+                serializeInt32(_data.finishDate, buffer: buffer, boxed: false)
+                serializeInt32(_data.winnersCount, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeInt32(_data.activatedCount!, buffer: buffer, boxed: false)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .giveawayInfo(let _data):
+                return ("giveawayInfo", [("flags", _data.flags as Any), ("startDate", _data.startDate as Any), ("joinedTooEarlyDate", _data.joinedTooEarlyDate as Any), ("adminDisallowedChatId", _data.adminDisallowedChatId as Any), ("disallowedCountry", _data.disallowedCountry as Any)])
+            case .giveawayInfoResults(let _data):
+                return ("giveawayInfoResults", [("flags", _data.flags as Any), ("startDate", _data.startDate as Any), ("giftCodeSlug", _data.giftCodeSlug as Any), ("starsPrize", _data.starsPrize as Any), ("finishDate", _data.finishDate as Any), ("winnersCount", _data.winnersCount as Any), ("activatedCount", _data.activatedCount as Any)])
+            }
+        }
+
+        public static func parse_giveawayInfo(_ reader: BufferReader) -> GiveawayInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {
+                _3 = reader.readInt32()
+            }
+            var _4: Int64?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _4 = reader.readInt64()
+            }
+            var _5: String?
+            if Int(_1!) & Int(1 << 4) != 0 {
+                _5 = parseString(reader)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.payments.GiveawayInfo.giveawayInfo(Cons_giveawayInfo(flags: _1!, startDate: _2!, joinedTooEarlyDate: _3, adminDisallowedChatId: _4, disallowedCountry: _5))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_giveawayInfoResults(_ reader: BufferReader) -> GiveawayInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            if Int(_1!) & Int(1 << 3) != 0 {
+                _3 = parseString(reader)
+            }
+            var _4: Int64?
+            if Int(_1!) & Int(1 << 4) != 0 {
+                _4 = reader.readInt64()
+            }
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _7 = reader.readInt32()
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.payments.GiveawayInfo.giveawayInfoResults(Cons_giveawayInfoResults(flags: _1!, startDate: _2!, giftCodeSlug: _3, starsPrize: _4, finishDate: _5!, winnersCount: _6!, activatedCount: _7))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.payments {
     enum PaymentForm: TypeConstructorDescription {
         public class Cons_paymentForm: TypeConstructorDescription {
             public var flags: Int32
@@ -2172,218 +2373,6 @@ public extension Api.payments {
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.payments.ValidatedRequestedInfo.validatedRequestedInfo(Cons_validatedRequestedInfo(flags: _1!, id: _2, shippingOptions: _3))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.phone {
-    enum ExportedGroupCallInvite: TypeConstructorDescription {
-        public class Cons_exportedGroupCallInvite: TypeConstructorDescription {
-            public var link: String
-            public init(link: String) {
-                self.link = link
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedGroupCallInvite", [("link", self.link as Any)])
-            }
-        }
-        case exportedGroupCallInvite(Cons_exportedGroupCallInvite)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .exportedGroupCallInvite(let _data):
-                if boxed {
-                    buffer.appendInt32(541839704)
-                }
-                serializeString(_data.link, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .exportedGroupCallInvite(let _data):
-                return ("exportedGroupCallInvite", [("link", _data.link as Any)])
-            }
-        }
-
-        public static func parse_exportedGroupCallInvite(_ reader: BufferReader) -> ExportedGroupCallInvite? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.phone.ExportedGroupCallInvite.exportedGroupCallInvite(Cons_exportedGroupCallInvite(link: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.phone {
-    enum GroupCall: TypeConstructorDescription {
-        public class Cons_groupCall: TypeConstructorDescription {
-            public var call: Api.GroupCall
-            public var participants: [Api.GroupCallParticipant]
-            public var participantsNextOffset: String
-            public var chats: [Api.Chat]
-            public var users: [Api.User]
-            public init(call: Api.GroupCall, participants: [Api.GroupCallParticipant], participantsNextOffset: String, chats: [Api.Chat], users: [Api.User]) {
-                self.call = call
-                self.participants = participants
-                self.participantsNextOffset = participantsNextOffset
-                self.chats = chats
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("groupCall", [("call", self.call as Any), ("participants", self.participants as Any), ("participantsNextOffset", self.participantsNextOffset as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
-            }
-        }
-        case groupCall(Cons_groupCall)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .groupCall(let _data):
-                if boxed {
-                    buffer.appendInt32(-1636664659)
-                }
-                _data.call.serialize(buffer, true)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.participants.count))
-                for item in _data.participants {
-                    item.serialize(buffer, true)
-                }
-                serializeString(_data.participantsNextOffset, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.chats.count))
-                for item in _data.chats {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .groupCall(let _data):
-                return ("groupCall", [("call", _data.call as Any), ("participants", _data.participants as Any), ("participantsNextOffset", _data.participantsNextOffset as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
-            }
-        }
-
-        public static func parse_groupCall(_ reader: BufferReader) -> GroupCall? {
-            var _1: Api.GroupCall?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.GroupCall
-            }
-            var _2: [Api.GroupCallParticipant]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipant.self)
-            }
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.phone.GroupCall.groupCall(Cons_groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, chats: _4!, users: _5!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.phone {
-    enum GroupCallStars: TypeConstructorDescription {
-        public class Cons_groupCallStars: TypeConstructorDescription {
-            public var totalStars: Int64
-            public var topDonors: [Api.GroupCallDonor]
-            public var chats: [Api.Chat]
-            public var users: [Api.User]
-            public init(totalStars: Int64, topDonors: [Api.GroupCallDonor], chats: [Api.Chat], users: [Api.User]) {
-                self.totalStars = totalStars
-                self.topDonors = topDonors
-                self.chats = chats
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("groupCallStars", [("totalStars", self.totalStars as Any), ("topDonors", self.topDonors as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
-            }
-        }
-        case groupCallStars(Cons_groupCallStars)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .groupCallStars(let _data):
-                if boxed {
-                    buffer.appendInt32(-1658995418)
-                }
-                serializeInt64(_data.totalStars, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.topDonors.count))
-                for item in _data.topDonors {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.chats.count))
-                for item in _data.chats {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .groupCallStars(let _data):
-                return ("groupCallStars", [("totalStars", _data.totalStars as Any), ("topDonors", _data.topDonors as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
-            }
-        }
-
-        public static func parse_groupCallStars(_ reader: BufferReader) -> GroupCallStars? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.GroupCallDonor]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallDonor.self)
-            }
-            var _3: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _4: [Api.User]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.phone.GroupCallStars.groupCallStars(Cons_groupCallStars(totalStars: _1!, topDonors: _2!, chats: _3!, users: _4!))
             }
             else {
                 return nil

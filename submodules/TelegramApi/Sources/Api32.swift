@@ -229,12 +229,12 @@ public extension Api.bots {
 public extension Api.bots {
     enum RequestedButton: TypeConstructorDescription {
         public class Cons_requestedButton: TypeConstructorDescription {
-            public var requestId: String
-            public init(requestId: String) {
-                self.requestId = requestId
+            public var webappReqId: String
+            public init(webappReqId: String) {
+                self.webappReqId = webappReqId
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestedButton", [("requestId", self.requestId as Any)])
+                return ("requestedButton", [("webappReqId", self.webappReqId as Any)])
             }
         }
         case requestedButton(Cons_requestedButton)
@@ -243,9 +243,9 @@ public extension Api.bots {
             switch self {
             case .requestedButton(let _data):
                 if boxed {
-                    buffer.appendInt32(569994407)
+                    buffer.appendInt32(-247743273)
                 }
-                serializeString(_data.requestId, buffer: buffer, boxed: false)
+                serializeString(_data.webappReqId, buffer: buffer, boxed: false)
                 break
             }
         }
@@ -253,7 +253,7 @@ public extension Api.bots {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .requestedButton(let _data):
-                return ("requestedButton", [("requestId", _data.requestId as Any)])
+                return ("requestedButton", [("webappReqId", _data.webappReqId as Any)])
             }
         }
 
@@ -262,7 +262,7 @@ public extension Api.bots {
             _1 = parseString(reader)
             let _c1 = _1 != nil
             if _c1 {
-                return Api.bots.RequestedButton.requestedButton(Cons_requestedButton(requestId: _1!))
+                return Api.bots.RequestedButton.requestedButton(Cons_requestedButton(webappReqId: _1!))
             }
             else {
                 return nil

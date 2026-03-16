@@ -94,6 +94,41 @@ public extension Api {
                 return ("messageEntityCustomEmoji", [("offset", self.offset as Any), ("length", self.length as Any), ("documentId", self.documentId as Any)])
             }
         }
+        public class Cons_messageEntityDiffDelete: TypeConstructorDescription {
+            public var offset: Int32
+            public var length: Int32
+            public init(offset: Int32, length: Int32) {
+                self.offset = offset
+                self.length = length
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityDiffDelete", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
+        }
+        public class Cons_messageEntityDiffInsert: TypeConstructorDescription {
+            public var offset: Int32
+            public var length: Int32
+            public init(offset: Int32, length: Int32) {
+                self.offset = offset
+                self.length = length
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityDiffInsert", [("offset", self.offset as Any), ("length", self.length as Any)])
+            }
+        }
+        public class Cons_messageEntityDiffReplace: TypeConstructorDescription {
+            public var offset: Int32
+            public var length: Int32
+            public var oldText: String
+            public init(offset: Int32, length: Int32, oldText: String) {
+                self.offset = offset
+                self.length = length
+                self.oldText = oldText
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageEntityDiffReplace", [("offset", self.offset as Any), ("length", self.length as Any), ("oldText", self.oldText as Any)])
+            }
+        }
         public class Cons_messageEntityEmail: TypeConstructorDescription {
             public var offset: Int32
             public var length: Int32
@@ -266,6 +301,9 @@ public extension Api {
         case messageEntityCashtag(Cons_messageEntityCashtag)
         case messageEntityCode(Cons_messageEntityCode)
         case messageEntityCustomEmoji(Cons_messageEntityCustomEmoji)
+        case messageEntityDiffDelete(Cons_messageEntityDiffDelete)
+        case messageEntityDiffInsert(Cons_messageEntityDiffInsert)
+        case messageEntityDiffReplace(Cons_messageEntityDiffReplace)
         case messageEntityEmail(Cons_messageEntityEmail)
         case messageEntityFormattedDate(Cons_messageEntityFormattedDate)
         case messageEntityHashtag(Cons_messageEntityHashtag)
@@ -341,6 +379,28 @@ public extension Api {
                 serializeInt32(_data.offset, buffer: buffer, boxed: false)
                 serializeInt32(_data.length, buffer: buffer, boxed: false)
                 serializeInt64(_data.documentId, buffer: buffer, boxed: false)
+                break
+            case .messageEntityDiffDelete(let _data):
+                if boxed {
+                    buffer.appendInt32(106086853)
+                }
+                serializeInt32(_data.offset, buffer: buffer, boxed: false)
+                serializeInt32(_data.length, buffer: buffer, boxed: false)
+                break
+            case .messageEntityDiffInsert(let _data):
+                if boxed {
+                    buffer.appendInt32(1903653142)
+                }
+                serializeInt32(_data.offset, buffer: buffer, boxed: false)
+                serializeInt32(_data.length, buffer: buffer, boxed: false)
+                break
+            case .messageEntityDiffReplace(let _data):
+                if boxed {
+                    buffer.appendInt32(-960371289)
+                }
+                serializeInt32(_data.offset, buffer: buffer, boxed: false)
+                serializeInt32(_data.length, buffer: buffer, boxed: false)
+                serializeString(_data.oldText, buffer: buffer, boxed: false)
                 break
             case .messageEntityEmail(let _data):
                 if boxed {
@@ -466,6 +526,12 @@ public extension Api {
                 return ("messageEntityCode", [("offset", _data.offset as Any), ("length", _data.length as Any)])
             case .messageEntityCustomEmoji(let _data):
                 return ("messageEntityCustomEmoji", [("offset", _data.offset as Any), ("length", _data.length as Any), ("documentId", _data.documentId as Any)])
+            case .messageEntityDiffDelete(let _data):
+                return ("messageEntityDiffDelete", [("offset", _data.offset as Any), ("length", _data.length as Any)])
+            case .messageEntityDiffInsert(let _data):
+                return ("messageEntityDiffInsert", [("offset", _data.offset as Any), ("length", _data.length as Any)])
+            case .messageEntityDiffReplace(let _data):
+                return ("messageEntityDiffReplace", [("offset", _data.offset as Any), ("length", _data.length as Any), ("oldText", _data.oldText as Any)])
             case .messageEntityEmail(let _data):
                 return ("messageEntityEmail", [("offset", _data.offset as Any), ("length", _data.length as Any)])
             case .messageEntityFormattedDate(let _data):
@@ -615,6 +681,51 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageEntity.messageEntityCustomEmoji(Cons_messageEntityCustomEmoji(offset: _1!, length: _2!, documentId: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityDiffDelete(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityDiffDelete(Cons_messageEntityDiffDelete(offset: _1!, length: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityDiffInsert(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntityDiffInsert(Cons_messageEntityDiffInsert(offset: _1!, length: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntityDiffReplace(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageEntity.messageEntityDiffReplace(Cons_messageEntityDiffReplace(offset: _1!, length: _2!, oldText: _3!))
             }
             else {
                 return nil

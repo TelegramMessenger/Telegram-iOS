@@ -108,6 +108,8 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             }
         } else if let location = attachment as? TelegramMediaMap, location.liveBroadcastingTimeout != nil {
             tags.insert(.liveLocation)
+        } else if let _ = attachment as? TelegramMediaPoll {
+            tags.insert(.polls)
         }
     }
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {
@@ -824,6 +826,8 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
                 format = .full(timeFormat: timeFormat, dateFormat: dateFormat, dayOfWeek: (flags & (1 << 5)) != 0)
             }
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .FormattedDate(format: format, date: date)))
+        case .messageEntityDiffInsert, .messageEntityDiffDelete, .messageEntityDiffReplace:
+            break
         }
     }
     return result
