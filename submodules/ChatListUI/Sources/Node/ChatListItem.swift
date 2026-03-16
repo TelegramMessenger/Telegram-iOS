@@ -2939,7 +2939,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                     } else if let image = media as? TelegramMediaImage {
                                         if let _ = largestImageRepresentation(image.representations) {
                                             let fitSize = contentImageSize
-                                            contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(image), size: fitSize))
+                                            contentImageSpecs.append(ContentImageSpec(message: message, media: .image(image), size: fitSize))
                                         }
                                         break inner
                                     } else if let file = media as? TelegramMediaFile {

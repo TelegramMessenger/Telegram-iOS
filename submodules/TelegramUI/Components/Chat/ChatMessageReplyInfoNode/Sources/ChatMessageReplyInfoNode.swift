@@ -83,7 +83,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         public let message: Message?
         public let replyForward: QuotedReplyMessageAttribute?
         public let quote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
-        public let todoItemId: Int32?
+        public let innerSubject: EngineMessageReplyInnerSubject?
         public let story: StoryId?
         public let isSummarized: Bool
         public let parentMessage: Message
@@ -100,7 +100,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             message: Message?,
             replyForward: QuotedReplyMessageAttribute?,
             quote: (quote: EngineMessageReplyQuote, isQuote: Bool)?,
-            todoItemId: Int32?,
+            innerSubject: EngineMessageReplyInnerSubject?,
             story: StoryId?,
             isSummarized: Bool,
             parentMessage: Message,
@@ -116,7 +116,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             self.message = message
             self.replyForward = replyForward
             self.quote = quote
-            self.todoItemId = todoItemId
+            self.innerSubject = innerSubject
             self.story = story
             self.isSummarized = isSummarized
             self.parentMessage = parentMessage
@@ -446,7 +446,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var textLeftInset: CGFloat = 0.0
             var messageText: NSAttributedString
             var todoItemCompleted: Bool?
-            if let todoItemId = arguments.todoItemId, let todo = arguments.message?.media.first(where: { $0 is TelegramMediaTodo }) as? TelegramMediaTodo, let todoItem = todo.items.first(where: { $0.id == todoItemId }) {
+            
+            if case let .pollOption(optionId) = arguments.innerSubject, let poll = arguments.message?.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll, let pollOption = poll.options.first(where: { $0.opaqueIdentifier == optionId }) {
+                messageText = stringWithAppliedEntities(pollOption.text, entities: pollOption.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
+                textLeftInset += 16.0
+            } else if case let .todoItem(todoItemId) = arguments.innerSubject, let todo = arguments.message?.media.first(where: { $0 is TelegramMediaTodo }) as? TelegramMediaTodo, let todoItem = todo.items.first(where: { $0.id == todoItemId }) {
                 messageText = stringWithAppliedEntities(todoItem.text, entities: todoItem.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
                 textLeftInset += 16.0
                 

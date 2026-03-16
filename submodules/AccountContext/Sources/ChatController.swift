@@ -791,11 +791,11 @@ public enum ChatControllerSubject: Equatable {
         }
         
         public var quote: Quote?
-        public var todoTaskId: Int32?
+        public var subject: EngineMessageReplyInnerSubject?
         
-        public init(quote: Quote? = nil, todoTaskId: Int32? = nil) {
+        public init(quote: Quote? = nil, subject: EngineMessageReplyInnerSubject? = nil) {
             self.quote = quote
-            self.todoTaskId = todoTaskId
+            self.subject = subject
         }
     }
     

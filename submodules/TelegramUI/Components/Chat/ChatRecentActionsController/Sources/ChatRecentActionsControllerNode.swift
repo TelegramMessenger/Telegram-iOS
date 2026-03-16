@@ -572,6 +572,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }
             }
         }, todoItemLongTap: { _, _ in
+        }, pollOptionLongTap: { _, _ in
         }, openCheckoutOrReceipt: { _, _ in
         }, openSearch: {
         }, setupReply: { _ in

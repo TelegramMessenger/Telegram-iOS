@@ -103,13 +103,13 @@ public final class ChatInputMessageAccessoryPanel: Component {
         public final class Reply: Equatable {
             public let id: EngineMessage.Id
             public let quote: EngineMessageReplyQuote?
-            public let todoItemId: Int32?
+            public let innerSubject: EngineMessageReplyInnerSubject?
             public let message: EngineMessage?
 
-            public init(id: EngineMessage.Id, quote: EngineMessageReplyQuote?, todoItemId: Int32?, message: EngineMessage?) {
+            public init(id: EngineMessage.Id, quote: EngineMessageReplyQuote?, innerSubject: EngineMessageReplyInnerSubject?, message: EngineMessage?) {
                 self.id = id
                 self.quote = quote
-                self.todoItemId = todoItemId
+                self.innerSubject = innerSubject
                 self.message = message
             }
 
@@ -120,7 +120,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                 if lhs.quote != rhs.quote {
                     return false
                 }
-                if lhs.todoItemId != rhs.todoItemId {
+                if lhs.innerSubject != rhs.innerSubject {
                     return false
                 }
                 if lhs.message?.id != rhs.message?.id {
@@ -597,8 +597,12 @@ public final class ChatInputMessageAccessoryPanel: Component {
                         authorName = EnginePeer(author).displayTitle(strings: environment.strings, displayOrder: environment.nameDisplayOrder)
                     }
                     
-                    if let _ = reply.todoItemId {
+                    if case .todoItem = reply.innerSubject {
                         let string = environment.strings.Chat_ReplyPanel_ReplyToTodoItem
+                        titleText = [.text(NSAttributedString(string: string, font: Font.medium(14.0), textColor: environment.theme.chat.inputPanel.panelControlAccentColor))]
+                    } else if case .pollOption = reply.innerSubject {
+                        //TODO:localize
+                        let string = "Reply to Poll Option"
                         titleText = [.text(NSAttributedString(string: string, font: Font.medium(14.0), textColor: environment.theme.chat.inputPanel.panelControlAccentColor))]
                     } else if let _ = reply.quote {
                         let string = environment.strings.Chat_ReplyPanel_ReplyToQuoteBy(authorName).string
@@ -628,9 +632,12 @@ public final class ChatInputMessageAccessoryPanel: Component {
                         if let quote = reply.quote {
                             let textColor = environment.theme.chat.inputPanel.primaryTextColor
                             textString = stringWithAppliedEntities(trimToLineCount(quote.text, lineCount: 1), entities: quote.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
-                        } else if let todoItemId = reply.todoItemId, let todo = message.media.first(where: { $0 is TelegramMediaTodo }) as? TelegramMediaTodo, let todoItem = todo.items.first(where: { $0.id == todoItemId }) {
+                        } else if case let .todoItem(todoItemId) = reply.innerSubject, let todo = message.media.first(where: { $0 is TelegramMediaTodo }) as? TelegramMediaTodo, let todoItem = todo.items.first(where: { $0.id == todoItemId }) {
                             let textColor = environment.theme.chat.inputPanel.primaryTextColor
                             textString = stringWithAppliedEntities(trimToLineCount(todoItem.text, lineCount: 1), entities: todoItem.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
+                        } else if case let .pollOption(pollOptionId) = reply.innerSubject, let poll = message.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll, let pollOption = poll.options.first(where: { $0.opaqueIdentifier == pollOptionId }) {
+                            let textColor = environment.theme.chat.inputPanel.primaryTextColor
+                            textString = stringWithAppliedEntities(trimToLineCount(pollOption.text, lineCount: 1), entities: pollOption.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage())
                         }
                     }
                 }

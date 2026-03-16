@@ -197,7 +197,16 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
                 }
             }
             
-            let replyTodoItemId = replySubject.todoItemId
+            var replyTodoItemId: Int32?
+            var replyPollOption: Buffer?
+            switch replySubject.innerSubject {
+            case let .todoItem(todoItemId):
+                replyTodoItemId = todoItemId
+            case let .pollOption(pollOption):
+                replyPollOption = Buffer(data: pollOption)
+            default:
+                break
+            }
             
             if replyToPeer != nil {
                 innerFlags |= 1 << 1
@@ -214,8 +223,11 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             if let _ = replyTodoItemId {
                 innerFlags |= 1 << 6
             }
+            if let _ = replyPollOption {
+                innerFlags |= 1 << 7
+            }
             if !discard {
-                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: nil))
+                replyTo = .inputReplyToMessage(.init(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption))
             }
         } else if let topMsgId {
             flags |= 1 << 0

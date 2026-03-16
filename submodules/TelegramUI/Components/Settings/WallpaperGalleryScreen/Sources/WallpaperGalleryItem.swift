@@ -1524,7 +1524,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             
             let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
             messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: messageAuthor, text: self.presentationData.strings.WallpaperPreview_ChannelReplyText, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            messageAttributes = [ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil, isQuote: false, todoItemId: nil)]
+            messageAttributes = [ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil, isQuote: false, innerSubject: nil)]
         }
         
         peers[peerId] = messageAuthor

@@ -29,9 +29,6 @@ extension ChatControllerImpl {
         
         let completion = todo.completions.first(where: { $0.id == todoItemId })
                 
-//        let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil// anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
-//        let gesture: ContextGesture? = nil // anyRecognizer as? ContextGesture
-        
         var canMark = false
         if (todo.flags.contains(.othersCanComplete) || message.author?.id == context.account.peerId) {
             canMark = true
@@ -135,7 +132,7 @@ extension ChatControllerImpl {
                     guard let self else {
                         return
                     }
-                    self.interfaceInteraction?.setupReplyMessage(message.id, todoItem.id, { transition, completed in
+                    self.interfaceInteraction?.setupReplyMessage(message.id, .todoItem(todoItem.id), { transition, completed in
                         c?.dismiss(result: .custom(transition), completion: {
                             completed()
                         })

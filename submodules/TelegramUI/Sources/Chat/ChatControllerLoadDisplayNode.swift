@@ -1580,7 +1580,7 @@ extension ChatControllerImpl {
             strongSelf.window?.presentInGlobalOverlay(controller)
         }
         
-        let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId, todoItemId, completion in
+        let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId, innerSubject, completion in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
             }
@@ -1607,7 +1607,7 @@ extension ChatControllerImpl {
                                 $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(
                                     messageId: message.id,
                                     quote: nil,
-                                    todoItemId: todoItemId
+                                    innerSubject: innerSubject
                                 ))
                             }).updatedReplyMessage(message).updatedSearch(nil).updatedShowCommands(false) }, completion: { t in
                                 completion(t, {})
@@ -1631,7 +1631,7 @@ extension ChatControllerImpl {
                     let replySubject = ChatInterfaceState.ReplyMessageSubject(
                         messageId: messageId,
                         quote: nil,
-                        todoItemId: todoItemId
+                        innerSubject: innerSubject
                     )
                     
                     completion(.immediate, {
@@ -5160,7 +5160,7 @@ extension ChatControllerImpl {
                             }
                         }
                         
-                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId, quote: toSubject.quote.flatMap { quote in ChatInterfaceHighlightedState.Quote(string: quote.string, offset: quote.offset) }, todoTaskId: toSubject.todoTaskId)
+                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId, quote: toSubject.quote.flatMap { quote in ChatInterfaceHighlightedState.Quote(string: quote.string, offset: quote.offset) }, subject: toSubject.subject)
                         controllerInteraction.highlightedState = highlightedState
                         strongSelf.updateItemNodesHighlightedStates(animated: initial)
                         strongSelf.contentData?.scrolledToMessageIdValue = ScrolledToMessageId(id: mappedId, allowedReplacementDirection: [])
@@ -5172,7 +5172,7 @@ extension ChatControllerImpl {
                             } else {
                                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Chat_ToastQuoteNotFound, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                             }
-                        } else if let _ = toSubject.todoTaskId {
+                        } else if let _ = toSubject.subject {
                             extendHighlight = true
                         }
                         
