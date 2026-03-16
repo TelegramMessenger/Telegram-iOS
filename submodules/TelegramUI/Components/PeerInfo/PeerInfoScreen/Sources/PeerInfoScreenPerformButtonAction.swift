@@ -682,6 +682,27 @@ extension PeerInfoScreenNode {
                     }
                     
                     let itemsCount = items.count
+                    
+                    /*if let cachedData = data.cachedData as? CachedUserData {
+                        var hasPaidFee = false
+                        if let paidMessageStars = cachedData.peerStatusSettings?.paidMessageStars, paidMessageStars != .zero {
+                            hasPaidFee = true
+                        }
+                        if !hasPaidFee {
+                            //TODO:localize
+                            items.append(.action(ContextMenuActionItem(text: "Return Fee", icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Paid"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.default)
+                                
+                                guard let self, let peer = self.data?.peer else {
+                                    return
+                                }
+                                
+                                let _ = self.context.engine.peers.reinstateNoPaidMessagesException(scopePeerId: self.context.account.peerId, peerId: peer.id).startStandalone()
+                            })))
+                        }
+                    }*/
                                         
                     if canSetupAutoremoveTimeout {
                         let strings = strongSelf.presentationData.strings

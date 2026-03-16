@@ -962,7 +962,11 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         if self.currentPaneKey == .gifts {
             backgroundColor = presentationData.theme.list.blocksBackgroundColor
         } else {
-            backgroundColor = presentationData.theme.list.blocksBackgroundColor.mixedWith(presentationData.theme.list.plainBackgroundColor, alpha: expansionFraction)
+            if self.currentPaneKey == .stories || self.currentPaneKey == .storyArchive {
+                backgroundColor = presentationData.theme.list.blocksBackgroundColor.mixedWith(presentationData.theme.list.plainBackgroundColor, alpha: expansionFraction)
+            } else {
+                backgroundColor = presentationData.theme.list.blocksBackgroundColor
+            }
         }
         
         self.backgroundColor = backgroundColor

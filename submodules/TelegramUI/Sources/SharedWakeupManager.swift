@@ -50,6 +50,8 @@ private struct AccountTasks {
     }
 }
 
+private let backgroundTaskSubmissionDelay: Double = 10.0
+
 private struct PendingMediaUploadKey: Hashable {
     let accountId: AccountRecordId
     let messageId: MessageId
@@ -99,7 +101,8 @@ public final class SharedWakeupManager {
     private var backgroundProcessingTaskId: String?
     private var backgroundProcessingTaskLaunched: Bool = false
     private var backgroundProcessingTaskCancellationRequestedByApp: Bool = false
-    
+    private var pendingBackgroundProcessingTaskTimer: SwiftSignalKit.Timer?
+
     private var pendingStoryUploadsByKey: [PendingStoryUploadKey: Float] = [:]
     private var pendingStoryUploadStatusesByKey: [PendingStoryUploadKey: PendingStoryUploadStatus] = [:]
     private var backgroundStoryProcessingTaskProgressByKey: [PendingStoryUploadKey: Float] = [:]
@@ -107,7 +110,8 @@ public final class SharedWakeupManager {
     private var backgroundStoryProcessingTaskId: String?
     private var backgroundStoryProcessingTaskLaunched: Bool = false
     private var backgroundStoryProcessingTaskCancellationRequestedByApp: Bool = false
-    
+    private var pendingBackgroundStoryProcessingTaskTimer: SwiftSignalKit.Timer?
+
     public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>, presentationData: @escaping () -> PresentationData?) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -155,6 +159,10 @@ public final class SharedWakeupManager {
                 }
                 strongSelf.allowBackgroundTimeExtensionDeadlineTimer?.invalidate()
                 strongSelf.allowBackgroundTimeExtensionDeadlineTimer = nil
+                strongSelf.pendingBackgroundProcessingTaskTimer?.invalidate()
+                strongSelf.pendingBackgroundProcessingTaskTimer = nil
+                strongSelf.pendingBackgroundStoryProcessingTaskTimer?.invalidate()
+                strongSelf.pendingBackgroundStoryProcessingTaskTimer = nil
             }
             strongSelf.updateBackgroundProcessingTaskStateFromPendingMediaUploads()
             strongSelf.updateBackgroundProcessingTaskStateFromPendingStoryUploads()
@@ -356,6 +364,8 @@ public final class SharedWakeupManager {
         self.pendingStoryUploadsDisposable?.dispose()
         self.managedPausedInBackgroundPlayer?.dispose()
         self.keepIdleDisposable?.dispose()
+        self.pendingBackgroundProcessingTaskTimer?.invalidate()
+        self.pendingBackgroundStoryProcessingTaskTimer?.invalidate()
         if let (taskId, _, timer) = self.currentTask {
             timer.invalidate()
             self.endBackgroundTask(taskId)
@@ -369,19 +379,30 @@ public final class SharedWakeupManager {
         
         let shouldHaveTask = !self.pendingMediaUploadsByKey.isEmpty && !self.inForeground
         let hadTask = self.backgroundProcessingTaskId != nil
-        
+
         if shouldHaveTask {
-            if !hadTask {
-                self.startBackgroundProcessingTaskIfNeeded()
+            if !hadTask && self.pendingBackgroundProcessingTaskTimer == nil {
+                let timer = SwiftSignalKit.Timer(timeout: backgroundTaskSubmissionDelay, repeat: false, completion: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.pendingBackgroundProcessingTaskTimer = nil
+                    self.startBackgroundProcessingTaskIfNeeded()
+                }, queue: .mainQueue())
+                self.pendingBackgroundProcessingTaskTimer = timer
+                timer.start()
             }
         } else {
+            self.pendingBackgroundProcessingTaskTimer?.invalidate()
+            self.pendingBackgroundProcessingTaskTimer = nil
+
             if let backgroundProcessingTaskId = self.backgroundProcessingTaskId {
                 if !self.backgroundProcessingTaskCancellationRequestedByApp {
                     self.backgroundProcessingTaskCancellationRequestedByApp = true
                     BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: backgroundProcessingTaskId)
                     Logger.shared.log("Wakeup", "Requested BG task cancellation by app: \(backgroundProcessingTaskId)")
                 }
-                
+
                 if !self.backgroundProcessingTaskLaunched {
                     self.backgroundProcessingTaskId = nil
                     self.backgroundProcessingTaskProgressByKey = [:]
@@ -399,19 +420,30 @@ public final class SharedWakeupManager {
         
         let shouldHaveTask = !self.pendingStoryUploadStatusesByKey.isEmpty && !self.inForeground
         let hadTask = self.backgroundStoryProcessingTaskId != nil
-        
+
         if shouldHaveTask {
-            if !hadTask {
-                self.startBackgroundStoryProcessingTaskIfNeeded()
+            if !hadTask && self.pendingBackgroundStoryProcessingTaskTimer == nil {
+                let timer = SwiftSignalKit.Timer(timeout: backgroundTaskSubmissionDelay, repeat: false, completion: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.pendingBackgroundStoryProcessingTaskTimer = nil
+                    self.startBackgroundStoryProcessingTaskIfNeeded()
+                }, queue: .mainQueue())
+                self.pendingBackgroundStoryProcessingTaskTimer = timer
+                timer.start()
             }
         } else {
+            self.pendingBackgroundStoryProcessingTaskTimer?.invalidate()
+            self.pendingBackgroundStoryProcessingTaskTimer = nil
+
             if let backgroundStoryProcessingTaskId = self.backgroundStoryProcessingTaskId {
                 if !self.backgroundStoryProcessingTaskCancellationRequestedByApp {
                     self.backgroundStoryProcessingTaskCancellationRequestedByApp = true
                     BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: backgroundStoryProcessingTaskId)
                     Logger.shared.log("Wakeup", "Requested story BG task cancellation by app: \(backgroundStoryProcessingTaskId)")
                 }
-                
+
                 if !self.backgroundStoryProcessingTaskLaunched {
                     self.backgroundStoryProcessingTaskId = nil
                     self.backgroundStoryProcessingTaskProgressByKey = [:]

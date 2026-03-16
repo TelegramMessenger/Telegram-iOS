@@ -121,11 +121,10 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
         let standardIconWidth: CGFloat = 32.0
         var rightTextInset: CGFloat = sideInset
         if !iconSize.width.isZero {
-            rightTextInset = max(iconSize.width, standardIconWidth) + iconSideInset + sideInset
+            rightTextInset = max(iconSize.width, standardIconWidth) + iconSideInset
         }
         
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude))
-
         
         let verticalSpacing: CGFloat = 2.0
         let combinedTextHeight = textSize.height + verticalSpacing

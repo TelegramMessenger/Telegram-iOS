@@ -25,6 +25,7 @@ import GalleryData
 import AnimatedTextComponent
 import BottomButtonPanelComponent
 import GlassBackgroundComponent
+import EdgeEffect
 
 #if DEBUG
 import os.signpost
@@ -124,20 +125,17 @@ final class StorageUsageScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let overNavigationContainer: UIView
     let makeStorageUsageExceptionsScreen: (CacheStorageSettings.PeerStorageCategory) -> ViewController?
     let peer: EnginePeer?
     let ready: Promise<Bool>
     
     init(
         context: AccountContext,
-        overNavigationContainer: UIView,
         makeStorageUsageExceptionsScreen: @escaping (CacheStorageSettings.PeerStorageCategory) -> ViewController?,
         peer: EnginePeer?,
         ready: Promise<Bool>
     ) {
         self.context = context
-        self.overNavigationContainer = overNavigationContainer
         self.makeStorageUsageExceptionsScreen = makeStorageUsageExceptionsScreen
         self.peer = peer
         self.ready = ready
@@ -755,6 +753,8 @@ final class StorageUsageScreenComponent: Component {
         private let navigationEditButton = ComponentView<Empty>()
         private let navigationDoneButton = ComponentView<Empty>()
         
+        private let edgeEffectView: EdgeEffectView
+        
         private let headerView = ComponentView<Empty>()
         private let headerOffsetContainer: UIView
         private let headerDescriptionView = ComponentView<Empty>()
@@ -768,7 +768,8 @@ final class StorageUsageScreenComponent: Component {
         private var doneStatusNode: RadialStatusNode?
         
         private let scrollContainerView: UIView
-        
+        private let topContentOverlayView: UIView
+
         private let pieChartView = ComponentView<Empty>()
         private let chartTotalLabel = ComponentView<Empty>()
         private let categoriesView = ComponentView<Empty>()
@@ -811,7 +812,11 @@ final class StorageUsageScreenComponent: Component {
             self.headerOffsetContainer = SparseContainerView()
             
             self.scrollContainerView = UIView()
-            
+
+            self.topContentOverlayView = UIView()
+            self.topContentOverlayView.isUserInteractionEnabled = false
+            self.topContentOverlayView.alpha = 0.0
+
             self.scrollView = ScrollViewImpl()
             
             self.keepDurationSectionContainerView = UIView()
@@ -822,6 +827,8 @@ final class StorageUsageScreenComponent: Component {
             self.headerProgressForegroundLayer = SimpleLayer()
             
             self.navigationRightButtonsBackground = GlassBackgroundView()
+            
+            self.edgeEffectView = EdgeEffectView()
             
             super.init(frame: frame)
             
@@ -848,6 +855,8 @@ final class StorageUsageScreenComponent: Component {
             
             self.scrollView.layer.addSublayer(self.headerProgressBackgroundLayer)
             self.scrollView.layer.addSublayer(self.headerProgressForegroundLayer)
+            
+            self.addSubview(self.edgeEffectView)
         }
         
         required init?(coder: NSCoder) {
@@ -961,6 +970,7 @@ final class StorageUsageScreenComponent: Component {
                 if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
                     panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
                 }
+                self.topContentOverlayView.alpha = 1.0 - expansionDistanceFactor
                 
                 var offsetFraction: CGFloat = abs(headerOffset - minOffset) / 60.0
                 offsetFraction = min(1.0, max(0.0, offsetFraction))
@@ -1105,10 +1115,10 @@ final class StorageUsageScreenComponent: Component {
             }
             
             if self.headerOffsetContainer.superview == nil {
-                component.overNavigationContainer.addSubview(self.headerOffsetContainer)
+                self.addSubview(self.headerOffsetContainer)
             }
             if self.navigationRightButtonsBackground.superview == nil {
-                component.overNavigationContainer.addSubview(self.navigationRightButtonsBackground)
+                self.addSubview(self.navigationRightButtonsBackground)
             }
             
             var wasLockedAtPanels = false
@@ -1221,6 +1231,11 @@ final class StorageUsageScreenComponent: Component {
             transition.setFrame(view: self.navigationRightButtonsBackground, frame: navigationRightButtonsBackgroundFrame)
             
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
+            
+            let edgeEffectHeight: CGFloat = environment.navigationHeight + 24.0
+            let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
+            self.edgeEffectView.update(content: environment.theme.list.blocksBackgroundColor, alpha: 1.0, rect: edgeEffectFrame, edge: .top, edgeSize: min(64.0, edgeEffectHeight), transition: transition)
             
             var contentHeight: CGFloat = 0.0
             
@@ -2219,10 +2234,16 @@ final class StorageUsageScreenComponent: Component {
                         self.scrollContainerView.addSubview(panelContainerView)
                     }
                     transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: panelContainerSize))
+                    if self.topContentOverlayView.superview == nil {
+                        self.scrollContainerView.insertSubview(self.topContentOverlayView, belowSubview: panelContainerView)
+                    }
+                    self.topContentOverlayView.backgroundColor = environment.theme.list.blocksBackgroundColor
+                    transition.setFrame(view: self.topContentOverlayView, frame: CGRect(origin: CGPoint(x: 0.0, y: panelContainerView.frame.minY - availableSize.height), size: availableSize))
                 }
                 contentHeight += panelContainerSize.height
             } else {
                 self.panelContainer.view?.removeFromSuperview()
+                self.topContentOverlayView.removeFromSuperview()
             }
             
             self.ignoreScrolling = true
@@ -3315,8 +3336,6 @@ final class StorageUsageScreenComponent: Component {
 public final class StorageUsageScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
-    private let overNavigationContainer: UIView
-    
     private let readyValue = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self.readyValue
@@ -3327,17 +3346,11 @@ public final class StorageUsageScreen: ViewControllerComponentContainer {
     public init(context: AccountContext, makeStorageUsageExceptionsScreen: @escaping (CacheStorageSettings.PeerStorageCategory) -> ViewController?, peer: EnginePeer? = nil, focusOnItemTag: StorageUsageEntryTag? = nil) {
         self.context = context
         
-        self.overNavigationContainer = SparseContainerView()
-        
         let componentReady = Promise<Bool>()
-        super.init(context: context, component: StorageUsageScreenComponent(context: context, overNavigationContainer: self.overNavigationContainer, makeStorageUsageExceptionsScreen: makeStorageUsageExceptionsScreen, peer: peer, ready: componentReady), navigationBarAppearance: .default)
+        super.init(context: context, component: StorageUsageScreenComponent(context: context, makeStorageUsageExceptionsScreen: makeStorageUsageExceptionsScreen, peer: peer, ready: componentReady), navigationBarAppearance: .transparent)
         
         if peer != nil {
             self.navigationPresentation = .modal
-        }
-        
-        if let navigationBar = self.navigationBar {
-            navigationBar.customOverBackgroundContentView.insertSubview(self.overNavigationContainer, at: 0)
         }
         
         self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))

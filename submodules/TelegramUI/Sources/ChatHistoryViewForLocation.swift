@@ -65,7 +65,7 @@ func chatHistoryViewForLocation(
             
             let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
             
-            if view.isLoading {
+            if view.isLoading || (view.entries.isEmpty && (view.holeEarlier || view.holeLater)) {
                 return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
             }
 
@@ -147,7 +147,7 @@ func chatHistoryViewForLocation(
                     if preloaded {
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                     } else {
-                        if view.isLoading {
+                        if view.isLoading || (view.entries.isEmpty && (view.holeEarlier || view.holeLater)) {
                             return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                         }
                         var scrollPosition: ChatHistoryViewScrollPosition?
@@ -311,7 +311,7 @@ func chatHistoryViewForLocation(
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
                     
-                    if view.isLoading {
+                    if view.isLoading || (view.entries.isEmpty && (view.holeEarlier || view.holeLater)) {
                         return ChatHistoryViewUpdate.Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                     }
                     
@@ -461,7 +461,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
                 case .Loading:
                     return nil
                 case let .HistoryView(view, _, _, _, _, _, _):
-                    if view.isLoading {
+                    if view.isLoading || (view.entries.isEmpty && (view.holeEarlier || view.holeLater)) {
                         return nil
                     }
                     return view.entries.isEmpty

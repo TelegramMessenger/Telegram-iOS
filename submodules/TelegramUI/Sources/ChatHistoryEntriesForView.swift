@@ -433,6 +433,12 @@ func chatHistoryEntriesForView(
         var i = 0
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)
         for entry in entries {
+            if case let .MessageGroupEntry(_, messages, _) = entry {
+                if !messages.isEmpty && maxReadIndex >= messages[0].0.index {
+                    i += 1
+                    continue
+                }
+            }
             if entry > unreadEntry {
                 if i != 0 {
                     entries.insert(unreadEntry, at: i)

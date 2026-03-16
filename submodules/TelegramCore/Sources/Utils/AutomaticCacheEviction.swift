@@ -134,115 +134,119 @@ final class AutomaticCacheEvictionContext {
                             }
                         }
                         
-                        if timeout == Int32.max {
-                            return .complete()
-                        }
+                        let storyTimeout: Int32 = settings.categoryStorageTimeout[.stories] ?? (2 * 24 * 60 * 60)
                         
-                        let minPeerTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) - timeout
-                        //let minPeerTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                        
-                        let allSignal = mediaBox.storageBox.all(peerId: peerId, excludeType: MediaResourceUserContentType.story.rawValue)
-                        |> mapToSignal { peerResourceIds -> Signal<Never, NoError> in
-                            return Signal { subscriber in
-                                var isCancelled = false
-                                
-                                processingQueue.justDispatch {
-                                    var removeIds: [MediaResourceId] = []
-                                    var removeRawIds: [Data] = []
-                                    var localCounter = 0
-                                    for resourceId in peerResourceIds {
-                                        localCounter += 1
-                                        if localCounter % 100 == 0 {
-                                            if isCancelled {
-                                                subscriber.putCompletion()
-                                                return
-                                            }
-                                        }
-                                        
-                                        removeRawIds.append(resourceId)
-                                        let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
-                                        let resourceTimestamp = mediaBox.resourceUsageWithInfo(id: id)
-                                        if resourceTimestamp != 0 && resourceTimestamp < minPeerTimestamp {
-                                            removeIds.append(id)
-                                        }
-                                    }
+                        let allSignal: Signal<Never, NoError>
+                        if timeout != Int32.max {
+                            let minPeerTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) - timeout
+                            
+                            allSignal = mediaBox.storageBox.all(peerId: peerId, excludeType: MediaResourceUserContentType.story.rawValue)
+                            |> mapToSignal { peerResourceIds -> Signal<Never, NoError> in
+                                return Signal { subscriber in
+                                    var isCancelled = false
                                     
-                                    if !removeIds.isEmpty {
-                                        Logger.shared.log("AutomaticCacheEviction", "peer \(peerId): cleaning \(removeIds.count) resources")
-                                        
-                                        let _ = mediaBox.removeCachedResourcesWithResult(removeIds).start(next: { actualIds in
-                                            var actualRawIds: [Data] = []
-                                            for id in actualIds {
-                                                if let data = id.stringRepresentation.data(using: .utf8) {
-                                                    actualRawIds.append(data)
+                                    processingQueue.justDispatch {
+                                        var removeIds: [MediaResourceId] = []
+                                        var localCounter = 0
+                                        for resourceId in peerResourceIds {
+                                            localCounter += 1
+                                            if localCounter % 100 == 0 {
+                                                if isCancelled {
+                                                    subscriber.putCompletion()
+                                                    return
                                                 }
                                             }
                                             
-                                            mediaBox.storageBox.remove(ids: actualRawIds)
-                                            
-                                            subscriber.putCompletion()
-                                        })
-                                    } else {
-                                        subscriber.putCompletion()
-                                    }
-                                }
-                                
-                                return ActionDisposable {
-                                    isCancelled = true
-                                }
-                            }
-                        }
-                        
-                        let storySignal = mediaBox.storageBox.all(peerId: peerId, onlyType: MediaResourceUserContentType.story.rawValue)
-                        |> mapToSignal { peerResourceIds -> Signal<Never, NoError> in
-                            return Signal { subscriber in
-                                var isCancelled = false
-                                
-                                processingQueue.justDispatch {
-                                    var removeIds: [MediaResourceId] = []
-                                    var removeRawIds: [Data] = []
-                                    var localCounter = 0
-                                    for resourceId in peerResourceIds {
-                                        localCounter += 1
-                                        if localCounter % 100 == 0 {
-                                            if isCancelled {
-                                                subscriber.putCompletion()
-                                                return
+                                            let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
+                                            let resourceTimestamp = mediaBox.resourceUsageWithInfo(id: id)
+                                            if resourceTimestamp != 0 && resourceTimestamp < minPeerTimestamp {
+                                                removeIds.append(id)
                                             }
                                         }
                                         
-                                        removeRawIds.append(resourceId)
-                                        let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
-                                        let resourceTimestamp = mediaBox.resourceUsageWithInfo(id: id)
-                                        if resourceTimestamp != 0 && resourceTimestamp < minPeerTimestamp {
-                                            removeIds.append(id)
+                                        if !removeIds.isEmpty {
+                                            Logger.shared.log("AutomaticCacheEviction", "peer \(peerId): cleaning \(removeIds.count) resources")
+                                            
+                                            let _ = mediaBox.removeCachedResourcesWithResult(removeIds).start(next: { actualIds in
+                                                var actualRawIds: [Data] = []
+                                                for id in actualIds {
+                                                    if let data = id.stringRepresentation.data(using: .utf8) {
+                                                        actualRawIds.append(data)
+                                                    }
+                                                }
+                                                
+                                                mediaBox.storageBox.remove(ids: actualRawIds)
+                                                
+                                                subscriber.putCompletion()
+                                            })
+                                        } else {
+                                            subscriber.putCompletion()
                                         }
                                     }
                                     
-                                    if !removeIds.isEmpty {
-                                        Logger.shared.log("AutomaticCacheEviction", "peer \(peerId): cleaning \(removeIds.count) resources")
-                                        
-                                        let _ = mediaBox.removeCachedResourcesWithResult(removeIds).start(next: { actualIds in
-                                            var actualRawIds: [Data] = []
-                                            for id in actualIds {
-                                                if let data = id.stringRepresentation.data(using: .utf8) {
-                                                    actualRawIds.append(data)
+                                    return ActionDisposable {
+                                        isCancelled = true
+                                    }
+                                }
+                            }
+                        } else {
+                            allSignal = .complete()
+                        }
+                        
+                        let storySignal: Signal<Never, NoError>
+                        if storyTimeout != Int32.max {
+                            let minPeerTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) - storyTimeout
+                            storySignal = mediaBox.storageBox.all(peerId: peerId, onlyType: MediaResourceUserContentType.story.rawValue)
+                            |> mapToSignal { peerResourceIds -> Signal<Never, NoError> in
+                                return Signal { subscriber in
+                                    var isCancelled = false
+                                    
+                                    processingQueue.justDispatch {
+                                        var removeIds: [MediaResourceId] = []
+                                        var localCounter = 0
+                                        for resourceId in peerResourceIds {
+                                            localCounter += 1
+                                            if localCounter % 100 == 0 {
+                                                if isCancelled {
+                                                    subscriber.putCompletion()
+                                                    return
                                                 }
                                             }
                                             
-                                            mediaBox.storageBox.remove(ids: actualRawIds)
+                                            let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
+                                            let resourceTimestamp = mediaBox.resourceUsageWithInfo(id: id)
+                                            if resourceTimestamp != 0 && resourceTimestamp < minPeerTimestamp {
+                                                removeIds.append(id)
+                                            }
+                                        }
+                                        
+                                        if !removeIds.isEmpty {
+                                            Logger.shared.log("AutomaticCacheEviction", "peer \(peerId): cleaning \(removeIds.count) resources")
                                             
+                                            let _ = mediaBox.removeCachedResourcesWithResult(removeIds).start(next: { actualIds in
+                                                var actualRawIds: [Data] = []
+                                                for id in actualIds {
+                                                    if let data = id.stringRepresentation.data(using: .utf8) {
+                                                        actualRawIds.append(data)
+                                                    }
+                                                }
+                                                
+                                                mediaBox.storageBox.remove(ids: actualRawIds)
+                                                
+                                                subscriber.putCompletion()
+                                            })
+                                        } else {
                                             subscriber.putCompletion()
-                                        })
-                                    } else {
-                                        subscriber.putCompletion()
+                                        }
+                                    }
+                                    
+                                    return ActionDisposable {
+                                        isCancelled = true
                                     }
                                 }
-                                
-                                return ActionDisposable {
-                                    isCancelled = true
-                                }
                             }
+                        } else {
+                            storySignal = .complete()
                         }
                         
                         return allSignal |> then(storySignal)

@@ -2404,7 +2404,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         if additionalSideInsets.right > 0.0 {
             textFieldInsets.right += additionalSideInsets.right / 3.0
         }
-        if inputHasText || self.extendedSearchLayout || hasMediaDraft || hasForward || hasSlowmodeButton {
+        if inputHasText || self.extendedSearchLayout || hasMediaDraft || hasForward || hasSlowmodeButton || isEditingMedia {
         } else {
             if let customRightAction = self.customRightAction, case .empty = customRightAction {
                 textFieldInsets.right = 8.0
@@ -3033,7 +3033,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         if self.extendedSearchLayout {
             nextButtonTopRight.x -= 46.0
         } else if hasSlowmodeButton {
-        } else if inputHasText || hasMediaDraft || hasForward {
+        } else if inputHasText || hasMediaDraft || hasForward || isEditingMedia {
             nextButtonTopRight.x -= sendActionButtonsSize.width
         }
         for (item, button) in self.accessoryItemButtons.reversed() {
@@ -3182,7 +3182,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         var mediaActionButtonsFrame = CGRect(origin: CGPoint(x: textInputContainerBackgroundFrame.maxX + 6.0, y: textInputContainerBackgroundFrame.maxY - mediaActionButtonsSize.height), size: mediaActionButtonsSize)
-        if inputHasText || self.extendedSearchLayout || hasMediaDraft || interfaceState.interfaceState.forwardMessageIds != nil || hasSlowmodeButton {
+        if inputHasText || self.extendedSearchLayout || hasMediaDraft || interfaceState.interfaceState.forwardMessageIds != nil || hasSlowmodeButton || isEditingMedia {
             mediaActionButtonsFrame.origin.x = width + 8.0
         }
         transition.updateFrame(node: self.mediaActionButtons, frame: mediaActionButtonsFrame)
@@ -3230,7 +3230,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         var sendActionButtonsFrame = CGRect(origin: CGPoint(x: textInputContainerBackgroundFrame.maxX - sendActionButtonsSize.width, y: textInputContainerBackgroundFrame.maxY - sendActionButtonsSize.height), size: sendActionButtonsSize)
         
         let sendActionsScale: CGFloat
-        if inputHasText || hasMediaDraft || hasForward {
+        if inputHasText || hasMediaDraft || hasForward || isEditingMedia {
             sendActionsScale = 1.0
         } else {
             sendActionsScale = 0.001
@@ -4368,6 +4368,11 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             
             if presentationInterfaceState.interfaceState.mediaDraftState != nil {
                 keepSendButtonEnabled = true
+            }
+            if let editMessageState = presentationInterfaceState.editMessageState {
+                if case let .media(value) = editMessageState.content, !value.isEmpty {
+                    keepSendButtonEnabled = true
+                }
             }
             hasForward = presentationInterfaceState.interfaceState.forwardMessageIds != nil
             
