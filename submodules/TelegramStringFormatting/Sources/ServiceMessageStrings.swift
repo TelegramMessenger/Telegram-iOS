@@ -1782,6 +1782,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .managedBotCreated:
                 attributedString = nil
+            case let .pollOptionAppended(option):
+                let _ = option
             case .unknown:
                 attributedString = nil
             }

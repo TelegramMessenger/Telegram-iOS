@@ -1124,7 +1124,7 @@ public extension Api {
             switch self {
             case .userFull(let _data):
                 if boxed {
-                    buffer.appendInt32(-1577103027)
+                    buffer.appendInt32(114026053)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt32(_data.flags2, buffer: buffer, boxed: false)
@@ -1231,7 +1231,7 @@ public extension Api {
                 if Int(_data.flags2) & Int(1 << 22) != 0 {
                     _data.note!.serialize(buffer, true)
                 }
-                if Int(_data.flags2) & Int(1 << 23) != 0 {
+                if Int(_data.flags2) & Int(1 << 25) != 0 {
                     serializeInt64(_data.botManagerId!, buffer: buffer, boxed: false)
                 }
                 break
@@ -1441,7 +1441,7 @@ public extension Api {
                 }
             }
             var _40: Int64?
-            if Int(_2!) & Int(1 << 23) != 0 {
+            if Int(_2!) & Int(1 << 25) != 0 {
                 _40 = reader.readInt64()
             }
             let _c1 = _1 != nil
@@ -1483,7 +1483,7 @@ public extension Api {
             let _c37 = (Int(_2!) & Int(1 << 20) == 0) || _37 != nil
             let _c38 = (Int(_2!) & Int(1 << 21) == 0) || _38 != nil
             let _c39 = (Int(_2!) & Int(1 << 22) == 0) || _39 != nil
-            let _c40 = (Int(_2!) & Int(1 << 23) == 0) || _40 != nil
+            let _c40 = (Int(_2!) & Int(1 << 25) == 0) || _40 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 && _c38 && _c39 && _c40 {
                 return Api.UserFull.userFull(Cons_userFull(flags: _1!, flags2: _2!, id: _3!, about: _4, settings: _5!, personalPhoto: _6, profilePhoto: _7, fallbackPhoto: _8, notifySettings: _9!, botInfo: _10, pinnedMsgId: _11, commonChatsCount: _12!, folderId: _13, ttlPeriod: _14, theme: _15, privateForwardName: _16, botGroupAdminRights: _17, botBroadcastAdminRights: _18, wallpaper: _19, stories: _20, businessWorkHours: _21, businessLocation: _22, businessGreetingMessage: _23, businessAwayMessage: _24, businessIntro: _25, birthday: _26, personalChannelId: _27, personalChannelMessage: _28, stargiftsCount: _29, starrefProgram: _30, botVerification: _31, sendPaidMessagesStars: _32, disallowedGifts: _33, starsRating: _34, starsMyPendingRating: _35, starsMyPendingRatingDate: _36, mainTab: _37, savedMusic: _38, note: _39, botManagerId: _40))
             }

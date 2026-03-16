@@ -3580,6 +3580,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             interaction.messageContextAction(EngineMessage(message), node, rect, gesture, key, fetchResourceId)
+        }, toggleMediaPlayback: { _ in
         }, toggleMessagesSelection: { messageId, selected in
             if let messageId = messageId.first {
                 interaction.toggleMessageSelection(messageId, selected)

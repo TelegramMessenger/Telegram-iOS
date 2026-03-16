@@ -523,7 +523,8 @@ public extension Api {
             public var quoteEntities: [Api.MessageEntity]?
             public var quoteOffset: Int32?
             public var todoItemId: Int32?
-            public init(flags: Int32, replyToMsgId: Int32?, replyToPeerId: Api.Peer?, replyFrom: Api.MessageFwdHeader?, replyMedia: Api.MessageMedia?, replyToTopId: Int32?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?, todoItemId: Int32?) {
+            public var pollOption: Buffer?
+            public init(flags: Int32, replyToMsgId: Int32?, replyToPeerId: Api.Peer?, replyFrom: Api.MessageFwdHeader?, replyMedia: Api.MessageMedia?, replyToTopId: Int32?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?, todoItemId: Int32?, pollOption: Buffer?) {
                 self.flags = flags
                 self.replyToMsgId = replyToMsgId
                 self.replyToPeerId = replyToPeerId
@@ -534,9 +535,10 @@ public extension Api {
                 self.quoteEntities = quoteEntities
                 self.quoteOffset = quoteOffset
                 self.todoItemId = todoItemId
+                self.pollOption = pollOption
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("messageReplyHeader", [("flags", self.flags as Any), ("replyToMsgId", self.replyToMsgId as Any), ("replyToPeerId", self.replyToPeerId as Any), ("replyFrom", self.replyFrom as Any), ("replyMedia", self.replyMedia as Any), ("replyToTopId", self.replyToTopId as Any), ("quoteText", self.quoteText as Any), ("quoteEntities", self.quoteEntities as Any), ("quoteOffset", self.quoteOffset as Any), ("todoItemId", self.todoItemId as Any)])
+                return ("messageReplyHeader", [("flags", self.flags as Any), ("replyToMsgId", self.replyToMsgId as Any), ("replyToPeerId", self.replyToPeerId as Any), ("replyFrom", self.replyFrom as Any), ("replyMedia", self.replyMedia as Any), ("replyToTopId", self.replyToTopId as Any), ("quoteText", self.quoteText as Any), ("quoteEntities", self.quoteEntities as Any), ("quoteOffset", self.quoteOffset as Any), ("todoItemId", self.todoItemId as Any), ("pollOption", self.pollOption as Any)])
             }
         }
         public class Cons_messageReplyStoryHeader: TypeConstructorDescription {
@@ -557,7 +559,7 @@ public extension Api {
             switch self {
             case .messageReplyHeader(let _data):
                 if boxed {
-                    buffer.appendInt32(1763137035)
+                    buffer.appendInt32(462937446)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 if Int(_data.flags) & Int(1 << 4) != 0 {
@@ -591,6 +593,9 @@ public extension Api {
                 if Int(_data.flags) & Int(1 << 11) != 0 {
                     serializeInt32(_data.todoItemId!, buffer: buffer, boxed: false)
                 }
+                if Int(_data.flags) & Int(1 << 12) != 0 {
+                    serializeBytes(_data.pollOption!, buffer: buffer, boxed: false)
+                }
                 break
             case .messageReplyStoryHeader(let _data):
                 if boxed {
@@ -605,7 +610,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .messageReplyHeader(let _data):
-                return ("messageReplyHeader", [("flags", _data.flags as Any), ("replyToMsgId", _data.replyToMsgId as Any), ("replyToPeerId", _data.replyToPeerId as Any), ("replyFrom", _data.replyFrom as Any), ("replyMedia", _data.replyMedia as Any), ("replyToTopId", _data.replyToTopId as Any), ("quoteText", _data.quoteText as Any), ("quoteEntities", _data.quoteEntities as Any), ("quoteOffset", _data.quoteOffset as Any), ("todoItemId", _data.todoItemId as Any)])
+                return ("messageReplyHeader", [("flags", _data.flags as Any), ("replyToMsgId", _data.replyToMsgId as Any), ("replyToPeerId", _data.replyToPeerId as Any), ("replyFrom", _data.replyFrom as Any), ("replyMedia", _data.replyMedia as Any), ("replyToTopId", _data.replyToTopId as Any), ("quoteText", _data.quoteText as Any), ("quoteEntities", _data.quoteEntities as Any), ("quoteOffset", _data.quoteOffset as Any), ("todoItemId", _data.todoItemId as Any), ("pollOption", _data.pollOption as Any)])
             case .messageReplyStoryHeader(let _data):
                 return ("messageReplyStoryHeader", [("peer", _data.peer as Any), ("storyId", _data.storyId as Any)])
             }
@@ -658,6 +663,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 11) != 0 {
                 _10 = reader.readInt32()
             }
+            var _11: Buffer?
+            if Int(_1!) & Int(1 << 12) != 0 {
+                _11 = parseBytes(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 4) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
@@ -668,8 +677,9 @@ public extension Api {
             let _c8 = (Int(_1!) & Int(1 << 7) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 10) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.MessageReplyHeader.messageReplyHeader(Cons_messageReplyHeader(flags: _1!, replyToMsgId: _2, replyToPeerId: _3, replyFrom: _4, replyMedia: _5, replyToTopId: _6, quoteText: _7, quoteEntities: _8, quoteOffset: _9, todoItemId: _10))
+            let _c11 = (Int(_1!) & Int(1 << 12) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.MessageReplyHeader.messageReplyHeader(Cons_messageReplyHeader(flags: _1!, replyToMsgId: _2, replyToPeerId: _3, replyFrom: _4, replyMedia: _5, replyToTopId: _6, quoteText: _7, quoteEntities: _8, quoteOffset: _9, todoItemId: _10, pollOption: _11))
             }
             else {
                 return nil
@@ -842,6 +852,7 @@ public extension Api {
         case inputMessagesFilterPhotoVideo
         case inputMessagesFilterPhotos
         case inputMessagesFilterPinned
+        case inputMessagesFilterPoll
         case inputMessagesFilterRoundVideo
         case inputMessagesFilterRoundVoice
         case inputMessagesFilterUrl
@@ -911,6 +922,11 @@ public extension Api {
                     buffer.appendInt32(464520273)
                 }
                 break
+            case .inputMessagesFilterPoll:
+                if boxed {
+                    buffer.appendInt32(-97793782)
+                }
+                break
             case .inputMessagesFilterRoundVideo:
                 if boxed {
                     buffer.appendInt32(-1253451181)
@@ -965,6 +981,8 @@ public extension Api {
                 return ("inputMessagesFilterPhotos", [])
             case .inputMessagesFilterPinned:
                 return ("inputMessagesFilterPinned", [])
+            case .inputMessagesFilterPoll:
+                return ("inputMessagesFilterPoll", [])
             case .inputMessagesFilterRoundVideo:
                 return ("inputMessagesFilterRoundVideo", [])
             case .inputMessagesFilterRoundVoice:
@@ -1021,6 +1039,9 @@ public extension Api {
         }
         public static func parse_inputMessagesFilterPinned(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterPinned
+        }
+        public static func parse_inputMessagesFilterPoll(_ reader: BufferReader) -> MessagesFilter? {
+            return Api.MessagesFilter.inputMessagesFilterPoll
         }
         public static func parse_inputMessagesFilterRoundVideo(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterRoundVideo
@@ -1166,62 +1187,6 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.MyBoost.myBoost(Cons_myBoost(flags: _1!, slot: _2!, peer: _3, date: _4!, expires: _5!, cooldownUntilDate: _6))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
-    enum NearestDc: TypeConstructorDescription {
-        public class Cons_nearestDc: TypeConstructorDescription {
-            public var country: String
-            public var thisDc: Int32
-            public var nearestDc: Int32
-            public init(country: String, thisDc: Int32, nearestDc: Int32) {
-                self.country = country
-                self.thisDc = thisDc
-                self.nearestDc = nearestDc
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("nearestDc", [("country", self.country as Any), ("thisDc", self.thisDc as Any), ("nearestDc", self.nearestDc as Any)])
-            }
-        }
-        case nearestDc(Cons_nearestDc)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .nearestDc(let _data):
-                if boxed {
-                    buffer.appendInt32(-1910892683)
-                }
-                serializeString(_data.country, buffer: buffer, boxed: false)
-                serializeInt32(_data.thisDc, buffer: buffer, boxed: false)
-                serializeInt32(_data.nearestDc, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .nearestDc(let _data):
-                return ("nearestDc", [("country", _data.country as Any), ("thisDc", _data.thisDc as Any), ("nearestDc", _data.nearestDc as Any)])
-            }
-        }
-
-        public static func parse_nearestDc(_ reader: BufferReader) -> NearestDc? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.NearestDc.nearestDc(Cons_nearestDc(country: _1!, thisDc: _2!, nearestDc: _3!))
             }
             else {
                 return nil

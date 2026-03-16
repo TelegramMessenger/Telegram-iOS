@@ -14,6 +14,7 @@ public final class ListMessageItemInteraction {
     public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
     public let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
     public let toggleMessagesSelection: ([MessageId], Bool) -> Void
+    public let toggleMediaPlayback: ((MessageId) -> Void)?
     let openUrl: (String, Bool, Bool?, Message?) -> Void
     let openInstantPage: (Message, ChatMessageItemAssociatedData?) -> Void
     let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
@@ -22,9 +23,19 @@ public final class ListMessageItemInteraction {
     public var searchTextHighightState: String?
     public var preferredStoryHighQuality: Bool = false
     
-    public init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, openUrl: @escaping (String, Bool, Bool?, Message?) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, getHiddenMedia: @escaping () -> [MessageId: [Media]]) {
+    public init(
+        openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
+        openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
+        toggleMediaPlayback: ((MessageId) -> Void)?,
+        toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
+        openUrl: @escaping (String, Bool, Bool?, Message?) -> Void,
+        openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void,
+        longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void,
+        getHiddenMedia: @escaping () -> [MessageId: [Media]]
+    ) {
         self.openMessage = openMessage
         self.openMessageContextMenu = openMessageContextMenu
+        self.toggleMediaPlayback = toggleMediaPlayback
         self.toggleMessagesSelection = toggleMessagesSelection
         self.openUrl = openUrl
         self.openInstantPage = openInstantPage
@@ -35,8 +46,9 @@ public final class ListMessageItemInteraction {
     public static var `default`: ListMessageItemInteraction = ListMessageItemInteraction(openMessage: { _, _ in
         return false
     }, openMessageContextMenu: { _, _, _, _, _ in
-    }, toggleMessagesSelection: { _, _ in
-    }, openUrl: { _, _, _, _ in
+    }, toggleMediaPlayback: nil, toggleMessagesSelection: { _, _ in
+    },
+    openUrl: { _, _, _, _ in
     }, openInstantPage: { _, _ in
     }, longTap: { _, _ in
     }, getHiddenMedia: { () -> [MessageId : [Media]] in

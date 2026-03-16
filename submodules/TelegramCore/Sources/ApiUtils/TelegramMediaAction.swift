@@ -363,8 +363,10 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .copyProtectionToggle(previousValue: messageActionNoForwardsToggleData.prevValue == .boolTrue, newValue: messageActionNoForwardsToggleData.newValue == .boolTrue))
     case let .messageActionNoForwardsRequest(messageActionNoForwardsRequestData):
         return TelegramMediaAction(action: .copyProtectionRequest(hasExpired: (messageActionNoForwardsRequestData.flags & (1 << 0)) != 0, previousValue: messageActionNoForwardsRequestData.prevValue == .boolTrue, newValue: messageActionNoForwardsRequestData.newValue == .boolTrue))
-    case let .messageActionManagedBotCreated(data):
-        return TelegramMediaAction(action: .managedBotCreated(botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(data.botId))))
+    case let .messageActionManagedBotCreated(messageActionManagedBotCreatedData):
+        return TelegramMediaAction(action: .managedBotCreated(botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(messageActionManagedBotCreatedData.botId))))
+    case let .messageActionPollAppendAnswer(messageActionPollAppendAnswerData):
+        return TelegramMediaAction(action: .pollOptionAppended(TelegramMediaPollOption(apiOption: messageActionPollAppendAnswerData.answer)))
     }
 }
 

@@ -2630,12 +2630,12 @@ public extension Api.functions.bots {
     }
 }
 public extension Api.functions.bots {
-    static func exportBotToken(botId: Int64, revoke: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.bots.ExportedBotToken>) {
+    static func exportBotToken(bot: Api.InputUser, revoke: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.bots.ExportedBotToken>) {
         let buffer = Buffer()
-        buffer.appendInt32(6533257)
-        serializeInt64(botId, buffer: buffer, boxed: false)
+        buffer.appendInt32(-1123182101)
+        bot.serialize(buffer, true)
         revoke.serialize(buffer, true)
-        return (FunctionDescription(name: "bots.exportBotToken", parameters: [("botId", String(describing: botId)), ("revoke", String(describing: revoke))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.bots.ExportedBotToken? in
+        return (FunctionDescription(name: "bots.exportBotToken", parameters: [("bot", String(describing: bot)), ("revoke", String(describing: revoke))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.bots.ExportedBotToken? in
             let reader = BufferReader(buffer)
             var result: Api.bots.ExportedBotToken?
             if let signature = reader.readInt32() {
@@ -5496,6 +5496,28 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
+    static func composeMessageWithAI(flags: Int32, text: Api.TextWithEntities, translateToLang: String?, changeTone: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TextWithEntities>) {
+        let buffer = Buffer()
+        buffer.appendInt32(-1080571914)
+        serializeInt32(flags, buffer: buffer, boxed: false)
+        text.serialize(buffer, true)
+        if Int(flags) & Int(1 << 1) != 0 {
+            serializeString(translateToLang!, buffer: buffer, boxed: false)
+        }
+        if Int(flags) & Int(1 << 2) != 0 {
+            serializeString(changeTone!, buffer: buffer, boxed: false)
+        }
+        return (FunctionDescription(name: "messages.composeMessageWithAI", parameters: [("flags", String(describing: flags)), ("text", String(describing: text)), ("translateToLang", String(describing: translateToLang)), ("changeTone", String(describing: changeTone))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.TextWithEntities? in
+            let reader = BufferReader(buffer)
+            var result: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                result = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
+            return result
+        })
+    }
+}
+public extension Api.functions.messages {
     static func createChat(flags: Int32, users: [Api.InputUser], title: String, ttlPeriod: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InvitedUsers>) {
         let buffer = Buffer()
         buffer.appendInt32(-1831936556)
@@ -7283,12 +7305,13 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func getPollResults(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func getPollResults(peer: Api.InputPeer, msgId: Int32, pollHash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(1941660731)
+        buffer.appendInt32(-308026565)
         peer.serialize(buffer, true)
         serializeInt32(msgId, buffer: buffer, boxed: false)
-        return (FunctionDescription(name: "messages.getPollResults", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        serializeInt64(pollHash, buffer: buffer, boxed: false)
+        return (FunctionDescription(name: "messages.getPollResults", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("pollHash", String(describing: pollHash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {

@@ -83,7 +83,8 @@ public extension Api {
             public var quoteOffset: Int32?
             public var monoforumPeerId: Api.InputPeer?
             public var todoItemId: Int32?
-            public init(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?, replyToPeerId: Api.InputPeer?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?, monoforumPeerId: Api.InputPeer?, todoItemId: Int32?) {
+            public var pollOption: Buffer?
+            public init(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?, replyToPeerId: Api.InputPeer?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?, monoforumPeerId: Api.InputPeer?, todoItemId: Int32?, pollOption: Buffer?) {
                 self.flags = flags
                 self.replyToMsgId = replyToMsgId
                 self.topMsgId = topMsgId
@@ -93,9 +94,10 @@ public extension Api {
                 self.quoteOffset = quoteOffset
                 self.monoforumPeerId = monoforumPeerId
                 self.todoItemId = todoItemId
+                self.pollOption = pollOption
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputReplyToMessage", [("flags", self.flags as Any), ("replyToMsgId", self.replyToMsgId as Any), ("topMsgId", self.topMsgId as Any), ("replyToPeerId", self.replyToPeerId as Any), ("quoteText", self.quoteText as Any), ("quoteEntities", self.quoteEntities as Any), ("quoteOffset", self.quoteOffset as Any), ("monoforumPeerId", self.monoforumPeerId as Any), ("todoItemId", self.todoItemId as Any)])
+                return ("inputReplyToMessage", [("flags", self.flags as Any), ("replyToMsgId", self.replyToMsgId as Any), ("topMsgId", self.topMsgId as Any), ("replyToPeerId", self.replyToPeerId as Any), ("quoteText", self.quoteText as Any), ("quoteEntities", self.quoteEntities as Any), ("quoteOffset", self.quoteOffset as Any), ("monoforumPeerId", self.monoforumPeerId as Any), ("todoItemId", self.todoItemId as Any), ("pollOption", self.pollOption as Any)])
             }
         }
         public class Cons_inputReplyToMonoForum: TypeConstructorDescription {
@@ -126,7 +128,7 @@ public extension Api {
             switch self {
             case .inputReplyToMessage(let _data):
                 if boxed {
-                    buffer.appendInt32(-2036351472)
+                    buffer.appendInt32(1003796418)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt32(_data.replyToMsgId, buffer: buffer, boxed: false)
@@ -155,6 +157,9 @@ public extension Api {
                 if Int(_data.flags) & Int(1 << 6) != 0 {
                     serializeInt32(_data.todoItemId!, buffer: buffer, boxed: false)
                 }
+                if Int(_data.flags) & Int(1 << 7) != 0 {
+                    serializeBytes(_data.pollOption!, buffer: buffer, boxed: false)
+                }
                 break
             case .inputReplyToMonoForum(let _data):
                 if boxed {
@@ -175,7 +180,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .inputReplyToMessage(let _data):
-                return ("inputReplyToMessage", [("flags", _data.flags as Any), ("replyToMsgId", _data.replyToMsgId as Any), ("topMsgId", _data.topMsgId as Any), ("replyToPeerId", _data.replyToPeerId as Any), ("quoteText", _data.quoteText as Any), ("quoteEntities", _data.quoteEntities as Any), ("quoteOffset", _data.quoteOffset as Any), ("monoforumPeerId", _data.monoforumPeerId as Any), ("todoItemId", _data.todoItemId as Any)])
+                return ("inputReplyToMessage", [("flags", _data.flags as Any), ("replyToMsgId", _data.replyToMsgId as Any), ("topMsgId", _data.topMsgId as Any), ("replyToPeerId", _data.replyToPeerId as Any), ("quoteText", _data.quoteText as Any), ("quoteEntities", _data.quoteEntities as Any), ("quoteOffset", _data.quoteOffset as Any), ("monoforumPeerId", _data.monoforumPeerId as Any), ("todoItemId", _data.todoItemId as Any), ("pollOption", _data.pollOption as Any)])
             case .inputReplyToMonoForum(let _data):
                 return ("inputReplyToMonoForum", [("monoforumPeerId", _data.monoforumPeerId as Any)])
             case .inputReplyToStory(let _data):
@@ -222,6 +227,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 6) != 0 {
                 _9 = reader.readInt32()
             }
+            var _10: Buffer?
+            if Int(_1!) & Int(1 << 7) != 0 {
+                _10 = parseBytes(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
@@ -231,8 +240,9 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 5) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 6) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.InputReplyTo.inputReplyToMessage(Cons_inputReplyToMessage(flags: _1!, replyToMsgId: _2!, topMsgId: _3, replyToPeerId: _4, quoteText: _5, quoteEntities: _6, quoteOffset: _7, monoforumPeerId: _8, todoItemId: _9))
+            let _c10 = (Int(_1!) & Int(1 << 7) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.InputReplyTo.inputReplyToMessage(Cons_inputReplyToMessage(flags: _1!, replyToMsgId: _2!, topMsgId: _3, replyToPeerId: _4, quoteText: _5, quoteEntities: _6, quoteOffset: _7, monoforumPeerId: _8, todoItemId: _9, pollOption: _10))
             }
             else {
                 return nil

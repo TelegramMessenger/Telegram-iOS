@@ -170,7 +170,7 @@ private func fetchPoll(account: Account, messageId: MessageId) -> Signal<Void, N
         guard let inputPeer = apiInputPeer(peer) else {
             return .complete()
         }
-        return account.network.request(Api.functions.messages.getPollResults(peer: inputPeer, msgId: messageId.id))
+        return account.network.request(Api.functions.messages.getPollResults(peer: inputPeer, msgId: messageId.id, pollHash: 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

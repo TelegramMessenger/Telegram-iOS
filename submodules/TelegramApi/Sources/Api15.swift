@@ -1623,7 +1623,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum MessageAction: TypeConstructorDescription {
+    indirect enum MessageAction: TypeConstructorDescription {
         public class Cons_messageActionBoostApply: TypeConstructorDescription {
             public var boosts: Int32
             public init(boosts: Int32) {
@@ -2071,6 +2071,15 @@ public extension Api {
                 return ("messageActionPhoneCall", [("flags", self.flags as Any), ("callId", self.callId as Any), ("reason", self.reason as Any), ("duration", self.duration as Any)])
             }
         }
+        public class Cons_messageActionPollAppendAnswer: TypeConstructorDescription {
+            public var answer: Api.PollAnswer
+            public init(answer: Api.PollAnswer) {
+                self.answer = answer
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageActionPollAppendAnswer", [("answer", self.answer as Any)])
+            }
+        }
         public class Cons_messageActionPrizeStars: TypeConstructorDescription {
             public var flags: Int32
             public var stars: Int64
@@ -2419,6 +2428,7 @@ public extension Api {
         case messageActionPaymentSentMe(Cons_messageActionPaymentSentMe)
         case messageActionPhoneCall(Cons_messageActionPhoneCall)
         case messageActionPinMessage
+        case messageActionPollAppendAnswer(Cons_messageActionPollAppendAnswer)
         case messageActionPrizeStars(Cons_messageActionPrizeStars)
         case messageActionRequestedPeer(Cons_messageActionRequestedPeer)
         case messageActionRequestedPeerSentMe(Cons_messageActionRequestedPeerSentMe)
@@ -2822,6 +2832,12 @@ public extension Api {
                     buffer.appendInt32(-1799538451)
                 }
                 break
+            case .messageActionPollAppendAnswer(let _data):
+                if boxed {
+                    buffer.appendInt32(-1650340500)
+                }
+                _data.answer.serialize(buffer, true)
+                break
             case .messageActionPrizeStars(let _data):
                 if boxed {
                     buffer.appendInt32(-1341372510)
@@ -3190,6 +3206,8 @@ public extension Api {
                 return ("messageActionPhoneCall", [("flags", _data.flags as Any), ("callId", _data.callId as Any), ("reason", _data.reason as Any), ("duration", _data.duration as Any)])
             case .messageActionPinMessage:
                 return ("messageActionPinMessage", [])
+            case .messageActionPollAppendAnswer(let _data):
+                return ("messageActionPollAppendAnswer", [("answer", _data.answer as Any)])
             case .messageActionPrizeStars(let _data):
                 return ("messageActionPrizeStars", [("flags", _data.flags as Any), ("stars", _data.stars as Any), ("transactionId", _data.transactionId as Any), ("boostPeer", _data.boostPeer as Any), ("giveawayMsgId", _data.giveawayMsgId as Any)])
             case .messageActionRequestedPeer(let _data):
@@ -3941,6 +3959,19 @@ public extension Api {
         }
         public static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionPinMessage
+        }
+        public static func parse_messageActionPollAppendAnswer(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.PollAnswer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.PollAnswer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionPollAppendAnswer(Cons_messageActionPollAppendAnswer(answer: _1!))
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_messageActionPrizeStars(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?

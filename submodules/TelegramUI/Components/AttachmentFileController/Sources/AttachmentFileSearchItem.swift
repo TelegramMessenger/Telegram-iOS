@@ -305,7 +305,7 @@ private enum AttachmentFileSearchEntry: Comparable, Identifiable {
             let itemInteraction = ListMessageItemInteraction(openMessage: { message, _ in
                 interaction.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let displayFileInfo = mode == .audio
             let isStoryMusic = mode == .audio
@@ -313,7 +313,7 @@ private enum AttachmentFileSearchEntry: Comparable, Identifiable {
             
             return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), systemStyle: .glass, context: interaction.context, chatLocation: .peer(id: PeerId(0)), interaction: itemInteraction, message: message, selection: .none, displayHeader: false, isDownloadList: isDownloadList, isStoryMusic: isStoryMusic, displayFileInfo: displayFileInfo, displayBackground: true, style: .blocks, sectionId: section)
         case let .showMore(text, section):
-            return ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: section, editing: false, action: {
+            return ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), style: .blocks, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: section, editing: false, action: {
                 interaction.expandSection(section)
             })
         }

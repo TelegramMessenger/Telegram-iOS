@@ -1,4 +1,60 @@
 public extension Api {
+    enum NearestDc: TypeConstructorDescription {
+        public class Cons_nearestDc: TypeConstructorDescription {
+            public var country: String
+            public var thisDc: Int32
+            public var nearestDc: Int32
+            public init(country: String, thisDc: Int32, nearestDc: Int32) {
+                self.country = country
+                self.thisDc = thisDc
+                self.nearestDc = nearestDc
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("nearestDc", [("country", self.country as Any), ("thisDc", self.thisDc as Any), ("nearestDc", self.nearestDc as Any)])
+            }
+        }
+        case nearestDc(Cons_nearestDc)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .nearestDc(let _data):
+                if boxed {
+                    buffer.appendInt32(-1910892683)
+                }
+                serializeString(_data.country, buffer: buffer, boxed: false)
+                serializeInt32(_data.thisDc, buffer: buffer, boxed: false)
+                serializeInt32(_data.nearestDc, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .nearestDc(let _data):
+                return ("nearestDc", [("country", _data.country as Any), ("thisDc", _data.thisDc as Any), ("nearestDc", _data.nearestDc as Any)])
+            }
+        }
+
+        public static func parse_nearestDc(_ reader: BufferReader) -> NearestDc? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.NearestDc.nearestDc(Cons_nearestDc(country: _1!, thisDc: _2!, nearestDc: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api {
     enum NotificationSound: TypeConstructorDescription {
         public class Cons_notificationSoundLocal: TypeConstructorDescription {
             public var title: String

@@ -1225,6 +1225,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             openMessageContextMenu: { message, bool, node, rect, gesture in
                 chatControllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture, nil)
             },
+            toggleMediaPlayback: nil,
             toggleMessagesSelection: { messageId, selected in
                 chatControllerInteraction.toggleMessagesSelection(messageId, selected)
             },

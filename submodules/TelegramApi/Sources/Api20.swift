@@ -694,16 +694,18 @@ public extension Api {
             public var answers: [Api.PollAnswer]
             public var closePeriod: Int32?
             public var closeDate: Int32?
-            public init(id: Int64, flags: Int32, question: Api.TextWithEntities, answers: [Api.PollAnswer], closePeriod: Int32?, closeDate: Int32?) {
+            public var hash: Int64
+            public init(id: Int64, flags: Int32, question: Api.TextWithEntities, answers: [Api.PollAnswer], closePeriod: Int32?, closeDate: Int32?, hash: Int64) {
                 self.id = id
                 self.flags = flags
                 self.question = question
                 self.answers = answers
                 self.closePeriod = closePeriod
                 self.closeDate = closeDate
+                self.hash = hash
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("poll", [("id", self.id as Any), ("flags", self.flags as Any), ("question", self.question as Any), ("answers", self.answers as Any), ("closePeriod", self.closePeriod as Any), ("closeDate", self.closeDate as Any)])
+                return ("poll", [("id", self.id as Any), ("flags", self.flags as Any), ("question", self.question as Any), ("answers", self.answers as Any), ("closePeriod", self.closePeriod as Any), ("closeDate", self.closeDate as Any), ("hash", self.hash as Any)])
             }
         }
         case poll(Cons_poll)
@@ -712,7 +714,7 @@ public extension Api {
             switch self {
             case .poll(let _data):
                 if boxed {
-                    buffer.appendInt32(1484026161)
+                    buffer.appendInt32(-1203610647)
                 }
                 serializeInt64(_data.id, buffer: buffer, boxed: false)
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
@@ -728,6 +730,7 @@ public extension Api {
                 if Int(_data.flags) & Int(1 << 5) != 0 {
                     serializeInt32(_data.closeDate!, buffer: buffer, boxed: false)
                 }
+                serializeInt64(_data.hash, buffer: buffer, boxed: false)
                 break
             }
         }
@@ -735,7 +738,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .poll(let _data):
-                return ("poll", [("id", _data.id as Any), ("flags", _data.flags as Any), ("question", _data.question as Any), ("answers", _data.answers as Any), ("closePeriod", _data.closePeriod as Any), ("closeDate", _data.closeDate as Any)])
+                return ("poll", [("id", _data.id as Any), ("flags", _data.flags as Any), ("question", _data.question as Any), ("answers", _data.answers as Any), ("closePeriod", _data.closePeriod as Any), ("closeDate", _data.closeDate as Any), ("hash", _data.hash as Any)])
             }
         }
 
@@ -760,14 +763,17 @@ public extension Api {
             if Int(_2!) & Int(1 << 5) != 0 {
                 _6 = reader.readInt32()
             }
+            var _7: Int64?
+            _7 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_2!) & Int(1 << 4) == 0) || _5 != nil
             let _c6 = (Int(_2!) & Int(1 << 5) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.Poll.poll(Cons_poll(id: _1!, flags: _2!, question: _3!, answers: _4!, closePeriod: _5, closeDate: _6))
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Poll.poll(Cons_poll(id: _1!, flags: _2!, question: _3!, answers: _4!, closePeriod: _5, closeDate: _6, hash: _7!))
             }
             else {
                 return nil

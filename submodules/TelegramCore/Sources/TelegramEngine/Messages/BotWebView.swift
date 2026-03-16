@@ -162,7 +162,7 @@ private func keepWebViewSignal(network: Network, stateManager: AccountStateManag
                     replyFlags |= 1 << 0
                     topMsgId = Int32(clamping: threadId)
                 }
-                replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil))
+                replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil, pollOption: nil))
             }
             let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyTo: replyTo, sendAs: sendAs))
             |> mapError { _ -> KeepWebViewError in
@@ -250,7 +250,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
             } else if topMsgId != nil {
                 replyFlags |= 1 << 0
             }
-            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil))
+            replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: nil, pollOption: nil))
         } else if let monoforumPeerId {
             replyTo = .inputReplyToMonoForum(.init(monoforumPeerId: monoforumPeerId))
         }

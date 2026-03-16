@@ -223,7 +223,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
             let interaction = ListMessageItemInteraction(openMessage: { message, _ in
                 arguments.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
@@ -238,7 +238,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
             let interaction = ListMessageItemInteraction(openMessage: { message, _ in
                 arguments.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
@@ -254,7 +254,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
             let interaction = ListMessageItemInteraction(openMessage: { message, _ in
                 arguments.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
@@ -644,8 +644,13 @@ public func makeAttachmentFileControllerImpl(
         
         let leftNavigationButton =  closeButtonNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: {}) }
         
+        var hasAudioSearch = false
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["music_search_username"] as? String {
+            hasAudioSearch = true
+        }
+        
         var rightNavigationButton: ItemListNavigationButton?
-        if bannedSendMedia == nil && (recentDocuments == nil || (recentDocuments?.count ?? 0) > 10) {
+        if bannedSendMedia == nil && (recentDocuments == nil || (recentDocuments?.count ?? 0) > 10 || (mode == .audio && hasAudioSearch)) {
             rightNavigationButton = searchButtonNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: {}) }
         }
         
