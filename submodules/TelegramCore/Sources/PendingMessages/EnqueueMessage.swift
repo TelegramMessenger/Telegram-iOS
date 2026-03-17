@@ -12,6 +12,36 @@ public enum EnqueueMessageGrouping {
 public enum EngineMessageReplyInnerSubject: Codable, Equatable {
     case todoItem(Int32)
     case pollOption(Data)
+
+    private enum CodingKeys: String, CodingKey {
+        case type = "t"
+        case value = "v"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(Int32.self, forKey: .type)
+        switch type {
+        case 0:
+            self = .todoItem(try container.decode(Int32.self, forKey: .value))
+        case 1:
+            self = .pollOption(try container.decode(Data.self, forKey: .value))
+        default:
+            self = .todoItem(try container.decode(Int32.self, forKey: .value))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case let .todoItem(id):
+            try container.encode(Int32(0), forKey: .type)
+            try container.encode(id, forKey: .value)
+        case let .pollOption(data):
+            try container.encode(Int32(1), forKey: .type)
+            try container.encode(data, forKey: .value)
+        }
+    }
 }
 
 public struct EngineMessageReplyQuote: Codable, Equatable {

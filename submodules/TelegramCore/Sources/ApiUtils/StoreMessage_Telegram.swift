@@ -108,6 +108,8 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             }
         } else if let location = attachment as? TelegramMediaMap, location.liveBroadcastingTimeout != nil {
             tags.insert(.liveLocation)
+        } else if let _ = attachment as? TelegramMediaPoll {
+            tags.insert(.polls)
         }
     }
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {

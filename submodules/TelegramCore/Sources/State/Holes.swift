@@ -92,27 +92,29 @@ struct AccumulatedPeers {
 
 func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
     if tagMask == .photoOrVideo {
-        return Api.MessagesFilter.inputMessagesFilterPhotoVideo
+        return .inputMessagesFilterPhotoVideo
     } else if tagMask == .photo {
-        return Api.MessagesFilter.inputMessagesFilterPhotos
+        return .inputMessagesFilterPhotos
     } else if tagMask == .video {
-        return Api.MessagesFilter.inputMessagesFilterVideo
+        return .inputMessagesFilterVideo
     } else if tagMask == .file {
-        return Api.MessagesFilter.inputMessagesFilterDocument
+        return .inputMessagesFilterDocument
     } else if tagMask == .music {
-        return Api.MessagesFilter.inputMessagesFilterMusic
+        return .inputMessagesFilterMusic
     } else if tagMask == .webPage {
-        return Api.MessagesFilter.inputMessagesFilterUrl
+        return .inputMessagesFilterUrl
     } else if tagMask == .voiceOrInstantVideo {
-        return Api.MessagesFilter.inputMessagesFilterRoundVoice
+        return .inputMessagesFilterRoundVoice
     } else if tagMask == .gif {
-        return Api.MessagesFilter.inputMessagesFilterGif
+        return .inputMessagesFilterGif
     } else if tagMask == .pinned {
-        return Api.MessagesFilter.inputMessagesFilterPinned
+        return .inputMessagesFilterPinned
     } else if tagMask == .voice {
-        return Api.MessagesFilter.inputMessagesFilterVoice
+        return .inputMessagesFilterVoice
     } else if tagMask == .roundVideo {
-        return Api.MessagesFilter.inputMessagesFilterRoundVideo
+        return .inputMessagesFilterRoundVideo
+    } else if tagMask == .polls {
+        return .inputMessagesFilterPoll
     } else {
         return nil
     }
