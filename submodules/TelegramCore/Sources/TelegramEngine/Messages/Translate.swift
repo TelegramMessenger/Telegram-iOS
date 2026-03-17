@@ -99,8 +99,11 @@ func _internal_composeMessageWithAI(network: Network, text: String, entities: [M
     }
     |> map { result -> (String, [MessageTextEntity]) in
         switch result {
-        case let .textWithEntities(data):
-            return (data.text, messageTextEntitiesFromApiEntities(data.entities))
+        case let .composedMessageWithAI(data):
+            switch data.resultText {
+            case let .textWithEntities(textData):
+                return (textData.text, messageTextEntitiesFromApiEntities(textData.entities))
+            }
         }
     }
 }
