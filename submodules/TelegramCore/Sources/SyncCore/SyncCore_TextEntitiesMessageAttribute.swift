@@ -467,3 +467,13 @@ public func trimStringWithEntities(string: String, entities: [MessageTextEntity]
     let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
     return (nsString.substring(with: nsRange), messageTextEntitiesInRange(entities: entities, range: nsRange, onlyQuoteable: false))
 }
+
+public struct TextWithEntities: Codable, Equatable {
+    public let text: String
+    public let entities: [MessageTextEntity]
+    
+    public init(text: String, entities: [MessageTextEntity]) {
+        self.text = text
+        self.entities = entities
+    }
+}

@@ -654,6 +654,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1280209983] = { return Api.MessageEntity.parse_messageEntityCashtag($0) }
     dict[681706865] = { return Api.MessageEntity.parse_messageEntityCode($0) }
     dict[-925956616] = { return Api.MessageEntity.parse_messageEntityCustomEmoji($0) }
+    dict[106086853] = { return Api.MessageEntity.parse_messageEntityDiffDelete($0) }
+    dict[1903653142] = { return Api.MessageEntity.parse_messageEntityDiffInsert($0) }
+    dict[-960371289] = { return Api.MessageEntity.parse_messageEntityDiffReplace($0) }
     dict[1692693954] = { return Api.MessageEntity.parse_messageEntityEmail($0) }
     dict[-1874147385] = { return Api.MessageEntity.parse_messageEntityFormattedDate($0) }
     dict[1868782349] = { return Api.MessageEntity.parse_messageEntityHashtag($0) }
@@ -1357,7 +1360,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1012971041] = { return Api.bots.ExportedBotToken.parse_exportedBotToken($0) }
     dict[428978491] = { return Api.bots.PopularAppBots.parse_popularAppBots($0) }
     dict[212278628] = { return Api.bots.PreviewInfo.parse_previewInfo($0) }
-    dict[569994407] = { return Api.bots.RequestedButton.parse_requestedButton($0) }
+    dict[-247743273] = { return Api.bots.RequestedButton.parse_requestedButton($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
@@ -1436,6 +1439,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1694474197] = { return Api.messages.Chats.parse_chats($0) }
     dict[-1663561404] = { return Api.messages.Chats.parse_chatsSlice($0) }
     dict[-1571952873] = { return Api.messages.CheckedHistoryImportPeer.parse_checkedHistoryImportPeer($0) }
+    dict[-1864913414] = { return Api.messages.ComposedMessageWithAI.parse_composedMessageWithAI($0) }
     dict[740433629] = { return Api.messages.DhConfig.parse_dhConfig($0) }
     dict[-1058912715] = { return Api.messages.DhConfig.parse_dhConfigNotModified($0) }
     dict[718878489] = { return Api.messages.DialogFilters.parse_dialogFilters($0) }
@@ -2600,6 +2604,8 @@ public extension Api {
         case let _1 as Api.messages.Chats:
             _1.serialize(buffer, boxed)
         case let _1 as Api.messages.CheckedHistoryImportPeer:
+            _1.serialize(buffer, boxed)
+        case let _1 as Api.messages.ComposedMessageWithAI:
             _1.serialize(buffer, boxed)
         case let _1 as Api.messages.DhConfig:
             _1.serialize(buffer, boxed)

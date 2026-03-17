@@ -238,7 +238,7 @@ final class TabBarControllerNode: ASDisplayNode {
                     let index = self.tabBarItems.firstIndex(where: { AnyHashable(ObjectIdentifier($0.item)) == itemId }) ?? 0
                     
                     return TabBarComponent.Item(
-                        item: item.item,
+                        content: .tabBarItem(item.item),
                         action: { [weak self] isLongTap in
                             guard let self else {
                                 return

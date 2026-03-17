@@ -1,4 +1,113 @@
 public extension Api.messages {
+    enum ExportedChatInvite: TypeConstructorDescription {
+        public class Cons_exportedChatInvite: TypeConstructorDescription {
+            public var invite: Api.ExportedChatInvite
+            public var users: [Api.User]
+            public init(invite: Api.ExportedChatInvite, users: [Api.User]) {
+                self.invite = invite
+                self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedChatInvite", [("invite", self.invite as Any), ("users", self.users as Any)])
+            }
+        }
+        public class Cons_exportedChatInviteReplaced: TypeConstructorDescription {
+            public var invite: Api.ExportedChatInvite
+            public var newInvite: Api.ExportedChatInvite
+            public var users: [Api.User]
+            public init(invite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite, users: [Api.User]) {
+                self.invite = invite
+                self.newInvite = newInvite
+                self.users = users
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("exportedChatInviteReplaced", [("invite", self.invite as Any), ("newInvite", self.newInvite as Any), ("users", self.users as Any)])
+            }
+        }
+        case exportedChatInvite(Cons_exportedChatInvite)
+        case exportedChatInviteReplaced(Cons_exportedChatInviteReplaced)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .exportedChatInvite(let _data):
+                if boxed {
+                    buffer.appendInt32(410107472)
+                }
+                _data.invite.serialize(buffer, true)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.users.count))
+                for item in _data.users {
+                    item.serialize(buffer, true)
+                }
+                break
+            case .exportedChatInviteReplaced(let _data):
+                if boxed {
+                    buffer.appendInt32(572915951)
+                }
+                _data.invite.serialize(buffer, true)
+                _data.newInvite.serialize(buffer, true)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.users.count))
+                for item in _data.users {
+                    item.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .exportedChatInvite(let _data):
+                return ("exportedChatInvite", [("invite", _data.invite as Any), ("users", _data.users as Any)])
+            case .exportedChatInviteReplaced(let _data):
+                return ("exportedChatInviteReplaced", [("invite", _data.invite as Any), ("newInvite", _data.newInvite as Any), ("users", _data.users as Any)])
+            }
+        }
+
+        public static func parse_exportedChatInvite(_ reader: BufferReader) -> ExportedChatInvite? {
+            var _1: Api.ExportedChatInvite?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.ExportedChatInvite.exportedChatInvite(Cons_exportedChatInvite(invite: _1!, users: _2!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_exportedChatInviteReplaced(_ reader: BufferReader) -> ExportedChatInvite? {
+            var _1: Api.ExportedChatInvite?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+            }
+            var _2: Api.ExportedChatInvite?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.ExportedChatInvite.exportedChatInviteReplaced(Cons_exportedChatInviteReplaced(invite: _1!, newInvite: _2!, users: _3!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.messages {
     enum ExportedChatInvites: TypeConstructorDescription {
         public class Cons_exportedChatInvites: TypeConstructorDescription {
             public var count: Int32
@@ -1834,97 +1943,6 @@ public extension Api.messages {
         }
         public static func parse_reactionsNotModified(_ reader: BufferReader) -> Reactions? {
             return Api.messages.Reactions.reactionsNotModified
-        }
-    }
-}
-public extension Api.messages {
-    enum RecentStickers: TypeConstructorDescription {
-        public class Cons_recentStickers: TypeConstructorDescription {
-            public var hash: Int64
-            public var packs: [Api.StickerPack]
-            public var stickers: [Api.Document]
-            public var dates: [Int32]
-            public init(hash: Int64, packs: [Api.StickerPack], stickers: [Api.Document], dates: [Int32]) {
-                self.hash = hash
-                self.packs = packs
-                self.stickers = stickers
-                self.dates = dates
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("recentStickers", [("hash", self.hash as Any), ("packs", self.packs as Any), ("stickers", self.stickers as Any), ("dates", self.dates as Any)])
-            }
-        }
-        case recentStickers(Cons_recentStickers)
-        case recentStickersNotModified
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .recentStickers(let _data):
-                if boxed {
-                    buffer.appendInt32(-1999405994)
-                }
-                serializeInt64(_data.hash, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.packs.count))
-                for item in _data.packs {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.stickers.count))
-                for item in _data.stickers {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.dates.count))
-                for item in _data.dates {
-                    serializeInt32(item, buffer: buffer, boxed: false)
-                }
-                break
-            case .recentStickersNotModified:
-                if boxed {
-                    buffer.appendInt32(186120336)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .recentStickers(let _data):
-                return ("recentStickers", [("hash", _data.hash as Any), ("packs", _data.packs as Any), ("stickers", _data.stickers as Any), ("dates", _data.dates as Any)])
-            case .recentStickersNotModified:
-                return ("recentStickersNotModified", [])
-            }
-        }
-
-        public static func parse_recentStickers(_ reader: BufferReader) -> RecentStickers? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.StickerPack]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
-            }
-            var _3: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            var _4: [Int32]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.RecentStickers.recentStickers(Cons_recentStickers(hash: _1!, packs: _2!, stickers: _3!, dates: _4!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_recentStickersNotModified(_ reader: BufferReader) -> RecentStickers? {
-            return Api.messages.RecentStickers.recentStickersNotModified
         }
     }
 }

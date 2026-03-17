@@ -197,6 +197,7 @@ public final class ChatPanelInterfaceInteraction {
     public let displayUndo: (UndoOverlayContent) -> Void
     public let presentInputTextTranslation: (NSAttributedString, @escaping (NSAttributedString) -> Void) -> Void
     public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
+    public let openAICompose: () -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -324,6 +325,7 @@ public final class ChatPanelInterfaceInteraction {
         displayUndo: @escaping (UndoOverlayContent) -> Void,
         presentInputTextTranslation: @escaping (NSAttributedString, @escaping (NSAttributedString) -> Void) -> Void,
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
+        openAICompose: @escaping () -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         toggleChatSidebarMode: @escaping () -> Void,
@@ -454,6 +456,7 @@ public final class ChatPanelInterfaceInteraction {
         self.displayUndo = displayUndo
         self.presentInputTextTranslation = presentInputTextTranslation
         self.sendEmoji = sendEmoji
+        self.openAICompose = openAICompose
         self.updateHistoryFilter = updateHistoryFilter
         self.updateChatLocationThread = updateChatLocationThread
         self.toggleChatSidebarMode = toggleChatSidebarMode
@@ -592,6 +595,7 @@ public final class ChatPanelInterfaceInteraction {
         }, displayUndo: { _ in
         }, presentInputTextTranslation: { _, _ in
         }, sendEmoji: { _, _, _ in
+        }, openAICompose: {
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {

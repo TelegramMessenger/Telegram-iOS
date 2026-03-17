@@ -4501,6 +4501,11 @@ extension ChatControllerImpl {
                 return
             }
             self.controllerInteraction?.sendEmoji(text, attribute, immediately)
+        }, openAICompose: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.chatDisplayNode.openAICompose()
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return

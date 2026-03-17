@@ -15,12 +15,21 @@ private let codeIcon: UIImage = {
 }()
 
 private final class TextNodeStrikethrough {
+    enum Style {
+        case single
+        case wavy
+    }
+    
     let range: NSRange
     let frame: CGRect
+    let color: UIColor?
+    let style: Style
     
-    init(range: NSRange, frame: CGRect) {
+    init(range: NSRange, frame: CGRect, color: UIColor?, style: Style) {
         self.range = range
         self.frame = frame
+        self.color = color
+        self.style = style
     }
 }
 
@@ -205,11 +214,7 @@ public struct TextNodeCutout: Equatable {
 }
 
 private let drawUnderlinesManually: Bool = {
-    if #available(iOS 18.0, *) {
-        return true
-    } else {
-        return false
-    }
+    return true
 }()
 
 private func displayLineFrame(frame: CGRect, isRTL: Bool, boundingRect: CGRect, cutout: TextNodeCutout?) -> CGRect {
@@ -1568,8 +1573,8 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                 size.height += line.frame.height + line.frame.height * lineSpacingFactor
                 blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width)
                 
-                if let range = line.range {
-                    attributedString.enumerateAttributes(in: range, options: []) { attributes, range, _ in
+                if let lineRange = line.range {
+                    attributedString.enumerateAttributes(in: lineRange, options: []) { attributes, range, _ in
                         if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
                             var ascent: CGFloat = 0.0
                             var descent: CGFloat = 0.0
@@ -1600,10 +1605,11 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                             
                             addSpoiler(line: line, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                         } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                            let clampedEnd = max(range.location, min(lineRange.location + lineRange.length, range.location + range.length))
                             let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, clampedEnd, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            line.strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height)))
+                            line.strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height), color: nil, style: .single))
                         }
                         
                         if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
@@ -2041,44 +2047,47 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                             
                             addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                         } else if let _ = attributes[NSAttributedString.Key(rawValue: "TelegramBackground")] {
+                            let clampedEnd = max(range.location, min(brokenLineRange.location + brokenLineRange.length, range.location + range.length))
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, clampedEnd, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            backgrounds.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            backgrounds.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight), color: nil, style: .single))
                         } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                            let clampedEnd = max(range.location, min(brokenLineRange.location + brokenLineRange.length, range.location + range.length))
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, clampedEnd, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                        } else if let _ = attributes[NSAttributedString.Key.underlineStyle] {
+                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight), color: nil, style: .single))
+                        } else if let underlineStyle = attributes[NSAttributedString.Key.underlineStyle] as? Int {
+                            let clampedEnd = max(range.location, min(brokenLineRange.location + brokenLineRange.length, range.location + range.length))
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, clampedEnd, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            underlines.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            underlines.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight), color: attributes[NSAttributedString.Key.underlineColor] as? UIColor, style: underlineStyle == NSUnderlineStyle.patternDot.rawValue ? .wavy : .single))
                         } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                             headIndent = paragraphStyle.headIndent
                         }
-                        
+
                         if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
                             if displayEmbeddedItemsUnderSpoilers || (attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] == nil && attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] == nil) {
                                 var ascent: CGFloat = 0.0
                                 var descent: CGFloat = 0.0
                                 CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                                
+
                                 addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                             }
                         }
-                        
+
                         if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
                             var ascent: CGFloat = 0.0
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                            
+
                             addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                 }
-                
+
                 var lineAscent: CGFloat = 0.0
                 var lineDescent: CGFloat = 0.0
                 let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, &lineAscent, &lineDescent, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
@@ -2168,39 +2177,42 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                             
                             addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                         } else if let _ = attributes[NSAttributedString.Key(rawValue: "TelegramBackground")] {
+                            let clampedEnd = max(range.location, min(lineRange.location + lineRange.length, range.location + range.length))
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, clampedEnd, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            backgrounds.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            backgrounds.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight), color: nil, style: .single))
                         } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                            let clampedEnd = max(range.location, min(lineRange.location + lineRange.length, range.location + range.length))
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, clampedEnd, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                        } else if let _ = attributes[NSAttributedString.Key.underlineStyle] {
+                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight), color: nil, style: .single))
+                        } else if let underlineStyle = attributes[NSAttributedString.Key.underlineStyle] as? Int {
+                            let clampedEnd = max(range.location, min(lineRange.location + lineRange.length, range.location + range.length))
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, clampedEnd, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            underlines.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            underlines.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight), color: attributes[NSAttributedString.Key.underlineColor] as? UIColor, style: underlineStyle == NSUnderlineStyle.patternDot.rawValue ? .wavy : .single))
                         } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                             headIndent = paragraphStyle.headIndent
                         }
-                        
+
                         if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
                             if displayEmbeddedItemsUnderSpoilers || (attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] == nil && attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] == nil) {
                                 var ascent: CGFloat = 0.0
                                 var descent: CGFloat = 0.0
                                 CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                                
+
                                 addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                             }
                         }
-                        
+
                         if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
                             var ascent: CGFloat = 0.0
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                            
+
                             addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
@@ -2605,22 +2617,59 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                 }
                 
                 if drawUnderlinesManually {
-                    if !line.underlines.isEmpty {
-                        for strikethrough in line.underlines {
-                            guard let lineRange = line.range else {
-                                continue
+                    for strikethrough in line.underlines {
+                        guard let lineRange = line.range else {
+                            continue
+                        }
+                        var textColor: UIColor?
+                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                            if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+                                textColor = color
                             }
-                            var textColor: UIColor?
-                            layout.attributedString?.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                                if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
-                                    textColor = color
-                                }
-                            }
-                            if let textColor = textColor {
+                        }
+                        switch strikethrough.style {
+                        case .single:
+                            if let color = strikethrough.color {
+                                context.setFillColor(color.cgColor)
+                            } else if let textColor {
                                 context.setFillColor(textColor.cgColor)
                             }
                             let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
                             context.fill(CGRect(x: frame.minX, y: frame.minY + 1.0, width: frame.width, height: 1.0))
+                        case .wavy:
+                            if let color = strikethrough.color {
+                                context.setStrokeColor(color.cgColor)
+                            } else if let textColor {
+                                context.setStrokeColor(textColor.cgColor)
+                            }
+                            context.setLineWidth(1.33)
+                            context.setLineCap(.round)
+                            context.setLineJoin(.round)
+                            let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY - 6.0)
+
+                            let amplitude: CGFloat = 1.2
+                            let period: CGFloat = 8.0
+                            let phase: CGFloat = -0.5
+                            let midY = frame.midY
+                            let step: CGFloat = 1.0
+
+                            context.saveGState()
+                            context.clip(to: frame)
+
+                            var x = frame.minX
+                            context.move(to: CGPoint(x: x, y: midY + amplitude * sin(phase)))
+                            x += step
+                            while x <= frame.maxX + step {
+                                let y = midY + amplitude * sin((x - frame.minX) * 2.0 * .pi / period + phase)
+                                context.addLine(to: CGPoint(x: x, y: y))
+                                x += step
+                            }
+                            context.strokePath()
+                            context.restoreGState()
+                            
+                            /*context.setFillColor(UIColor.red.cgColor)
+                            let frame1 = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                            context.fill(CGRect(x: frame1.minX, y: frame1.minY + 1.0, width: frame1.width, height: 1.0))*/
                         }
                     }
                 }

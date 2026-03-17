@@ -1,0 +1,460 @@
+import Foundation
+import NaturalLanguage
+import UIKit
+import SwiftSignalKit
+import Display
+import TelegramPresentationData
+import ComponentFlow
+import AccountContext
+import MultilineTextComponent
+import BundleIconComponent
+import TelegramCore
+import TranslateUI
+
+private let languageRecognizer = NLLanguageRecognizer()
+
+func localizedLanguageName(strings: PresentationStrings, language: String) -> String {
+    let toLang = language
+    let key = "Translation.Language.\(toLang)"
+    let translateTitle: String
+    if let string = strings.primaryComponent.dict[key] {
+        translateTitle = string
+    } else {
+        let languageLocale = Locale(identifier: language)
+        let toLanguage = languageLocale.localizedString(forLanguageCode: toLang) ?? ""
+        return toLanguage
+    }
+    return translateTitle
+}
+
+final class TextProcessingTranslateContentComponent: Component {
+    enum Mode {
+        case translate
+        case stylize
+        case fix
+    }
+    
+    final class ExternalState {
+        fileprivate(set) var sourceLanguage: String?
+        
+        fileprivate(set) var result: (language: String, text: TextWithEntities?, textCorrectionRanges: [Range<Int>])? = nil {
+            didSet {
+                if self.result?.language != oldValue?.language || self.result?.text != oldValue?.text {
+                    self.resultUpdated?(self.result)
+                }
+            }
+        }
+        var resultUpdated: (((language: String, text: TextWithEntities?, textCorrectionRanges: [Range<Int>])?) -> Void)?
+        
+        fileprivate(set) var emojify: Bool = false
+        fileprivate(set) var isSourceTextExpanded: Bool = false
+        fileprivate(set) var style: TelegramComposeAIMessageMode.Style = .neutral
+        
+        fileprivate(set) var isProcessing: Bool = false {
+            didSet {
+                if self.isProcessing != oldValue {
+                    self.isProcessingUpdated?(self.isProcessing)
+                }
+            }
+        }
+        var isProcessingUpdated: ((Bool) -> Void)?
+        
+        init() {
+        }
+    }
+
+    let context: AccountContext
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let inputText: TextWithEntities
+    let externalState: ExternalState
+    let mode: Mode
+    let copyAction: () -> Void
+    let displayLanguageSelectionMenu: (UIView, String, TelegramComposeAIMessageMode.Style, Bool,  @escaping (String, TelegramComposeAIMessageMode.Style) -> Void) -> Void
+
+    init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        externalState: ExternalState,
+        inputText: TextWithEntities,
+        mode: Mode,
+        copyAction: @escaping () -> Void,
+        displayLanguageSelectionMenu: @escaping (UIView, String, TelegramComposeAIMessageMode.Style, Bool, @escaping (String, TelegramComposeAIMessageMode.Style) -> Void) -> Void
+    ) {
+        self.context = context
+        self.theme = theme
+        self.strings = strings
+        self.externalState = externalState
+        self.inputText = inputText
+        self.mode = mode
+        self.copyAction = copyAction
+        self.displayLanguageSelectionMenu = displayLanguageSelectionMenu
+    }
+
+    static func ==(lhs: TextProcessingTranslateContentComponent, rhs: TextProcessingTranslateContentComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.externalState !== rhs.externalState {
+            return false
+        }
+        if lhs.inputText != rhs.inputText {
+            return false
+        }
+        if lhs.mode != rhs.mode {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private let sourceText = ComponentView<Empty>()
+        private let targetText = ComponentView<Empty>()
+        private let separatorLayer: SimpleLayer
+        
+        private var component: TextProcessingTranslateContentComponent?
+        private weak var state: EmptyComponentState?
+        private var isUpdating: Bool = false
+        
+        private var processDisposable: Disposable?
+        
+        override init(frame: CGRect) {
+            self.separatorLayer = SimpleLayer()
+            
+            super.init(frame: frame)
+            
+            self.layer.addSublayer(self.separatorLayer)
+        }
+        
+        required init?(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        deinit {
+            self.processDisposable?.dispose()
+        }
+        
+        private func beginTranslationIfNecessary(reset: Bool) {
+            guard let component = self.component else {
+                return
+            }
+            
+            if reset {
+                self.processDisposable?.dispose()
+                self.processDisposable = nil
+                if let result = component.externalState.result {
+                    component.externalState.result = (result.language, nil, [])
+                }
+            }
+            
+            if let result = component.externalState.result, result.text == nil, self.processDisposable == nil {
+                switch component.mode {
+                case .translate:
+                    component.externalState.isProcessing = true
+                    self.processDisposable = (component.context.engine.messages.composeAIMessage(
+                        text: component.inputText,
+                        mode: .translate(toLanguage: result.language, emojify: component.externalState.emojify, style: component.externalState.style)
+                    ) |> deliverOnMainQueue).startStrict(next: { [weak self] processedText in
+                        guard let self, let component = self.component, let processedText else {
+                            return
+                        }
+                        component.externalState.isProcessing = false
+                        component.externalState.result = (result.language, processedText.text, processedText.diffRanges)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        }
+                    })
+                case .stylize:
+                    if !component.externalState.emojify && component.externalState.style == .neutral {
+                        component.externalState.isProcessing = false
+                        component.externalState.result = (result.language, component.inputText, [])
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        }
+                    } else {
+                        component.externalState.isProcessing = true
+                        self.processDisposable = (component.context.engine.messages.composeAIMessage(
+                            text: component.inputText,
+                            mode: .stylize(emojify: component.externalState.emojify, style: component.externalState.style)
+                        ) |> deliverOnMainQueue).startStrict(next: { [weak self] processedText in
+                            guard let self, let component = self.component, let processedText else {
+                                return
+                            }
+                            component.externalState.isProcessing = false
+                            component.externalState.result = (result.language, processedText.text, processedText.diffRanges)
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        })
+                    }
+                case .fix:
+                    component.externalState.isProcessing = true
+                    self.processDisposable = (component.context.engine.messages.composeAIMessage(
+                        text: component.inputText,
+                        mode: .proofread
+                    ) |> deliverOnMainQueue).startStrict(next: { [weak self] processedText in
+                        guard let self, let component = self.component, let processedText else {
+                            return
+                        }
+                        component.externalState.isProcessing = false
+                        component.externalState.result = (result.language, processedText.text, processedText.diffRanges)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        }
+                    })
+                }
+            }
+        }
+
+        func update(component: TextProcessingTranslateContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
+            if component.externalState.sourceLanguage == nil {
+                languageRecognizer.processString(component.inputText.text)
+                let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
+                languageRecognizer.reset()
+                        
+                let filteredLanguages = hypotheses.sorted(by: { $0.value > $1.value })
+                if let first = filteredLanguages.first {
+                    component.externalState.sourceLanguage = normalizeTranslationLanguage(first.key.rawValue)
+                } else {
+                    component.externalState.sourceLanguage = "en"
+                }
+            }
+            
+            self.component = component
+            self.state = state
+            
+            if component.externalState.result == nil {
+                switch component.mode {
+                case .translate:
+                    var languageCode = component.strings.baseLanguageCode
+                    let rawSuffix = "-raw"
+                    if languageCode.hasSuffix(rawSuffix) {
+                        languageCode = String(languageCode.dropLast(rawSuffix.count))
+                    }
+                    component.externalState.result = (languageCode, nil, [])
+                    self.beginTranslationIfNecessary(reset: false)
+                case .stylize:
+                    component.externalState.result = ("", component.inputText, [])
+                case .fix:
+                    component.externalState.result = ("", nil, [])
+                    self.beginTranslationIfNecessary(reset: false)
+                }
+            }
+            
+            var contentHeight: CGFloat = 0.0
+            
+            let sideInset: CGFloat = 16.0
+            let topInset: CGFloat = 17.0
+            let bottomInset: CGFloat = 14.0
+            let blockSpacing: CGFloat = 30.0
+            
+            let fromPrefix: String
+            let toPrefix: String
+            var toTitle: String
+            switch component.mode {
+            case .translate:
+                fromPrefix = "From"
+                toPrefix = "To"
+                toTitle = localizedLanguageName(strings: component.strings, language: component.externalState.result?.language ?? "")
+                if component.externalState.style != .neutral {
+                    toTitle.append(" (")
+                    let styleName: String
+                    switch component.externalState.style {
+                    case .neutral:
+                        styleName = ""
+                    case .formal:
+                        styleName = "Formal"
+                    case .short:
+                        styleName = "Short"
+                    case .savage:
+                        styleName = "Savage"
+                    case .biblical:
+                        styleName = "Biblical"
+                    case .posh:
+                        styleName = "Posh"
+                    }
+                    toTitle.append(styleName)
+                    toTitle.append(")")
+                }
+            case .stylize, .fix:
+                fromPrefix = "Original:"
+                toPrefix = "Result"
+                toTitle = ""
+            }
+            
+            contentHeight += topInset
+            if case .stylize = component.mode {
+                let sourceTextSize = self.sourceText.update(
+                    transition: transition,
+                    component: AnyComponent(TextProcessingStyleSelectionComponent(
+                        theme: component.theme,
+                        strings: component.strings,
+                        selectedStyle: component.externalState.style,
+                        updateStyle: { [weak self] style in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            if component.externalState.style != style {
+                                component.externalState.style = style
+                                
+                                if let result = component.externalState.result {
+                                    component.externalState.result = (result.language, nil, [])
+                                    if !self.isUpdating {
+                                        self.state?.updated(transition: .spring(duration: 0.4))
+                                    }
+                                    self.beginTranslationIfNecessary(reset: true)
+                                }
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 46.0)
+                )
+                let sourceTextFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: sourceTextSize)
+                contentHeight += sourceTextSize.height
+                
+                if let sourceTextView = self.sourceText.view {
+                    if sourceTextView.superview == nil {
+                        self.sourceText.parentState = state
+                        self.addSubview(sourceTextView)
+                    }
+                    transition.setFrame(view: sourceTextView, frame: sourceTextFrame)
+                }
+            } else {
+                let sourceTextSize = self.sourceText.update(
+                    transition: transition,
+                    component: AnyComponent(TextProcessingTextAreaComponent(
+                        context: component.context,
+                        theme: component.theme,
+                        titlePrefix: fromPrefix,
+                        title: localizedLanguageName(strings: component.strings, language: component.externalState.sourceLanguage ?? ""),
+                        titleAction: nil,
+                        isExpanded: (
+                            component.externalState.isSourceTextExpanded,
+                            { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.externalState.isSourceTextExpanded = !component.externalState.isSourceTextExpanded
+                                if !self.isUpdating {
+                                    self.state?.updated(transition: .spring(duration: 0.4))
+                                }
+                            }
+                        ),
+                        copyAction: nil,
+                        emojify: nil,
+                        text: component.inputText,
+                        textCorrectionRanges: []
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                )
+                
+                let sourceTextFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: sourceTextSize)
+                contentHeight += sourceTextSize.height
+                
+                if let sourceTextView = self.sourceText.view {
+                    if sourceTextView.superview == nil {
+                        self.sourceText.parentState = state
+                        self.addSubview(sourceTextView)
+                    }
+                    transition.setFrame(view: sourceTextView, frame: sourceTextFrame)
+                }
+            }
+            
+            let targetTextSize = self.targetText.update(
+                transition: transition,
+                component: AnyComponent(TextProcessingTextAreaComponent(
+                    context: component.context,
+                    theme: component.theme,
+                    titlePrefix: toPrefix,
+                    title: toTitle,
+                    titleAction: component.mode == .translate ? { [weak self] sourceView in
+                        guard let self, let component = self.component, let result = component.externalState.result else {
+                            return
+                        }
+                        component.displayLanguageSelectionMenu(sourceView, result.language, component.externalState.style, true, { [weak self] language, style in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            if component.externalState.result?.language != language || component.externalState.style != style {
+                                component.externalState.result = (language, nil, [])
+                                component.externalState.style = style
+                                
+                                if !self.isUpdating {
+                                    self.state?.updated(transition: .spring(duration: 0.4))
+                                }
+                                self.beginTranslationIfNecessary(reset: true)
+                            }
+                        })
+                    } : nil,
+                    isExpanded: nil,
+                    copyAction: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.copyAction()
+                    },
+                    emojify: (component.mode == .translate || component.mode == .stylize) ? (
+                        component.externalState.emojify,
+                        { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.externalState.emojify = !component.externalState.emojify
+                            
+                            self.beginTranslationIfNecessary(reset: true)
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        }
+                    ) : nil,
+                    text: component.externalState.result?.text,
+                    textCorrectionRanges: component.externalState.result?.textCorrectionRanges ?? []
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+            )
+            
+            transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight + floorToScreenPixels((blockSpacing - UIScreenPixel) * 0.5) - 1.0), size: CGSize(width: availableSize.width - sideInset * 2.0, height: UIScreenPixel)))
+            self.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
+            
+            contentHeight += blockSpacing
+            let targetTextFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: targetTextSize)
+            contentHeight += targetTextSize.height
+            
+            if let targetTextView = self.targetText.view {
+                if targetTextView.superview == nil {
+                    self.targetText.parentState = state
+                    self.addSubview(targetTextView)
+                }
+                transition.setFrame(view: targetTextView, frame: targetTextFrame)
+            }
+
+            contentHeight += bottomInset
+
+            return CGSize(width: availableSize.width, height: contentHeight)
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
