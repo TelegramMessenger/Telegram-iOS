@@ -171,7 +171,7 @@ public func standaloneSendEnqueueMessages(
         }
         
         if let replyToMessageId = message.replyToMessageId {
-            attributes.append(ReplyMessageAttribute(messageId: replyToMessageId, threadMessageId: nil, quote: nil, isQuote: false, todoItemId: nil))
+            attributes.append(ReplyMessageAttribute(messageId: replyToMessageId, threadMessageId: nil, quote: nil, isQuote: false, innerSubject: nil))
         }
         if let forwardOptions = message.forwardOptions {
             attributes.append(ForwardOptionsMessageAttribute(hideNames: forwardOptions.hideNames, hideCaptions: forwardOptions.hideCaptions))
@@ -339,6 +339,7 @@ private func sendUploadedMessageContent(
             }
             var replyToStoryId: StoryId?
             var replyTodoItemId: Int32?
+            var replyPollOption: Buffer?
             var scheduleTime: Int32?
             var scheduleRepeatPeriod: Int32?
             var videoTimestamp: Int32?
@@ -352,7 +353,14 @@ private func sendUploadedMessageContent(
             for attribute in attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute {
                     replyMessageId = replyAttribute.messageId.id
-                    replyTodoItemId = replyAttribute.todoItemId
+                    switch replyAttribute.innerSubject {
+                    case let .todoItem(todoItemId):
+                        replyTodoItemId = todoItemId
+                    case let .pollOption(pollOption):
+                        replyPollOption = Buffer(data: pollOption)
+                    default:
+                        break
+                    }
                 } else if let attribute = attribute as? ReplyStoryAttribute {
                     replyToStoryId = attribute.storyId
                 } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
@@ -445,7 +453,10 @@ private func sendUploadedMessageContent(
                         if let _ = replyTodoItemId {
                             replyFlags |= 1 << 6
                         }
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: nil))
+                        if let _ = replyPollOption {
+                            replyFlags |= 1 << 7
+                        }
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption))
                     } else if let replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0
@@ -479,7 +490,10 @@ private func sendUploadedMessageContent(
                         if let _ = replyTodoItemId {
                             replyFlags |= 1 << 6
                         }
-                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: nil))
+                        if let _ = replyPollOption {
+                            replyFlags |= 1 << 7
+                        }
+                        replyTo = .inputReplyToMessage(.init(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil, monoforumPeerId: monoforumPeerId, todoItemId: replyTodoItemId, pollOption: replyPollOption))
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
                             flags |= 1 << 0

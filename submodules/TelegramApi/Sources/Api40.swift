@@ -2772,12 +2772,12 @@ public extension Api.functions.bots {
     }
 }
 public extension Api.functions.bots {
-    static func getRequestedWebViewButton(bot: Api.InputUser, requestId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.KeyboardButton>) {
+    static func getRequestedWebViewButton(bot: Api.InputUser, webappReqId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.KeyboardButton>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1295431495)
+        buffer.appendInt32(-1088047117)
         bot.serialize(buffer, true)
-        serializeString(requestId, buffer: buffer, boxed: false)
-        return (FunctionDescription(name: "bots.getRequestedWebViewButton", parameters: [("bot", String(describing: bot)), ("requestId", String(describing: requestId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.KeyboardButton? in
+        serializeString(webappReqId, buffer: buffer, boxed: false)
+        return (FunctionDescription(name: "bots.getRequestedWebViewButton", parameters: [("bot", String(describing: bot)), ("webappReqId", String(describing: webappReqId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.KeyboardButton? in
             let reader = BufferReader(buffer)
             var result: Api.KeyboardButton?
             if let signature = reader.readInt32() {
@@ -5496,9 +5496,9 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func composeMessageWithAI(flags: Int32, text: Api.TextWithEntities, translateToLang: String?, changeTone: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.TextWithEntities>) {
+    static func composeMessageWithAI(flags: Int32, text: Api.TextWithEntities, translateToLang: String?, changeTone: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ComposedMessageWithAI>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1080571914)
+        buffer.appendInt32(-45978882)
         serializeInt32(flags, buffer: buffer, boxed: false)
         text.serialize(buffer, true)
         if Int(flags) & Int(1 << 1) != 0 {
@@ -5507,11 +5507,11 @@ public extension Api.functions.messages {
         if Int(flags) & Int(1 << 2) != 0 {
             serializeString(changeTone!, buffer: buffer, boxed: false)
         }
-        return (FunctionDescription(name: "messages.composeMessageWithAI", parameters: [("flags", String(describing: flags)), ("text", String(describing: text)), ("translateToLang", String(describing: translateToLang)), ("changeTone", String(describing: changeTone))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.TextWithEntities? in
+        return (FunctionDescription(name: "messages.composeMessageWithAI", parameters: [("flags", String(describing: flags)), ("text", String(describing: text)), ("translateToLang", String(describing: translateToLang)), ("changeTone", String(describing: changeTone))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ComposedMessageWithAI? in
             let reader = BufferReader(buffer)
-            var result: Api.TextWithEntities?
+            var result: Api.messages.ComposedMessageWithAI?
             if let signature = reader.readInt32() {
-                result = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+                result = Api.parse(reader, signature: signature) as? Api.messages.ComposedMessageWithAI
             }
             return result
         })
@@ -8887,16 +8887,16 @@ public extension Api.functions.messages {
     }
 }
 public extension Api.functions.messages {
-    static func sendBotRequestedPeer(flags: Int32, peer: Api.InputPeer, msgId: Int32?, requestId: String?, buttonId: Int32, requestedPeers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func sendBotRequestedPeer(flags: Int32, peer: Api.InputPeer, msgId: Int32?, webappReqId: String?, buttonId: Int32, requestedPeers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1662773304)
+        buffer.appendInt32(1818030759)
         serializeInt32(flags, buffer: buffer, boxed: false)
         peer.serialize(buffer, true)
         if Int(flags) & Int(1 << 0) != 0 {
             serializeInt32(msgId!, buffer: buffer, boxed: false)
         }
         if Int(flags) & Int(1 << 1) != 0 {
-            serializeString(requestId!, buffer: buffer, boxed: false)
+            serializeString(webappReqId!, buffer: buffer, boxed: false)
         }
         serializeInt32(buttonId, buffer: buffer, boxed: false)
         buffer.appendInt32(481674261)
@@ -8904,7 +8904,7 @@ public extension Api.functions.messages {
         for item in requestedPeers {
             item.serialize(buffer, true)
         }
-        return (FunctionDescription(name: "messages.sendBotRequestedPeer", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("requestId", String(describing: requestId)), ("buttonId", String(describing: buttonId)), ("requestedPeers", String(describing: requestedPeers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        return (FunctionDescription(name: "messages.sendBotRequestedPeer", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("webappReqId", String(describing: webappReqId)), ("buttonId", String(describing: buttonId)), ("requestedPeers", String(describing: requestedPeers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {

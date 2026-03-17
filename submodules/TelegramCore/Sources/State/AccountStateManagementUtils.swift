@@ -1694,7 +1694,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         if let replyToMsgHeader {
                             switch replyToMsgHeader {
                             case let .inputReplyToMessage(inputReplyToMessageData):
-                                let (replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset, monoforumPeerId, todoItemId) = (inputReplyToMessageData.replyToMsgId, inputReplyToMessageData.topMsgId, inputReplyToMessageData.replyToPeerId, inputReplyToMessageData.quoteText, inputReplyToMessageData.quoteEntities, inputReplyToMessageData.quoteOffset, inputReplyToMessageData.monoforumPeerId, inputReplyToMessageData.todoItemId)
+                                let (replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset, monoforumPeerId, todoItemId, pollOption) = (inputReplyToMessageData.replyToMsgId, inputReplyToMessageData.topMsgId, inputReplyToMessageData.replyToPeerId, inputReplyToMessageData.quoteText, inputReplyToMessageData.quoteEntities, inputReplyToMessageData.quoteOffset, inputReplyToMessageData.monoforumPeerId, inputReplyToMessageData.todoItemId, inputReplyToMessageData.pollOption)
                                 let _ = topMsgId
                                 let _ = monoforumPeerId
                                 
@@ -1733,10 +1733,17 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                     break
                                 }
                                 
+                                var innerSubject: EngineMessageReplyInnerSubject?
+                                if let todoItemId {
+                                    innerSubject = .todoItem(todoItemId)
+                                } else if let pollOption {
+                                    innerSubject = .pollOption(pollOption.makeData())
+                                }
+                                
                                 replySubject = EngineMessageReplySubject(
                                     messageId: MessageId(peerId: parsedReplyToPeerId ?? peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId),
                                     quote: quote,
-                                    todoItemId: todoItemId
+                                    innerSubject: innerSubject
                                 )
                             case .inputReplyToStory:
                                 break

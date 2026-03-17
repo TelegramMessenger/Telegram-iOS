@@ -179,8 +179,9 @@ public extension MessageTags {
     static let unseenReaction = MessageTags(rawValue: 1 << 11)
     static let voice = MessageTags(rawValue: 1 << 12)
     static let roundVideo = MessageTags(rawValue: 1 << 13)
+    static let polls = MessageTags(rawValue: 1 << 14)
     
-    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video, .pinned, .unseenReaction, .voice, .roundVideo]
+    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video, .pinned, .unseenReaction, .voice, .roundVideo, .polls]
 }
 
 public extension GlobalMessageTags {

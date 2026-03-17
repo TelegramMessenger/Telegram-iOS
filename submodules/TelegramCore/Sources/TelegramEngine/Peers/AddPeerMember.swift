@@ -369,7 +369,7 @@ func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId:
                 if let _ = requestId {
                     flags |= (1 << 1)
                 }
-                let signal = account.network.request(Api.functions.messages.sendBotRequestedPeer(flags: flags, peer: inputPeer, msgId: msgId, requestId: requestId, buttonId: buttonId, requestedPeers: inputRequestedPeers))
+                let signal = account.network.request(Api.functions.messages.sendBotRequestedPeer(flags: flags, peer: inputPeer, msgId: msgId, webappReqId: requestId, buttonId: buttonId, requestedPeers: inputRequestedPeers))
                 |> mapError { error -> SendBotRequestedPeerError in
                     return .generic
                 }
@@ -436,7 +436,7 @@ func _internal_getRequestedWebViewButton(account: Account, botId: PeerId, reques
         guard let inputUser = inputUser else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.bots.getRequestedWebViewButton(bot: inputUser, requestId: requestId))
+        return account.network.request(Api.functions.bots.getRequestedWebViewButton(bot: inputUser, webappReqId: requestId))
         |> mapError { _ -> GetRequestedWebViewButtonError in
             return .generic
         }

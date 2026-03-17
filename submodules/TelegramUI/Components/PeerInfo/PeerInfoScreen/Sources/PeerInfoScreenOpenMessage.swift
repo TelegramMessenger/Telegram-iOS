@@ -123,7 +123,7 @@ extension PeerInfoScreenNode {
                             strongSelf.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: strongSelf.context, account: strongSelf.context.account, signals: signals!)
                             |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
                                 if let strongSelf = self {
-                                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.peerId, messages: messages.map { $0.message.withUpdatedReplyToMessageId(.init(messageId: message.id, quote: nil, todoItemId: nil)) }).startStandalone()
+                                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.peerId, messages: messages.map { $0.message.withUpdatedReplyToMessageId(.init(messageId: message.id, quote: nil, innerSubject: nil)) }).startStandalone()
                                 }
                             }))
                         }

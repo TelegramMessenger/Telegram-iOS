@@ -995,6 +995,70 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum ComposedMessageWithAI: TypeConstructorDescription {
+        public class Cons_composedMessageWithAI: TypeConstructorDescription {
+            public var flags: Int32
+            public var resultText: Api.TextWithEntities
+            public var diffText: Api.TextWithEntities?
+            public init(flags: Int32, resultText: Api.TextWithEntities, diffText: Api.TextWithEntities?) {
+                self.flags = flags
+                self.resultText = resultText
+                self.diffText = diffText
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("composedMessageWithAI", [("flags", self.flags as Any), ("resultText", self.resultText as Any), ("diffText", self.diffText as Any)])
+            }
+        }
+        case composedMessageWithAI(Cons_composedMessageWithAI)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .composedMessageWithAI(let _data):
+                if boxed {
+                    buffer.appendInt32(-1864913414)
+                }
+                serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                _data.resultText.serialize(buffer, true)
+                if Int(_data.flags) & Int(1 << 0) != 0 {
+                    _data.diffText!.serialize(buffer, true)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .composedMessageWithAI(let _data):
+                return ("composedMessageWithAI", [("flags", _data.flags as Any), ("resultText", _data.resultText as Any), ("diffText", _data.diffText as Any)])
+            }
+        }
+
+        public static func parse_composedMessageWithAI(_ reader: BufferReader) -> ComposedMessageWithAI? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
+            var _3: Api.TextWithEntities?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+                }
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.ComposedMessageWithAI.composedMessageWithAI(Cons_composedMessageWithAI(flags: _1!, resultText: _2!, diffText: _3))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.messages {
     enum DhConfig: TypeConstructorDescription {
         public class Cons_dhConfig: TypeConstructorDescription {
             public var g: Int32
@@ -1664,115 +1728,6 @@ public extension Api.messages {
         }
         public static func parse_emojiGroupsNotModified(_ reader: BufferReader) -> EmojiGroups? {
             return Api.messages.EmojiGroups.emojiGroupsNotModified
-        }
-    }
-}
-public extension Api.messages {
-    enum ExportedChatInvite: TypeConstructorDescription {
-        public class Cons_exportedChatInvite: TypeConstructorDescription {
-            public var invite: Api.ExportedChatInvite
-            public var users: [Api.User]
-            public init(invite: Api.ExportedChatInvite, users: [Api.User]) {
-                self.invite = invite
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedChatInvite", [("invite", self.invite as Any), ("users", self.users as Any)])
-            }
-        }
-        public class Cons_exportedChatInviteReplaced: TypeConstructorDescription {
-            public var invite: Api.ExportedChatInvite
-            public var newInvite: Api.ExportedChatInvite
-            public var users: [Api.User]
-            public init(invite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite, users: [Api.User]) {
-                self.invite = invite
-                self.newInvite = newInvite
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedChatInviteReplaced", [("invite", self.invite as Any), ("newInvite", self.newInvite as Any), ("users", self.users as Any)])
-            }
-        }
-        case exportedChatInvite(Cons_exportedChatInvite)
-        case exportedChatInviteReplaced(Cons_exportedChatInviteReplaced)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .exportedChatInvite(let _data):
-                if boxed {
-                    buffer.appendInt32(410107472)
-                }
-                _data.invite.serialize(buffer, true)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            case .exportedChatInviteReplaced(let _data):
-                if boxed {
-                    buffer.appendInt32(572915951)
-                }
-                _data.invite.serialize(buffer, true)
-                _data.newInvite.serialize(buffer, true)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .exportedChatInvite(let _data):
-                return ("exportedChatInvite", [("invite", _data.invite as Any), ("users", _data.users as Any)])
-            case .exportedChatInviteReplaced(let _data):
-                return ("exportedChatInviteReplaced", [("invite", _data.invite as Any), ("newInvite", _data.newInvite as Any), ("users", _data.users as Any)])
-            }
-        }
-
-        public static func parse_exportedChatInvite(_ reader: BufferReader) -> ExportedChatInvite? {
-            var _1: Api.ExportedChatInvite?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.ExportedChatInvite.exportedChatInvite(Cons_exportedChatInvite(invite: _1!, users: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_exportedChatInviteReplaced(_ reader: BufferReader) -> ExportedChatInvite? {
-            var _1: Api.ExportedChatInvite?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-            }
-            var _2: Api.ExportedChatInvite?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.ExportedChatInvite.exportedChatInviteReplaced(Cons_exportedChatInviteReplaced(invite: _1!, newInvite: _2!, users: _3!))
-            }
-            else {
-                return nil
-            }
         }
     }
 }

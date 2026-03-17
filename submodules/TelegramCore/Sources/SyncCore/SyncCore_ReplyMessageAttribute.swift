@@ -7,18 +7,18 @@ public class ReplyMessageAttribute: MessageAttribute {
     public let threadMessageId: MessageId?
     public let quote: EngineMessageReplyQuote?
     public let isQuote: Bool
-    public let todoItemId: Int32?
+    public let innerSubject: EngineMessageReplyInnerSubject?
     
     public var associatedMessageIds: [MessageId] {
         return [self.messageId]
     }
     
-    public init(messageId: MessageId, threadMessageId: MessageId?, quote: EngineMessageReplyQuote?, isQuote: Bool, todoItemId: Int32?) {
+    public init(messageId: MessageId, threadMessageId: MessageId?, quote: EngineMessageReplyQuote?, isQuote: Bool, innerSubject: EngineMessageReplyInnerSubject?) {
         self.messageId = messageId
         self.threadMessageId = threadMessageId
         self.quote = quote
         self.isQuote = isQuote
-        self.todoItemId = todoItemId
+        self.innerSubject = innerSubject
     }
     
     required public init(decoder: PostboxDecoder) {
@@ -33,7 +33,13 @@ public class ReplyMessageAttribute: MessageAttribute {
         
         self.quote = decoder.decodeCodable(EngineMessageReplyQuote.self, forKey: "qu")
         self.isQuote = decoder.decodeBoolForKey("iq", orElse: self.quote != nil)
-        self.todoItemId = decoder.decodeOptionalInt32ForKey("tid")
+        if let todoItemId = decoder.decodeOptionalInt32ForKey("tid") {
+            self.innerSubject = .todoItem(todoItemId)
+        } else if let pollOptionId = decoder.decodeDataForKey("pid") {
+            self.innerSubject = .pollOption(pollOptionId)
+        } else {
+            self.innerSubject = nil
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -51,10 +57,16 @@ public class ReplyMessageAttribute: MessageAttribute {
             encoder.encodeNil(forKey: "qu")
         }
         encoder.encodeBool(self.isQuote, forKey: "iq")
-        if let todoItemId = self.todoItemId {
+        switch self.innerSubject {
+        case let .todoItem(todoItemId):
             encoder.encodeInt32(todoItemId, forKey: "tid")
-        } else {
+            encoder.encodeNil(forKey: "pid")
+        case let .pollOption(pollOptionId):
+            encoder.encodeData(pollOptionId, forKey: "pid")
             encoder.encodeNil(forKey: "tid")
+        default:
+            encoder.encodeNil(forKey: "tid")
+            encoder.encodeNil(forKey: "pid")
         }
     }
 }

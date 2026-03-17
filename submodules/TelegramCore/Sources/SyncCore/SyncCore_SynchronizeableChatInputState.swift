@@ -40,7 +40,7 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
             self.replySubject = replySubject
         } else {
             if let messageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "m.p"), let messageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "m.n"), let messageIdId = try? container.decodeIfPresent(Int32.self, forKey: "m.i") {
-                self.replySubject = EngineMessageReplySubject(messageId: MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId), quote: nil, todoItemId: nil)
+                self.replySubject = EngineMessageReplySubject(messageId: MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId), quote: nil, innerSubject: nil)
             } else {
                 self.replySubject = nil
             }
