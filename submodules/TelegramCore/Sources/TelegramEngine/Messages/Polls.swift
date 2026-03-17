@@ -4,6 +4,30 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
+private func cloudMediaToInputMedia(_ media: Media) -> Api.InputMedia? {
+    if let image = media as? TelegramMediaImage,
+       let reference = image.reference,
+       case let .cloud(id, accessHash, maybeFileReference) = reference {
+        let fileReference = maybeFileReference ?? Data()
+        return .inputMediaPhoto(.init(flags: 0, id: .inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference))), ttlSeconds: nil, video: nil))
+    } else if let file = media as? TelegramMediaFile,
+              let resource = file.resource as? CloudDocumentMediaResource {
+        return .inputMediaDocument(.init(flags: 0, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))), videoCover: nil, videoTimestamp: nil, ttlSeconds: nil, query: nil))
+    } else if let map = media as? TelegramMediaMap {
+        var geoFlags: Int32 = 0
+        if map.accuracyRadius != nil {
+            geoFlags |= 1 << 0
+        }
+        let geoPoint = Api.InputGeoPoint.inputGeoPoint(.init(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })))
+        if let venue = map.venue {
+            return .inputMediaVenue(.init(geoPoint: geoPoint, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? ""))
+        } else {
+            return .inputMediaGeoPoint(.init(geoPoint: geoPoint))
+        }
+    }
+    return nil
+}
+
 
 public enum RequestMessageSelectPollOptionError {
     case generic
@@ -93,13 +117,15 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
     }
 }
 
-func _internal_addPollAnswer(account: Account, messageId: MessageId, answerText: String, answerEntities: [MessageTextEntity]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
+func _internal_addPollAnswer(account: Account, messageId: MessageId, text: String, entities: [MessageTextEntity], opaqueIdentifier: Data, mediaReference: AnyMediaReference?) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
     |> castError(RequestMessageSelectPollOptionError.self)
     |> mapToSignal { peer in
         if let inputPeer = apiInputPeer(peer) {
-            let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: 0, text: .textWithEntities(.init(text: answerText, entities: apiEntitiesFromMessageTextEntities(answerEntities, associatedPeers: SimpleDictionary()))), option: Buffer(data: Data()), media: nil))
+            let inputMedia = mediaReference.flatMap { cloudMediaToInputMedia($0.media) }
+            let flags: Int32 = inputMedia != nil ? (1 << 0) : 0
+            let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: flags, text: .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary()))), option: Buffer(data: opaqueIdentifier), media: inputMedia))
             return account.network.request(Api.functions.messages.addPollAnswer(peer: inputPeer, msgId: messageId.id, answer: apiAnswer))
             |> mapError { _ -> RequestMessageSelectPollOptionError in
                 return .generic

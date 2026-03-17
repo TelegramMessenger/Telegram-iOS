@@ -2567,7 +2567,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.historyNode.scrollToEndOfHistory()
             }
         }
-        self.historyNode.scrollEnabled = !self.isScrollingLockedAtTop
+        self.historyNode.scrollEnabled = !(self.isScrollingLockedAtTop || self.chatPresentationInterfaceState.focusedPollAddOptionMessageId != nil)
         
         let navigateButtonsSize = self.navigateButtons.updateLayout(transition: transition)
         var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 8.0, y: layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 20.0), size: navigateButtonsSize)
@@ -3014,10 +3014,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var showNavigateButtons = true
-        if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+        if let _ = self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
             showNavigateButtons = false
         }
-        if chatPresentationInterfaceState.displayHistoryFilterAsList {
+        if self.chatPresentationInterfaceState.displayHistoryFilterAsList {
+            showNavigateButtons = false
+        }
+        if let _ = self.chatPresentationInterfaceState.focusedPollAddOptionMessageId {
             showNavigateButtons = false
         }
         
@@ -3536,6 +3539,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 updatedInputFocus = true
             }
             
+            if self.chatPresentationInterfaceState.focusedPollAddOptionMessageId != chatPresentationInterfaceState.focusedPollAddOptionMessageId, let messageId = chatPresentationInterfaceState.focusedPollAddOptionMessageId {
+                self.controller?.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams()), scrollPosition: .top(-18.0))
+            }
+            
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
@@ -3650,7 +3657,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.controller?.customNavigationBarContentNode = nil
                 self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
             }
-            
+                        
             var waitForKeyboardLayout = false
             if let textView = self.textInputPanelNode?.textInputNode?.textView {
                 let updatedInputView = self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState)

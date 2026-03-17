@@ -237,6 +237,9 @@ private final class AttachButtonComponent: CombinedComponent {
             case .emoji:
                 name = "Emoji"
                 imageName = "Chat/Attach Menu/Reply"
+            case .audio:
+                name = "Audio"
+                imageName = "Chat/Attach Menu/Audio"
             case let .app(bot):
                 botPeer = bot.peer
                 name = bot.shortName
@@ -1839,6 +1842,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 accessibilityTitle = "Sticker"
             case .emoji:
                 accessibilityTitle = "Emoji"
+            case .audio:
+                accessibilityTitle = "Audio"
             case let .app(bot):
                 accessibilityTitle = bot.shortName
             case .standalone:

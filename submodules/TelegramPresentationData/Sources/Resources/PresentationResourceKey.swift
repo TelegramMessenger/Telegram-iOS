@@ -344,6 +344,8 @@ public enum PresentationResourceKey: Int32 {
     case chatReplyServiceBackgroundTemplateImage
     
     case chatBubbleCloseIcon
+    case chatAttachedContentCloseIcon
+    case chatPollAddIcon
     
     case chatEmptyStateStarIcon
     case chatPlaceholderStarIcon

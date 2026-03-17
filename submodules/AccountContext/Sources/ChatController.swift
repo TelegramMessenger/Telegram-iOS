@@ -1143,6 +1143,7 @@ public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func matchesMessage(id: MessageId) -> Bool
     func cancelInsertionAnimations()
     func messages() -> [Message]
+    func updateHiddenMedia()
 }
 
 public final class ChatControllerNavigationData: CustomViewControllerNavigationData {

@@ -132,6 +132,10 @@ extension ChatControllerImpl {
             availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
         }
         
+        if "".isEmpty {
+            availableButtons.insert(.audio, at: max(0, availableButtons.count - 1))
+        }
+        
         let presentationData = self.presentationData
         
         var isScheduledMessages = false
@@ -303,6 +307,7 @@ extension ChatControllerImpl {
             
             let currentMediaController = Atomic<MediaPickerScreenImpl?>(value: nil)
             let currentFilesController = Atomic<AttachmentFileControllerImpl?>(value: nil)
+            let currentAudioController = Atomic<AttachmentFileControllerImpl?>(value: nil)
             let currentLocationController = Atomic<LocationPickerController?>(value: nil)
             
             strongSelf.canReadHistory.set(false)
@@ -368,7 +373,7 @@ extension ChatControllerImpl {
                         controller.prepareForReuse()
                         return true
                     }
-                    let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
+                    let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, audio: false, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
                         self?.presentFileGallery()
                     }, presentFiles: { [weak self, weak attachmentController] in
@@ -387,6 +392,34 @@ extension ChatControllerImpl {
                     })
                     if let controller = controller as? AttachmentFileControllerImpl {
                         let _ = currentFilesController.swap(controller)
+                        completion(controller, controller.mediaPickerContext)
+                    }
+                    return true
+                case .audio:
+                    strongSelf.controllerNavigationDisposable.set(nil)
+                    let existingController = currentAudioController.with { $0 }
+                    if let controller = existingController {
+                        completion(controller, controller.mediaPickerContext)
+                        controller.prepareForReuse()
+                        return true
+                    }
+                    let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, audio: true, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
+                        attachmentController?.dismiss(animated: true)
+                        self?.presentFileGallery()
+                    }, presentFiles: { [weak self, weak attachmentController] in
+                        attachmentController?.dismiss(animated: true)
+                        self?.presentICloudFileGallery()
+                    }, presentDocumentScanner: nil, send: { [weak self] mediaReference in
+                        guard let self else {
+                            return
+                        }
+                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                        self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                            self?.sendMessages([message], media: true, postpone: postpone)
+                        })
+                    })
+                    if let controller = controller as? AttachmentFileControllerImpl {
+                        let _ = currentAudioController.swap(controller)
                         completion(controller, controller.mediaPickerContext)
                     }
                     return true

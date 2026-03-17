@@ -22,6 +22,8 @@ import TextNodeWithEntities
 import ShimmeringLinkNode
 import EmojiTextAttachmentView
 import ChatControllerInteraction
+import SemanticStatusNode
+import ComposePollScreen
 
 private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
     let timestamp: Double
@@ -470,6 +472,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private let resultBarNode: ASImageNode
     private let resultBarIconNode: ASImageNode
     private var mediaNode: TransformImageNode?
+    private var mediaVideoIconNode: ASImageNode?
     private var stickerMediaLayer: InlineStickerItemLayer?
     private var mediaHidden = false
     private(set) var mediaFrame: CGRect?
@@ -595,11 +598,15 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                     })
 
-                    strongSelf.separatorNode.alpha = 1.0
-                    strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    let separatorAlpha: CGFloat = strongSelf.currentResult == nil ? 1.0 : 0.0
+                    strongSelf.separatorNode.alpha = separatorAlpha
+                    strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: separatorAlpha, duration: 0.3)
 
-                    strongSelf.previousOptionNode?.separatorNode.alpha = 1.0
-                    strongSelf.previousOptionNode?.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    if let previousOptionNode = strongSelf.previousOptionNode {
+                        let previousSeparatorAlpha: CGFloat = previousOptionNode.currentResult == nil ? 1.0 : 0.0
+                        previousOptionNode.separatorNode.alpha = previousSeparatorAlpha
+                        previousOptionNode.separatorNode.layer.animateAlpha(from: 0.0, to: previousSeparatorAlpha, duration: 0.3)
+                    }
                 }
             }
         }
@@ -716,6 +723,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private func updateMediaVisibility() {
         let alpha: CGFloat = self.mediaHidden ? 0.0 : 1.0
         self.mediaNode?.alpha = alpha
+        self.mediaVideoIconNode?.alpha = alpha
         self.stickerMediaLayer?.opacity = Float(alpha)
     }
 
@@ -1105,6 +1113,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
 
                         let mediaReference = AnyMediaReference.standalone(media: media)
                         var imageSize = ChatMessagePollOptionNode.mediaSize
+                        var isVideo = false
                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                             imageSize = largest.dimensions.cgSize.aspectFilled(ChatMessagePollOptionNode.mediaSize)
                             if previousMedia?.isEqual(to: media) != true, let photoReference = mediaReference.concrete(TelegramMediaImage.self) {
@@ -1121,6 +1130,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                                     mediaNode.setSignal(chatMessageVideo(postbox: context.account.postbox, userLocation: .other, videoReference: fileReference))
                                 }
                             }
+                            isVideo = file.isVideo
                         } else if let map = media as? TelegramMediaMap {
                             if previousMedia?.isEqual(to: media) != true {
                                 let resource = MapSnapshotMediaResource(latitude: map.latitude, longitude: map.longitude, width: Int32(ChatMessagePollOptionNode.mediaSize.width), height: Int32(ChatMessagePollOptionNode.mediaSize.height))
@@ -1137,9 +1147,35 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                             emptyColor: incoming ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                         ))
                         apply()
+
+                        if isVideo {
+                            let mediaVideoIconNode: ASImageNode
+                            if let current = node.mediaVideoIconNode {
+                                mediaVideoIconNode = current
+                            } else {
+                                let current = ASImageNode()
+                                current.displaysAsynchronously = false
+                                current.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PlayButton"), color: .white)
+                                node.mediaVideoIconNode = current
+                                node.containerNode.addSubnode(current)
+                                mediaVideoIconNode = current
+                            }
+                            mediaVideoIconNode.frame = CGRect(origin: CGPoint(x: mediaFrame.midX - 15.0, y: mediaFrame.midY - 15.0), size: CGSize(width: 30.0, height: 30.0))
+                            mediaVideoIconNode.isHidden = false
+                        } else if let mediaVideoIconNode = node.mediaVideoIconNode {
+                            mediaVideoIconNode.removeFromSupernode()
+                            node.mediaVideoIconNode = nil
+                        }
                     } else if let mediaNode = node.mediaNode {
                         mediaNode.removeFromSupernode()
                         node.mediaNode = nil
+                        if let mediaVideoIconNode = node.mediaVideoIconNode {
+                            mediaVideoIconNode.removeFromSupernode()
+                            node.mediaVideoIconNode = nil
+                        }
+                    } else if let mediaVideoIconNode = node.mediaVideoIconNode {
+                        mediaVideoIconNode.removeFromSupernode()
+                        node.mediaVideoIconNode = nil
                     }
                     node.setMediaHidden(node.mediaHidden)
 
@@ -1244,6 +1280,404 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
 
 private let labelsFont = Font.regular(14.0)
 
+private final class ChatMessagePollAddOptionNode: ASDisplayNode, ASEditableTextNodeDelegate {
+    struct Attachment: Equatable {
+        let media: AnyMediaReference?
+        let progress: CGFloat?
+    }
+    
+    private let textNode: EditableTextNode
+    private let placeholderNode: ImmediateTextNode
+    private let measureTextNode: ImmediateTextNode
+    let separatorNode: ASDisplayNode
+    private let imageButton: HighlightTrackingButtonNode
+    
+    private var attachButton: HighlightableButtonNode?
+    private var imageNode: TransformImageNode?
+    private var animationLayer: InlineStickerItemLayer?
+    private var statusNode: SemanticStatusNode?
+    private var videoIconView: UIImageView?
+    private var appliedMedia: AnyMediaReference?
+    
+    private var currentFont: UIFont?
+    private var currentTextColor: UIColor?
+    private var currentPlaceholderColor: UIColor?
+    private var currentKeyboardAppearance: UIKeyboardAppearance?
+    private var currentTintColor: UIColor?
+    private var currentMeasuredHeight: CGFloat?
+    private var currentTextWidth: CGFloat = 0.0
+    private var currentAttachment: Attachment?
+    private var currentContext: AccountContext?
+    private var currentTheme: PresentationTheme?
+    
+    var textUpdated: ((String) -> Void)?
+    var heightUpdated: (() -> Void)?
+    var focusUpdated: ((Bool) -> Void)?
+    var attachPressed: (() -> Void)?
+    var mediaPressed: (() -> Void)?
+    
+    static let characterLimit = 100
+    private static let leftInset: CGFloat = 50.0
+    private static let rightInset: CGFloat = 10.0
+    private static let verticalInset: CGFloat = 15.0
+    private static let minHeight: CGFloat = 52.0
+    private static let attachmentInset: CGFloat = 52.0
+    
+    override init() {
+        self.textNode = EditableTextNode()
+        self.textNode.clipsToBounds = false
+        self.textNode.textView.clipsToBounds = false
+        self.textNode.textContainerInset = UIEdgeInsets()
+        
+        self.placeholderNode = ImmediateTextNode()
+        self.placeholderNode.isUserInteractionEnabled = false
+        self.placeholderNode.maximumNumberOfLines = 1
+        
+        self.measureTextNode = ImmediateTextNode()
+        self.measureTextNode.maximumNumberOfLines = 0
+        self.measureTextNode.isUserInteractionEnabled = false
+        self.measureTextNode.lineSpacing = 0.1
+        
+        self.separatorNode = ASDisplayNode()
+        self.imageButton = HighlightTrackingButtonNode()
+        
+        super.init()
+        
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.placeholderNode)
+        self.addSubnode(self.separatorNode)
+        
+        self.imageButton.isExclusiveTouch = true
+        self.imageButton.addTarget(self, action: #selector(self.imageButtonPressed), forControlEvents: .touchUpInside)
+        
+        self.textNode.delegate = self
+        self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
+    }
+    
+    var text: String {
+        return self.textNode.attributedText?.string ?? ""
+    }
+    
+    func setText(_ text: String) {
+        guard let font = self.currentFont, let textColor = self.currentTextColor else {
+            return
+        }
+        self.textNode.attributedText = NSAttributedString(string: text, font: font, textColor: textColor)
+        self.placeholderNode.isHidden = !text.isEmpty
+        self.updateMeasuredHeight(notify: true)
+    }
+    
+    func resignInput() {
+        _ = self.textNode.resignFirstResponder()
+    }
+    
+    private func updateMeasuredHeight(notify: Bool) {
+        guard let font = self.currentFont else {
+            return
+        }
+        var measureText = self.text
+        if measureText.hasSuffix("\n") || measureText.isEmpty {
+            measureText += "|"
+        }
+        self.measureTextNode.attributedText = NSAttributedString(string: measureText, font: font, textColor: .black)
+        let measureSize = self.measureTextNode.updateLayout(CGSize(width: self.currentTextWidth, height: .greatestFiniteMagnitude))
+        if let currentMeasuredHeight = self.currentMeasuredHeight, abs(currentMeasuredHeight - measureSize.height) > 0.1 {
+            self.currentMeasuredHeight = measureSize.height
+            if notify {
+                self.heightUpdated?()
+            }
+        } else {
+            self.currentMeasuredHeight = measureSize.height
+        }
+    }
+    
+    @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
+        let text = editableTextNode.textView.text ?? ""
+        self.placeholderNode.isHidden = !text.isEmpty
+        self.textUpdated?(text)
+        self.updateMeasuredHeight(notify: true)
+    }
+    
+    func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
+        self.focusUpdated?(true)
+    }
+    
+    func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+        self.focusUpdated?(false)
+    }
+    
+    func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        let currentText = editableTextNode.textView.text ?? ""
+        let updatedText = (currentText as NSString).replacingCharacters(in: range, with: text)
+        if updatedText.count > ChatMessagePollAddOptionNode.characterLimit {
+            guard let font = self.currentFont, let textColor = self.currentTextColor else {
+                return false
+            }
+            let limitedText = String(updatedText.prefix(ChatMessagePollAddOptionNode.characterLimit))
+            self.textNode.attributedText = NSAttributedString(string: limitedText, font: font, textColor: textColor)
+            self.placeholderNode.isHidden = !limitedText.isEmpty
+            self.textUpdated?(limitedText)
+            self.updateMeasuredHeight(notify: true)
+            return false
+        }
+        return true
+    }
+    
+    static func asyncLayout(_ maybeNode: ChatMessagePollAddOptionNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ incoming: Bool, _ text: String, _ attachment: Attachment?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollAddOptionNode))) {
+        return { context, presentationData, strings, incoming, text, attachment, constrainedWidth in
+            let font = presentationData.messageFont
+            let textColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
+            let secondaryTextColor = incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
+            let placeholderColor = (incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor).withMultipliedAlpha(0.7)
+            let tintColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar
+            
+            let hasAttachmentPreview = attachment?.media != nil
+            let displayAttachButton = !text.isEmpty && !hasAttachmentPreview
+            let constrainedWidth = min(268.0, constrainedWidth)
+            let textWidth = max(1.0, constrainedWidth - ChatMessagePollAddOptionNode.leftInset - ChatMessagePollAddOptionNode.rightInset - (hasAttachmentPreview || displayAttachButton ? ChatMessagePollAddOptionNode.attachmentInset : 0.0))
+            
+            var measureText = text
+            if measureText.hasSuffix("\n") || measureText.isEmpty {
+                measureText += "|"
+            }
+            let measureTextNode = ImmediateTextNode()
+            measureTextNode.maximumNumberOfLines = 0
+            measureTextNode.attributedText = NSAttributedString(string: measureText, font: font, textColor: .black)
+            let measureSize = measureTextNode.updateLayout(CGSize(width: textWidth, height: .greatestFiniteMagnitude))
+            let contentHeight = max(ChatMessagePollAddOptionNode.minHeight, measureSize.height + ChatMessagePollAddOptionNode.verticalInset * 2.0)
+            
+            return (constrainedWidth, { width in
+                let size = CGSize(width: width, height: contentHeight)
+                return (size, { _, _ in
+                    let node = maybeNode ?? ChatMessagePollAddOptionNode()
+                    let keyboardAppearance = presentationData.theme.theme.rootController.keyboardColor.keyboardAppearance
+                    
+                    if node.currentFont !== font || !(node.currentTextColor?.isEqual(textColor) ?? false) {
+                        node.currentFont = font
+                        node.currentTextColor = textColor
+                        node.textNode.typingAttributes = [
+                            NSAttributedString.Key.font.rawValue: font,
+                            NSAttributedString.Key.foregroundColor.rawValue: textColor
+                        ]
+                    }
+                    if node.currentKeyboardAppearance != keyboardAppearance {
+                        node.currentKeyboardAppearance = keyboardAppearance
+                        node.textNode.keyboardAppearance = keyboardAppearance
+                    }
+                    if !(node.currentTintColor?.isEqual(tintColor) ?? false) {
+                        node.currentTintColor = tintColor
+                        node.textNode.tintColor = tintColor
+                    }
+                    if !(node.currentPlaceholderColor?.isEqual(placeholderColor) ?? false) || node.placeholderNode.attributedText?.string != strings.CreatePoll_AddOption {
+                        node.currentPlaceholderColor = placeholderColor
+                        node.placeholderNode.attributedText = NSAttributedString(string: strings.CreatePoll_AddOption, font: font, textColor: placeholderColor)
+                    }
+                    
+                    if node.text != text, let textColor = node.currentTextColor, let font = node.currentFont {
+                        node.textNode.attributedText = NSAttributedString(string: text, font: font, textColor: textColor)
+                    }
+                    node.placeholderNode.isHidden = !text.isEmpty
+                    node.currentTextWidth = textWidth
+                    node.currentMeasuredHeight = measureSize.height
+                    node.currentAttachment = attachment
+                    node.currentContext = context
+                    node.currentTheme = presentationData.theme.theme
+                    
+                    let placeholderSize = node.placeholderNode.updateLayout(CGSize(width: textWidth, height: .greatestFiniteMagnitude))
+                    node.placeholderNode.frame = CGRect(origin: CGPoint(x: ChatMessagePollAddOptionNode.leftInset, y: ChatMessagePollAddOptionNode.verticalInset), size: placeholderSize)
+                    node.textNode.frame = CGRect(origin: CGPoint(x: ChatMessagePollAddOptionNode.leftInset, y: ChatMessagePollAddOptionNode.verticalInset), size: CGSize(width: textWidth, height: max(contentHeight, 1000.0)))
+                    node.separatorNode.frame = CGRect(origin: CGPoint(x: ChatMessagePollAddOptionNode.leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - ChatMessagePollAddOptionNode.leftInset - 10.0, height: UIScreenPixel))
+                    node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
+                    node.updateAttachmentLayout(size: size, tintColor: secondaryTextColor)
+                    
+                    return node
+                })
+            })
+        }
+    }
+    
+    @objc private func imageButtonPressed() {
+        self.mediaPressed?()
+    }
+    
+    @objc private func attachButtonPressed() {
+        self.attachPressed?()
+    }
+    
+    private func updateAttachmentLayout(size: CGSize, tintColor: UIColor) {
+        let imageNodeSize = CGSize(width: 40.0, height: 40.0)
+        let imageNodeFrame = CGRect(origin: CGPoint(x: size.width - 10.0 - imageNodeSize.width, y: size.height - ChatMessagePollAddOptionNode.minHeight + floor((ChatMessagePollAddOptionNode.minHeight - imageNodeSize.height) * 0.5)), size: imageNodeSize)
+        
+        let shouldShowAttachButton = self.currentAttachment?.media == nil && !self.text.isEmpty
+        if shouldShowAttachButton {
+            let attachButton: HighlightableButtonNode
+            if let current = self.attachButton {
+                attachButton = current
+            } else {
+                let current = HighlightableButtonNode()
+                current.addTarget(self, action: #selector(self.attachButtonPressed), forControlEvents: .touchUpInside)
+                current.setImage(generateTintedImage(image: UIImage(bundleImageName: "Item List/AttachIcon"), color: tintColor), for: .normal)
+                self.attachButton = current
+                self.addSubnode(current)
+                attachButton = current
+            }
+            attachButton.frame = CGRect(origin: CGPoint(x: size.width - 15.0 - 24.0, y: size.height - ChatMessagePollAddOptionNode.minHeight + floor((ChatMessagePollAddOptionNode.minHeight - 24.0) * 0.5)), size: CGSize(width: 24.0, height: 24.0))
+            attachButton.isHidden = false
+        } else if let attachButton = self.attachButton {
+            self.attachButton = nil
+            attachButton.removeFromSupernode()
+        }
+        
+        var isSticker = false
+        if let attachment = self.currentAttachment, let file = attachment.media?.media as? TelegramMediaFile, (file.isSticker || file.isCustomEmoji), let context = self.currentContext, let theme = self.currentTheme {
+            isSticker = true
+            let animationLayer: InlineStickerItemLayer
+            if let current = self.animationLayer {
+                animationLayer = current
+            } else {
+                let current = InlineStickerItemLayer(
+                    context: context,
+                    userLocation: .other,
+                    attemptSynchronousLoad: true,
+                    emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file, custom: nil, enableAnimation: true),
+                    file: file,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    unique: false,
+                    placeholderColor: theme.list.mediaPlaceholderColor,
+                    pointSize: CGSize(width: imageNodeSize.width * 2.0, height: imageNodeSize.height * 2.0),
+                    dynamicColor: nil,
+                    loopCount: nil
+                )
+                current.isVisibleForAnimations = true
+                self.animationLayer = current
+                self.layer.addSublayer(current)
+                animationLayer = current
+            }
+            animationLayer.frame = imageNodeFrame
+            self.appliedMedia = attachment.media
+            
+            if self.imageButton.supernode == nil {
+                self.addSubnode(self.imageButton)
+            }
+            self.imageButton.frame = imageNodeFrame
+            self.imageButton.isHidden = false
+        } else if let animationLayer = self.animationLayer {
+            self.animationLayer = nil
+            animationLayer.removeFromSuperlayer()
+        }
+        
+        if let attachment = self.currentAttachment, let media = attachment.media, !isSticker, let context = self.currentContext, let theme = self.currentTheme {
+            let imageNode: TransformImageNode
+            if let current = self.imageNode {
+                imageNode = current
+            } else {
+                let current = TransformImageNode()
+                current.isUserInteractionEnabled = false
+                self.imageNode = current
+                self.addSubnode(current)
+                imageNode = current
+            }
+            
+            imageNode.frame = imageNodeFrame
+            
+            var imageSize = imageNodeSize
+            let updateMedia = self.appliedMedia != media
+            if updateMedia {
+                self.appliedMedia = media
+            }
+            
+            var isVideo = false
+            if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations), let photoReference = media.concrete(TelegramMediaImage.self) {
+                imageSize = largest.dimensions.cgSize.aspectFilled(imageNodeSize)
+                if updateMedia {
+                    imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: .other, photoReference: photoReference))
+                }
+            } else if let file = media.media as? TelegramMediaFile, let fileReference = media.concrete(TelegramMediaFile.self) {
+                if let dimensions = file.dimensions {
+                    imageSize = dimensions.cgSize.aspectFilled(imageNodeSize)
+                }
+                if file.mimeType.hasPrefix("image/") {
+                    if updateMedia {
+                        imageNode.setSignal(instantPageImageFile(account: context.account, userLocation: .other, fileReference: fileReference, fetched: true))
+                    }
+                } else if file.isVideo {
+                    if updateMedia {
+                        imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, userLocation: .other, videoReference: fileReference))
+                    }
+                    isVideo = true
+                }
+            } else if let map = media.media as? TelegramMediaMap {
+                imageSize = imageNodeSize
+                if updateMedia {
+                    let resource = MapSnapshotMediaResource(latitude: map.latitude, longitude: map.longitude, width: Int32(imageSize.width), height: Int32(imageSize.height))
+                    imageNode.setSignal(chatMapSnapshotImage(engine: context.engine, resource: resource))
+                }
+            }
+            
+            let apply = imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 10.0), imageSize: imageSize, boundingSize: imageNodeSize, intrinsicInsets: UIEdgeInsets(), emptyColor: theme.list.mediaPlaceholderColor))
+            apply()
+            
+            if self.imageButton.supernode == nil {
+                self.addSubnode(self.imageButton)
+            }
+            self.imageButton.frame = imageNodeFrame
+            self.imageButton.isHidden = false
+            
+            if let progress = attachment.progress {
+                let statusNode: SemanticStatusNode
+                if let current = self.statusNode {
+                    statusNode = current
+                } else {
+                    let current = SemanticStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.5), foregroundNodeColor: .white)
+                    self.statusNode = current
+                    self.addSubnode(current)
+                    statusNode = current
+                }
+                statusNode.frame = imageNodeFrame.insetBy(dx: 6.0, dy: 6.0)
+                statusNode.transitionToState(.progress(value: max(0.027, min(1.0, progress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 2.0), animateRotation: false), updateCutout: false)
+                isVideo = false
+            } else if let statusNode = self.statusNode {
+                self.statusNode = nil
+                statusNode.removeFromSupernode()
+            }
+            
+            if isVideo {
+                let videoIconView: UIImageView
+                if let current = self.videoIconView {
+                    videoIconView = current
+                } else {
+                    let current = UIImageView(image: UIImage(bundleImageName: "Media Gallery/PlayButton")?.withRenderingMode(.alwaysTemplate))
+                    current.tintColor = .white
+                    self.view.addSubview(current)
+                    self.videoIconView = current
+                    videoIconView = current
+                }
+                videoIconView.frame = CGRect(origin: CGPoint(x: imageNodeFrame.midX - 15.0, y: imageNodeFrame.midY - 15.0), size: CGSize(width: 30.0, height: 30.0))
+                videoIconView.isHidden = false
+            } else if let videoIconView = self.videoIconView {
+                self.videoIconView = nil
+                videoIconView.removeFromSuperview()
+            }
+        } else {
+            self.appliedMedia = nil
+            if let imageNode = self.imageNode {
+                self.imageNode = nil
+                imageNode.removeFromSupernode()
+            }
+            if let statusNode = self.statusNode {
+                self.statusNode = nil
+                statusNode.removeFromSupernode()
+            }
+            if let videoIconView = self.videoIconView {
+                self.videoIconView = nil
+                videoIconView.removeFromSuperview()
+            }
+            self.imageButton.removeFromSupernode()
+        }
+    }
+}
+
 private final class SolutionButtonNode: HighlightableButtonNode {
     private let pressed: () -> Void
     let iconNode: ASImageNode
@@ -1282,6 +1716,26 @@ private final class SolutionButtonNode: HighlightableButtonNode {
 }
 
 public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
+    private final class AttachedMedia {
+        var media: AnyMediaReference
+        var progress: CGFloat?
+        var uploadDisposable: Disposable?
+        
+        init(media: AnyMediaReference) {
+            self.media = media
+        }
+        
+        var requiresUpload: Bool {
+            if let image = self.media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations), !(largest.resource is CloudPhotoSizeMediaResource) {
+                return true
+            }
+            if let file = self.media.media as? TelegramMediaFile, !(file.resource is CloudDocumentMediaResource) {
+                return true
+            }
+            return false
+        }
+    }
+    
     private let textNode: TextNodeWithEntities
     private let typeNode: TextNode
     private var timerNode: PollBubbleTimerNode?
@@ -1291,15 +1745,22 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private var deadlineTimerNode: DeadlineTimerNode?
     private let buttonSubmitInactiveTextNode: TextNode
     private let buttonSubmitActiveTextNode: TextNode
+    private let buttonSaveTextNode: TextNode
     private let buttonViewResultsTextNode: TextNode
     private let buttonNode: HighlightableButtonNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var optionNodes: [ChatMessagePollOptionNode] = []
+    private var addOptionNode: ChatMessagePollAddOptionNode?
     private var shuffledOptionOpaqueIdentifiers: [Data]?
     private var shimmeringNodes: [ShimmeringLinkNode] = []
     private let temporaryHiddenMediaDisposable = MetaDisposable()
 
     private var poll: TelegramMediaPoll?
+    private var currentNewOptionText: String = ""
+    private var currentNewOptionMedia: AttachedMedia?
+    private var pendingNewOptionSubmissionText: String?
+    private var pendingNewOptionOptionCount: Int?
+    private var pollOptionsDisabledForAddOptionFocusMessageId: MessageId?
     
     private var isPreviewingResults = false
 
@@ -1369,6 +1830,12 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonSubmitActiveTextNode.contentsScale = UIScreenScale
         self.buttonSubmitActiveTextNode.displaysAsynchronously = false
 
+        self.buttonSaveTextNode = TextNode()
+        self.buttonSaveTextNode.isUserInteractionEnabled = false
+        self.buttonSaveTextNode.contentMode = .topLeft
+        self.buttonSaveTextNode.contentsScale = UIScreenScale
+        self.buttonSaveTextNode.displaysAsynchronously = false
+
         self.buttonViewResultsTextNode = TextNode()
         self.buttonViewResultsTextNode.isUserInteractionEnabled = false
         self.buttonViewResultsTextNode.contentMode = .topLeft
@@ -1388,6 +1855,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.solutionButtonNode)
         self.addSubnode(self.buttonSubmitInactiveTextNode)
         self.addSubnode(self.buttonSubmitActiveTextNode)
+        self.addSubnode(self.buttonSaveTextNode)
         self.addSubnode(self.buttonViewResultsTextNode)
         self.addSubnode(self.buttonNode)
 
@@ -1404,11 +1872,15 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 if highlighted {
                     strongSelf.buttonSubmitActiveTextNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonSubmitActiveTextNode.alpha = 0.6
+                    strongSelf.buttonSaveTextNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.buttonSaveTextNode.alpha = 0.6
                     strongSelf.buttonViewResultsTextNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonViewResultsTextNode.alpha = 0.6
                 } else {
                     strongSelf.buttonSubmitActiveTextNode.alpha = 1.0
                     strongSelf.buttonSubmitActiveTextNode.layer.animateAlpha(from: 0.6, to: 1.0, duration: 0.3)
+                    strongSelf.buttonSaveTextNode.alpha = 1.0
+                    strongSelf.buttonSaveTextNode.layer.animateAlpha(from: 0.6, to: 1.0, duration: 0.3)
                     strongSelf.buttonViewResultsTextNode.alpha = 1.0
                     strongSelf.buttonViewResultsTextNode.layer.animateAlpha(from: 0.6, to: 1.0, duration: 0.3)
                 }
@@ -1423,6 +1895,11 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    deinit {
+        self.currentNewOptionMedia?.uploadDisposable?.dispose()
+        self.temporaryHiddenMediaDisposable.dispose()
+    }
 
     private func optionNodeForMedia(_ media: Media) -> ChatMessagePollOptionNode? {
         for optionNode in self.optionNodes {
@@ -1433,99 +1910,299 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
 
+    private var trimmedNewOptionText: String {
+        return self.currentNewOptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
-    private func openOptionMedia(_ media: Media) {
+    private func updateNewOptionText(_ text: String) {
+        self.currentNewOptionText = text
+        self.requestNewOptionLayoutUpdate()
+        self.updateSelection()
+    }
+
+    private func updatePollOptionsInteraction(animated: Bool) {
         guard let item = self.item else {
             return
         }
+        let arePollOptionsDisabled = self.pollOptionsDisabledForAddOptionFocusMessageId == item.message.id
+        let isPollActionInProgress = item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] != nil
 
-        let _ = item
+        for optionNode in self.optionNodes {
+            let alpha: CGFloat = arePollOptionsDisabled ? 0.5 : 1.0
+            if animated && abs(optionNode.alpha - alpha) > 0.001 {
+                optionNode.layer.animateAlpha(from: optionNode.alpha, to: alpha, duration: 0.2)
+            }
+            optionNode.alpha = alpha
+            optionNode.isUserInteractionEnabled = !arePollOptionsDisabled && !isPollActionInProgress
+        }
+    }
 
-//        let message = item.message.withUpdatedMedia([media])
-//        let _ = item.context.sharedContext.openChatMessage(OpenChatMessageParams(
-//            context: item.context,
-//            updatedPresentationData: item.controllerInteraction.updatedPresentationData,
-//            chatLocation: item.chatLocation,
-//            chatFilterTag: nil,
-//            chatLocationContextHolder: nil,
-//            message: message,
-//            mediaIndex: 0,
-//            standalone: true,
-//            reverseMessageGalleryOrder: false,
-//            navigationController: item.controllerInteraction.navigationController(),
-//            dismissInput: {
-//                item.controllerInteraction.dismissTextInput()
-//            },
-//            present: { controller, arguments, presentationContextType in
-//                switch presentationContextType {
-//                case .current:
-//                    item.controllerInteraction.presentControllerInCurrent(controller, arguments)
-//                default:
-//                    item.controllerInteraction.presentController(controller, arguments)
-//                }
-//            },
-//            transitionNode: { [weak self] messageId, media, adjustRect in
-//                guard let self else {
-//                    return nil
-//                }
-//                return self.transitionNode(messageId: messageId, media: media, adjustRect: adjustRect)
-//            },
-//            addToTransitionSurface: { [weak self] view in
-//                guard let self else {
-//                    return
-//                }
-//                if let itemNode = self.itemNode as? ASDisplayNode, let superview = itemNode.view.superview {
-//                    superview.addSubview(view)
-//                } else {
-//                    self.view.addSubview(view)
-//                }
-//            },
-//            openUrl: { url in
-//                item.controllerInteraction.openUrl(.init(url: url, concealed: false, progress: Promise()))
-//            },
-//            openPeer: { peer, navigation in
-//                item.controllerInteraction.openPeer(EnginePeer(peer), navigation, nil, .default)
-//            },
-//            callPeer: { peerId, isVideo in
-//                item.controllerInteraction.callPeer(peerId, isVideo)
-//            },
-//            openConferenceCall: { message in
-//                item.controllerInteraction.openConferenceCall(message)
-//            },
-//            enqueueMessage: { _ in
-//            },
-//            sendSticker: { fileReference, sourceNode, sourceRect in
-//                item.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
-//            },
-//            sendEmoji: { text, attribute in
-//                item.controllerInteraction.sendEmoji(text, attribute, false)
-//            },
-//            setupTemporaryHiddenMedia: { [weak self] signal, _, galleryMedia in
-//                guard let self else {
-//                    return
-//                }
-//                self.temporaryHiddenMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { [weak self] entry in
-//                    guard let self, let item = self.item, let itemNode = self.itemNode as? ChatMessageItemView else {
-//                        return
-//                    }
-//                    var hiddenMedia = item.controllerInteraction.hiddenMedia
-//                    if entry != nil {
-//                        hiddenMedia[item.message.id] = [galleryMedia]
-//                    } else {
-//                        hiddenMedia.removeValue(forKey: item.message.id)
-//                    }
-//                    item.controllerInteraction.hiddenMedia = hiddenMedia
-//                    itemNode.updateHiddenMedia()
-//                }))
-//            },
-//            chatAvatarHiddenMedia: { _, _ in
-//            },
-//            gallerySource: .standaloneMessage(message, 0)
-//        ))
+    private func setPollOptionsDisabledForAddOptionFocus(messageId: MessageId?, animated: Bool) {
+        self.pollOptionsDisabledForAddOptionFocusMessageId = messageId
+        self.updatePollOptionsInteraction(animated: animated)
+    }
+
+    private func requestNewOptionLayoutUpdate() {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+    }
+
+    private func updateFocusedPollAddOptionMessageId(_ messageId: MessageId?) {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.updatePresentationState { state in
+            if state.focusedPollAddOptionMessageId == messageId {
+                return state
+            }
+            return state.updatedFocusedPollAddOptionMessageId(messageId)
+        }
+    }
+
+    private func clearFocusedPollAddOptionMessageIdIfNeeded(for messageId: MessageId) {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.updatePresentationState { state in
+            if state.focusedPollAddOptionMessageId != messageId {
+                return state
+            }
+            return state.updatedFocusedPollAddOptionMessageId(nil)
+        }
+    }
+
+    private func clearOpenAnswerInput() {
+        if let item = self.item {
+            self.clearFocusedPollAddOptionMessageIdIfNeeded(for: item.message.id)
+        }
+        self.currentNewOptionText = ""
+        self.currentNewOptionMedia?.uploadDisposable?.dispose()
+        self.currentNewOptionMedia = nil
+        self.pendingNewOptionSubmissionText = nil
+        self.pendingNewOptionOptionCount = nil
+        self.addOptionNode?.setText("")
+        self.addOptionNode?.resignInput()
+        self.requestNewOptionLayoutUpdate()
+    }
+
+    private func openOpenAnswerAttachment() {
+        guard let item = self.item else {
+            return
+        }
+        
+        if let media = self.currentNewOptionMedia {
+            media.uploadDisposable?.dispose()
+            self.currentNewOptionMedia = nil
+            self.requestNewOptionLayoutUpdate()
+            self.updateSelection()
+            return
+        }
+        
+        item.controllerInteraction.dismissTextInput()
+        
+        presentPollAttachmentScreen(
+            context: item.context,
+            updatedPresentationData: item.controllerInteraction.updatedPresentationData,
+            availableButtons: [.gallery, .sticker, .emoji, .location],
+            present: { [weak item] controller in
+                item?.controllerInteraction.navigationController()?.pushViewController(controller)
+            },
+            completion: { [weak self] media in
+                guard let self else {
+                    return
+                }
+                let attachedMedia = AttachedMedia(media: media)
+                self.currentNewOptionMedia = attachedMedia
+                self.uploadAttachedMediaIfNeeded(attachedMedia)
+                self.requestNewOptionLayoutUpdate()
+                self.updateSelection()
+            }
+        )
+    }
+    
+    private func uploadAttachedMediaIfNeeded(_ media: AttachedMedia) {
+        guard let item = self.item, media.requiresUpload, media.uploadDisposable == nil else {
+            return
+        }
+        media.progress = 0.0
+        
+        if let image = media.media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+            media.uploadDisposable = (standaloneUploadedImage(
+                postbox: item.context.account.postbox,
+                network: item.context.account.network,
+                peerId: item.message.id.peerId,
+                text: "",
+                source: .resource(media.media.resourceReference(largest.resource)),
+                dimensions: largest.dimensions
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                switch value {
+                case let .progress(progress):
+                    media.progress = CGFloat(progress)
+                case let .result(result):
+                    if case let .media(resultMedia) = result {
+                        if let resultImage = resultMedia.media as? TelegramMediaImage, let resultLargest = largestImageRepresentation(resultImage.representations) {
+                            item.context.account.postbox.mediaBox.moveResourceData(from: largest.resource.id, to: resultLargest.resource.id, synchronous: true)
+                        }
+                        media.media = resultMedia
+                        media.progress = nil
+                        media.uploadDisposable?.dispose()
+                        media.uploadDisposable = nil
+                    }
+                }
+                self.requestNewOptionLayoutUpdate()
+                self.updateSelection()
+            })
+        } else if let file = media.media.media as? TelegramMediaFile {
+            media.uploadDisposable = (standaloneUploadedFile(
+                postbox: item.context.account.postbox,
+                network: item.context.account.network,
+                peerId: item.message.id.peerId,
+                text: "",
+                source: .resource(media.media.resourceReference(file.resource)),
+                thumbnailData: file.immediateThumbnailData,
+                mimeType: file.mimeType,
+                attributes: file.attributes,
+                hintFileIsLarge: false
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                switch value {
+                case let .progress(progress):
+                    media.progress = CGFloat(progress)
+                case let .result(result):
+                    if case let .media(resultMedia) = result {
+                        if let resultFile = resultMedia.media as? TelegramMediaFile {
+                            item.context.account.postbox.mediaBox.moveResourceData(from: file.resource.id, to: resultFile.resource.id, synchronous: true)
+                        }
+                        media.media = resultMedia
+                        media.progress = nil
+                        media.uploadDisposable?.dispose()
+                        media.uploadDisposable = nil
+                    }
+                }
+                self.requestNewOptionLayoutUpdate()
+                self.updateSelection()
+            })
+        }
+    }
+
+    private func openOptionMedia(option: TelegramMediaPollOption) {
+        guard let item = self.item, let media = option.media else {
+            return
+        }
+
+        var attributes = item.message.attributes
+        attributes.removeAll(where: { $0 is TextEntitiesMessageAttribute })
+        if !option.entities.isEmpty {
+            attributes.append(TextEntitiesMessageAttribute(entities: option.entities))
+        }
+        
+        let message = item.message.withUpdatedText(option.text).withUpdatedAttributes(attributes).withUpdatedMedia([media])
+        let _ = item.context.sharedContext.openChatMessage(OpenChatMessageParams(
+            context: item.context,
+            updatedPresentationData: item.controllerInteraction.updatedPresentationData,
+            chatLocation: item.chatLocation,
+            chatFilterTag: nil,
+            chatLocationContextHolder: nil,
+            message: message,
+            mediaIndex: 0,
+            standalone: true,
+            reverseMessageGalleryOrder: false,
+            navigationController: item.controllerInteraction.navigationController(),
+            dismissInput: {
+                item.controllerInteraction.dismissTextInput()
+            },
+            present: { controller, arguments, presentationContextType in
+                switch presentationContextType {
+                case .current:
+                    item.controllerInteraction.presentControllerInCurrent(controller, arguments)
+                default:
+                    item.controllerInteraction.presentController(controller, arguments)
+                }
+            },
+            transitionNode: { [weak self] messageId, media, adjustRect in
+                guard let self else {
+                    return nil
+                }
+                return self.transitionNode(messageId: messageId, media: media, adjustRect: adjustRect)
+            },
+            addToTransitionSurface: { [weak self] view in
+                guard let self else {
+                    return
+                }
+                if let superview = self.itemNode?.view.superview?.superview?.superview {
+                    superview.addSubview(view)
+                } else {
+                    self.view.addSubview(view)
+                }
+            },
+            openUrl: { url in
+                item.controllerInteraction.openUrl(.init(url: url, concealed: false, progress: Promise()))
+            },
+            openPeer: { peer, navigation in
+                item.controllerInteraction.openPeer(EnginePeer(peer), navigation, nil, .default)
+            },
+            callPeer: { peerId, isVideo in
+                item.controllerInteraction.callPeer(peerId, isVideo)
+            },
+            openConferenceCall: { message in
+                item.controllerInteraction.openConferenceCall(message)
+            },
+            enqueueMessage: { _ in
+            },
+            sendSticker: { fileReference, sourceNode, sourceRect in
+                item.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
+            },
+            sendEmoji: { text, attribute in
+                item.controllerInteraction.sendEmoji(text, attribute, false)
+            },
+            setupTemporaryHiddenMedia: { [weak self] signal, _, galleryMedia in
+                guard let self else {
+                    return
+                }
+                self.temporaryHiddenMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { [weak self] entry in
+                    guard let self, let item = self.item else {
+                        return
+                    }
+                    var hiddenMedia = item.controllerInteraction.hiddenMedia
+                    if entry != nil {
+                        hiddenMedia[item.message.id] = [galleryMedia]
+                    } else {
+                        hiddenMedia.removeValue(forKey: item.message.id)
+                    }
+                    item.controllerInteraction.hiddenMedia = hiddenMedia
+                    self.itemNode?.updateHiddenMedia()
+                }))
+            },
+            chatAvatarHiddenMedia: { _, _ in
+            },
+            gallerySource: .standaloneMessage(message, 0)
+        ))
     }
 
     @objc private func buttonPressed() {
         guard let item = self.item, let poll = self.poll, let pollId = poll.id else {
+            return
+        }
+
+        let trimmedNewOptionText = self.trimmedNewOptionText
+        if !trimmedNewOptionText.isEmpty {
+            if let media = self.currentNewOptionMedia, media.requiresUpload {
+                return
+            }
+            self.pendingNewOptionSubmissionText = trimmedNewOptionText
+            self.pendingNewOptionOptionCount = poll.options.count
+
+            let optionData = "\(poll.options.count)".data(using: .utf8)!
+            item.controllerInteraction.requestAddMessagePollOption(item.message.id, trimmedNewOptionText, [], optionData, self.currentNewOptionMedia?.media)
             return
         }
 
@@ -1577,10 +2254,15 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         let makeVotersLayout = TextNode.asyncLayout(self.votersNode)
         let makeSubmitInactiveTextLayout = TextNode.asyncLayout(self.buttonSubmitInactiveTextNode)
         let makeSubmitActiveTextLayout = TextNode.asyncLayout(self.buttonSubmitActiveTextNode)
+        let makeSaveTextLayout = TextNode.asyncLayout(self.buttonSaveTextNode)
         let makeViewResultsTextLayout = TextNode.asyncLayout(self.buttonViewResultsTextNode)
         let statusLayout = self.statusNode.asyncLayout()
+        let makeAddOptionLayout = ChatMessagePollAddOptionNode.asyncLayout(self.addOptionNode)
 
         var previousPoll: TelegramMediaPoll?
+        let currentNewOptionText = self.currentNewOptionText
+        let currentNewOptionAttachment = ChatMessagePollAddOptionNode.Attachment(media: self.currentNewOptionMedia?.media, progress: self.currentNewOptionMedia?.progress)
+        let pendingOpenAnswerSubmissionText = self.pendingNewOptionSubmissionText
         if let item = self.item {
             for media in item.message.media {
                 if let media = media as? TelegramMediaPoll {
@@ -1851,6 +2533,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                 let (buttonSubmitInactiveTextLayout, buttonSubmitInactiveTextApply) = makeSubmitInactiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.accentControlDisabledColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 let (buttonSubmitActiveTextLayout, buttonSubmitActiveTextApply) = makeSubmitActiveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.MessagePoll_SubmitVote, font: Font.regular(17.0), textColor: messageTheme.polls.bar), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
+                let (buttonSaveTextLayout, buttonSaveTextApply) = makeSaveTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Common_Save, font: Font.regular(17.0), textColor: messageTheme.polls.bar), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
                 let (buttonViewResultsTextLayout, buttonViewResultsTextApply) = makeViewResultsTextLayout(TextNodeLayoutArguments(attributedString: viewResultsAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets))
 
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
@@ -1864,6 +2547,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 boundingSize.width = max(boundingSize.width, typeLayout.size.width)
                 boundingSize.width = max(boundingSize.width, votersLayout.size.width + 4.0/* + (statusSize?.width ?? 0.0)*/)
                 boundingSize.width = max(boundingSize.width, buttonSubmitInactiveTextLayout.size.width + 4.0/* + (statusSize?.width ?? 0.0)*/)
+                boundingSize.width = max(boundingSize.width, buttonSaveTextLayout.size.width + 4.0/* + (statusSize?.width ?? 0.0)*/)
                 boundingSize.width = max(boundingSize.width, buttonViewResultsTextLayout.size.width + 4.0/* + (statusSize?.width ?? 0.0)*/)
 
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
@@ -1881,6 +2565,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 }
 
                 var pollOptionsFinalizeLayouts: [(CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)] = []
+                var addOptionFinalizeLayout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollAddOptionNode))?
                 var orderedPollOptions: [(Int, TelegramMediaPollOption)] = []
                 var shuffledOptionOpaqueIdentifiers: [Data]?
                 if let poll = poll {
@@ -1962,6 +2647,13 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
                         pollOptionsFinalizeLayouts.append(result.1)
                     }
+
+                    let displayAddOption = poll.openAnswers && !isClosed && !hasVoted && poll.pollId.namespace == Namespaces.Media.CloudPoll
+                    if displayAddOption {
+                        let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
+                        boundingSize.width = max(boundingSize.width, addOptionResult.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
+                        addOptionFinalizeLayout = addOptionResult.layout
+                    }
                 }
 
                 boundingSize.width = max(boundingSize.width, min(270.0, constrainedSize.width))
@@ -1989,6 +2681,13 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         resultSize.height += result.0.height
                         optionNodesSizesAndApply.append(result)
                     }
+                    var addOptionSizeAndApply: (CGSize, (Bool, Bool) -> ChatMessagePollAddOptionNode)?
+                    if let addOptionFinalizeLayout {
+                        let result = addOptionFinalizeLayout(boundingWidth - layoutConstants.bubble.borderInset * 2.0)
+                        resultSize.width = max(resultSize.width, result.0.width + layoutConstants.bubble.borderInset * 2.0)
+                        resultSize.height += result.0.height
+                        addOptionSizeAndApply = result
+                    }
 
                     let optionsVotersSpacing: CGFloat = 11.0
                     let optionsButtonSpacing: CGFloat = 9.0
@@ -2014,6 +2713,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                     let buttonSubmitInactiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitInactiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitInactiveTextLayout.size)
                     let buttonSubmitActiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitActiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitActiveTextLayout.size)
+                    let buttonSaveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSaveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSaveTextLayout.size)
                     let buttonViewResultsTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonViewResultsTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonViewResultsTextLayout.size)
 
                     return (resultSize, { [weak self] animation, synchronousLoad, _ in
@@ -2090,7 +2790,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                                 verticalOffset += size.height
                                 updatedOptionNodes.append(optionNode)
-                                optionNode.isUserInteractionEnabled = item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
+                                optionNode.isUserInteractionEnabled = strongSelf.pollOptionsDisabledForAddOptionFocusMessageId != item.message.id && item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
+                                optionNode.alpha = strongSelf.pollOptionsDisabledForAddOptionFocusMessageId == item.message.id ? 0.5 : 1.0
 
                                 if i > 0 {
                                     optionNode.previousOptionNode = updatedOptionNodes[i - 1]
@@ -2103,6 +2804,58 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             strongSelf.optionNodes = updatedOptionNodes
                             strongSelf.shuffledOptionOpaqueIdentifiers = shuffledOptionOpaqueIdentifiers
+                            strongSelf.updatePollOptionsInteraction(animated: animation.isAnimated)
+
+                            if let (size, apply) = addOptionSizeAndApply {
+                                let isRequesting = item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] != nil
+                                let addOptionNode = apply(animation.isAnimated, isRequesting)
+                                let addOptionNodeFrame = CGRect(origin: CGPoint(x: layoutConstants.bubble.borderInset, y: verticalOffset), size: size)
+                                if addOptionNode.supernode !== strongSelf {
+                                    strongSelf.addSubnode(addOptionNode)
+                                } else {
+                                    animation.animator.updateFrame(layer: addOptionNode.layer, frame: addOptionNodeFrame, completion: nil)
+                                }
+                                addOptionNode.frame = addOptionNodeFrame
+                                addOptionNode.isUserInteractionEnabled = !isRequesting
+                                addOptionNode.textUpdated = { [weak self] text in
+                                    self?.updateNewOptionText(text)
+                                }
+                                addOptionNode.heightUpdated = { [weak self] in
+                                    self?.requestNewOptionLayoutUpdate()
+                                }
+                                addOptionNode.attachPressed = { [weak self] in
+                                    self?.openOpenAnswerAttachment()
+                                }
+                                addOptionNode.mediaPressed = { [weak self] in
+                                    self?.openOpenAnswerAttachment()
+                                }
+                                let messageId = item.message.id
+                                addOptionNode.focusUpdated = { [weak self] focused in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if focused {
+                                        self.setPollOptionsDisabledForAddOptionFocus(messageId: messageId, animated: true)
+                                        self.updateFocusedPollAddOptionMessageId(messageId)
+                                    } else {
+                                        self.setPollOptionsDisabledForAddOptionFocus(messageId: nil, animated: true)
+                                        self.clearFocusedPollAddOptionMessageIdIfNeeded(for: messageId)
+                                    }
+                                }
+                                strongSelf.addOptionNode = addOptionNode
+                                verticalOffset += size.height
+                            } else if let addOptionNode = strongSelf.addOptionNode {
+                                if let item = strongSelf.item {
+                                    strongSelf.setPollOptionsDisabledForAddOptionFocus(messageId: nil, animated: animation.isAnimated)
+                                    strongSelf.clearFocusedPollAddOptionMessageIdIfNeeded(for: item.message.id)
+                                }
+                                strongSelf.addOptionNode = nil
+                                addOptionNode.removeFromSupernode()
+                            }
+
+                            if let poll = poll, let pendingOpenAnswerSubmissionText, let pendingOpenAnswerOptionCount = strongSelf.pendingNewOptionOptionCount, poll.options.count > pendingOpenAnswerOptionCount, poll.options.contains(where: { $0.text == pendingOpenAnswerSubmissionText }) {
+                                strongSelf.clearOpenAnswerInput()
+                            }
 
                             if textLayout.hasRTL {
                                 strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right - additionalTextRightInset, y: textFrame.origin.y), size: textFrame.size)
@@ -2316,6 +3069,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = buttonSubmitActiveTextApply()
                             strongSelf.buttonSubmitActiveTextNode.frame = buttonSubmitActiveTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
 
+                            let _ = buttonSaveTextApply()
+                            strongSelf.buttonSaveTextNode.frame = buttonSaveTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
+
                             let _ = buttonViewResultsTextApply()
                             strongSelf.buttonViewResultsTextNode.frame = buttonViewResultsTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
 
@@ -2390,6 +3146,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
 
         let disableAllActions = false
+        let isPollActionInProgress = item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] != nil
 
         var hasSelection = poll.kind.multipleAnswers
 
@@ -2453,10 +3210,11 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         if !disableAllActions && hasSelection && !hasResults && (!canAlwaysViewResults || hasSelectedOptions) && poll.pollId.namespace == Namespaces.Media.CloudPoll {
             self.votersNode.isHidden = true
             self.buttonViewResultsTextNode.isHidden = true
+            self.buttonSaveTextNode.isHidden = true
             self.buttonSubmitInactiveTextNode.isHidden = hasSelectedOptions
             self.buttonSubmitActiveTextNode.isHidden = !hasSelectedOptions
             self.buttonNode.isHidden = !hasSelectedOptions
-            self.buttonNode.isUserInteractionEnabled = true
+            self.buttonNode.isUserInteractionEnabled = !isPollActionInProgress
         } else {
             let shouldShowViewResultsButton: Bool
             switch poll.publicity {
@@ -2471,25 +3229,43 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                 if isBotChat {
                     self.buttonViewResultsTextNode.isHidden = true
+                    self.buttonSaveTextNode.isHidden = true
                     self.buttonNode.isHidden = true
                 } else {
                     self.buttonViewResultsTextNode.isHidden = false
+                    self.buttonSaveTextNode.isHidden = true
                     self.buttonNode.isHidden = false
                 }
 
                 if Namespaces.Message.allNonRegular.contains(item.message.id.namespace) {
                     self.buttonNode.isUserInteractionEnabled = false
                 } else {
-                    self.buttonNode.isUserInteractionEnabled = true
+                    self.buttonNode.isUserInteractionEnabled = !isPollActionInProgress
                 }
             } else {
                 self.votersNode.isHidden = false
                 self.buttonViewResultsTextNode.isHidden = true
+                self.buttonSaveTextNode.isHidden = true
                 self.buttonNode.isHidden = true
-                self.buttonNode.isUserInteractionEnabled = true
+                self.buttonNode.isUserInteractionEnabled = !isPollActionInProgress
             }
             self.buttonSubmitInactiveTextNode.isHidden = true
             self.buttonSubmitActiveTextNode.isHidden = true
+        }
+
+        let canDisplayOpenAnswer = poll.openAnswers && !isClosed && !hasVoted && poll.pollId.namespace == Namespaces.Media.CloudPoll
+        let hasDraftOpenAnswer = !self.trimmedNewOptionText.isEmpty
+        let canSubmitOpenAnswer = hasDraftOpenAnswer && !(self.currentNewOptionMedia?.requiresUpload ?? false)
+        if canDisplayOpenAnswer && canSubmitOpenAnswer {
+            self.votersNode.isHidden = true
+            self.buttonSubmitInactiveTextNode.isHidden = true
+            self.buttonSubmitActiveTextNode.isHidden = true
+            self.buttonViewResultsTextNode.isHidden = true
+            self.buttonSaveTextNode.isHidden = false
+            self.buttonNode.isHidden = false
+            self.buttonNode.isUserInteractionEnabled = !isPollActionInProgress
+        } else {
+            self.buttonSaveTextNode.isHidden = true
         }
 
         self.avatarsNode.isUserInteractionEnabled = !self.buttonViewResultsTextNode.isHidden
@@ -2538,9 +3314,12 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
             for optionNode in self.optionNodes {
                 if optionNode.frame.contains(point), case .tap = gesture {
-                    if let mediaFrame = optionNode.mediaFrame, mediaFrame.offsetBy(dx: optionNode.frame.minX, dy: optionNode.frame.minY).contains(point), let media = optionNode.option?.media {
+                    if self.pollOptionsDisabledForAddOptionFocusMessageId == self.item?.message.id {
+                        return ChatMessageBubbleContentTapAction(content: .none)
+                    }
+                    if let mediaFrame = optionNode.mediaFrame, mediaFrame.offsetBy(dx: optionNode.frame.minX, dy: optionNode.frame.minY).contains(point), let option = optionNode.option, let _ = option.media {
                         return ChatMessageBubbleContentTapAction(content: .custom({ [weak self] in
-                            self?.openOptionMedia(media)
+                            self?.openOptionMedia(option: option)
                         }))
                     }
                     if optionNode.isUserInteractionEnabled {
@@ -2568,6 +3347,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                 }
+            }
+            if let addOptionNode = self.addOptionNode, addOptionNode.frame.contains(point) {
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
             if self.buttonNode.isUserInteractionEnabled, !self.buttonNode.isHidden, self.buttonNode.frame.contains(point) {
                 return ChatMessageBubbleContentTapAction(content: .ignore)

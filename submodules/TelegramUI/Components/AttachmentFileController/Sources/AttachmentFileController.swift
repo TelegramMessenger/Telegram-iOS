@@ -715,9 +715,7 @@ public func makeAttachmentFileControllerImpl(
     }
     
     let controller = AttachmentFileControllerImpl(context: context, state: signal, hideNavigationBarBackground: true)
-    if case .audio = mode {
-        controller.hasBottomEdgeEffect = false
-    }
+
     controller.delayDisappear = true
     controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
         switch offset {

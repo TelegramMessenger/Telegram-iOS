@@ -159,7 +159,7 @@ extension ChatControllerImpl {
             sources.append(
                 ContextController.Source(
                     id: AnyHashable(OptionsId.message),
-                    title: self.presentationData.strings.Chat_Todo_ContextMenu_SectionList,
+                    title: "Poll",
                     source: .extracted(messageContentSource),
                     items: .single(actions)
                 )

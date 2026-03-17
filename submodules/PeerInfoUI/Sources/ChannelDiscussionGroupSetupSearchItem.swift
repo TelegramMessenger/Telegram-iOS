@@ -316,5 +316,3 @@ private final class ChannelDiscussionSearchNavigationContentNode: NavigationBarC
         self.searchBar.deactivate(clear: false)
     }
 }
-
-

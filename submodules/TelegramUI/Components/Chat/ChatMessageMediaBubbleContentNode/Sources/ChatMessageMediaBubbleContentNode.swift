@@ -563,7 +563,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return false
         }
-        let highlighted = item.controllerInteraction.highlightedState?.messageStableId == item.message.stableId
+        let highlighted = item.controllerInteraction.highlightedState?.messageStableId == item.message.stableId && item.controllerInteraction.highlightedState?.subject == nil
         
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
