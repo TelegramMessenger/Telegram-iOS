@@ -68,6 +68,43 @@ func _internal_translate(network: Network, text: String, toLang: String, entitie
     }
 }
 
+func _internal_composeMessageWithAI(network: Network, text: String, entities: [MessageTextEntity], proofread: Bool = false, translateToLang: String? = nil, changeTone: String? = nil, emojify: Bool = false) -> Signal<(String, [MessageTextEntity]), TranslationError> {
+    var flags: Int32 = 0
+    if proofread {
+        flags |= (1 << 0)
+    }
+    if translateToLang != nil {
+        flags |= (1 << 1)
+    }
+    if changeTone != nil {
+        flags |= (1 << 2)
+    }
+    if emojify {
+        flags |= (1 << 3)
+    }
+
+    let apiText: Api.TextWithEntities = .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary())))
+
+    return network.request(Api.functions.messages.composeMessageWithAI(flags: flags, text: apiText, translateToLang: translateToLang, changeTone: changeTone))
+    |> mapError { error -> TranslationError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .limitExceeded
+        } else if error.errorDescription == "INPUT_TEXT_EMPTY" {
+            return .textIsEmpty
+        } else if error.errorDescription == "INPUT_TEXT_TOO_LONG" {
+            return .textTooLong
+        } else {
+            return .generic
+        }
+    }
+    |> map { result -> (String, [MessageTextEntity]) in
+        switch result {
+        case let .textWithEntities(data):
+            return (data.text, messageTextEntitiesFromApiEntities(data.entities))
+        }
+    }
+}
+
 func _internal_translateTexts(network: Network, texts: [(String, [MessageTextEntity])], toLang: String, tone: TranslationTone = .neutral) -> Signal<[(String, [MessageTextEntity])], TranslationError> {
     var flags: Int32 = 0
     flags |= (1 << 1)

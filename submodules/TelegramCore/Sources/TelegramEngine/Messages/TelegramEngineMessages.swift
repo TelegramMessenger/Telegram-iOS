@@ -635,6 +635,10 @@ public extension TelegramEngine {
             }
         }
         
+        public func composeMessageWithAI(text: String, entities: [MessageTextEntity], proofread: Bool = false, translateToLang: String? = nil, changeTone: String? = nil, emojify: Bool = false) -> Signal<(String, [MessageTextEntity]), TranslationError> {
+            return _internal_composeMessageWithAI(network: self.account.network, text: text, entities: entities, proofread: proofread, translateToLang: translateToLang, changeTone: changeTone, emojify: emojify)
+        }
+
         public func translate(texts: [(String, [MessageTextEntity])], toLang: String, tone: TranslationTone = .neutral) -> Signal<[(String, [MessageTextEntity])], TranslationError> {
             return _internal_translateTexts(network: self.account.network, texts: texts, toLang: toLang, tone: tone)
         }
