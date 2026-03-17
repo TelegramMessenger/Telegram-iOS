@@ -34,7 +34,7 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                 if let poll = poll {
                                     switch poll {
                                     case let .poll(pollData):
-                                        let (flags, question, answers, closePeriod) = (pollData.flags, pollData.question, pollData.answers, pollData.closePeriod)
+                                        let (flags, question, answers, closePeriod, closeDate) = (pollData.flags, pollData.question, pollData.answers, pollData.closePeriod, pollData.closeDate)
                                         let publicity: TelegramMediaPollPublicity
                                         if (flags & (1 << 1)) != 0 {
                                             publicity = .public
@@ -59,7 +59,7 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                             questionText = text
                                             questionEntities = messageTextEntitiesFromApiEntities(entities)
                                         }
-                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: resultPoll?.attachedMedia)
+                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, deadlineDate: closeDate, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: resultPoll?.attachedMedia)
                                     }
                                 }
                                 

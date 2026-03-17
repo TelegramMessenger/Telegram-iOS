@@ -7917,93 +7917,94 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        var found = false
-        self.forEachController({ controller in
-            if let controller = controller as? TooltipScreen {
-                if controller.text == .entities(text: solution.text, entities: solution.entities) {
-                    found = true
-                    controller.dismiss()
-                    return false
-                }
-            }
-            return true
-        })
-        if found {
-            return
-        }
+//        var found = false
+//        self.forEachController({ controller in
+//            if let controller = controller as? TooltipScreen {
+//                if controller.text == .entities(text: solution.text, entities: solution.entities) {
+//                    found = true
+//                    controller.dismiss()
+//                    return false
+//                }
+//            }
+//            return true
+//        })
+//        if found {
+//            return
+//        }
         
-        let tooltipScreen = TooltipScreen(context: self.context, account: self.context.account, sharedContext: self.context.sharedContext, text: .entities(text: solution.text, entities: solution.entities), icon: .animation(name: "anim_infotip", delay: 0.2, tintColor: nil), location: .top, shouldDismissOnTouch: { point, _ in
-            return .ignore
-        }, openActiveTextItem: { [weak self] item, action in
-            guard let strongSelf = self else {
-                return
-            }
-            switch item {
-            case let .url(url, concealed):
-                switch action {
-                case .tap:
-                    strongSelf.openUrl(url, concealed: concealed)
-                case .longTap:
-                    strongSelf.controllerInteraction?.longTap(.url(url), nil)
-                }
-            case let .mention(peerId, mention):
-                switch action {
-                case .tap:
-                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                    |> deliverOnMainQueue).startStandalone(next: { peer in
-                        if let strongSelf = self, let peer = peer {
-                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
-                        }
-                    })
-                case .longTap:
-                    strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
-                }
-            case let .textMention(mention):
-                switch action {
-                case .tap:
-                    strongSelf.controllerInteraction?.openPeerMention(mention, nil)
-                case .longTap:
-                    strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
-                }
-            case let .botCommand(command):
-                switch action {
-                case .tap:
-                    strongSelf.controllerInteraction?.sendBotCommand(nil, command)
-                case .longTap:
-                    strongSelf.controllerInteraction?.longTap(.command(command), nil)
-                }
-            case let .hashtag(hashtag):
-                switch action {
-                case .tap:
-                    strongSelf.controllerInteraction?.openHashtag(nil, hashtag)
-                case .longTap:
-                    strongSelf.controllerInteraction?.longTap(.hashtag(hashtag), nil)
-                }
-            }
-        })
-        
+//        let tooltipScreen = TooltipScreen(context: self.context, account: self.context.account, sharedContext: self.context.sharedContext, text: .entities(text: solution.text, entities: solution.entities), icon: .animation(name: "anim_infotip", delay: 0.2, tintColor: nil), location: .top, shouldDismissOnTouch: { point, _ in
+//            return .ignore
+//        }, openActiveTextItem: { [weak self] item, action in
+//            guard let strongSelf = self else {
+//                return
+//            }
+//            switch item {
+//            case let .url(url, concealed):
+//                switch action {
+//                case .tap:
+//                    strongSelf.openUrl(url, concealed: concealed)
+//                case .longTap:
+//                    strongSelf.controllerInteraction?.longTap(.url(url), nil)
+//                }
+//            case let .mention(peerId, mention):
+//                switch action {
+//                case .tap:
+//                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+//                    |> deliverOnMainQueue).startStandalone(next: { peer in
+//                        if let strongSelf = self, let peer = peer {
+//                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
+//                        }
+//                    })
+//                case .longTap:
+//                    strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
+//                }
+//            case let .textMention(mention):
+//                switch action {
+//                case .tap:
+//                    strongSelf.controllerInteraction?.openPeerMention(mention, nil)
+//                case .longTap:
+//                    strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
+//                }
+//            case let .botCommand(command):
+//                switch action {
+//                case .tap:
+//                    strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+//                case .longTap:
+//                    strongSelf.controllerInteraction?.longTap(.command(command), nil)
+//                }
+//            case let .hashtag(hashtag):
+//                switch action {
+//                case .tap:
+//                    strongSelf.controllerInteraction?.openHashtag(nil, hashtag)
+//                case .longTap:
+//                    strongSelf.controllerInteraction?.longTap(.hashtag(hashtag), nil)
+//                }
+//            }
+//        })
+//        
         let messageId = item.message.id
         self.controllerInteraction?.currentPollMessageWithTooltip = messageId
-        self.updatePollTooltipMessageState(animated: !isAutomatic)
+        self.controllerInteraction?.requestMessageUpdate(messageId, false)
+        //self.updatePollTooltipMessageState(animated: !isAutomatic)
         
-        tooltipScreen.willBecomeDismissed = { [weak self] tooltipScreen in
-            guard let strongSelf = self else {
-                return
-            }
-            if strongSelf.controllerInteraction?.currentPollMessageWithTooltip == messageId {
-                strongSelf.controllerInteraction?.currentPollMessageWithTooltip = nil
-                strongSelf.updatePollTooltipMessageState(animated: true)
-            }
-        }
-        
-        self.forEachController({ controller in
-            if let controller = controller as? TooltipScreen {
-                controller.dismiss()
-            }
-            return true
-        })
-        
-        self.present(tooltipScreen, in: .current)
+//        tooltipScreen.willBecomeDismissed = { [weak self] tooltipScreen in
+//            guard let strongSelf = self else {
+//                return
+//            }
+//            if strongSelf.controllerInteraction?.currentPollMessageWithTooltip == messageId {
+//                strongSelf.controllerInteraction?.currentPollMessageWithTooltip = nil
+//                strongSelf.updatePollTooltipMessageState(animated: true)
+//            }
+//        }
+//        
+//        self.forEachController({ controller in
+//            if let controller = controller as? TooltipScreen {
+//                controller.dismiss()
+//            }
+//            return true
+//        })
+//        
+//        self.present(tooltipScreen, in: .current)
     }
     
     public func displayPromoAnnouncement(text: String) {

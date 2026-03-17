@@ -19,6 +19,7 @@ public enum PeerInfoPaneKey: Int32 {
     case voice
     case links
     case gifs
+    case polls
     case groupsInCommon
     case similarChannels
     case similarBots

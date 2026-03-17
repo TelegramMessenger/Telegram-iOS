@@ -1479,6 +1479,52 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatBubblePollChevronLeftIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronLeftIncomingIcon.rawValue, { theme in
+            if let image = UIImage(bundleImageName: "Settings/TextArrowRight") {
+                return generateImage(image.size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    if let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.incoming.accentTextColor), let cgImage = image.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: .zero, size: image.size))
+                    }
+                })
+            }
+            return nil
+        })
+    }
+    
+    public static func chatBubblePollChevronLeftOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronLeftOutgoingIcon.rawValue, { theme in
+            if let image = UIImage(bundleImageName: "Settings/TextArrowRight") {
+                return generateImage(image.size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    if let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.outgoing.accentTextColor), let cgImage = image.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: .zero, size: image.size))
+                    }
+                })
+            }
+            return nil
+        })
+    }
+    
+    public static func chatBubblePollChevronRightIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronRightIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatBubblePollChevronRightOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronRightOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
     public static func messageButtonsPostReject(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.messageButtonsPostReject.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SuggestPostDecline"), color: .white)

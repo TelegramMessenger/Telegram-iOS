@@ -180,6 +180,11 @@ public enum PresentationResourceKey: Int32 {
     case chatBubbleTodoCheckIncomingIcon
     case chatBubbleTodoCheckOutgoingIcon
     
+    case chatBubblePollChevronLeftIncomingIcon
+    case chatBubblePollChevronLeftOutgoingIcon
+    case chatBubblePollChevronRightIncomingIcon
+    case chatBubblePollChevronRightOutgoingIcon
+    
     case chatServiceMessageTodoCompletedIcon
     case chatServiceMessageTodoIncompletedIcon
     case chatServiceMessageTodoAppendedIcon

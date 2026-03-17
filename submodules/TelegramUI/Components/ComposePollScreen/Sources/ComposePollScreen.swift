@@ -58,6 +58,7 @@ public final class ComposedPoll {
     public let correctAnswers: [Data]?
     public let results: TelegramMediaPollResults
     public let deadlineTimeout: Int32?
+    public let deadlineDate: Int32?
     public let usedCustomEmojiFiles: [Int64: TelegramMediaFile]
 
     public init(
@@ -74,6 +75,7 @@ public final class ComposedPoll {
         correctAnswers: [Data]?,
         results: TelegramMediaPollResults,
         deadlineTimeout: Int32?,
+        deadlineDate: Int32?,
         usedCustomEmojiFiles: [Int64: TelegramMediaFile]
     ) {
         self.publicity = publicity
@@ -89,6 +91,7 @@ public final class ComposedPoll {
         self.correctAnswers = correctAnswers
         self.results = results
         self.deadlineTimeout = deadlineTimeout
+        self.deadlineDate = deadlineDate
         self.usedCustomEmojiFiles = usedCustomEmojiFiles
     }
 }
@@ -537,12 +540,13 @@ final class ComposePollScreenComponent: Component {
             let usedCustomEmojiFiles: [Int64: TelegramMediaFile] = [:]
             
             var deadlineTimeout: Int32?
+            var deadlineDate: Int32?
             if self.limitDuration {
                 switch self.timeLimit {
                 case let .duration(duration):
-                    deadlineTimeout = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) + duration
+                    deadlineTimeout = duration
                 case let .deadline(deadline):
-                    deadlineTimeout = deadline
+                    deadlineDate = deadline
                 }
             }
             
@@ -575,6 +579,7 @@ final class ComposePollScreenComponent: Component {
                     }
                 ),
                 deadlineTimeout: deadlineTimeout,
+                deadlineDate: deadlineDate,
                 usedCustomEmojiFiles: usedCustomEmojiFiles
             )
         }
@@ -1812,7 +1817,7 @@ final class ComposePollScreenComponent: Component {
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                     Image(image: self.cachedAddIcon, size: CGSize(width: 30.0, height: 30.0))
                 )), false),
-                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.canAddOptions, action: { [weak self] _ in
+                accessory: .toggle(ListActionItemComponent.Toggle(style: .lock(isLocked: self.isQuiz), isOn: self.canAddOptions, action: { [weak self] _ in
                     guard let self else {
                         return
                     }
@@ -1928,6 +1933,9 @@ final class ComposePollScreenComponent: Component {
                         return
                     }
                     self.isQuiz = !self.isQuiz
+                    if self.isQuiz && self.canAddOptions {
+                        self.canAddOptions = false
+                    }
                     self.state?.updated(transition: .spring(duration: 0.4))
                 })),
                 action: nil

@@ -2050,6 +2050,7 @@ extension ChatControllerImpl {
                             results: poll.results,
                             isClosed: false,
                             deadlineTimeout: poll.deadlineTimeout,
+                            deadlineDate: poll.deadlineDate,
                             openAnswers: poll.openAnswers,
                             revotingDisabled: poll.revotingDisabled,
                             shuffleAnswers: poll.shuffleAnswers,

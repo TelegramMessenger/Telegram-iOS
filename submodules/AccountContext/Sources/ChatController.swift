@@ -799,6 +799,7 @@ public enum ChatControllerSubject: Equatable {
         }
     }
     
+    case tag(MessageTags)
     case message(id: MessageSubject, highlight: MessageHighlight?, timecode: Double?, setupReply: Bool)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
@@ -807,6 +808,12 @@ public enum ChatControllerSubject: Equatable {
     
     public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
         switch lhs {
+        case let .tag(lhsTag):
+            if case let .tag(rhsTag) = rhs, lhsTag == rhsTag {
+                return true
+            } else {
+                return false
+            }
         case let .message(lhsId, lhsHighlight, lhsTimecode, lhsSetupReply):
             if case let .message(rhsId, rhsHighlight, rhsTimecode, rhsSetupReply) = rhs, lhsId == rhsId && lhsHighlight == rhsHighlight && lhsTimecode == rhsTimecode && lhsSetupReply == rhsSetupReply {
                 return true
