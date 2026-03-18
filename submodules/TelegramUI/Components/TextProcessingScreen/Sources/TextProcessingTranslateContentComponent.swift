@@ -423,7 +423,7 @@ final class TextProcessingTranslateContentComponent: Component {
                         }
                     ) : nil,
                     text: component.externalState.result?.text,
-                    textCorrectionRanges: component.externalState.result?.textCorrectionRanges ?? []
+                    textCorrectionRanges: component.mode == .fix ? (component.externalState.result?.textCorrectionRanges ?? []) : []
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
