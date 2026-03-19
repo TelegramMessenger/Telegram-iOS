@@ -405,3 +405,128 @@ func _internal_togglePeerMessagesTranslationHidden(account: Account, peerId: Eng
         |> ignoreValues
     }
 }
+
+public enum TelegramComposeAIMessageMode {
+    public enum Style {
+        case neutral
+        case formal
+        case short
+        case savage
+        case biblical
+        case posh
+    }
+    
+    case translate(toLanguage: String, emojify: Bool, style: Style)
+    case stylize(emojify: Bool, style: Style)
+    case proofread
+}
+
+extension TelegramComposeAIMessageMode.Style {
+    var apiStyle: String {
+        switch self {
+        case .neutral:
+            return ""
+        case .formal:
+            return "formal"
+        case .short:
+            return "short"
+        case .savage:
+            return "savage"
+        case .biblical:
+            return "biblical"
+        case .posh:
+            return "posh"
+        }
+    }
+}
+
+public final class TelegramAIComposeMessageResult {
+    public let text: TextWithEntities
+    public let diffRanges: [Range<Int>]
+    
+    public init(text: TextWithEntities, diffRanges: [Range<Int>]) {
+        self.text = text
+        self.diffRanges = diffRanges
+    }
+}
+
+extension TextWithEntities {
+    init(apiValue: Api.TextWithEntities) {
+        switch apiValue {
+        case let .textWithEntities(textWithEntities):
+            self.init(text: textWithEntities.text, entities: messageTextEntitiesFromApiEntities(textWithEntities.entities))
+        }
+    }
+}
+
+func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult?, NoError> {
+    var flags: Int32 = 0
+    var translateToLang: String?
+    var changeTone: String?
+    switch mode {
+    case let .translate(toLanguage, emojify, style):
+        translateToLang = toLanguage
+        flags |= (1 << 1)
+        
+        if emojify {
+            flags |= (1 << 3)
+        }
+        
+        if style != .neutral {
+            changeTone = style.apiStyle
+            flags |= (1 << 2)
+        }
+    case let .stylize(emojify, style):
+        if emojify {
+            flags |= (1 << 3)
+        }
+        
+        if style != .neutral {
+            changeTone = style.apiStyle
+            flags |= (1 << 2)
+        }
+    case .proofread:
+        flags |= (1 << 0)
+    }
+    
+    let inputText: Api.TextWithEntities = .textWithEntities(Api.TextWithEntities.Cons_textWithEntities(text: text.text, entities: apiEntitiesFromMessageTextEntities(text.entities, associatedPeers: SimpleDictionary())))
+    
+    return account.network.request(Api.functions.messages.composeMessageWithAI(flags: flags, text: inputText, translateToLang: translateToLang, changeTone: changeTone))
+    |> delay(0.4, queue: .mainQueue())
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.messages.ComposedMessageWithAI?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<TelegramAIComposeMessageResult?, NoError> in
+        guard let result else {
+            return .single(nil)
+        }
+        switch result {
+        case let .composedMessageWithAI(composedMessageWithAI):
+            var diffRanges: [Range<Int>] = []
+            if let diffText = composedMessageWithAI.diffText {
+                switch diffText {
+                case let .textWithEntities(textWithEntities):
+                    for entity in textWithEntities.entities {
+                        switch entity {
+                        case let .messageEntityDiffReplace(messageEntityDiffReplace):
+                            if messageEntityDiffReplace.length >= 0 {
+                                diffRanges.append(Int(messageEntityDiffReplace.offset) ..< Int(messageEntityDiffReplace.offset + messageEntityDiffReplace.length))
+                            }
+                        case let .messageEntityDiffInsert(messageEntityDiffInsert):
+                            if messageEntityDiffInsert.length >= 0 {
+                                diffRanges.append(Int(messageEntityDiffInsert.offset) ..< Int(messageEntityDiffInsert.offset + messageEntityDiffInsert.length))
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+            }
+            return .single(TelegramAIComposeMessageResult(
+                text: TextWithEntities(apiValue: composedMessageWithAI.resultText),
+                diffRanges: diffRanges
+            ))
+        }
+    }
+}

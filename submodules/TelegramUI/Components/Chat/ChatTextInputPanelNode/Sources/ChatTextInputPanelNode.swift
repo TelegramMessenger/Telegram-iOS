@@ -246,6 +246,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     public var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
     private let counterTextNode: ImmediateTextNode
     
+    private var aiButton: (button: HighlightTrackingButton, icon: UIImageView)?
+    
     public let menuButton: HighlightTrackingButtonNode
     private let menuButtonBackgroundView: GlassBackgroundView
     private let menuButtonClippingNode: ASDisplayNode
@@ -332,6 +334,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private var strings: PresentationStrings?
     
     private let hapticFeedback = HapticFeedback()
+    
+    public var isAIEnabled: Bool = false
     
     public var inputTextState: ChatTextInputState {
         if let textInputNode = self.textInputNode {
@@ -3523,6 +3527,52 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             )
         }
         
+        if self.isAIEnabled {
+            let aiButton: (button: HighlightTrackingButton, icon: UIImageView)
+            if let current = self.aiButton {
+                aiButton = current
+            } else {
+                aiButton = (HighlightTrackingButton(), GlassBackgroundView.ContentImageView())
+                self.aiButton = aiButton
+                aiButton.button.highligthedChanged = { [weak self] highlighted in
+                    guard let self, let aiButton = self.aiButton else {
+                        return
+                    }
+                    if highlighted {
+                        aiButton.icon.alpha = 0.6
+                    } else {
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+                        transition.updateAlpha(layer: aiButton.icon.layer, alpha: 1.0)
+                    }
+                }
+                aiButton.button.addTarget(self, action: #selector(self.aiButtonPressed), for: .touchUpInside)
+                aiButton.button.addSubview(aiButton.icon)
+                aiButton.icon.image = UIImage(bundleImageName: "Chat/Input/Text/InputAIIcon")?.withRenderingMode(.alwaysTemplate)
+                self.textInputContainerBackgroundView.contentView.addSubview(aiButton.icon)
+                self.textInputContainerBackgroundView.contentView.addSubview(aiButton.button)
+            }
+            aiButton.icon.tintColor = interfaceState.theme.chat.inputPanel.inputControlColor
+            if let image = aiButton.icon.image {
+                let aiButtonSize = CGSize(width: 40.0, height: 40.0)
+                let aiButtonFrame = CGRect(origin: CGPoint(x: textInputContainerBackgroundFrame.width - aiButtonSize.width - 3.0, y: 0.0), size: aiButtonSize)
+                transition.updateFrame(view: aiButton.button, frame: aiButtonFrame)
+                transition.updateFrame(view: aiButton.icon, frame: image.size.centered(in: aiButtonFrame))
+            }
+            let aiButtonAlpha: CGFloat = textInputContainerBackgroundFrame.height >= 78.0 ? 1.0 : 0.0
+            transition.updateAlpha(layer: aiButton.button.layer, alpha: aiButtonAlpha)
+            transition.updateAlpha(layer: aiButton.icon.layer, alpha: aiButtonAlpha)
+        } else if let aiButton = self.aiButton {
+            self.aiButton = nil
+            let aiButtonView = aiButton.button
+            let aiButtonIconView = aiButton.button
+            transition.updateAlpha(layer: aiButton.button.layer, alpha: 0.0, completion: { [weak aiButtonView] _ in
+                aiButtonView?.removeFromSuperview()
+            })
+            transition.updateAlpha(layer: aiButton.icon.layer, alpha: 0.0, completion: { [weak aiButtonIconView] _ in
+                aiButtonIconView?.removeFromSuperview()
+            })
+        }
+        
         let containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: contentHeight + 64.0))
         transition.updateFrame(view: self.glassBackgroundContainer, frame: containerFrame)
         self.glassBackgroundContainer.update(size: containerFrame.size, isDark: interfaceState.theme.overallDarkAppearance, transition: ComponentTransition(transition))
@@ -3553,6 +3603,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     
     @objc private func recordMorePressed() {
         self.interfaceInteraction?.resumeMediaRecording()
+    }
+    
+    @objc private func aiButtonPressed() {
+        self.interfaceInteraction?.openAICompose()
     }
     
     private func displayViewOnceTooltip(text: String) {

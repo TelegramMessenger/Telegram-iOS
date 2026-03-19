@@ -174,6 +174,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, displayUndo: { _ in
         }, presentInputTextTranslation: { _, _ in
         }, sendEmoji: { _, _, _ in
+        }, openAICompose: {
         }, updateHistoryFilter: { _ in
         }, updateChatLocationThread: { _, _ in
         }, toggleChatSidebarMode: {
