@@ -356,6 +356,7 @@ final class TextProcessingTranslateContentComponent: Component {
                         copyAction: nil,
                         emojify: nil,
                         text: component.inputText,
+                        loadingStateMeasuringText: nil,
                         textCorrectionRanges: []
                     )),
                     environment: {},
@@ -423,6 +424,7 @@ final class TextProcessingTranslateContentComponent: Component {
                         }
                     ) : nil,
                     text: component.externalState.result?.text,
+                    loadingStateMeasuringText: component.inputText.text,
                     textCorrectionRanges: component.mode == .fix ? (component.externalState.result?.textCorrectionRanges ?? []) : []
                 )),
                 environment: {},
