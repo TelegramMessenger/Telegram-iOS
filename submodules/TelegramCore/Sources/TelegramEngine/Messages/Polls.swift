@@ -93,13 +93,22 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
     }
 }
 
-func _internal_addPollAnswer(account: Account, messageId: MessageId, answerText: String, answerEntities: [MessageTextEntity]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
+func _internal_addPollAnswer(account: Account, messageId: MessageId, option: TelegramMediaPollOption) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
     |> castError(RequestMessageSelectPollOptionError.self)
     |> mapToSignal { peer in
         if let inputPeer = apiInputPeer(peer) {
-            let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: 0, text: .textWithEntities(.init(text: answerText, entities: apiEntitiesFromMessageTextEntities(answerEntities, associatedPeers: SimpleDictionary()))), option: Buffer(data: Data()), media: nil))
+            var flags: Int32 = 0
+            var inputMedia: Api.InputMedia?
+            if let image = option.media as? TelegramMediaImage, let reference = image.reference, case let .cloud(id, accessHash, maybeFileReference) = reference, let fileReference = maybeFileReference {
+                flags |= (1 << 0)
+                inputMedia = .inputMediaPhoto(.init(flags: 0, id: .inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference))), ttlSeconds: nil, video: nil))
+            } else if let file = option.media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+                flags |= (1 << 0)
+                inputMedia = .inputMediaDocument(.init(flags: 0, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))), videoCover: nil, videoTimestamp: nil, ttlSeconds: nil, query: nil))
+            }
+            let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: flags, text: .textWithEntities(.init(text: option.text, entities: apiEntitiesFromMessageTextEntities(option.entities, associatedPeers: SimpleDictionary()))), option: Buffer(data: option.opaqueIdentifier), media: inputMedia))
             return account.network.request(Api.functions.messages.addPollAnswer(peer: inputPeer, msgId: messageId.id, answer: apiAnswer))
             |> mapError { _ -> RequestMessageSelectPollOptionError in
                 return .generic
