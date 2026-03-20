@@ -1,0 +1,40 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "TextProcessingScreen",
+    module_name = "TextProcessingScreen",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/Display",
+        "//submodules/TelegramPresentationData",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ViewControllerComponent",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/AccountContext",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/PresentationDataUtils",
+        "//submodules/Components/ResizableSheetComponent",
+        "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/TabBarComponent",
+        "//submodules/TranslateUI",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
+        "//submodules/TextFormat",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/TelegramUI/Components/CheckComponent",
+        "//submodules/ShimmerEffect",
+        "//submodules/TelegramUI/Components/LottieComponent",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

@@ -64,6 +64,8 @@ import LegacyChatHeaderPanelComponent
 import ChatSearchNavigationContentNode
 import GroupCallHeaderPanelComponent
 import PresentationDataUtils
+import TextProcessingScreen
+import Pasteboard
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -884,6 +886,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.textInputPanelNode = ChatTextInputPanelNode(context: context, presentationInterfaceState: chatPresentationInterfaceState, presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode), presentController: { [weak self] controller in
             self?.interfaceInteraction?.presentController(controller, nil)
         })
+        self.textInputPanelNode?.isAIEnabled = true
         self.textInputPanelNode?.textInputAccessoryPanel = textInputAccessoryPanel
         self.textInputPanelNode?.textInputContextPanel = textInputContextPanel
         self.textInputPanelNode?.storedInputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage
@@ -4428,8 +4431,58 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
+    func openAICompose() {
+        var effectivePresentationInterfaceState = self.chatPresentationInterfaceState
         
+        if let textInputPanelNode = self.textInputPanelNode {
+            effectivePresentationInterfaceState = effectivePresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
+        }
+        
+        let effectiveInputText: NSAttributedString
+        if effectivePresentationInterfaceState.interfaceState.editMessage != nil && effectivePresentationInterfaceState.interfaceState.postSuggestionState != nil {
+            effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.effectiveInputState.inputText)
+        } else {
+            effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
+        }
+        
+        if effectiveInputText.length == 0 {
+            return
+        }
+        
+        let inputText = trimChatInputText(effectiveInputText)
+        var entities: [MessageTextEntity] = []
+        if inputText.length != 0 {
+            if case let .customChatContents(customChatContents) = self.chatPresentationInterfaceState.subject, case .businessLinkSetup = customChatContents.kind {
+                entities = generateChatInputTextEntities(inputText, generateLinks: false)
+            } else {
+                entities = generateTextEntities(inputText.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(inputText, maxAnimatedEmojisInText: 0))
+            }
+        }
+        
+        self.controller?.push(TextProcessingScreen(
+            context: self.context,
+            inputText: TextWithEntities(text: inputText.string, entities: entities),
+            copyResult: { [weak self] text in
+                guard let self else {
+                    return
+                }
+                let _ = self
+                storeMessageTextInPasteboard(text.text, entities: text.entities)
+            },
+            completion: { [weak self] text in
+                guard let self, let controller = self.controller else {
+                    return
+                }
+                controller.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    return state.updatedInterfaceState { interfaceState in
+                        return interfaceState.withUpdatedEffectiveInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(text.text, entities: text.entities)))
+                    }
+                })
+            }
+        ))
+    }
+    
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
         guard let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode else {
             return
         }

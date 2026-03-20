@@ -1770,6 +1770,10 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func composeAIMessage(text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult?, NoError> {
+            return _internal_composeAIMessage(account: self.account, text: text, mode: mode)
+        }
     }
 }
 

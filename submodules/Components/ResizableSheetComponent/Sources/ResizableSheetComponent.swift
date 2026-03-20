@@ -460,6 +460,12 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 topOffsetFraction = 1.0
             }
             
+            #if DEBUG
+            if "".isEmpty {
+                topOffsetFraction = 1.0
+            }
+            #endif
+            
             let minScale: CGFloat = itemLayout.isTablet ? 1.0 : (itemLayout.containerSize.width - 6.0 * 2.0) / itemLayout.containerSize.width
             let minScaledTranslation: CGFloat = itemLayout.isTablet ? 0.0 : (itemLayout.containerSize.height - itemLayout.containerSize.height * minScale) * 0.5 - 6.0
             let minScaledCornerRadius: CGFloat = itemLayout.containerCornerRadius

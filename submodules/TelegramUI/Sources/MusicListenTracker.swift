@@ -172,9 +172,7 @@ final class MusicListenTracker {
         let duration = self.accumulatedDuration
         let trackDuration = self.trackDuration
 
-        // Check minimum threshold: min(30s, 90% of track)
-        let threshold = min(30.0, trackDuration * 0.9)
-        if duration >= threshold && duration > 0 && trackDuration > 0 {
+        if duration >= 3.0 && trackDuration > 0 {
             let reportedDuration = Int(duration)
             self.reportDisposable.set(
                 self.engine.messages.reportMusicListened(file: fileReference, duration: reportedDuration).startStrict()
