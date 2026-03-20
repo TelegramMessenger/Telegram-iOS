@@ -728,7 +728,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             return
         }
         
-        guard self.forceSelected == nil else {
+        guard self.forceSelected == nil && self.currentResult == nil else {
             return
         }
 
@@ -1359,6 +1359,8 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     private var currentStrings: PresentationStrings?
     private var currentTheme: PresentationTheme?
     private var currentIncoming = false
+    private var currentFocusedTextInputIsMedia = false
+    private var currentModeSelectorAnimationName: String?
     
     var textUpdated: ((NSAttributedString) -> Void)?
     var heightUpdated: (() -> Void)?
@@ -1444,7 +1446,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
             textColor: currentTextColor,
             accentColor: currentTintColor,
             insets: UIEdgeInsets(top: ChatMessagePollAddOptionNode.verticalInset, left: 0.0, bottom: ChatMessagePollAddOptionNode.verticalInset, right: 0.0),
-            hideKeyboard: false,
+            hideKeyboard: self.currentFocusedTextInputIsMedia,
             customInputView: nil,
             placeholder: NSAttributedString(string: strings.CreatePoll_AddOption, font: font, textColor: currentPlaceholderColor),
             resetText: nil,
@@ -1530,8 +1532,8 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
         return max(ChatMessagePollAddOptionNode.minHeight, measureSize.height + ChatMessagePollAddOptionNode.verticalInset * 2.0)
     }
     
-    static func asyncLayout(_ maybeNode: ChatMessagePollAddOptionNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ incoming: Bool, _ text: NSAttributedString, _ attachment: Attachment?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollAddOptionNode))) {
-        return { context, presentationData, strings, incoming, text, attachment, constrainedWidth in
+    static func asyncLayout(_ maybeNode: ChatMessagePollAddOptionNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ incoming: Bool, _ focusedTextInputIsMedia: Bool, _ text: NSAttributedString, _ attachment: Attachment?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollAddOptionNode))) {
+        return { context, presentationData, strings, incoming, focusedTextInputIsMedia, text, attachment, constrainedWidth in
             let font = presentationData.messageFont
             let textColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
             let secondaryTextColor = incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
@@ -1565,6 +1567,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
                     node.currentContext = context
                     node.currentTheme = presentationData.theme.theme
                     node.currentIncoming = incoming
+                    node.currentFocusedTextInputIsMedia = focusedTextInputIsMedia
                     let textFieldSize = node.updateTextFieldLayout(size: size, forceUpdate: false)
                     node.currentMeasuredHeight = max(ChatMessagePollAddOptionNode.minHeight, textFieldSize.height)
                     node.currentTextValue = node._textFieldExternalState.text
@@ -1607,8 +1610,19 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
         self.addIconNode.isHidden = displaySelector
         
         if displaySelector {
+            var playAnimation = false
+            
             let modeSelectorSize = CGSize(width: 32.0, height: 32.0)
-            let modeSelectorFrame = CGRect(origin: CGPoint(x: floor((ChatMessagePollAddOptionNode.leftInset - modeSelectorSize.width) * 0.5) - 2.0, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
+            var modeSelectorFrame = CGRect(origin: CGPoint(x: floor((ChatMessagePollAddOptionNode.leftInset - modeSelectorSize.width) * 0.5) - 2.0, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
+            let animationName = self.currentFocusedTextInputIsMedia ? "input_anim_smileToKey" : "input_anim_keyToSmile"
+            if let currentModeSelectorAnimationName = self.currentModeSelectorAnimationName, currentModeSelectorAnimationName != animationName {
+                playAnimation = true
+            }
+            self.currentModeSelectorAnimationName = animationName
+            
+            if self.currentFocusedTextInputIsMedia {
+                modeSelectorFrame = modeSelectorFrame.offsetBy(dx: 3.0, dy: 0.0)
+            }
             
             let modeSelector: ComponentView<Empty>
             if let current = self.modeSelector {
@@ -1622,7 +1636,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
                 transition: animated ? .easeInOut(duration: 0.2) : .immediate,
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(LottieComponent(
-                        content: LottieComponent.AppBundleContent(name: "input_anim_keyToSmile"),
+                        content: LottieComponent.AppBundleContent(name: animationName),
                         color: secondaryTextColor,
                         size: modeSelectorSize
                     )),
@@ -1640,9 +1654,20 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
                 if modeSelectorView.superview == nil {
                     self.view.addSubview(modeSelectorView)
                 }
-                modeSelectorView.frame = modeSelectorFrame
+                if playAnimation {
+                    let transition = ComponentTransition(animation: .curve(duration: animationName == "input_anim_smileToKey" ? 0.32 : 0.26, curve: .easeInOut))
+                    transition.setFrame(view: modeSelectorView, frame: modeSelectorFrame)
+                } else {
+                    modeSelectorView.frame = modeSelectorFrame
+                }
                 modeSelectorView.alpha = 1.0
                 modeSelectorView.transform = .identity
+                
+                if let animationView = modeSelectorView.contentView as? LottieComponent.View {
+                    if playAnimation {
+                        animationView.playOnce()
+                    }
+                }
             }
         } else if let modeSelector = self.modeSelector {
             self.modeSelector = nil
@@ -2090,6 +2115,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             return
         }
         self.newOptionIsFocused = focus
+        if !focus {
+            item.controllerInteraction.focusedTextInputIsMedia = false
+        }
         item.controllerInteraction.updatePresentationState { state in
             if focus {
                 if state.focusedPollAddOptionMessageId == item.message.id {
@@ -2122,15 +2150,21 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return
         }
-        item.controllerInteraction.updatePresentationState { state in
-            return state.updatedInputMode({ inputMode in
+        item.controllerInteraction.updatePresentationState { [weak item] state in
+            var focusedTextInputIsMedia = false
+            let updatedState = state.updatedInputMode({ inputMode in
                 if case .media = inputMode {
                     return .text
                 } else {
+                    focusedTextInputIsMedia = true
                     return .media(mode: .other, expanded: .none, focused: true)
                 }
             })
+            item?.controllerInteraction.focusedTextInputIsMedia = focusedTextInputIsMedia
+            
+            return updatedState
         }
+        self.requestNewOptionLayoutUpdate()
     }
 
     private func openNewOptionAttachment() {
@@ -2707,7 +2741,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                     let displayAddOption = poll.openAnswers && !isClosed && !hasVoted && poll.pollId.namespace == Namespaces.Media.CloudPoll
                     if displayAddOption {
-                        let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
+                        let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, item.controllerInteraction.focusedTextInputIsMedia, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, addOptionResult.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
                         addOptionFinalizeLayout = addOptionResult.layout
                     }
