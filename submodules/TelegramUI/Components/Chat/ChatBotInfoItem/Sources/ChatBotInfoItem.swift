@@ -260,10 +260,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                         return ("URL", url)
                     }
                 ))
-                var rawTextString = "Tap **Start** below to test your new chatbot.\nIts behavior is defined by **\(managedByBot.compactDisplayTitle)**."
-                if peer.profileImageRepresentations.isEmpty {
-                    rawTextString.append("\n\nYou can edit your bot's profile picture [here〉]()")
-                }
+                let rawTextString = "Tap **Start** below to test your new chatbot. Its behavior is defined by **\(managedByBot.compactDisplayTitle)**."
                 textString = parseMarkdownIntoAttributedString(rawTextString, attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
                     bold: MarkdownAttributeSet(font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),

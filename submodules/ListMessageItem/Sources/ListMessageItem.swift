@@ -14,7 +14,7 @@ public final class ListMessageItemInteraction {
     public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
     public let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
     public let toggleMessagesSelection: ([MessageId], Bool) -> Void
-    public let toggleMediaPlayback: ((MessageId) -> Void)?
+    public let toggleMediaPlayback: ((Message) -> Void)?
     let openUrl: (String, Bool, Bool?, Message?) -> Void
     let openInstantPage: (Message, ChatMessageItemAssociatedData?) -> Void
     let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
@@ -26,7 +26,7 @@ public final class ListMessageItemInteraction {
     public init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
-        toggleMediaPlayback: ((MessageId) -> Void)?,
+        toggleMediaPlayback: ((Message) -> Void)?,
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         openUrl: @escaping (String, Bool, Bool?, Message?) -> Void,
         openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void,
@@ -70,6 +70,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
     let isDownloadList: Bool
     let isSavedMusic: Bool
     let isStoryMusic: Bool
+    let isAttachMusic: Bool
     let displayFileInfo: Bool
     let displayBackground: Bool
     let canReorder: Bool
@@ -81,7 +82,29 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
     
     public let selectable: Bool = true
     
-    public init(presentationData: ChatPresentationData, systemStyle: ItemListSystemStyle = .legacy, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message?, translateToLanguage: String? = nil, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false, isDownloadList: Bool = false, isSavedMusic: Bool = false, isStoryMusic: Bool = false, displayFileInfo: Bool = true, displayBackground: Bool = false, canReorder: Bool = false, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0) {
+    public init(
+        presentationData: ChatPresentationData,
+        systemStyle: ItemListSystemStyle = .legacy,
+        context: AccountContext,
+        chatLocation: ChatLocation,
+        interaction: ListMessageItemInteraction,
+        message: Message?,
+        translateToLanguage: String? = nil,
+        selection: ChatHistoryMessageSelection,
+        displayHeader: Bool,
+        customHeader: ListViewItemHeader? = nil,
+        hintIsLink: Bool = false,
+        isGlobalSearchResult: Bool = false,
+        isDownloadList: Bool = false,
+        isSavedMusic: Bool = false,
+        isStoryMusic: Bool = false,
+        isAttachMusic: Bool = false,
+        displayFileInfo: Bool = true,
+        displayBackground: Bool = false,
+        canReorder: Bool = false,
+        style: ItemListStyle = .plain,
+        sectionId: ItemListSectionId = 0
+    ) {
         self.presentationData = presentationData
         self.systemStyle = systemStyle
         self.context = context
@@ -102,6 +125,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         self.isDownloadList = isDownloadList
         self.isSavedMusic = isSavedMusic
         self.isStoryMusic = isStoryMusic
+        self.isAttachMusic = isAttachMusic
         self.displayFileInfo = displayFileInfo
         self.displayBackground = displayBackground
         self.canReorder = canReorder
@@ -224,7 +248,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         if case let .selectable(selected) = self.selection {
             self.interaction.toggleMessagesSelection([message.id], !selected)
         } else {
-            if !self.displayFileInfo {
+            if !self.displayFileInfo || self.isAttachMusic {
                 let _ = self.interaction.openMessage(message, .default)
             } else {
                 listView.forEachItemNode { itemNode in

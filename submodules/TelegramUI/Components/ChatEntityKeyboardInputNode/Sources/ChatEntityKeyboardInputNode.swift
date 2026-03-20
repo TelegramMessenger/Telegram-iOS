@@ -370,6 +370,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     private var hasRecentGifsDisposable: Disposable?
     private let opaqueTopPanelBackground: Bool
     private let useOpaqueTheme: Bool
+    private let displayBottomPanel: Bool
     
     private struct EmojiSearchResult {
         var groups: [EmojiPagerContentComponent.ItemGroup]
@@ -484,13 +485,14 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         |> distinctUntilChanged
     }
     
-    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, useOpaqueTheme: Bool = false, interaction: ChatEntityKeyboardInputNode.Interaction?, chatPeerId: PeerId?, stateContext: StateContext?, forceHasPremium: Bool = false) {
+    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, useOpaqueTheme: Bool = false, interaction: ChatEntityKeyboardInputNode.Interaction?, chatPeerId: PeerId?, stateContext: StateContext?, forceHasPremium: Bool = false, displayBottomPanel: Bool = true) {
         self.context = context
         self.currentInputData = currentInputData
         self.defaultToEmojiTab = defaultToEmojiTab
         self.opaqueTopPanelBackground = opaqueTopPanelBackground
         self.useOpaqueTheme = useOpaqueTheme
         self.stateContext = stateContext
+        self.displayBottomPanel = displayBottomPanel
         
         self.interaction = interaction
         
@@ -2162,10 +2164,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             emoji: inputData.emoji.flatMap { emoji in
                 return emoji.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: emoji.contentItemGroups), itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults, searchState: emoji.searchState)
             },
-            stickers: inputData.stickers.flatMap { stickers in
+            stickers: !self.displayBottomPanel ? nil : inputData.stickers.flatMap { stickers in
                 return stickers.withUpdatedItemGroups(panelItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.panelItemGroups), contentItemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.contentItemGroups), itemContentUniqueId: stickers.itemContentUniqueId, emptySearchResults: nil, searchState: stickers.searchState)
             },
-            gifs: inputData.gifs,
+            gifs: !self.displayBottomPanel ? nil : inputData.gifs,
             availableGifSearchEmojies: inputData.availableGifSearchEmojies
         )
     }

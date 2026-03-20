@@ -350,6 +350,10 @@ public final class TextFieldComponent: Component {
             return InputState(inputText: stateAttributedStringForText(self.textView.attributedText ?? NSAttributedString()), selectionRange: selectionRange)
         }
         
+        public var inputTextView: UITextView {
+            return self.textView
+        }
+        
         private var component: TextFieldComponent?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
@@ -1589,11 +1593,12 @@ public final class TextFieldComponent: Component {
                     environment: {},
                     containerSize: textFrame.size
                 )
-                let placeholderFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.minY + floor((textFrame.height - placeholderSize.height) * 0.5) - 1.0), size: placeholderSize)
+                let placeholderFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((textFrame.height - placeholderSize.height) * 0.5) - 1.0), size: placeholderSize)
                 if let placeholderView = placeholder.view {
                     if placeholderView.superview == nil {
+                        placeholderView.isUserInteractionEnabled = false
                         placeholderView.layer.anchorPoint = CGPoint()
-                        self.insertSubview(placeholderView, belowSubview: self.textView)
+                        self.textView.insertSubview(placeholderView, at: 0)
                     }
                     placeholderTransition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                     placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)

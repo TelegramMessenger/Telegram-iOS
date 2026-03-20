@@ -19,6 +19,7 @@ import GlassBarButtonComponent
 import BundleIconComponent
 import EdgeEffect
 import SaveToCameraRoll
+import PeerMessagesMediaPlaylist
 
 private final class AttachmentFileControllerArguments {
     let context: AccountContext
@@ -29,8 +30,9 @@ private final class AttachmentFileControllerArguments {
     let expandSavedMusic: () -> Void
     let expandRecentMusic: () -> Void
     let send: (Message) -> Void
+    let toggleMediaPlayback: (Message) -> Void
    
-    init(context: AccountContext, isAudio: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, scanDocument: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, expandRecentMusic: @escaping () -> Void, send: @escaping (Message) -> Void) {
+    init(context: AccountContext, isAudio: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, scanDocument: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, expandRecentMusic: @escaping () -> Void, send: @escaping (Message) -> Void, toggleMediaPlayback: @escaping (Message) -> Void) {
         self.context = context
         self.isAudio = isAudio
         self.openGallery = openGallery
@@ -39,6 +41,7 @@ private final class AttachmentFileControllerArguments {
         self.expandSavedMusic = expandSavedMusic
         self.expandRecentMusic = expandRecentMusic
         self.send = send
+        self.toggleMediaPlayback = toggleMediaPlayback
     }
 }
 
@@ -223,11 +226,13 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
             let interaction = ListMessageItemInteraction(openMessage: { message, _ in
                 arguments.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { message in
+                arguments.toggleMediaPlayback(message)
+            }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
-            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: arguments.context.account.peerId), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: arguments.context.account.peerId), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
         case let .savedShowMore(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
                 arguments.expandSavedMusic()
@@ -238,12 +243,14 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
             let interaction = ListMessageItemInteraction(openMessage: { message, _ in
                 arguments.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { message in
+                arguments.toggleMediaPlayback(message)
+            }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
             
-            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
         case let .recentShowMore(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
                 arguments.expandRecentMusic()
@@ -254,12 +261,14 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
             let interaction = ListMessageItemInteraction(openMessage: { message, _ in
                 arguments.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { message in
+                arguments.toggleMediaPlayback(message)
+            }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
             
-            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
         case let .globalShowMore(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
                 
@@ -490,6 +499,7 @@ public func makeAttachmentFileControllerImpl(
             if message.id.namespace == Namespaces.Message.Local {
                 if let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile {
                     send(.standalone(media: file))
+                    dismissImpl?()
                 }
             } else {
                 let _ = (context.engine.messages.getMessagesLoadIfNecessary([message.id], strategy: .cloud(skipLocal: true))
@@ -509,6 +519,10 @@ public func makeAttachmentFileControllerImpl(
                     dismissImpl?()
                 })
             }
+        },
+        toggleMediaPlayback: { message in
+            let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil)
+            context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
         }
     )
     
@@ -715,9 +729,7 @@ public func makeAttachmentFileControllerImpl(
     }
     
     let controller = AttachmentFileControllerImpl(context: context, state: signal, hideNavigationBarBackground: true)
-    if case .audio = mode {
-        controller.hasBottomEdgeEffect = false
-    }
+
     controller.delayDisappear = true
     controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
         switch offset {

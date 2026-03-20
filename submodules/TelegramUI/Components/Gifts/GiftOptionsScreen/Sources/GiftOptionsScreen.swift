@@ -363,7 +363,7 @@ final class GiftOptionsScreenComponent: Component {
                         mainController.present(controller, in: .current)
                         return
                     }
-                    if gift.flags.contains(.requiresPremium) && !component.context.isPremium {
+                    if gift.flags.contains(.requiresPremium) && !component.context.isPremium && !((gift.availability?.resale ?? 0) > 0) {
                         let controller = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .premiumGift(gift.file), forceDark: false, dismissed: nil)
                         mainController.push(controller)
                         return

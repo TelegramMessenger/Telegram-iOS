@@ -95,6 +95,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, openHashtag: { _, _ in
             }, updateInputState: { _ in
             }, updateInputMode: { _ in
+            }, updatePresentationState: { _ in
             }, openMessageShareMenu: { _ in
             }, presentController: { _, _ in
             }, presentControllerInCurrent: { _, _ in
@@ -120,6 +121,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, addContact: { _ in
             }, rateCall: { _, _, _ in
             }, requestSelectMessagePollOptions: { _, _ in
+            }, requestAddMessagePollOption: { _, _, _, _, _ in
             }, requestOpenMessagePollResults: { _, _ in
             }, openAppStorePage: {
             }, displayMessageTooltip: { _, _, _, _, _ in
@@ -133,6 +135,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, dismissReplyMarkupMessage: { _ in
             }, openMessagePollResults: { _, _ in
             }, openPollCreation: { _ in
+            }, openPollMedia: { _, _ in
             }, displayPollSolution: { _, _ in
             }, displayPsa: { _, _ in
             }, displayDiceTooltip: { _ in

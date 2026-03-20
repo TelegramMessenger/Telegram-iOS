@@ -1,4 +1,72 @@
 public extension Api.messages {
+    enum AffectedFoundMessages: TypeConstructorDescription {
+        public class Cons_affectedFoundMessages: TypeConstructorDescription {
+            public var pts: Int32
+            public var ptsCount: Int32
+            public var offset: Int32
+            public var messages: [Int32]
+            public init(pts: Int32, ptsCount: Int32, offset: Int32, messages: [Int32]) {
+                self.pts = pts
+                self.ptsCount = ptsCount
+                self.offset = offset
+                self.messages = messages
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("affectedFoundMessages", [("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any), ("offset", self.offset as Any), ("messages", self.messages as Any)])
+            }
+        }
+        case affectedFoundMessages(Cons_affectedFoundMessages)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .affectedFoundMessages(let _data):
+                if boxed {
+                    buffer.appendInt32(-275956116)
+                }
+                serializeInt32(_data.pts, buffer: buffer, boxed: false)
+                serializeInt32(_data.ptsCount, buffer: buffer, boxed: false)
+                serializeInt32(_data.offset, buffer: buffer, boxed: false)
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.messages.count))
+                for item in _data.messages {
+                    serializeInt32(item, buffer: buffer, boxed: false)
+                }
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .affectedFoundMessages(let _data):
+                return ("affectedFoundMessages", [("pts", _data.pts as Any), ("ptsCount", _data.ptsCount as Any), ("offset", _data.offset as Any), ("messages", _data.messages as Any)])
+            }
+        }
+
+        public static func parse_affectedFoundMessages(_ reader: BufferReader) -> AffectedFoundMessages? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: [Int32]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.AffectedFoundMessages.affectedFoundMessages(Cons_affectedFoundMessages(pts: _1!, ptsCount: _2!, offset: _3!, messages: _4!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
+public extension Api.messages {
     enum AffectedHistory: TypeConstructorDescription {
         public class Cons_affectedHistory: TypeConstructorDescription {
             public var pts: Int32

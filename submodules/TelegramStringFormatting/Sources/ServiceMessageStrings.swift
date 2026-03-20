@@ -20,6 +20,42 @@ private func customEmojiAttributes(primaryTextColor: UIColor, emoji: ChatTextInp
     return MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: emoji])
 }
 
+private func serviceMessageArgumentRange(index: Int, value: String, in stringWithRanges: (String, [(Int, NSRange)])) -> NSRange? {
+    if let range = stringWithRanges.1.first(where: { $0.0 == index })?.1 {
+        return range
+    }
+
+    let string = stringWithRanges.0 as NSString
+    return stringWithRanges.1.map { $0.1 }.first(where: { range in
+        NSMaxRange(range) <= string.length && string.substring(with: range) == value
+    })
+}
+
+private func addServiceMessageTextEntities(_ entities: [MessageTextEntity], to attributedString: NSMutableAttributedString, text: String, range: NSRange, associatedMedia: [MediaId: Media]) {
+    let textLength = min((text as NSString).length, range.length)
+
+    for entity in entities {
+        if entity.range.lowerBound >= textLength {
+            continue
+        }
+
+        let length = min(entity.range.count, textLength - entity.range.lowerBound)
+        if length <= 0 {
+            continue
+        }
+
+        let entityRange = NSRange(location: range.location + entity.range.lowerBound, length: length)
+        switch entity.type {
+        case .Spoiler:
+            attributedString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: entityRange)
+        case let .CustomEmoji(_, fileId):
+            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: entityRange)
+        default:
+            break
+        }
+    }
+}
+
 private func peerMentionAttributes(primaryTextColor: UIColor, peerId: EnginePeer.Id) -> MarkdownAttributeSet {
     return MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [TelegramTextAttributes.PeerMention: TelegramPeerMention(peerId: peerId, mention: "")])
 }
@@ -1780,10 +1816,62 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = NSAttributedString(string: strings.Notification_CopyProtection_Request(peerName).string, font: titleFont, textColor: primaryTextColor)
                 }
-            case .managedBotCreated:
-                attributedString = nil
+            case let .managedBotCreated(botId):
+                let peerName = message.peers[botId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                let peerIds: [(Int, EnginePeer.Id?)] = [(0, botId)]
+                let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                attributedString = addAttributesToStringWithRanges(strings.Notification_ManagedBotCreated(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
             case let .pollOptionAppended(option):
-                let _ = option
+                var optionTitle = "DELETED"
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        for media in message.media {
+                            if let todo = media as? TelegramMediaTodo {
+                                optionTitle = todo.text
+                            }
+                        }
+                    }
+                }
+                if optionTitle.count > 20 {
+                    optionTitle = optionTitle.prefix(20) + "…"
+                }
+                let optionEntities = option.entities.filter { entity in
+                    switch entity.type {
+                    case .Spoiler, .CustomEmoji:
+                        return true
+                    default:
+                        return false
+                    }
+                }
+                if message.author?.id == accountPeerId {
+                    var optionText = option.text
+                    if optionText.count > 20 {
+                        optionText = optionText.prefix(20) + "…"
+                    }
+                    let resultString = strings.Notification_PollAddedOptionYou(optionText)
+                    let stringWithRanges = resultString._tuple
+                    let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes]))
+                    if let optionRange = serviceMessageArgumentRange(index: 0, value: optionText, in: stringWithRanges) {
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                    }
+                    attributedString = resultAttributedString
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    
+                    var optionText = option.text
+                    if optionText.count > 20 {
+                        optionText = optionText.prefix(20) + "…"
+                    }
+                    let resultString = strings.Notification_PollAddedOption(peerName, optionText)
+                    let stringWithRanges = resultString._tuple
+                    let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: attributes))
+                    if let optionRange = serviceMessageArgumentRange(index: 1, value: optionText, in: stringWithRanges) {
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                    }
+                    attributedString = resultAttributedString
+                }
             case .unknown:
                 attributedString = nil
             }

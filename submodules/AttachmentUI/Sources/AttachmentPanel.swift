@@ -34,6 +34,7 @@ private let smallGlassButtonSize = CGSize(width: 72.0, height: 62.0)
 private let smallButtonWidth: CGFloat = 69.0
 private let iconSize = CGSize(width: 30.0, height: 30.0)
 private let glassPanelSideInset: CGFloat = 20.0
+private let smallPanelWidth: CGFloat = 240.0
 
 private final class IconComponent: Component {
     public let account: Account
@@ -236,6 +237,9 @@ private final class AttachButtonComponent: CombinedComponent {
             case .emoji:
                 name = "Emoji"
                 imageName = "Chat/Attach Menu/Reply"
+            case .audio:
+                name = "Audio"
+                imageName = "Chat/Attach Menu/Audio"
             case let .app(bot):
                 botPeer = bot.peer
                 name = bot.shortName
@@ -1659,7 +1663,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             return
         }
         
-        let width = layout.size.width
+        var width = layout.size.width
+        if self.buttons.count == 3 {
+            width = smallPanelWidth
+        }
+        
         var panelSideInset: CGFloat
         switch self.panelStyle {
         case .glass:
@@ -1669,6 +1677,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
                 
         var distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - self.buttonSize.width) / CGFloat(max(1, self.buttons.count - 1)))
+        if self.buttons.count == 3 {
+            distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - 32.0) / CGFloat(max(1, self.buttons.count - 1)))
+        }
         let internalWidth = distanceBetweenNodes * CGFloat(self.buttons.count - 1)
         var buttonWidth = self.buttonSize.width
         var leftNodeOriginX: CGFloat
@@ -1681,6 +1692,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             }
         case .legacy:
             leftNodeOriginX = (width - internalWidth) / 2.0
+        }
+        if self.buttons.count == 3 {
+            leftNodeOriginX = floor((layout.size.width - width) / 2.0) + 16.0
         }
                 
         if self.buttons.count > maxButtonsToFit && layout.size.width < layout.size.height {
@@ -1830,6 +1844,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 accessibilityTitle = "Sticker"
             case .emoji:
                 accessibilityTitle = "Emoji"
+            case .audio:
+                accessibilityTitle = "Audio"
             case let .app(bot):
                 accessibilityTitle = bot.shortName
             case .standalone:
@@ -2161,7 +2177,15 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 self.tabSelectionRecognizer = tabSelectionRecognizer
                 self.scrollNode.view.addGestureRecognizer(tabSelectionRecognizer)
             }
-            let panelSize = CGSize(width: isSelecting ? textPanelWidth : layout.size.width - layout.safeInsets.left - layout.safeInsets.right - panelSideInset * 2.0, height: isSelecting ? textPanelHeight - 11.0 : glassPanelHeight)
+            
+            let buttonsPanelWidth: CGFloat
+            if buttons.count == 3 {
+                buttonsPanelWidth = smallPanelWidth
+            } else {
+                buttonsPanelWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - panelSideInset * 2.0
+            }
+            
+            let panelSize = CGSize(width: isSelecting ? textPanelWidth : buttonsPanelWidth, height: isSelecting ? textPanelHeight - 11.0 : glassPanelHeight)
             
             let cornerRadius: CGFloat = isSelecting ? min(20.0, panelSize.height * 0.5) : panelSize.height * 0.5
             let backgroundOriginX: CGFloat = isSelecting ? panelSideInset : floorToScreenPixels((layout.size.width - panelSize.width) / 2.0)

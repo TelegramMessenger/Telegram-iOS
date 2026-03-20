@@ -82,7 +82,7 @@ func _internal_composeMessageWithAI(network: Network, text: String, entities: [M
     if emojify {
         flags |= (1 << 3)
     }
-
+    
     let apiText: Api.TextWithEntities = .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary())))
 
     return network.request(Api.functions.messages.composeMessageWithAI(flags: flags, text: apiText, translateToLang: translateToLang, changeTone: changeTone))
@@ -93,6 +93,8 @@ func _internal_composeMessageWithAI(network: Network, text: String, entities: [M
             return .textIsEmpty
         } else if error.errorDescription == "INPUT_TEXT_TOO_LONG" {
             return .textTooLong
+        } else if error.errorDescription.hasPrefix("AICOMPOSE_FLOOD_PREMIUM ") {
+            return .limitExceeded
         } else {
             return .generic
         }

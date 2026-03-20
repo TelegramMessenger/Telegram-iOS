@@ -28,10 +28,9 @@ swift_library(
         "//submodules/PresentationDataUtils",
         "//submodules/PhotoResources",
         "//submodules/LocationResources",
-        "//submodules/SemanticStatusNode",
+        "//submodules/RadialStatusNode",
     ],
     visibility = [
         "//visibility:public",
     ],
 )
-

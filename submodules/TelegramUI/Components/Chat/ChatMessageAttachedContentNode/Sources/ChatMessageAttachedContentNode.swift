@@ -31,6 +31,7 @@ import ChatMessageAttachedContentButtonNode
 import MessageInlineBlockBackgroundView
 import ComponentFlow
 import PlainButtonComponent
+import BundleIconComponent
 import AvatarNode
 import EmojiTextAttachmentView
 
@@ -99,7 +100,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     public var statusNode: ChatMessageDateAndStatusNode?
     
     private var closeButton: ComponentView<Empty>?
-    private var closeButtonImage: UIImage?
     
     private var inlineStickerLayers: [InlineStickerItemLayer] = []
     
@@ -1238,6 +1238,41 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 } else {
                                     titleBadgeLabel.bounds = CGRect(origin: CGPoint(), size: titleBadgeFrame.size)
                                     animation.animator.updatePosition(layer: titleBadgeLabel.layer, position: titleBadgeFrame.origin, completion: nil)
+                                }
+                            }
+                            
+                            if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                                let closeButton: ComponentView<Empty>
+                                if let current = self.closeButton {
+                                    closeButton = current
+                                } else {
+                                    closeButton = ComponentView<Empty>()
+                                    self.closeButton = closeButton
+                                }
+                                let closeButtonSize = closeButton.update(
+                                    transition: .immediate,
+                                    component: AnyComponent(
+                                        PlainButtonComponent(
+                                            content: AnyComponent(
+                                                Image(image: PresentationResourcesChat.chatAttachedContentCloseIcon(presentationData.theme.theme), tintColor: mainColor, size: CGSize(width: 12.0, height: 12.0))
+                                            ),
+                                            minSize: CGSize(width: 44.0, height: 44.0),
+                                            action: { [weak controllerInteraction] in
+                                                controllerInteraction?.displayPollSolution(nil, nil)
+                                            },
+                                            animateAlpha: true,
+                                            animateScale: false
+                                        )
+                                    ),
+                                    environment: {},
+                                    containerSize: CGSize(width: 44.0, height: 44.0)
+                                )
+                                let closeButtonFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - closeButtonSize.width + 11.0, y: floorToScreenPixels(titleFrame.midY - closeButtonSize.height / 2.0)), size: closeButtonSize)
+                                if let closeButtonView = closeButton.view {
+                                    if closeButtonView.superview == nil {
+                                        self.transformContainer.view.addSubview(closeButtonView)
+                                    }
+                                    closeButtonView.frame = closeButtonFrame
                                 }
                             }
                         } else {

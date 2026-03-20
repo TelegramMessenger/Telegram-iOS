@@ -285,6 +285,10 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 return (result, false, true)
             } else if let poll = media as? TelegramMediaPoll {
+                if item.controllerInteraction.currentPollMessageWithTooltip == item.message.id, let _ = poll.results.solution {
+                    result.append((message, ChatMessageQuizAnswerBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                }
+                
                 if let attachedMedia = poll.attachedMedia {
                     if let _ = attachedMedia as? TelegramMediaImage {
                         result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
@@ -6437,6 +6441,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     contentNode.updateQuoteTextHighlightState(text: nil, offset: nil, color: .clear, animated: true)
                 } else if let contentNode = contentNode as? ChatMessageTodoBubbleContentNode {
                     contentNode.updateTaskHighlightState(id: nil, color: .clear, animated: true)
+                } else if let contentNode = contentNode as? ChatMessagePollBubbleContentNode {
+                    contentNode.updateOptionHighlightState(id: nil, color: .clear, animated: true)
                 }
             }
             

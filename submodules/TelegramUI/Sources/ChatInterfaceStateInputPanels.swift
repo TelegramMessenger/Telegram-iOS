@@ -17,6 +17,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
     if chatPresentationInterfaceState.isNotAccessible {
         return (nil, nil)
     }
+
+    if chatPresentationInterfaceState.focusedPollAddOptionMessageId != nil {
+        return (nil, nil)
+    }
     
     if case .messageOptions = chatPresentationInterfaceState.subject {
         return (nil, nil)

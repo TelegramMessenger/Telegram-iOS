@@ -10,7 +10,6 @@ import UndoUI
 import AccountContext
 import ChatMessageItemView
 import ChatMessageItemCommon
-import AvatarNode
 import ChatControllerInteraction
 import Pasteboard
 import TelegramStringFormatting
@@ -29,6 +28,15 @@ extension ChatControllerImpl {
         
         let pollOption = poll.options[pollOptionIndex]
         
+        var selectedOptions: [Data] = []
+        if let voters = poll.results.voters {
+            for voter in voters {
+                if voter.selected {
+                    selectedOptions.append(voter.opaqueIdentifier)
+                }
+            }
+        }
+        
         let _ = (contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: self.presentationInterfaceState, context: self.context, messages: [message], controllerInteraction: self.controllerInteraction, selectAll: false, interfaceInteraction: self.interfaceInteraction, messageNode: params.messageNode as? ChatMessageItemView)
         |> deliverOnMainQueue).start(next: { [weak self] actions in
             guard let self else {
@@ -36,36 +44,34 @@ extension ChatControllerImpl {
             }
           
             var items: [ContextMenuItem] = []
-//            if canMark {
-//                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Todo_ContextMenu_CheckTask, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { [weak self]  c, f in
-//                    guard let self else {
-//                        return
-//                    }
-//
-//                    if !self.context.isPremium {
-//                        f(.default)
-//                        let controller = UndoOverlayController(
-//                            presentationData: self.presentationData,
-//                            content: .premiumPaywall(title: nil, text: self.presentationData.strings.Chat_Todo_PremiumRequired, customUndoText: nil, timeout: nil, linkAction: nil),
-//                            action: { [weak self] action in
-//                                guard let self else {
-//                                    return false
-//                                }
-//                                if case .info = action {
-//                                    let controller = self.context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
-//                                    self.push(controller)
-//                                }
-//                                return false
-//                            }
-//                        )
-//                        self.present(controller, in: .current)
-//                    } else {
-//                        c?.dismiss(completion: {
-//                            let _ = self.context.engine.messages.requestUpdateTodoMessageItems(messageId: message.id, completedIds: [todoItemId], incompletedIds: []).start()
-//                        })
-//                    }
-//                })))
-//            }
+            if !poll.isClosed && (selectedOptions.isEmpty || !poll.revotingDisabled) {
+                if selectedOptions.contains(pollOption.opaqueIdentifier) {
+                    items.append(.action(ContextMenuActionItem(text: "Retract Vote", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unvote"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                        guard let self else {
+                            return
+                        }
+                        c?.dismiss(result: .default, completion: {
+                            var updatedOptions = selectedOptions
+                            updatedOptions.removeAll(where: { $0 == pollOption.opaqueIdentifier } )
+                            self.controllerInteraction?.requestSelectMessagePollOptions(message.id, updatedOptions)
+                        })
+                    })))
+                } else {
+                    items.append(.action(ContextMenuActionItem(text: "Vote", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/StopPoll"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                        guard let self else {
+                            return
+                        }
+                        c?.dismiss(result: .default, completion: {
+                            var updatedOptions = selectedOptions
+                            if !poll.kind.multipleAnswers {
+                                updatedOptions = []
+                            }
+                            updatedOptions.append(pollOption.opaqueIdentifier)
+                            self.controllerInteraction?.requestSelectMessagePollOptions(message.id, updatedOptions)
+                        })
+                    })))
+                }
+            }
             
             //TODO:localize
             if canReplyInChat(self.presentationInterfaceState, accountPeerId: self.context.account.peerId) {
@@ -140,6 +146,18 @@ extension ChatControllerImpl {
                 })))
             }
             
+            if pollOption.date != nil {
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self]  _, f in
+                    f(.default)
+
+                    guard let self else {
+                        return
+                    }
+                    let _ = self.context.engine.messages.deletePollOption(messageId: message.id, opaqueIdentifier: pollOption.opaqueIdentifier).start()
+                })))
+            }
+            
             self.canReadHistory.set(false)
             
             //TODO:localize
@@ -159,7 +177,7 @@ extension ChatControllerImpl {
             sources.append(
                 ContextController.Source(
                     id: AnyHashable(OptionsId.message),
-                    title: self.presentationData.strings.Chat_Todo_ContextMenu_SectionList,
+                    title: "Poll",
                     source: .extracted(messageContentSource),
                     items: .single(actions)
                 )

@@ -37,8 +37,10 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/GlassBarButtonComponent",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/SearchInputPanelComponent",
         "//submodules/TelegramUI/Components/EdgeEffect",
+        "//submodules/TelegramUI/Components/MediaManager/PeerMessagesMediaPlaylist",
     ],
     visibility = [
         "//visibility:public",

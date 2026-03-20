@@ -124,7 +124,7 @@ public final class PollBubbleTimerNode: ASDisplayNode {
         let isTimer = timeout <= Int(timerInterval)
         
         let color = isProximity ? params.proximityColor : params.regularColor
-        self.textNode.attributedText = NSAttributedString(string: textForTimeout(value: timeout), font: Font.regular(14.0), textColor: color)
+        self.textNode.attributedText = NSAttributedString(string: textForTimeout(value: timeout), font: Font.with(size: 14.0, traits: .monospacedNumbers), textColor: color)
         let textSize = textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         self.textNode.frame = CGRect(origin: CGPoint(x: -22.0 - textSize.width, y: 0.0), size: textSize)
         

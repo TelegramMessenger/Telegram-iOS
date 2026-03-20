@@ -197,7 +197,7 @@ final class StickerAttachmentScreenComponent: Component {
                 return
             }
             component.completion(fileReference)
-            (self.environment?.controller() as? StickerAttachmentScreen)?.parentController()?.dismiss()
+            (self.environment?.controller() as? StickerAttachmentScreen)?.dismiss(animated: true)
         }
         
         func updateContent() {

@@ -4,6 +4,30 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
+private func cloudMediaToInputMedia(_ media: Media) -> Api.InputMedia? {
+    if let image = media as? TelegramMediaImage,
+       let reference = image.reference,
+       case let .cloud(id, accessHash, maybeFileReference) = reference {
+        let fileReference = maybeFileReference ?? Data()
+        return .inputMediaPhoto(.init(flags: 0, id: .inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference))), ttlSeconds: nil, video: nil))
+    } else if let file = media as? TelegramMediaFile,
+              let resource = file.resource as? CloudDocumentMediaResource {
+        return .inputMediaDocument(.init(flags: 0, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))), videoCover: nil, videoTimestamp: nil, ttlSeconds: nil, query: nil))
+    } else if let map = media as? TelegramMediaMap {
+        var geoFlags: Int32 = 0
+        if map.accuracyRadius != nil {
+            geoFlags |= 1 << 0
+        }
+        let geoPoint = Api.InputGeoPoint.inputGeoPoint(.init(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })))
+        if let venue = map.venue {
+            return .inputMediaVenue(.init(geoPoint: geoPoint, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? ""))
+        } else {
+            return .inputMediaGeoPoint(.init(geoPoint: geoPoint))
+        }
+    }
+    return nil
+}
+
 
 public enum RequestMessageSelectPollOptionError {
     case generic
@@ -34,7 +58,7 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                 if let poll = poll {
                                     switch poll {
                                     case let .poll(pollData):
-                                        let (flags, question, answers, closePeriod) = (pollData.flags, pollData.question, pollData.answers, pollData.closePeriod)
+                                        let (flags, question, answers, closePeriod, closeDate) = (pollData.flags, pollData.question, pollData.answers, pollData.closePeriod, pollData.closeDate)
                                         let publicity: TelegramMediaPollPublicity
                                         if (flags & (1 << 1)) != 0 {
                                             publicity = .public
@@ -59,7 +83,7 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                             questionText = text
                                             questionEntities = messageTextEntitiesFromApiEntities(entities)
                                         }
-                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: resultPoll?.attachedMedia)
+                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, deadlineDate: closeDate, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: resultPoll?.attachedMedia)
                                     }
                                 }
                                 
@@ -93,28 +117,63 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
     }
 }
 
-func _internal_addPollAnswer(account: Account, messageId: MessageId, answerText: String, answerEntities: [MessageTextEntity]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
+public enum AddPollOptionError {
+    case generic
+}
+
+func _internal_addPollOption(account: Account, messageId: MessageId, text: String, entities: [MessageTextEntity], mediaReference: AnyMediaReference?) -> Signal<Never, AddPollOptionError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
-    |> castError(RequestMessageSelectPollOptionError.self)
+    |> castError(AddPollOptionError.self)
     |> mapToSignal { peer in
         if let inputPeer = apiInputPeer(peer) {
-            let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: 0, text: .textWithEntities(.init(text: answerText, entities: apiEntitiesFromMessageTextEntities(answerEntities, associatedPeers: SimpleDictionary()))), option: Buffer(data: Data()), media: nil))
+            let inputMedia = mediaReference.flatMap { cloudMediaToInputMedia($0.media) }
+            let flags: Int32 = inputMedia != nil ? (1 << 0) : 0
+            let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: flags, text: .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary()))), media: inputMedia))
             return account.network.request(Api.functions.messages.addPollAnswer(peer: inputPeer, msgId: messageId.id, answer: apiAnswer))
-            |> mapError { _ -> RequestMessageSelectPollOptionError in
+            |> mapError { _ -> AddPollOptionError in
                 return .generic
             }
-            |> mapToSignal { result -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> in
+            |> mapToSignal { result -> Signal<TelegramMediaPoll?, AddPollOptionError> in
                 return account.postbox.transaction { transaction -> TelegramMediaPoll? in
                     account.stateManager.addUpdates(result)
                     return nil
                 }
-                |> castError(RequestMessageSelectPollOptionError.self)
+                |> castError(AddPollOptionError.self)
             }
         } else {
             return .single(nil)
         }
     }
+    |> ignoreValues
+}
+
+public enum DeletePollOptionError {
+    case generic
+}
+
+func _internal_deletePollOption(account: Account, messageId: MessageId, opaqueIdentifier: Data) -> Signal<Never, DeletePollOptionError> {
+    return account.postbox.loadedPeerWithId(messageId.peerId)
+    |> take(1)
+    |> castError(DeletePollOptionError.self)
+    |> mapToSignal { peer in
+        if let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.messages.deletePollAnswer(peer: inputPeer, msgId: messageId.id, option: Buffer(data: opaqueIdentifier)))
+            |> mapError { _ -> DeletePollOptionError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<TelegramMediaPoll?, DeletePollOptionError> in
+                return account.postbox.transaction { transaction -> TelegramMediaPoll? in
+                    account.stateManager.addUpdates(result)
+                    return nil
+                }
+                |> castError(DeletePollOptionError.self)
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+    |> ignoreValues
 }
 
 func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Void, NoError> {
@@ -182,7 +241,11 @@ func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager
             pollMediaFlags |= 1 << 1
         }
 
-        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(.init(flags: pollMediaFlags, poll: .poll(.init(id: poll.pollId.id, flags: pollFlags, question: .textWithEntities(.init(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary()))), answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil, hash: 0)), correctAnswers: correctAnswers, attachedMedia: nil, solution: mappedSolution, solutionEntities: mappedSolutionEntities, solutionMedia: nil)), replyMarkup: nil, entities: nil, scheduleDate: nil, scheduleRepeatPeriod: nil, quickReplyShortcutId: nil))
+        //TODO:fix
+        let _ = correctAnswers
+        let correctAnswerss: [Int32] = []
+        
+        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(.init(flags: pollMediaFlags, poll: .poll(.init(id: poll.pollId.id, flags: pollFlags, question: .textWithEntities(.init(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary()))), answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil, hash: 0)), correctAnswers: correctAnswerss, attachedMedia: nil, solution: mappedSolution, solutionEntities: mappedSolutionEntities, solutionMedia: nil)), replyMarkup: nil, entities: nil, scheduleDate: nil, scheduleRepeatPeriod: nil, quickReplyShortcutId: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
