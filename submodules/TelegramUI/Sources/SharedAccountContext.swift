@@ -2469,6 +2469,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             },
             openPollCreation: { _ in
             },
+            openPollMedia: { _, _ in
+            },
             displayPollSolution: { _, _ in
             },
             displayPsa: { _, _ in

@@ -17,7 +17,7 @@ import BundleIconComponent
 import SwiftSignalKit
 import PhotoResources
 import LocationResources
-import SemanticStatusNode
+import RadialStatusNode
 import EmojiTextAttachmentView
 import TextFormat
 
@@ -131,6 +131,7 @@ public final class ListComposePollOptionComponent: Component {
     public let canAdd: Bool
     public let attachment: Attachment?
     public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
+    public let returnKeyType: UIReturnKeyType
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
     public let selection: Selection?
@@ -159,7 +160,8 @@ public final class ListComposePollOptionComponent: Component {
         canAdd: Bool = false,
         attachment: Attachment? = nil,
         emptyLineHandling: TextFieldComponent.EmptyLineHandling,
-        returnKeyAction: (() -> Void)?,
+        returnKeyType: UIReturnKeyType = .next,
+        returnKeyAction: (() -> Void)? = nil,
         backspaceKeyAction: (() -> Void)?,
         selection: Selection?,
         inputMode: InputMode?,
@@ -186,6 +188,7 @@ public final class ListComposePollOptionComponent: Component {
         self.canAdd = canAdd
         self.attachment = attachment
         self.emptyLineHandling = emptyLineHandling
+        self.returnKeyType = returnKeyType
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
         self.selection = selection
@@ -245,6 +248,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
+            return false
+        }
+        if lhs.returnKeyType != rhs.returnKeyType {
             return false
         }
         if lhs.selection != rhs.selection {
@@ -466,7 +472,7 @@ public final class ListComposePollOptionComponent: Component {
         
         private var attachButton: ComponentView<Empty>?
         private var imageNode: TransformImageNode?
-        private var statusNode: SemanticStatusNode?
+        private var statusNode: RadialStatusNode?
         private var animationLayer: InlineStickerItemLayer?
         private var videoIconView: UIImageView?
         private let imageButton = HighlightTrackingButton()
@@ -727,7 +733,7 @@ public final class ListComposePollOptionComponent: Component {
                     emptyLineHandling: component.emptyLineHandling,
                     externalHandlingForMultilinePaste: true,
                     formatMenuAvailability: .none,
-                    returnKeyType: .next,
+                    returnKeyType: component.returnKeyType,
                     lockedFormatAction: {
                     },
                     present: { _ in
@@ -853,11 +859,13 @@ public final class ListComposePollOptionComponent: Component {
             }
             
             if let selection = component.selection {
+                var checkTransition = transition
                 let checkView: CheckView
                 var animateIn = false
                 if let current = self.checkView {
                     checkView = current
                 } else {
+                    checkTransition = .immediate
                     animateIn = true
                     checkView = CheckView()
                     self.checkView = checkView
@@ -873,21 +881,22 @@ public final class ListComposePollOptionComponent: Component {
                 let checkSize = CGSize(width: 22.0, height: 22.0)
                 let checkFrame = CGRect(origin: CGPoint(x: leftInset - checkSize.width - 20.0 + self.revealOffset, y: floor((size.height - checkSize.height) * 0.5)), size: checkSize)
                 
+                checkTransition.setPosition(view: checkView, position: checkFrame.center)
+                checkTransition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
+                
+                checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
+                
                 if animateIn {
-                    checkView.frame = CGRect(origin: CGPoint(x: -checkSize.width, y: self.bounds.height == 0.0 ? checkFrame.minY : floor((self.bounds.height - checkSize.height) * 0.5)), size: checkFrame.size)
-                    transition.setPosition(view: checkView, position: checkFrame.center)
-                    transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
-                } else {
-                    transition.setPosition(view: checkView, position: checkFrame.center)
-                    transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: transition)
+                    transition.animateAlpha(view: checkView, from: 0.0, to: 1.0)
+                    transition.animateScale(view: checkView, from: 0.01, to: 1.0)
                 }
             } else if let checkView = self.checkView {
                 self.checkView = nil
-                transition.setPosition(view: checkView, position: CGPoint(x: -checkView.bounds.width * 0.5, y: size.height * 0.5), completion: { [weak checkView] _ in
+                
+                transition.setAlpha(view: checkView, alpha: 0.0, completion: { [weak checkView] _ in
                     checkView?.removeFromSuperview()
                 })
+                transition.setScale(view: checkView, scale: 0.01)
             }
                 
             var rightIconsInset: CGFloat = 16.0
@@ -964,9 +973,19 @@ public final class ListComposePollOptionComponent: Component {
             if let attachment = component.attachment, let file = attachment.media?.media as? TelegramMediaFile, file.isSticker || file.isCustomEmoji {
                 isSticker = true
                 
-                let animationSize = CGSize(width: 40.0, height: 40.0)
+                var updateMedia = false
+                if self.appliedMedia != attachment.media {
+                    self.appliedMedia = attachment.media
+                    updateMedia = true
+                }
+                
+                
+                var animationSize = CGSize(width: 40.0, height: 40.0)
+                if let dimensions = file.dimensions {
+                    animationSize = dimensions.cgSize.aspectFitted(animationSize)
+                }
                 let animationLayer: InlineStickerItemLayer
-                if let current = self.animationLayer {
+                if let current = self.animationLayer, !updateMedia {
                     animationLayer = current
                 } else {
                     if let animationLayer = self.animationLayer {
@@ -991,7 +1010,7 @@ public final class ListComposePollOptionComponent: Component {
                     self.animationLayer = animationLayer
                     self.layer.addSublayer(animationLayer)
                 }
-                animationLayer.frame = imageNodeFrame
+                animationLayer.frame = CGRect(origin: CGPoint(x: imageNodeFrame.midX - animationSize.width * 0.5, y: imageNodeFrame.midY - animationSize.height * 0.5), size: animationSize)
                 
                 if self.imageButton.superview == nil {
                     self.imageButton.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
@@ -999,7 +1018,7 @@ public final class ListComposePollOptionComponent: Component {
                 }
                 self.imageButton.frame = imageNodeFrame
             } else if let animationLayer = self.animationLayer {
-                self.imageNode = nil
+                self.animationLayer = nil
                 if !transition.animation.isImmediate {
                     let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     alphaTransition.setAlpha(layer: animationLayer, alpha: 0.0, completion: { [weak animationLayer] _ in
@@ -1094,18 +1113,18 @@ public final class ListComposePollOptionComponent: Component {
                 self.imageButton.frame = imageNodeFrame
                 
                 if let progress = attachment.progress {
-                    let statusNode: SemanticStatusNode
+                    let statusNode: RadialStatusNode
                     if let current = self.statusNode {
                         statusNode = current
                     } else {
-                        statusNode = SemanticStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.5), foregroundNodeColor: .white)
+                        statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.5))
                         self.statusNode = statusNode
                         self.addSubview(statusNode.view)
                     }
                     
-                    let progressFrame = imageNodeFrame.insetBy(dx: 6.0, dy: 6.0)
+                    let progressFrame = imageNodeFrame.insetBy(dx: 4.0, dy: 4.0)
                     statusNode.frame = progressFrame
-                    statusNode.transitionToState(.progress(value: max(0.027, min(1.0, progress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 2.0), animateRotation: false), updateCutout: false)
+                    statusNode.transitionToState(.progress(color: .white, lineWidth: 2.0 - UIScreenPixel, value: max(0.027, min(1.0, progress)), cancelEnabled: true, animateRotation: true))
                     
                     isVideo = false
                 } else if let statusNode = self.statusNode {
@@ -1130,6 +1149,12 @@ public final class ListComposePollOptionComponent: Component {
                         videoIconView.tintColor = .white
                         self.addSubview(videoIconView)
                         self.videoIconView = videoIconView
+                        
+                        if !transition.animation.isImmediate {
+                            let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                            alphaTransition.animateAlpha(view: videoIconView, from: 0.0, to: 1.0)
+                            alphaTransition.animateScale(view: videoIconView, from: 0.01, to: 1.0)
+                        }
                     }
                     let videoIconFrame = CGRect(origin: CGPoint(x: imageNodeFrame.center.x - 15.0, y: imageNodeFrame.center.y - 15.0), size: CGSize(width: 30.0, height: 30.0))
                     videoIconView.frame = videoIconFrame
@@ -1157,6 +1182,19 @@ public final class ListComposePollOptionComponent: Component {
                     imageNode.view.removeFromSuperview()
                 }
                 self.imageButton.removeFromSuperview()
+                
+                if let videoIconView = self.videoIconView {
+                    self.videoIconView = nil
+                    if !transition.animation.isImmediate {
+                        let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                        alphaTransition.setAlpha(view: videoIconView, alpha: 0.0, completion: { [weak videoIconView] _ in
+                            videoIconView?.removeFromSuperview()
+                        })
+                        alphaTransition.setScale(view: videoIconView, scale: 0.001)
+                    } else {
+                        videoIconView.removeFromSuperview()
+                    }
+                }
                 
                 if let statusNode = self.statusNode {
                     self.statusNode = nil

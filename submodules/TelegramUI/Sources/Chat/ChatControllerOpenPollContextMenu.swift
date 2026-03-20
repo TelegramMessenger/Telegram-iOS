@@ -10,7 +10,6 @@ import UndoUI
 import AccountContext
 import ChatMessageItemView
 import ChatMessageItemCommon
-import AvatarNode
 import ChatControllerInteraction
 import Pasteboard
 import TelegramStringFormatting

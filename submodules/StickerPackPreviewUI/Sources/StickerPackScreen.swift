@@ -525,8 +525,8 @@ private final class StickerPackContainer: ASDisplayNode {
                                     if let strongSelf = self {
                                         let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file._parse(), saved: !isStarred)
                                         |> deliverOnMainQueue).start(next: { [weak self] result in
-                                            if let self, let contorller = self.controller {
-                                                contorller.present(UndoOverlayController(presentationData: self.presentationData, content: .sticker(context: context, file: item.file._parse(), loop: true, title: nil, text: !isStarred ? self.presentationData.strings.Conversation_StickerAddedToFavorites : self.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+                                            if let self, let controller = self.controller {
+                                                controller.present(UndoOverlayController(presentationData: self.presentationData, content: .sticker(context: context, file: item.file._parse(), loop: true, title: nil, text: !isStarred ? self.presentationData.strings.Conversation_StickerAddedToFavorites : self.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
                                             }
                                         })
                                     }

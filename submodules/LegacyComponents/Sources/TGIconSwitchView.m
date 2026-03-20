@@ -104,7 +104,7 @@ static const void *positionChangedKey = &positionChangedKey;
         offset = CGPointMake(-7.0, -3.0);
     }
     
-    if (_isLocked.boolValue) {
+    if (_isLocked.boolValue || [_positiveContentColor isEqual:[UIColor clearColor]]) {
         _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(12.5f) + offset.y);
     } else {
         _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
@@ -150,10 +150,11 @@ static const void *positionChangedKey = &positionChangedKey;
         self.backgroundColor = nil;
         
         if (_isLocked.boolValue) {
-            _offIconView.hidden = false;
+            _offIconView.alpha = 1.0;
         } else {
-            _offIconView.hidden = true;
+            _offIconView.alpha = 0.0;
         }
+        _onIconView.hidden = true;
     } else {
         self.tintColor = [UIColor redColor];
         self.backgroundColor = [UIColor redColor];
@@ -162,12 +163,13 @@ static const void *positionChangedKey = &positionChangedKey;
 
 - (void)setNegativeContentColor:(UIColor *)color {
     _negativeContentColor = color;
-    if (_isLocked.boolValue) {
+    if (_isLocked.boolValue || [_positiveContentColor isEqual:[UIColor clearColor]]) {
         _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"Item List/SwitchLockIcon"), color);
     } else {
         _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOff.png"), color);
     }
     _offIconView.frame = CGRectMake(_offIconView.frame.origin.x, _offIconView.frame.origin.y, _offIconView.image.size.width, _offIconView.image.size.height);
+    [self updateIconFrame];
 }
 
 - (void)updateIsLocked:(bool)isLocked {
@@ -176,12 +178,17 @@ static const void *positionChangedKey = &positionChangedKey;
         
         if ([_positiveContentColor isEqual:[UIColor clearColor]]) {
             if (!isLocked) {
-                _offIconView.hidden = true;
+                [UIView animateWithDuration:0.2 animations:^{
+                    _offIconView.alpha = 0.0;
+                }];
             } else {
-                _offIconView.hidden = false;
+                [UIView animateWithDuration:0.2 animations:^{
+                    _offIconView.alpha = 1.0;
+                }];
             }
             _onIconView.hidden = true;
         } else {
+            _offIconView.alpha = 1.0;
             _offIconView.hidden = false;
             _onIconView.hidden = false;
         }

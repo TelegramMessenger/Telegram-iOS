@@ -173,6 +173,11 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         }
     }
     
+    public enum PollMediaSubject {
+        case option(TelegramMediaPollOption)
+        case solution(TelegramMediaPollResults.Solution)
+    }
+    
     public let openMessage: (Message, OpenMessageParams) -> Bool
     public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
     public let openPeerMention: (String, Promise<Bool>?) -> Void
@@ -243,6 +248,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let dismissReplyMarkupMessage: (Message) -> Void
     public let openMessagePollResults: (MessageId, Data) -> Void
     public let openPollCreation: (Bool?) -> Void
+    public let openPollMedia: (Message, PollMediaSubject) -> Void
     public let displayPollSolution: (TelegramMediaPollResults.Solution?, ASDisplayNode?) -> Void
     public let displayPsa: (String, ASDisplayNode) -> Void
     public let displayDiceTooltip: (TelegramMediaDice) -> Void
@@ -417,6 +423,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         dismissReplyMarkupMessage: @escaping (Message) -> Void,
         openMessagePollResults: @escaping (MessageId, Data) -> Void,
         openPollCreation: @escaping (Bool?) -> Void,
+        openPollMedia: @escaping (Message, PollMediaSubject) -> Void,
         displayPollSolution: @escaping (TelegramMediaPollResults.Solution?, ASDisplayNode?) -> Void,
         displayPsa: @escaping (String, ASDisplayNode) -> Void,
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
@@ -533,6 +540,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.requestAddMessagePollOption = requestAddMessagePollOption
         self.requestOpenMessagePollResults = requestOpenMessagePollResults
         self.openPollCreation = openPollCreation
+        self.openPollMedia = openPollMedia
         self.displayPollSolution = displayPollSolution
         self.displayPsa = displayPsa
         self.openAppStorePage = openAppStorePage

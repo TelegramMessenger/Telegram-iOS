@@ -34,6 +34,7 @@ import TextSelectionNode
 import ReplyAccessoryPanelNode
 import SuggestPostAccessoryPanelNode
 import ChatMessageItemView
+import ChatMessageBubbleItemNode
 import ChatMessageSelectionNode
 import ManagedDiceAnimationNode
 import ChatMessageTransitionNode
@@ -51,6 +52,7 @@ import ChatThemeScreen
 import ChatTextInputPanelNode
 import ChatInputAccessoryPanel
 import ChatMessageTextBubbleContentNode
+import ChatMessagePollBubbleContentNode
 import HeaderPanelContainerComponent
 import MediaPlaybackHeaderPanelComponent
 import LiveLocationHeaderPanelComponent
@@ -3506,6 +3508,22 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
+    func chatPresentationInterfaceStateTextInputView(_ state: ChatPresentationInterfaceState) -> UITextView? {
+        var result: UITextView?
+        if let focusedPollAddOptionMessageId = state.focusedPollAddOptionMessageId {
+            self.historyNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == focusedPollAddOptionMessageId {
+                    for contentNode in itemNode.contentNodes {
+                        if let contentNode = contentNode as? ChatMessagePollBubbleContentNode {
+                            result = contentNode.newOptionInputTextView()
+                        }
+                    }
+                }
+            }
+        }
+        return result
+    }
+    
     func updateChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition, interactive: Bool, forceLayout: Bool, completion: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.selectedMessages = chatPresentationInterfaceState.interfaceState.selectionState?.selectedIds
         
@@ -3659,7 +3677,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
                         
             var waitForKeyboardLayout = false
-            if let textView = self.textInputPanelNode?.textInputNode?.textView {
+            var effectiveTextView: UITextView?
+            let customTextView = self.chatPresentationInterfaceStateTextInputView(chatPresentationInterfaceState)
+            if let customTextView {
+                effectiveTextView = customTextView
+            } else if let mainTextView = self.textInputPanelNode?.textInputNode?.textView {
+                effectiveTextView = mainTextView
+            }
+            if let textView = effectiveTextView {
                 let updatedInputView = self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState)
                 if textView.inputView !== updatedInputView {
                     textView.inputView = updatedInputView
@@ -3682,9 +3707,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
                 
                 if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
-                    self.ensureInputViewFocused()
+                    if let customTextView {
+                        customTextView.becomeFirstResponder()
+                    } else {
+                        self.ensureInputViewFocused()
+                    }
                 } else {
-                    if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+                    if let customTextView, customTextView.isFirstResponder {
+                        self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
+                    } else if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
                         if inputPanelNode.isFocused {
                             inputPanelNode.skipPresentationInterfaceStateUpdate = true
                             self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))

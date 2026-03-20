@@ -4140,14 +4140,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             })
         }, openPollCreation: { [weak self] isQuiz in
-            guard let strongSelf = self else {
+            guard let self else {
                 return
             }
-            let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                if let controller = strongSelf.configurePollCreation(isQuiz: isQuiz) {
-                    strongSelf.effectiveNavigationController?.pushViewController(controller)
+            let _ = self.presentVoiceMessageDiscardAlert(action: {
+                if let controller = self.configurePollCreation(isQuiz: isQuiz) {
+                    self.effectiveNavigationController?.pushViewController(controller)
                 }
             })
+        }, openPollMedia: { [weak self] message, subject in
+            guard let self else {
+                return
+            }
+            self.openPollMedia(message: message, subject: subject)
         }, displayPollSolution: { [weak self] solution, sourceNode in
             guard let self else {
                 return

@@ -1414,9 +1414,9 @@ public struct PresentationResourcesChat {
         return theme.image(PresentationResourceKey.chatPollAddIcon.rawValue, { theme in
             return generateImage(CGSize(width: 17.0, height: 15.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.list.itemBlocksSeparatorColor.cgColor)
+                context.setFillColor(UIColor.white.cgColor)
 
-                let lineHeight = 1.0 + UIScreenPixel
+                let lineHeight = 2.0 - UIScreenPixel
                 context.addPath(CGPath(roundedRect: CGRect(x: 1.0, y: 7.0, width: 15.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
                 context.addPath(CGPath(roundedRect: CGRect(x: 8.0, y: 0.0, width: lineHeight, height: 15.0), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
                 context.fillPath()

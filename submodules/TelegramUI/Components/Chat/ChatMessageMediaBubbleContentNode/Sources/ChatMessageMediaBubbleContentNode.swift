@@ -206,10 +206,33 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             automaticDownload = .full
                         }
                     } else if let poll = media as? TelegramMediaPoll {
-                        if let image = poll.attachedMedia as? TelegramMediaImage {
-                            selectedMedia = image
-                        } else if let file = poll.attachedMedia as? TelegramMediaFile {
-                            selectedMedia = file
+                        if let telegramImage = poll.attachedMedia as? TelegramMediaImage {
+                            selectedMedia = telegramImage
+                            if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {
+                                automaticDownload = .full
+                            }
+                            
+                            if let _ = telegramImage.video {
+                                automaticPlayback = true
+                            }
+                        } else if let telegramFile = poll.attachedMedia as? TelegramMediaFile {
+                            selectedMedia = telegramFile
+                            if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramFile) {
+                                automaticDownload = .full
+                            } else if shouldPredownloadMedia(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile) {
+                                automaticDownload = .prefetch
+                            }
+                            if (telegramFile.isVideo && !telegramFile.isAnimated) && item.context.sharedContext.energyUsageSettings.autoplayVideo {
+                                if let _ = telegramFile.videoCover {
+                                    automaticPlayback = false
+                                } else if NativeVideoContent.isHLSVideo(file: telegramFile) {
+                                    automaticPlayback = true
+                                } else if case .full = automaticDownload {
+                                    automaticPlayback = true
+                                } else {
+                                    automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                                }
+                            }
                         }
                     }
                 }

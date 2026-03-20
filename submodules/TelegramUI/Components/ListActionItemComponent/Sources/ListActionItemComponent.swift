@@ -467,7 +467,7 @@ public final class ListActionItemComponent: Component {
             case .expandArrows:
                 contentRightInset = 36.0
             case .toggle:
-                contentRightInset = 76.0
+                contentRightInset = 82.0
             case .activity:
                 contentRightInset = 76.0
             case let .custom(customAccessory):

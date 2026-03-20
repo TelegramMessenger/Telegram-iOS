@@ -33,7 +33,7 @@ swift_library(
         "//submodules/PhotoResources",
         "//submodules/LocationResources",
         "//submodules/TelegramUI/Components/ChatControllerInteraction",
-        "//submodules/SemanticStatusNode",
+        "//submodules/RadialStatusNode",
         "//submodules/TelegramUI/Components/ComposePollScreen",
     ],
     visibility = [
