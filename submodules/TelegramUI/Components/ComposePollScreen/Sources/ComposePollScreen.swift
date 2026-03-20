@@ -31,6 +31,7 @@ import ListComposePollOptionComponent
 import GlassBarButtonComponent
 import ChatScheduleTimeController
 import ContextUI
+import StickerPeekUI
 
 public final class ComposedPoll {
     public struct Text {
@@ -58,6 +59,7 @@ public final class ComposedPoll {
     public let correctAnswers: [Data]?
     public let results: TelegramMediaPollResults
     public let deadlineTimeout: Int32?
+    public let deadlineDate: Int32?
     public let usedCustomEmojiFiles: [Int64: TelegramMediaFile]
 
     public init(
@@ -74,6 +76,7 @@ public final class ComposedPoll {
         correctAnswers: [Data]?,
         results: TelegramMediaPollResults,
         deadlineTimeout: Int32?,
+        deadlineDate: Int32?,
         usedCustomEmojiFiles: [Int64: TelegramMediaFile]
     ) {
         self.publicity = publicity
@@ -89,6 +92,7 @@ public final class ComposedPoll {
         self.correctAnswers = correctAnswers
         self.results = results
         self.deadlineTimeout = deadlineTimeout
+        self.deadlineDate = deadlineDate
         self.usedCustomEmojiFiles = usedCustomEmojiFiles
     }
 }
@@ -438,7 +442,12 @@ final class ComposePollScreenComponent: Component {
             return self.isMultiAnswer ?? false
         }
         
-        func validatedInput() -> ComposedPoll? {
+        enum ValidatedInput {
+            case ready(ComposedPoll)
+            case isUploading
+        }
+        
+        func validatedInput() -> ValidatedInput? {
             if self.pollTextInputState.text.length == 0 {
                 return nil
             }
@@ -471,14 +480,16 @@ final class ComposePollScreenComponent: Component {
                 }
                 
                 if let media = pollOption.media, media.requiresUpload {
-                    return nil
+                    return .isUploading
                 }
                 
                 mappedOptions.append(TelegramMediaPollOption(
                     text: pollOption.textInputState.text.string,
                     entities: entities,
                     opaqueIdentifier: optionData,
-                    media: pollOption.media?.media.media
+                    media: pollOption.media?.media.media,
+                    date: nil,
+                    addedBy: nil
                 ))
             }
             
@@ -508,7 +519,7 @@ final class ComposePollScreenComponent: Component {
                 }
                 
                 if let media = self.quizAnswerMedia, media.requiresUpload {
-                    return nil
+                    return .isUploading
                 }
                 
                 mappedSolution = (self.quizAnswerTextInputState.text.string, solutionTextEntities, self.quizAnswerMedia?.media)
@@ -537,20 +548,21 @@ final class ComposePollScreenComponent: Component {
             let usedCustomEmojiFiles: [Int64: TelegramMediaFile] = [:]
             
             var deadlineTimeout: Int32?
+            var deadlineDate: Int32?
             if self.limitDuration {
                 switch self.timeLimit {
                 case let .duration(duration):
-                    deadlineTimeout = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) + duration
+                    deadlineTimeout = duration
                 case let .deadline(deadline):
-                    deadlineTimeout = deadline
+                    deadlineDate = deadline
                 }
             }
             
             if let media = self.pollDescriptionMedia, media.requiresUpload {
-                return nil
+                return .isUploading
             }
             
-            return ComposedPoll(
+            return .ready(ComposedPoll(
                 publicity: self.isAnonymous ? .anonymous : .public,
                 kind: mappedKind,
                 openAnswers: self.canAddOptions,
@@ -575,8 +587,9 @@ final class ComposePollScreenComponent: Component {
                     }
                 ),
                 deadlineTimeout: deadlineTimeout,
+                deadlineDate: deadlineDate,
                 usedCustomEmojiFiles: usedCustomEmojiFiles
-            )
+            ))
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
@@ -776,6 +789,9 @@ final class ComposePollScreenComponent: Component {
             if let textInputView = self.pollTextSection.findTaggedView(tag: self.pollTextFieldTag) as? ListComposePollOptionComponent.View {
                 textInputStates.append((textInputView, self.pollTextInputState))
             }
+            if let textInputView = self.pollTextSection.findTaggedView(tag: self.pollDescriptionFieldTag) as? ListComposePollOptionComponent.View {
+                textInputStates.append((textInputView, self.pollDescriptionInputState))
+            }
             for pollOption in self.pollOptions {
                 if let textInputView = findTaggedComponentViewImpl(view: self.pollOptionsSectionContainer, tag: pollOption.textFieldTag) as? ListComposePollOptionComponent.View {
                     textInputStates.append((textInputView, pollOption.textInputState))
@@ -795,13 +811,35 @@ final class ComposePollScreenComponent: Component {
             case quizAnswer
             case pollOption(PollOption)
         }
+
+        private func attachedMedia(for subject: MediaAttachSubject) -> AttachedMedia? {
+            switch subject {
+            case .description:
+                return self.pollDescriptionMedia
+            case .quizAnswer:
+                return self.quizAnswerMedia
+            case let .pollOption(pollOption):
+                return pollOption.media
+            }
+        }
+
+        private func setAttachedMedia(_ media: AttachedMedia?, for subject: MediaAttachSubject) {
+            switch subject {
+            case .description:
+                self.pollDescriptionMedia = media
+            case .quizAnswer:
+                self.quizAnswerMedia = media
+            case let .pollOption(pollOption):
+                pollOption.media = media
+            }
+        }
         
-        private func openAttachedMedia(subject: MediaAttachSubject) {
+        private func openAttachedMedia(subject: MediaAttachSubject, replace: Bool = false) {
             guard let component = self.component else {
                 return
             }
             
-            guard !self.openAttachMediaMenu(subject: subject) else {
+            guard replace || !self.openAttachMediaContextMenu(subject: subject) else {
                 return
             }
             
@@ -820,14 +858,7 @@ final class ComposePollScreenComponent: Component {
                     return
                 }
                 let attachedMedia = AttachedMedia(media: media)
-                switch subject {
-                case .description:
-                    self.pollDescriptionMedia = attachedMedia
-                case .quizAnswer:
-                    self.quizAnswerMedia = attachedMedia
-                case let .pollOption(pollOption):
-                    pollOption.media = attachedMedia
-                }
+                self.setAttachedMedia(attachedMedia, for: subject)
                 self.uploadAttachedMediaIfNeeded(attachedMedia)
                 self.state?.updated(transition: .easeInOut(duration: 0.2))
             })
@@ -915,53 +946,111 @@ final class ComposePollScreenComponent: Component {
             }
         }
         
-        private func openAttachMediaMenu(subject: MediaAttachSubject) -> Bool {
-            switch subject {
-            case .description:
-                if let media = self.pollDescriptionMedia {
-                    if let _ = media.progress {
-                        media.uploadDisposable?.dispose()
-                        self.pollDescriptionMedia = nil
-                        self.state?.updated(transition: .easeInOut(duration: 0.25))
-                    } else {
-                        self.pollDescriptionMedia = nil
-                        self.state?.updated(transition: .easeInOut(duration: 0.25))
-                    }
-                    return true
-                }
-            case .quizAnswer:
-                if let media = self.quizAnswerMedia {
-                    if let _ = media.progress {
-                        media.uploadDisposable?.dispose()
-                        self.quizAnswerMedia = nil
-                        self.state?.updated(transition: .easeInOut(duration: 0.25))
-                    } else {
-                        self.quizAnswerMedia = nil
-                        self.state?.updated(transition: .easeInOut(duration: 0.25))
-                    }
-                    self.state?.updated(transition: .easeInOut(duration: 0.25))
-                    return true
-                }
-            case let .pollOption(pollOption):
-                if let media = pollOption.media {
-                    if let _ = media.progress {
-                        media.uploadDisposable?.dispose()
-                        pollOption.media = nil
-                        self.state?.updated(transition: .easeInOut(duration: 0.25))
-                    } else {
-                        pollOption.media = nil
-                        self.state?.updated(transition: .easeInOut(duration: 0.25))
-                    }
-                    return true
+        private func openAttachMediaContextMenu(subject: MediaAttachSubject) -> Bool {
+            guard let component = self.component, let media = self.attachedMedia(for: subject) else {
+                return false
+            }
+            if media.progress != nil {
+                media.uploadDisposable?.dispose()
+                self.setAttachedMedia(nil, for: subject)
+                self.state?.updated(transition: .easeInOut(duration: 0.25))
+            } else {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                
+                if let file = media.media.media as? TelegramMediaFile, file.isSticker || file.isCustomEmoji {
+                    var items: [ContextMenuItem] = []
+                    
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: "Replace", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        guard let self else {
+                            return
+                        }
+                        self.openAttachedMedia(subject: subject, replace: true)
+                    })))
+                    
+                    items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        guard let self else {
+                            return
+                        }
+                        self.setAttachedMedia(nil, for: subject)
+                        self.state?.updated(transition: .easeInOut(duration: 0.2))
+                    })))
+                    
+                    let peekController = makePeekController(
+                        presentationData: presentationData,
+                        content: StickerPreviewPeekContent(
+                            context: component.context,
+                            theme: presentationData.theme,
+                            strings: presentationData.strings,
+                            item: .pack(file),
+                            isCreating: false,
+                            menu: items,
+                            openPremiumIntro: {}
+                        ),
+                        sourceView: {
+                            return nil
+                        },
+                        activateImmediately: true
+                    )
+                    self.environment?.controller()?.presentInGlobalOverlay(peekController)
+                } else {
+                    var items: [ContextMenuItem] = []
+                    
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: "Replace", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        guard let self else {
+                            return
+                        }
+                        self.openAttachedMedia(subject: subject, replace: true)
+                    })))
+                    
+                    items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        guard let self else {
+                            return
+                        }
+                        self.setAttachedMedia(nil, for: subject)
+                        self.state?.updated(transition: .easeInOut(duration: 0.2))
+                    })))
+                    
+                    let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value(0)), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [media.media.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                    let gallery = component.context.sharedContext.makeGalleryController(context: component.context, source: .standaloneMessage(message, nil), streamSingleVideo: true, isPreview: true)
+                    
+                    let source: ContextContentSource = .controller(ComposePollContextControllerContentSource(controller: gallery, sourceView: nil, sourceRect: .zero))
+                    
+                    let contextController = makeContextController(
+                        presentationData: presentationData,
+                        source: source,
+                        items: .single(ContextController.Items(content: .list(items))),
+                        gesture: nil
+                    )
+                    self.environment?.controller()?.presentInGlobalOverlay(contextController)
                 }
             }
-            return false
+            return true
         }
         
         private func presentTimeLimitOptions(sourceView: UIView) {
             guard let component = self.component else {
                 return
             }
+            
+            var sourceView = sourceView
+            if let itemView = sourceView as? ListActionItemComponent.View, let iconView = itemView.iconView {
+                sourceView = iconView
+            }
+            
             var subItems: [ContextMenuItem] = []
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
@@ -1058,8 +1147,24 @@ final class ComposePollScreenComponent: Component {
             
             let theme = environment.theme.withModalBlocksBackground()
             
+            var isChannel = false
+            if case let .channel(channel) = component.peer, case .broadcast = channel.info {
+                isChannel = true
+            }
+            
             if self.component == nil {
                 self.isQuiz = component.isQuiz ?? false
+                if !self.isQuiz {
+                    self.isMultiAnswer = true
+                }
+                if !isChannel {
+                    self.isAnonymous = false
+                    if !self.isQuiz {
+                        self.canAddOptions = true
+                    }
+                }
+                self.canRevote = true
+                self.shuffleOptions = true
                 
                 self.pollOptions.append(ComposePollScreenComponent.PollOption(
                     id: self.nextPollOptionId
@@ -1295,18 +1400,7 @@ final class ComposePollScreenComponent: Component {
                 characterLimit: 1024, //TODO
                 attachment: pollDescriptionAttachment,
                 emptyLineHandling: .allowed,
-                returnKeyAction: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    if !self.pollOptions.isEmpty {
-                        if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[0].id] {
-                            if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
-                                pollOptionComponentView.activateInput()
-                            }
-                        }
-                    }
-                },
+                returnKeyType: .default,
                 backspaceKeyAction: nil,
                 selection: nil,
                 inputMode: self.currentInputMode,
@@ -1694,15 +1788,10 @@ final class ComposePollScreenComponent: Component {
             }
             contentHeight += pollOptionsSectionFooterSize.height
             contentHeight += sectionSpacing
-            
-            var canBePublic = true
-            if case let .channel(channel) = component.peer, case .broadcast = channel.info {
-                canBePublic = false
-            }
-            
+                        
             //TODO:localize
             var pollSettingsSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            if canBePublic {
+            if !isChannel {
                 pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "anonymous", component: AnyComponent(ListActionItemComponent(
                     theme: theme,
                     style: .glass,
@@ -1786,44 +1875,46 @@ final class ComposePollScreenComponent: Component {
                 action: nil
             ))))
             
-            pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "adding", component: AnyComponent(ListActionItemComponent(
-                theme: theme,
-                style: .glass,
-                title: AnyComponent(VStack([
-                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "Allow Adding Options",
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: theme.list.itemPrimaryTextColor
-                        )),
-                        maximumNumberOfLines: 2
-                    ))),
-                    AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "Participants can suggest new options",
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
-                            textColor: theme.list.itemSecondaryTextColor
-                        )),
-                        maximumNumberOfLines: 3,
-                        lineSpacing: 0.1
-                    )))
-                ], alignment: .left, spacing: 4.0)),
-                verticalAlignment: .middle,
-                leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
-                    Image(image: self.cachedAddIcon, size: CGSize(width: 30.0, height: 30.0))
-                )), false),
-                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.canAddOptions, action: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    if !self.canAddOptions && self.isAnonymous {
-                        self.isAnonymous = false
-                    }
-                    self.canAddOptions = !self.canAddOptions
-                    self.state?.updated(transition: .spring(duration: 0.4))
-                })),
-                action: nil
-            ))))
+            if !isChannel {
+                pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "adding", component: AnyComponent(ListActionItemComponent(
+                    theme: theme,
+                    style: .glass,
+                    title: AnyComponent(VStack([
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Allow Adding Options",
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 2
+                        ))),
+                        AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Participants can suggest new options",
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
+                                textColor: theme.list.itemSecondaryTextColor
+                            )),
+                            maximumNumberOfLines: 3,
+                            lineSpacing: 0.1
+                        )))
+                    ], alignment: .left, spacing: 4.0)),
+                    verticalAlignment: .middle,
+                    leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                        Image(image: self.cachedAddIcon, size: CGSize(width: 30.0, height: 30.0))
+                    )), false),
+                    accessory: .toggle(ListActionItemComponent.Toggle(style: .lock(isLocked: self.isQuiz), isOn: self.canAddOptions, isInteractive: !self.isQuiz, action: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        if !self.canAddOptions && self.isAnonymous {
+                            self.isAnonymous = false
+                        }
+                        self.canAddOptions = !self.canAddOptions
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    })),
+                    action: nil
+                ))))
+            }
             
             pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "revoting", component: AnyComponent(ListActionItemComponent(
                 theme: theme,
@@ -1928,6 +2019,12 @@ final class ComposePollScreenComponent: Component {
                         return
                     }
                     self.isQuiz = !self.isQuiz
+                    if self.isQuiz {
+                        if self.canAddOptions {
+                            self.canAddOptions = false
+                        }
+                        self.canRevote = false
+                    }
                     self.state?.updated(transition: .spring(duration: 0.4))
                 })),
                 action: nil
@@ -1965,6 +2062,10 @@ final class ComposePollScreenComponent: Component {
                     }
                     self.limitDuration = !self.limitDuration
                     self.state?.updated(transition: .spring(duration: 0.4))
+                    
+                    if self.limitDuration {
+                        self.scrollView.setContentOffset(CGPoint(x: 0.0, y: self.scrollView.contentSize.height - self.scrollView.bounds.size.height), animated: true)
+                    }
                 })),
                 action: nil
             ))))
@@ -2443,7 +2544,15 @@ final class ComposePollScreenComponent: Component {
                 transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
             }
             
-            let isValid = self.validatedInput() != nil
+            let validatedInput = self.validatedInput()
+            var isValid = false
+            var isUploading = false
+            if case .ready = validatedInput {
+                isValid = true
+            } else if case .isUploading = validatedInput {
+                isUploading = true
+            }
+            
             let doneButtonSize = self.doneButton.update(
                 transition: transition,
                 component: AnyComponent(GlassBarButtonComponent(
@@ -2451,7 +2560,7 @@ final class ComposePollScreenComponent: Component {
                     backgroundColor: isValid ? environment.theme.list.itemCheckColors.fillColor : environment.theme.list.itemCheckColors.fillColor.desaturated().withMultipliedAlpha(0.5),
                     isDark: environment.theme.overallDarkAppearance,
                     state: .tintedGlass,
-                    isEnabled: isValid,
+                    isEnabled: isValid || isUploading,
                     component: AnyComponentWithIdentity(id: "done", component: AnyComponent(
                         Text(text: environment.strings.MediaPicker_Send, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
                     )),
@@ -2459,10 +2568,7 @@ final class ComposePollScreenComponent: Component {
                         guard let self, let controller = self.environment?.controller() as? ComposePollScreen else {
                             return
                         }
-                        if let input = self.validatedInput() {
-                            controller.completion(input)
-                            controller.dismiss()
-                        }
+                        controller.sendPressed()
                     }
                 )),
                 environment: {},
@@ -2671,14 +2777,27 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
         self.dismiss()
     }
     
-    @objc private func sendPressed() {
+    @objc fileprivate func sendPressed() {
         guard let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
             return
         }
-        if let input = componentView.validatedInput() {
-            self.completion(input)
+        let validatedInput = componentView.validatedInput()
+        if case let .ready(poll) = validatedInput {
+            self.completion(poll)
+            self.dismiss()
+        } else if case .isUploading = validatedInput {
+            //TODO:localize
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let controller = UndoOverlayController(
+                presentationData: presentationData,
+                content: .info(title: "Please wait", text: "Poll media is still uploading...", timeout: nil, customUndoText: nil),
+                position: .top,
+                action: { _ in
+                    return false
+                }
+            )
+            self.present(controller, in: .current)
         }
-        self.dismiss()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -2712,5 +2831,39 @@ private final class ComposePollContextReferenceContentSource: ContextReferenceCo
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
+    }
+}
+
+private final class ComposePollContextControllerContentSource: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceView: UIView?
+    let sourceRect: CGRect
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool = false
+    
+    init(controller: ViewController, sourceView: UIView?, sourceRect: CGRect) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.sourceRect = sourceRect
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceView = self.sourceView
+        let sourceRect = self.sourceRect
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceView] in
+            if let sourceView = sourceView {
+                return (sourceView, sourceRect)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
+        if let controller = self.controller as? GalleryControllerProtocol {
+            controller.viewDidAppear(false)
+        }
     }
 }

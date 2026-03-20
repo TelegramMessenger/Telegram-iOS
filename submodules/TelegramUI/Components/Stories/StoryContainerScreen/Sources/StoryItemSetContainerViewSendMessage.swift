@@ -1936,7 +1936,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                         
-                        let controller = component.context.sharedContext.makeAttachmentFileController(context: component.context, updatedPresentationData: updatedPresentationData, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak view, weak attachmentController] in
+                        let controller = component.context.sharedContext.makeAttachmentFileController(context: component.context, updatedPresentationData: updatedPresentationData, audio: false, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak view, weak attachmentController] in
                             guard let self, let view else {
                                 return
                             }

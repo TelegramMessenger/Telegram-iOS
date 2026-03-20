@@ -1912,6 +1912,8 @@ public class GalleryController: ViewController, StandalonePresentableController,
         self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         
         if !self.adjustedForInitialPreviewingLayout && self.isPresentedInPreviewingContext() {
+            self.navigationBar?.isHidden = true
+            
             self.adjustedForInitialPreviewingLayout = true
             self.galleryNode.setControlsHidden(true, animated: false)
             if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {

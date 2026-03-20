@@ -168,12 +168,12 @@ public extension Api {
         public class Cons_inputMediaPoll: TypeConstructorDescription {
             public var flags: Int32
             public var poll: Api.Poll
-            public var correctAnswers: [Buffer]?
+            public var correctAnswers: [Int32]?
             public var attachedMedia: Api.InputMedia?
             public var solution: String?
             public var solutionEntities: [Api.MessageEntity]?
             public var solutionMedia: Api.InputMedia?
-            public init(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, attachedMedia: Api.InputMedia?, solution: String?, solutionEntities: [Api.MessageEntity]?, solutionMedia: Api.InputMedia?) {
+            public init(flags: Int32, poll: Api.Poll, correctAnswers: [Int32]?, attachedMedia: Api.InputMedia?, solution: String?, solutionEntities: [Api.MessageEntity]?, solutionMedia: Api.InputMedia?) {
                 self.flags = flags
                 self.poll = poll
                 self.correctAnswers = correctAnswers
@@ -460,7 +460,7 @@ public extension Api {
                 break
             case .inputMediaPoll(let _data):
                 if boxed {
-                    buffer.appendInt32(-1229194966)
+                    buffer.appendInt32(-2009448184)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.poll.serialize(buffer, true)
@@ -468,7 +468,7 @@ public extension Api {
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(_data.correctAnswers!.count))
                     for item in _data.correctAnswers! {
-                        serializeBytes(item, buffer: buffer, boxed: false)
+                        serializeInt32(item, buffer: buffer, boxed: false)
                     }
                 }
                 if Int(_data.flags) & Int(1 << 3) != 0 {
@@ -919,10 +919,10 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.Poll
             }
-            var _3: [Buffer]?
+            var _3: [Int32]?
             if Int(_1!) & Int(1 << 0) != 0 {
                 if let _ = reader.readInt32() {
-                    _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+                    _3 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
                 }
             }
             var _4: Api.InputMedia?

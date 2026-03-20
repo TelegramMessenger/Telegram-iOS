@@ -2396,6 +2396,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             openHashtag: { _, _ in },
             updateInputState: { _ in },
             updateInputMode: { _ in },
+            updatePresentationState: { _ in },
             openMessageShareMenu: { _ in
             },
             presentController: { _, _ in
@@ -2440,6 +2441,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             },
             requestSelectMessagePollOptions: { _, _ in
             },
+            requestAddMessagePollOption: { _, _, _, _, _ in
+            },
             requestOpenMessagePollResults: { _, _ in
             },
             openAppStorePage: {
@@ -2465,6 +2468,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             openMessagePollResults: { _, _ in
             },
             openPollCreation: { _ in
+            },
+            openPollMedia: { _, _ in
             },
             displayPollSolution: { _, _ in
             },
@@ -2728,8 +2733,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, presentDocumentScanner: (() -> Void)?, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController {
-        return makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, bannedSendMedia: bannedSendMedia, presentGallery: presentGallery, presentFiles: presentFiles, presentDocumentScanner: presentDocumentScanner, send: send)
+    public func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, audio: Bool, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, presentDocumentScanner: (() -> Void)?, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController {
+        return makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: audio ? .audio : .recent, bannedSendMedia: bannedSendMedia, presentGallery: presentGallery, presentFiles: presentFiles, presentDocumentScanner: presentDocumentScanner, send: send)
     }
     
     public func makeGalleryCaptionPanelView(context: AccountContext, chatLocation: ChatLocation, isScheduledMessages: Bool, isFile: Bool, hasTimer: Bool, customEmojiAvailable: Bool, present: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) -> NSObject? {

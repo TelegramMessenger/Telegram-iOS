@@ -71,7 +71,7 @@ public func presentPollAttachmentScreen(
             controllerCompletion(controller, controller.mediaPickerContext)
             return true
         case .file:
-            let controller = context.sharedContext.makeAttachmentFileController(context: context, updatedPresentationData: updatedPresentationData, bannedSendMedia: nil, presentGallery: { [weak attachmentController] in
+            let controller = context.sharedContext.makeAttachmentFileController(context: context, updatedPresentationData: updatedPresentationData, audio: false, bannedSendMedia: nil, presentGallery: { [weak attachmentController] in
                 attachmentController?.dismiss(animated: true)
                 //self?.presentFileGallery()
             }, presentFiles: { [weak attachmentController] in

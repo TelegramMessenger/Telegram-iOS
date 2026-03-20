@@ -7,7 +7,7 @@ extension TelegramMediaPollOption {
     init(apiOption: Api.PollAnswer) {
         switch apiOption {
         case let .pollAnswer(pollAnswerData):
-            let (flags, text, option) = (pollAnswerData.flags, pollAnswerData.text, pollAnswerData.option)
+            let (flags, text, option, date, addedBy) = (pollAnswerData.flags, pollAnswerData.text, pollAnswerData.option, pollAnswerData.date, pollAnswerData.addedBy)
             let answerText: String
             let answerEntities: [MessageTextEntity]
             switch text {
@@ -20,10 +20,11 @@ extension TelegramMediaPollOption {
             if (flags & (1 << 0)) != 0, let apiMedia = pollAnswerData.media {
                 parsedMedia = textMediaAndExpirationTimerFromApiMedia(apiMedia, PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(0))).media
             }
-            self.init(text: answerText, entities: answerEntities, opaqueIdentifier: option.makeData(), media: parsedMedia)
+            self.init(text: answerText, entities: answerEntities, opaqueIdentifier: option.makeData(), media: parsedMedia, date: date, addedBy: addedBy?.peerId)
         case let .inputPollAnswer(inputPollAnswerData):
             let text = inputPollAnswerData.text
             let answerText: String
+            
             let answerEntities: [MessageTextEntity]
             switch text {
             case let .textWithEntities(textWithEntitiesData):
@@ -31,12 +32,12 @@ extension TelegramMediaPollOption {
                 answerText = text
                 answerEntities = messageTextEntitiesFromApiEntities(entities)
             }
-            self.init(text: answerText, entities: answerEntities, opaqueIdentifier: Data())
+            self.init(text: answerText, entities: answerEntities, opaqueIdentifier: Data(), date: nil, addedBy: nil)
         }
     }
 
     var apiOption: Api.PollAnswer {
-        return .pollAnswer(.init(flags: 0, text: .textWithEntities(.init(text: self.text, entities: apiEntitiesFromMessageTextEntities(self.entities, associatedPeers: SimpleDictionary()))), option: Buffer(data: self.opaqueIdentifier), media: nil))
+        return .pollAnswer(.init(flags: 0, text: .textWithEntities(.init(text: self.text, entities: apiEntitiesFromMessageTextEntities(self.entities, associatedPeers: SimpleDictionary()))), option: Buffer(data: self.opaqueIdentifier), media: nil, addedBy: nil, date: nil))
     }
 }
 

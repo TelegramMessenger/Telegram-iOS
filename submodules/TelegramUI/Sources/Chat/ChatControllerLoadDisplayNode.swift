@@ -4130,6 +4130,12 @@ extension ChatControllerImpl {
             guard let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction else {
                 return
             }
+            
+            if let textFieldView = strongSelf.chatDisplayNode.chatPresentationInterfaceStateTextFieldView(strongSelf.presentationInterfaceState) {
+                textFieldView.insertText(text)
+                return
+            }
+            
             if !strongSelf.chatDisplayNode.isTextInputPanelActive {
                 return
             }

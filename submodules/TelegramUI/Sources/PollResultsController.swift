@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -456,7 +457,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     })
     
     let previousWasEmpty = Atomic<Bool?>(value: nil)
-    
+        
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         statePromise.get(),
@@ -498,7 +499,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
                 }
             }
         }
-        
+                
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .textWithSubtitle(presentationData.strings.PollResults_Title, presentationData.strings.MessagePoll_VotedCount(totalVoters)), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: nil, emptyStateItem: nil, initialScrollToItem: initialScrollToItem, crossfadeState: previousWasEmptyValue != nil && previousWasEmptyValue == true && isEmpty == false, animateChanges: false)
         

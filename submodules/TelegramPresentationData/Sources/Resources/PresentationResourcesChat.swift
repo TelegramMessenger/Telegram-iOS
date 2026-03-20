@@ -1361,7 +1361,7 @@ public struct PresentationResourcesChat {
             })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius)).withRenderingMode(.alwaysTemplate)
         })
     }
-    
+        
     public static func chatBubbleCloseIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleCloseIcon.rawValue, { theme in
             return generateImage(CGSize(width: 12.0, height: 12.0), rotatedContext: { size, context in
@@ -1384,6 +1384,42 @@ public struct PresentationResourcesChat {
                 context.move(to: CGPoint(x: bounds.maxX, y: bounds.minY))
                 context.addLine(to: CGPoint(x: bounds.minX, y: bounds.maxY))
                 context.strokePath()
+            })
+        })
+    }
+    
+    public static func chatAttachedContentCloseIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatAttachedContentCloseIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 12.0, height: 12.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+                
+                context.setStrokeColor(UIColor.white.cgColor)
+                context.setLineCap(.round)
+                context.setLineWidth(1.0 + UIScreenPixel)
+                
+                let bounds = CGRect(origin: .zero, size: size).insetBy(dx: 2.0, dy: 2.0)
+                
+                context.move(to: CGPoint(x: bounds.minX, y: bounds.minY))
+                context.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY))
+                context.strokePath()
+                
+                context.move(to: CGPoint(x: bounds.maxX, y: bounds.minY))
+                context.addLine(to: CGPoint(x: bounds.minX, y: bounds.maxY))
+                context.strokePath()
+            })?.withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
+    public static func chatPollAddIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatPollAddIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 17.0, height: 15.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.white.cgColor)
+
+                let lineHeight = 2.0 - UIScreenPixel
+                context.addPath(CGPath(roundedRect: CGRect(x: 1.0, y: 7.0, width: 15.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.addPath(CGPath(roundedRect: CGRect(x: 8.0, y: 0.0, width: lineHeight, height: 15.0), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.fillPath()
             })
         })
     }
@@ -1476,6 +1512,52 @@ public struct PresentationResourcesChat {
     public static func chatServiceMessageTodoAppendedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatServiceMessageTodoAppendedIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ServiceTodoAppended"), color: .white)
+        })
+    }
+    
+    public static func chatBubblePollChevronLeftIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronLeftIncomingIcon.rawValue, { theme in
+            if let image = UIImage(bundleImageName: "Settings/TextArrowRight") {
+                return generateImage(image.size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    if let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.incoming.accentTextColor), let cgImage = image.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: .zero, size: image.size))
+                    }
+                })
+            }
+            return nil
+        })
+    }
+    
+    public static func chatBubblePollChevronLeftOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronLeftOutgoingIcon.rawValue, { theme in
+            if let image = UIImage(bundleImageName: "Settings/TextArrowRight") {
+                return generateImage(image.size, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    if let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.outgoing.accentTextColor), let cgImage = image.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: .zero, size: image.size))
+                    }
+                })
+            }
+            return nil
+        })
+    }
+    
+    public static func chatBubblePollChevronRightIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronRightIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatBubblePollChevronRightOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubblePollChevronRightOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.chat.message.outgoing.accentTextColor)
         })
     }
     

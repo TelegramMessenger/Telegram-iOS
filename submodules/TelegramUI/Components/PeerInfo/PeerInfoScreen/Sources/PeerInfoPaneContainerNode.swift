@@ -560,7 +560,9 @@ private final class PeerInfoPendingPane {
         case .savedMessagesChats:
             paneNode = PeerInfoChatListPaneNode(context: context, navigationController: chatControllerInteraction.navigationController)
         case .savedMessages:
-            paneNode = PeerInfoChatPaneNode(context: context, peerId: peerId, navigationController: chatControllerInteraction.navigationController)
+            paneNode = PeerInfoChatPaneNode(context: context, chatLocation: .replyThread(message: ChatReplyThreadMessage(peerId: context.account.peerId, threadId: peerId.toInt64(), channelMessageId: nil, isChannelPost: false, isForumPost: false, isMonoforumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)), tag: nil, navigationController: chatControllerInteraction.navigationController)
+        case .polls:
+            paneNode = PeerInfoChatPaneNode(context: context, chatLocation: .peer(id: peerId), tag: .polls, navigationController: chatControllerInteraction.navigationController)
         }
         paneNode.externalDataUpdated = externalDataUpdated
         paneNode.parentController = parentController
@@ -1312,6 +1314,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                             GiftsTabItemComponent(context: self.context, icons: icons, title: presentationData.strings.PeerInfo_PaneGifts, theme: presentationData.theme)
                         ))
                         canReorder = true
+                    case .polls:
+                        //TODO:localize
+                        content = .title(HorizontalTabsComponent.Tab.Title(text: "Polls", entities: [], enableAnimations: false))
                     }
                     
                     return HorizontalTabsComponent.Tab(

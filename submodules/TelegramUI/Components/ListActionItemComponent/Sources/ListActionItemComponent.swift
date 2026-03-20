@@ -13,10 +13,10 @@ public final class ListActionItemComponent: Component {
         case legacy
     }
     
-    public enum ToggleStyle {
+    public enum ToggleStyle: Equatable {
         case regular
         case icons
-        case lock
+        case lock(isLocked: Bool)
     }
     
     public struct Toggle: Equatable {
@@ -467,7 +467,7 @@ public final class ListActionItemComponent: Component {
             case .expandArrows:
                 contentRightInset = 36.0
             case .toggle:
-                contentRightInset = 76.0
+                contentRightInset = 82.0
             case .activity:
                 contentRightInset = 76.0
             case let .custom(customAccessory):
@@ -831,9 +831,12 @@ public final class ListActionItemComponent: Component {
                     let switchNode: IconSwitchNode
                     var switchTransition = transition
                     var updateSwitchTheme = themeUpdated
+                    if case let .toggle(previousToggle) = previousComponent?.accessory, previousToggle.style != toggle.style {
+                        updateSwitchTheme = true
+                    }
                     if let current = self.iconSwitchNode {
                         switchNode = current
-                        switchNode.updateIsLocked(toggle.style == .lock)
+                        switchNode.updateIsLocked(toggle.style == .lock(isLocked: true))
                         if switchNode.isOn != toggle.isOn {
                             switchNode.setOn(toggle.isOn, animated: !transition.animation.isImmediate)
                         }
@@ -841,7 +844,7 @@ public final class ListActionItemComponent: Component {
                         switchTransition = switchTransition.withAnimation(.none)
                         updateSwitchTheme = true
                         switchNode = IconSwitchNode()
-                        switchNode.updateIsLocked(toggle.style == .lock)
+                        switchNode.updateIsLocked(toggle.style == .lock(isLocked: true))
                         switchNode.setOn(toggle.isOn, animated: false)
                         self.iconSwitchNode = switchNode
                         self.button.addSubview(switchNode.view)
@@ -863,8 +866,13 @@ public final class ListActionItemComponent: Component {
                         switchNode.frameColor = component.theme.list.itemSwitchColors.frameColor
                         switchNode.contentColor = component.theme.list.itemSwitchColors.contentColor
                         switchNode.handleColor = component.theme.list.itemSwitchColors.handleColor
-                        switchNode.positiveContentColor = component.theme.list.itemSwitchColors.positiveColor
-                        switchNode.negativeContentColor = component.theme.list.itemSwitchColors.negativeColor
+                        if case .icons = toggle.style {
+                            switchNode.positiveContentColor = component.theme.list.itemSwitchColors.positiveColor
+                            switchNode.negativeContentColor = component.theme.list.itemSwitchColors.negativeColor
+                        } else {
+                            switchNode.positiveContentColor = .clear
+                            switchNode.negativeContentColor = component.theme.list.itemSecondaryTextColor
+                        }
                     }
                     
                     var switchSize = CGSize(width: 51.0, height: 31.0)

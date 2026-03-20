@@ -1783,7 +1783,38 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .managedBotCreated:
                 attributedString = nil
             case let .pollOptionAppended(option):
-                let _ = option
+                var optionTitle = "DELETED"
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
+                        for media in message.media {
+                            if let todo = media as? TelegramMediaTodo {
+                                optionTitle = todo.text
+                            }
+                        }
+                    }
+                }
+                if optionTitle.count > 20 {
+                    optionTitle = optionTitle.prefix(20) + "…"
+                }
+                if message.author?.id == accountPeerId {
+                    var optionText = option.text
+                    if optionText.count > 20 {
+                        optionText = optionText.prefix(20) + "…"
+                    }
+                    let resultString = strings.Notification_PollAddedOptionYou(optionText)
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    
+                    var optionText = option.text
+                    if optionText.count > 20 {
+                        optionText = optionText.prefix(20) + "…"
+                    }
+                    let resultString = strings.Notification_PollAddedOption(peerName, optionText)
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
             case .unknown:
                 attributedString = nil
             }

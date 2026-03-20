@@ -17,7 +17,7 @@ import BundleIconComponent
 import SwiftSignalKit
 import PhotoResources
 import LocationResources
-import SemanticStatusNode
+import RadialStatusNode
 import EmojiTextAttachmentView
 import TextFormat
 
@@ -131,6 +131,7 @@ public final class ListComposePollOptionComponent: Component {
     public let canAdd: Bool
     public let attachment: Attachment?
     public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
+    public let returnKeyType: UIReturnKeyType
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
     public let selection: Selection?
@@ -159,7 +160,8 @@ public final class ListComposePollOptionComponent: Component {
         canAdd: Bool = false,
         attachment: Attachment? = nil,
         emptyLineHandling: TextFieldComponent.EmptyLineHandling,
-        returnKeyAction: (() -> Void)?,
+        returnKeyType: UIReturnKeyType = .next,
+        returnKeyAction: (() -> Void)? = nil,
         backspaceKeyAction: (() -> Void)?,
         selection: Selection?,
         inputMode: InputMode?,
@@ -186,6 +188,7 @@ public final class ListComposePollOptionComponent: Component {
         self.canAdd = canAdd
         self.attachment = attachment
         self.emptyLineHandling = emptyLineHandling
+        self.returnKeyType = returnKeyType
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
         self.selection = selection
@@ -245,6 +248,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
+            return false
+        }
+        if lhs.returnKeyType != rhs.returnKeyType {
             return false
         }
         if lhs.selection != rhs.selection {
@@ -466,8 +472,9 @@ public final class ListComposePollOptionComponent: Component {
         
         private var attachButton: ComponentView<Empty>?
         private var imageNode: TransformImageNode?
-        private var statusNode: SemanticStatusNode?
+        private var statusNode: RadialStatusNode?
         private var animationLayer: InlineStickerItemLayer?
+        private var videoIconView: UIImageView?
         private let imageButton = HighlightTrackingButton()
         
         private var checkView: CheckView?
@@ -726,7 +733,7 @@ public final class ListComposePollOptionComponent: Component {
                     emptyLineHandling: component.emptyLineHandling,
                     externalHandlingForMultilinePaste: true,
                     formatMenuAvailability: .none,
-                    returnKeyType: .next,
+                    returnKeyType: component.returnKeyType,
                     lockedFormatAction: {
                     },
                     present: { _ in
@@ -852,11 +859,13 @@ public final class ListComposePollOptionComponent: Component {
             }
             
             if let selection = component.selection {
+                var checkTransition = transition
                 let checkView: CheckView
                 var animateIn = false
                 if let current = self.checkView {
                     checkView = current
                 } else {
+                    checkTransition = .immediate
                     animateIn = true
                     checkView = CheckView()
                     self.checkView = checkView
@@ -872,21 +881,22 @@ public final class ListComposePollOptionComponent: Component {
                 let checkSize = CGSize(width: 22.0, height: 22.0)
                 let checkFrame = CGRect(origin: CGPoint(x: leftInset - checkSize.width - 20.0 + self.revealOffset, y: floor((size.height - checkSize.height) * 0.5)), size: checkSize)
                 
+                checkTransition.setPosition(view: checkView, position: checkFrame.center)
+                checkTransition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
+                
+                checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
+                
                 if animateIn {
-                    checkView.frame = CGRect(origin: CGPoint(x: -checkSize.width, y: self.bounds.height == 0.0 ? checkFrame.minY : floor((self.bounds.height - checkSize.height) * 0.5)), size: checkFrame.size)
-                    transition.setPosition(view: checkView, position: checkFrame.center)
-                    transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: .immediate)
-                } else {
-                    transition.setPosition(view: checkView, position: checkFrame.center)
-                    transition.setBounds(view: checkView, bounds: CGRect(origin: CGPoint(), size: checkFrame.size))
-                    checkView.update(size: checkFrame.size, isRectangle: selection.isMultiSelection, isQuiz: selection.isQuiz, theme: component.theme, isSelected: selection.isSelected, transition: transition)
+                    transition.animateAlpha(view: checkView, from: 0.0, to: 1.0)
+                    transition.animateScale(view: checkView, from: 0.01, to: 1.0)
                 }
             } else if let checkView = self.checkView {
                 self.checkView = nil
-                transition.setPosition(view: checkView, position: CGPoint(x: -checkView.bounds.width * 0.5, y: size.height * 0.5), completion: { [weak checkView] _ in
+                
+                transition.setAlpha(view: checkView, alpha: 0.0, completion: { [weak checkView] _ in
                     checkView?.removeFromSuperview()
                 })
+                transition.setScale(view: checkView, scale: 0.01)
             }
                 
             var rightIconsInset: CGFloat = 16.0
@@ -907,9 +917,8 @@ public final class ListComposePollOptionComponent: Component {
                     transition: attachButtonTransition,
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(BundleIconComponent(
-                            name: "Chat/Input/Text/IconAttachment",
-                            tintColor: component.theme.chat.inputPanel.inputControlColor.blitOver(component.theme.list.itemBlocksBackgroundColor, alpha: 1.0),
-                            maxSize: CGSize(width: 25.0, height: 25.0)
+                            name: "Item List/AttachIcon",
+                            tintColor: component.theme.chat.inputPanel.inputControlColor.blitOver(component.theme.list.itemBlocksBackgroundColor, alpha: 1.0)
                         )),
                         effectAlignment: .center,
                         action: { [weak self] in
@@ -964,9 +973,19 @@ public final class ListComposePollOptionComponent: Component {
             if let attachment = component.attachment, let file = attachment.media?.media as? TelegramMediaFile, file.isSticker || file.isCustomEmoji {
                 isSticker = true
                 
-                let animationSize = CGSize(width: 40.0, height: 40.0)
+                var updateMedia = false
+                if self.appliedMedia != attachment.media {
+                    self.appliedMedia = attachment.media
+                    updateMedia = true
+                }
+                
+                
+                var animationSize = CGSize(width: 40.0, height: 40.0)
+                if let dimensions = file.dimensions {
+                    animationSize = dimensions.cgSize.aspectFitted(animationSize)
+                }
                 let animationLayer: InlineStickerItemLayer
-                if let current = self.animationLayer {
+                if let current = self.animationLayer, !updateMedia {
                     animationLayer = current
                 } else {
                     if let animationLayer = self.animationLayer {
@@ -991,7 +1010,7 @@ public final class ListComposePollOptionComponent: Component {
                     self.animationLayer = animationLayer
                     self.layer.addSublayer(animationLayer)
                 }
-                animationLayer.frame = imageNodeFrame
+                animationLayer.frame = CGRect(origin: CGPoint(x: imageNodeFrame.midX - animationSize.width * 0.5, y: imageNodeFrame.midY - animationSize.height * 0.5), size: animationSize)
                 
                 if self.imageButton.superview == nil {
                     self.imageButton.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
@@ -999,7 +1018,7 @@ public final class ListComposePollOptionComponent: Component {
                 }
                 self.imageButton.frame = imageNodeFrame
             } else if let animationLayer = self.animationLayer {
-                self.imageNode = nil
+                self.animationLayer = nil
                 if !transition.animation.isImmediate {
                     let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
                     alphaTransition.setAlpha(layer: animationLayer, alpha: 0.0, completion: { [weak animationLayer] _ in
@@ -1034,6 +1053,8 @@ public final class ListComposePollOptionComponent: Component {
                     self.appliedMedia = media
                     updateMedia = true
                 }
+                
+                var isVideo = false
                 if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations), let photoReference = media.concrete(TelegramMediaImage.self) {
                     imageSize = largest.dimensions.cgSize.aspectFilled(imageNodeSize)
                     
@@ -1048,10 +1069,29 @@ public final class ListComposePollOptionComponent: Component {
                         if updateMedia {
                             imageNode.setSignal(instantPageImageFile(account: component.context.account, userLocation: .other, fileReference: fileReference, fetched: true))
                         }
-                    } else {
+                    } else if file.isVideo {
                         if updateMedia {
                             imageNode.setSignal(chatMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: fileReference))
                         }
+                        isVideo = true
+                    } else {
+                        let fileName: String = file.fileName ?? "File"
+                        var fileExtension: String?
+                        if let range = fileName.range(of: ".", options: [.backwards]) {
+                            fileExtension = fileName[range.upperBound...].lowercased()
+                        }
+                        
+                        imageNode.setSignal(.single({ arguments in
+                            let size = arguments.imageSize
+                            let context = DrawingContext(size: size)!
+                            context.withFlippedContext { context in
+                                context.clear(CGRect(origin: .zero, size: size))
+                                if let image = extensionImage(fileExtension: fileExtension), let cgImage = image.cgImage {
+                                    context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                                }
+                            }
+                            return context
+                        }))
                     }
                 } else if let map = media.media as? TelegramMediaMap {
                     imageSize = CGSize(width: 40.0, height: 40.0)
@@ -1073,18 +1113,20 @@ public final class ListComposePollOptionComponent: Component {
                 self.imageButton.frame = imageNodeFrame
                 
                 if let progress = attachment.progress {
-                    let statusNode: SemanticStatusNode
+                    let statusNode: RadialStatusNode
                     if let current = self.statusNode {
                         statusNode = current
                     } else {
-                        statusNode = SemanticStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.5), foregroundNodeColor: .white)
+                        statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.5))
                         self.statusNode = statusNode
                         self.addSubview(statusNode.view)
                     }
                     
-                    let progressFrame = imageNodeFrame.insetBy(dx: 6.0, dy: 6.0)
+                    let progressFrame = imageNodeFrame.insetBy(dx: 4.0, dy: 4.0)
                     statusNode.frame = progressFrame
-                    statusNode.transitionToState(.progress(value: max(0.027, min(1.0, progress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 1.0, lineWidth: 2.0), animateRotation: false), updateCutout: false)
+                    statusNode.transitionToState(.progress(color: .white, lineWidth: 2.0 - UIScreenPixel, value: max(0.027, min(1.0, progress)), cancelEnabled: true, animateRotation: true))
+                    
+                    isVideo = false
                 } else if let statusNode = self.statusNode {
                     self.statusNode = nil
                     if !transition.animation.isImmediate {
@@ -1095,6 +1137,37 @@ public final class ListComposePollOptionComponent: Component {
                         alphaTransition.setScale(view: statusNode.view, scale: 0.001)
                     } else {
                         statusNode.view.removeFromSuperview()
+                    }
+                }
+                
+                if isVideo {
+                    let videoIconView: UIImageView
+                    if let current = self.videoIconView {
+                        videoIconView = current
+                    } else  {
+                        videoIconView = UIImageView(image: UIImage(bundleImageName: "Media Gallery/PlayButton")?.withRenderingMode(.alwaysTemplate))
+                        videoIconView.tintColor = .white
+                        self.addSubview(videoIconView)
+                        self.videoIconView = videoIconView
+                        
+                        if !transition.animation.isImmediate {
+                            let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                            alphaTransition.animateAlpha(view: videoIconView, from: 0.0, to: 1.0)
+                            alphaTransition.animateScale(view: videoIconView, from: 0.01, to: 1.0)
+                        }
+                    }
+                    let videoIconFrame = CGRect(origin: CGPoint(x: imageNodeFrame.center.x - 15.0, y: imageNodeFrame.center.y - 15.0), size: CGSize(width: 30.0, height: 30.0))
+                    videoIconView.frame = videoIconFrame
+                } else if let videoIconView = self.videoIconView {
+                    self.videoIconView = nil
+                    if !transition.animation.isImmediate {
+                        let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                        alphaTransition.setAlpha(view: videoIconView, alpha: 0.0, completion: { [weak videoIconView] _ in
+                            videoIconView?.removeFromSuperview()
+                        })
+                        alphaTransition.setScale(view: videoIconView, scale: 0.001)
+                    } else {
+                        videoIconView.removeFromSuperview()
                     }
                 }
             } else if let imageNode = self.imageNode {
@@ -1109,6 +1182,19 @@ public final class ListComposePollOptionComponent: Component {
                     imageNode.view.removeFromSuperview()
                 }
                 self.imageButton.removeFromSuperview()
+                
+                if let videoIconView = self.videoIconView {
+                    self.videoIconView = nil
+                    if !transition.animation.isImmediate {
+                        let alphaTransition: ComponentTransition = .easeInOut(duration: 0.2)
+                        alphaTransition.setAlpha(view: videoIconView, alpha: 0.0, completion: { [weak videoIconView] _ in
+                            videoIconView?.removeFromSuperview()
+                        })
+                        alphaTransition.setScale(view: videoIconView, scale: 0.001)
+                    } else {
+                        videoIconView.removeFromSuperview()
+                    }
+                }
                 
                 if let statusNode = self.statusNode {
                     self.statusNode = nil
@@ -1386,4 +1472,90 @@ final class RevealOptionsGestureRecognizer: UIPanGestureRecognizer {
             super.touchesMoved(touches, with: event)
         }
     }
+}
+
+private let extensionFont = Font.with(size: 15.0, design: .round, weight: .bold)
+private let mediumExtensionFont = Font.with(size: 14.0, design: .round, weight: .bold)
+private let smallExtensionFont = Font.with(size: 12.0, design: .round, weight: .bold)
+
+private let redColors: (UInt32, UInt32) = (0xff875f, 0xff5069)
+private let greenColors: (UInt32, UInt32) = (0x99de6f, 0x5fb84f)
+private let blueColors: (UInt32, UInt32) = (0x72d5fd, 0x2a9ef1)
+private let yellowColors: (UInt32, UInt32) = (0xffa24b, 0xed705c)
+
+private let extensionColorsMap: [String: (UInt32, UInt32)] = [
+    "ppt": redColors,
+    "pptx": redColors,
+    "pdf": redColors,
+    "key": redColors,
+    
+    "xls": greenColors,
+    "xlsx": greenColors,
+    "csv": greenColors,
+    
+    "zip": yellowColors,
+    "rar": yellowColors,
+    "gzip": yellowColors,
+    "ai": yellowColors
+]
+
+private func generateExtensionImage(colors: (UInt32, UInt32), fileExtension: String) -> UIImage? {
+    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.saveGState()
+        context.beginPath()
+        let _ = try? drawSvgPath(context, path: "M6,0 L26.7573593,0 C27.5530088,-8.52837125e-16 28.3160705,0.316070521 28.8786797,0.878679656 L39.1213203,11.1213203 C39.6839295,11.6839295 40,12.4469912 40,13.2426407 L40,34 C40,37.3137085 37.3137085,40 34,40 L6,40 C2.6862915,40 4.05812251e-16,37.3137085 0,34 L0,6 C-4.05812251e-16,2.6862915 2.6862915,6.08718376e-16 6,0 ")
+        context.clip()
+        
+        let gradientColors = [UIColor(rgb: colors.0).cgColor, UIColor(rgb: colors.1).cgColor] as CFArray
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        
+        context.restoreGState()
+        
+        context.saveGState()
+        let rounded = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 13).cgPath
+        let full = UIBezierPath(rect: CGRect(origin: .zero, size: size)).cgPath
+        context.addPath(full)
+        context.addPath(rounded)
+        context.setBlendMode(.destinationOut)
+        context.drawPath(using: .eoFill)
+        context.setBlendMode(.normal)
+        context.restoreGState()
+        
+        context.saveGState()
+        
+        context.beginPath()
+        let _ = try? drawSvgPath(context, path: "M6,0 L26.7573593,0 C27.5530088,-8.52837125e-16 28.3160705,0.316070521 28.8786797,0.878679656 L39.1213203,11.1213203 C39.6839295,11.6839295 40,12.4469912 40,13.2426407 L40,34 C40,37.3137085 37.3137085,40 34,40 L6,40 C2.6862915,40 4.05812251e-16,37.3137085 0,34 L0,6 C-4.05812251e-16,2.6862915 2.6862915,6.08718376e-16 6,0 ")
+        context.clip()
+
+        context.setBlendMode(.overlay)
+        context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.5).cgColor)
+        context.translateBy(x: 40.0 - 14.0, y: 0.0)
+        let _ = try? drawSvgPath(context, path: "M-1,0 L14,0 L14,15 L14,14 C14,12.8954305 13.1045695,12 12,12 L4,12 C2.8954305,12 2,11.1045695 2,10 L2,2 C2,0.8954305 1.1045695,-2.02906125e-16 0,0 L-1,0 L-1,0 Z ")
+        
+        context.restoreGState()
+        
+        UIGraphicsPushContext(context)
+        let extensionText = NSAttributedString(string: fileExtension, font: fileExtension.count > 3 ? mediumExtensionFont : extensionFont, textColor: .white, paragraphAlignment: .center)
+        extensionText.draw(in: CGRect(origin: CGPoint(x: 0.0, y: 15.0), size: size))
+        UIGraphicsPopContext()
+    })
+}
+
+private func extensionImage(fileExtension: String?) -> UIImage? {
+    let colors: (UInt32, UInt32)
+    if let fileExtension = fileExtension {
+        if let extensionColors = extensionColorsMap[fileExtension] {
+            colors = extensionColors
+        } else {
+            colors = blueColors
+        }
+    } else {
+        colors = blueColors
+    }
+    return generateExtensionImage(colors: colors, fileExtension: fileExtension ?? "")
 }

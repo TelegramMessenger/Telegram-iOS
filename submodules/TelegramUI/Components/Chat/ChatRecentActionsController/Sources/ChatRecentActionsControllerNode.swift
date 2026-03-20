@@ -367,7 +367,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     strongSelf.pushController(searchController)
                 }
             }))
-            }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, updateInputState: { _ in
+        }, updateInputMode: { _ in
+        }, updatePresentationState: { _ in
+        }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
         }, presentControllerInCurrent: { _, _ in
         }, navigationController: { [weak self] in
@@ -585,6 +588,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, addContact: { _ in
         }, rateCall: { _, _, _ in
         }, requestSelectMessagePollOptions: { _, _ in
+        }, requestAddMessagePollOption: { _, _, _, _, _ in
         }, requestOpenMessagePollResults: { _, _ in
         }, openAppStorePage: { [weak self] in
             if let strongSelf = self {
@@ -601,6 +605,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in
         }, openPollCreation: { _ in
+        }, openPollMedia: { _, _ in
         }, displayPollSolution: { _, _ in
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in

@@ -34,9 +34,11 @@ import TextSelectionNode
 import ReplyAccessoryPanelNode
 import SuggestPostAccessoryPanelNode
 import ChatMessageItemView
+import ChatMessageBubbleItemNode
 import ChatMessageSelectionNode
 import ManagedDiceAnimationNode
 import ChatMessageTransitionNode
+import TextFieldComponent
 import ChatLoadingNode
 import ChatRecentActionsController
 import UIKitRuntimeUtils
@@ -51,6 +53,7 @@ import ChatThemeScreen
 import ChatTextInputPanelNode
 import ChatInputAccessoryPanel
 import ChatMessageTextBubbleContentNode
+import ChatMessagePollBubbleContentNode
 import HeaderPanelContainerComponent
 import MediaPlaybackHeaderPanelComponent
 import LiveLocationHeaderPanelComponent
@@ -550,7 +553,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 }
                                 if let poll = media as? TelegramMediaPoll {
                                     var updatedMedia = message.media.filter { !($0 is TelegramMediaPoll) }
-                                    updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, textEntities: poll.textEntities, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil))
+                                    updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, textEntities: poll.textEntities, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil, deadlineDate: nil))
                                     messageMedia = updatedMedia
                                 }
                                 if let _ = media as? TelegramMediaDice {
@@ -718,8 +721,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.controllerInteraction.chatIsRotated = historyNodeRotated
         
         var displayAdPeer: PeerId?
+        var tag: MessageTags?
         if !isChatPreview {
             switch subject {
+            case let .tag(tagValue):
+                tag = tagValue
             case .none, .message:
                 if case let .peer(peerId) = chatLocation {
                     displayAdPeer = peerId
@@ -735,7 +741,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNodeImpl?)?
-        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, adMessagesContext: self.adMessagesContext, tag: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), rotated: historyNodeRotated, isChatPreview: isChatPreview, messageTransitionNode: {
+        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, adMessagesContext: self.adMessagesContext, tag: tag.flatMap { .tag($0) }, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), rotated: historyNodeRotated, isChatPreview: isChatPreview, messageTransitionNode: {
             return getMessageTransitionNode?()
         })
 
@@ -2567,7 +2573,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.historyNode.scrollToEndOfHistory()
             }
         }
-        self.historyNode.scrollEnabled = !self.isScrollingLockedAtTop
+        self.historyNode.scrollEnabled = !(self.isScrollingLockedAtTop || self.chatPresentationInterfaceState.focusedPollAddOptionMessageId != nil)
         
         let navigateButtonsSize = self.navigateButtons.updateLayout(transition: transition)
         var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 8.0, y: layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 20.0), size: navigateButtonsSize)
@@ -3014,10 +3020,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var showNavigateButtons = true
-        if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+        if let _ = self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
             showNavigateButtons = false
         }
-        if chatPresentationInterfaceState.displayHistoryFilterAsList {
+        if self.chatPresentationInterfaceState.displayHistoryFilterAsList {
+            showNavigateButtons = false
+        }
+        if let _ = self.chatPresentationInterfaceState.focusedPollAddOptionMessageId {
             showNavigateButtons = false
         }
         
@@ -3502,6 +3511,22 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             return nil
         }
     }
+        
+    func chatPresentationInterfaceStateTextFieldView(_ state: ChatPresentationInterfaceState) -> TextFieldComponent.View? {
+        var result: TextFieldComponent.View?
+        if let focusedPollAddOptionMessageId = state.focusedPollAddOptionMessageId {
+            self.historyNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == focusedPollAddOptionMessageId {
+                    for contentNode in itemNode.contentNodes {
+                        if let contentNode = contentNode as? ChatMessagePollBubbleContentNode {
+                            result = contentNode.newOptionInputTextFieldView()
+                        }
+                    }
+                }
+            }
+        }
+        return result
+    }
     
     func updateChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition, interactive: Bool, forceLayout: Bool, completion: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.selectedMessages = chatPresentationInterfaceState.interfaceState.selectionState?.selectedIds
@@ -3534,6 +3559,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             var updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
             if self.chatPresentationInterfaceStateInputView(self.chatPresentationInterfaceState) !== self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState) {
                 updatedInputFocus = true
+            }
+            
+            if self.chatPresentationInterfaceState.focusedPollAddOptionMessageId != chatPresentationInterfaceState.focusedPollAddOptionMessageId, let messageId = chatPresentationInterfaceState.focusedPollAddOptionMessageId {
+                self.controller?.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams()), scrollPosition: .top(-18.0))
             }
             
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
@@ -3650,9 +3679,16 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.controller?.customNavigationBarContentNode = nil
                 self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
             }
-            
+                        
             var waitForKeyboardLayout = false
-            if let textView = self.textInputPanelNode?.textInputNode?.textView {
+            var effectiveTextView: UITextView?
+            let customTextView = self.chatPresentationInterfaceStateTextFieldView(chatPresentationInterfaceState)
+            if let customTextView {
+                effectiveTextView = customTextView.inputTextView
+            } else if let mainTextView = self.textInputPanelNode?.textInputNode?.textView {
+                effectiveTextView = mainTextView
+            }
+            if let textView = effectiveTextView {
                 let updatedInputView = self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState)
                 if textView.inputView !== updatedInputView {
                     textView.inputView = updatedInputView
@@ -3675,9 +3711,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
                 
                 if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
-                    self.ensureInputViewFocused()
+                    if let customTextView {
+                        customTextView.activateInput()
+                    } else {
+                        self.ensureInputViewFocused()
+                    }
                 } else {
-                    if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+                    if let customTextView, customTextView.isFirstResponder {
+                        self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
+                    } else if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
                         if inputPanelNode.isFocused {
                             inputPanelNode.skipPresentationInterfaceStateUpdate = true
                             self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))

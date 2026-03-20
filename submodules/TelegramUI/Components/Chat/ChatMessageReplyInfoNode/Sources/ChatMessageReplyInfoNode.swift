@@ -446,10 +446,14 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var textLeftInset: CGFloat = 0.0
             var messageText: NSAttributedString
             var todoItemCompleted: Bool?
+            var checkIsRectangle = false
             
             if case let .pollOption(optionId) = arguments.innerSubject, let poll = arguments.message?.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll, let pollOption = poll.options.first(where: { $0.opaqueIdentifier == optionId }) {
                 messageText = stringWithAppliedEntities(pollOption.text, entities: pollOption.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
                 textLeftInset += 16.0
+                
+                todoItemCompleted = true
+                checkIsRectangle = poll.kind.multipleAnswers
             } else if case let .todoItem(todoItemId) = arguments.innerSubject, let todo = arguments.message?.media.first(where: { $0 is TelegramMediaTodo }) as? TelegramMediaTodo, let todoItem = todo.items.first(where: { $0.id == todoItemId }) {
                 messageText = stringWithAppliedEntities(todoItem.text, entities: todoItem.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
                 textLeftInset += 16.0
@@ -520,7 +524,25 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var updatedMediaReference: AnyMediaReference?
             var imageDimensions: CGSize?
             var hasRoundImage = false
-            if let message = arguments.message, !message.containsSecretMedia {
+            if case let .pollOption(optionId) = arguments.innerSubject, let poll = arguments.message?.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll, let pollOption = poll.options.first(where: { $0.opaqueIdentifier == optionId }), let media = pollOption.media {
+                if let image = media as? TelegramMediaImage {
+                    updatedMediaReference = .message(message: MessageReference(arguments.parentMessage), media: image)
+                    if let representation = largestRepresentationForPhoto(image) {
+                        imageDimensions = representation.dimensions.cgSize
+                    }
+                } else if let file = media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
+                    updatedMediaReference = .message(message: MessageReference(arguments.parentMessage), media: file)
+                    
+                    if let dimensions = file.dimensions {
+                        imageDimensions = dimensions.cgSize
+                    } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                        imageDimensions = representation.dimensions.cgSize
+                    }
+                    if file.isInstantVideo {
+                        hasRoundImage = true
+                    }
+                }
+            } else if let message = arguments.message, !message.containsSecretMedia {
                 for media in message.media {
                     if let image = media as? TelegramMediaImage {
                         updatedMediaReference = .message(message: MessageReference(message), media: image)
@@ -908,7 +930,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         checkLayer.setSelected(todoItemCompleted, animated: true)
                         animation.animator.updateFrame(layer: checkLayer, frame: checkLayerFrame, completion: nil)
                     } else {
-                        checkLayer = CheckLayer(theme: checkTheme)
+                        checkLayer = CheckLayer(theme: checkTheme, content: .check(isRectangle: checkIsRectangle))
                         node.checkLayer = checkLayer
                         node.contentNode.layer.addSublayer(checkLayer)
                         

@@ -30,10 +30,11 @@ static const void *positionChangedKey = &positionChangedKey;
 @interface TGIconSwitchView () {
     UIImageView *_offIconView;
     UIImageView *_onIconView;
+    UIColor *_positiveContentColor;
     UIColor *_negativeContentColor;
     
     bool _stateIsOn;
-    bool _isLocked;
+    NSNumber *_isLocked;
 }
 
 @end
@@ -103,7 +104,7 @@ static const void *positionChangedKey = &positionChangedKey;
         offset = CGPointMake(-7.0, -3.0);
     }
     
-    if (_isLocked) {
+    if (_isLocked.boolValue || [_positiveContentColor isEqual:[UIColor clearColor]]) {
         _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(12.5f) + offset.y);
     } else {
         _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
@@ -141,22 +142,56 @@ static const void *positionChangedKey = &positionChangedKey;
 }
 
 - (void)setPositiveContentColor:(UIColor *)color {
+    _positiveContentColor = color;
     _onIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOn.png"), color);
+    
+    if ([color isEqual:[UIColor clearColor]]) {
+        self.tintColor = nil;
+        self.backgroundColor = nil;
+        
+        if (_isLocked.boolValue) {
+            _offIconView.alpha = 1.0;
+        } else {
+            _offIconView.alpha = 0.0;
+        }
+        _onIconView.hidden = true;
+    } else {
+        self.tintColor = [UIColor redColor];
+        self.backgroundColor = [UIColor redColor];
+    }
 }
 
 - (void)setNegativeContentColor:(UIColor *)color {
     _negativeContentColor = color;
-    if (_isLocked) {
+    if (_isLocked.boolValue || [_positiveContentColor isEqual:[UIColor clearColor]]) {
         _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"Item List/SwitchLockIcon"), color);
-        _offIconView.frame = CGRectMake(_offIconView.frame.origin.x, _offIconView.frame.origin.y, _offIconView.image.size.width, _offIconView.image.size.height);
     } else {
         _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOff.png"), color);
     }
+    _offIconView.frame = CGRectMake(_offIconView.frame.origin.x, _offIconView.frame.origin.y, _offIconView.image.size.width, _offIconView.image.size.height);
+    [self updateIconFrame];
 }
 
 - (void)updateIsLocked:(bool)isLocked {
-    if (_isLocked != isLocked) {
-        _isLocked = isLocked;
+    if (_isLocked == nil || _isLocked.boolValue != isLocked) {
+        _isLocked = @(isLocked);
+        
+        if ([_positiveContentColor isEqual:[UIColor clearColor]]) {
+            if (!isLocked) {
+                [UIView animateWithDuration:0.2 animations:^{
+                    _offIconView.alpha = 0.0;
+                }];
+            } else {
+                [UIView animateWithDuration:0.2 animations:^{
+                    _offIconView.alpha = 1.0;
+                }];
+            }
+            _onIconView.hidden = true;
+        } else {
+            _offIconView.alpha = 1.0;
+            _offIconView.hidden = false;
+            _onIconView.hidden = false;
+        }
         
         if (_negativeContentColor) {
             [self setNegativeContentColor:_negativeContentColor];
