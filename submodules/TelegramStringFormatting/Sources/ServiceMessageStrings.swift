@@ -1783,18 +1783,18 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .managedBotCreated:
                 attributedString = nil
             case let .pollOptionAppended(option):
-                var todoTitle = "DELETED"
+                var optionTitle = "DELETED"
                 for attribute in message.attributes {
                     if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
                         for media in message.media {
                             if let todo = media as? TelegramMediaTodo {
-                                todoTitle = todo.text
+                                optionTitle = todo.text
                             }
                         }
                     }
                 }
-                if todoTitle.count > 20 {
-                    todoTitle = todoTitle.prefix(20) + "…"
+                if optionTitle.count > 20 {
+                    optionTitle = optionTitle.prefix(20) + "…"
                 }
                 if message.author?.id == accountPeerId {
                     var optionText = option.text

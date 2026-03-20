@@ -442,7 +442,12 @@ final class ComposePollScreenComponent: Component {
             return self.isMultiAnswer ?? false
         }
         
-        func validatedInput() -> ComposedPoll? {
+        enum ValidatedInput {
+            case ready(ComposedPoll)
+            case isUploading
+        }
+        
+        func validatedInput() -> ValidatedInput? {
             if self.pollTextInputState.text.length == 0 {
                 return nil
             }
@@ -475,7 +480,7 @@ final class ComposePollScreenComponent: Component {
                 }
                 
                 if let media = pollOption.media, media.requiresUpload {
-                    return nil
+                    return .isUploading
                 }
                 
                 mappedOptions.append(TelegramMediaPollOption(
@@ -512,7 +517,7 @@ final class ComposePollScreenComponent: Component {
                 }
                 
                 if let media = self.quizAnswerMedia, media.requiresUpload {
-                    return nil
+                    return .isUploading
                 }
                 
                 mappedSolution = (self.quizAnswerTextInputState.text.string, solutionTextEntities, self.quizAnswerMedia?.media)
@@ -552,10 +557,10 @@ final class ComposePollScreenComponent: Component {
             }
             
             if let media = self.pollDescriptionMedia, media.requiresUpload {
-                return nil
+                return .isUploading
             }
             
-            return ComposedPoll(
+            return .ready(ComposedPoll(
                 publicity: self.isAnonymous ? .anonymous : .public,
                 kind: mappedKind,
                 openAnswers: self.canAddOptions,
@@ -582,7 +587,7 @@ final class ComposePollScreenComponent: Component {
                 deadlineTimeout: deadlineTimeout,
                 deadlineDate: deadlineDate,
                 usedCustomEmojiFiles: usedCustomEmojiFiles
-            )
+            ))
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
@@ -2537,7 +2542,15 @@ final class ComposePollScreenComponent: Component {
                 transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
             }
             
-            let isValid = self.validatedInput() != nil
+            let validatedInput = self.validatedInput()
+            var isValid = false
+            var isUploading = false
+            if case .ready = validatedInput {
+                isValid = true
+            } else if case .isUploading = validatedInput {
+                isUploading = true
+            }
+            
             let doneButtonSize = self.doneButton.update(
                 transition: transition,
                 component: AnyComponent(GlassBarButtonComponent(
@@ -2545,7 +2558,7 @@ final class ComposePollScreenComponent: Component {
                     backgroundColor: isValid ? environment.theme.list.itemCheckColors.fillColor : environment.theme.list.itemCheckColors.fillColor.desaturated().withMultipliedAlpha(0.5),
                     isDark: environment.theme.overallDarkAppearance,
                     state: .tintedGlass,
-                    isEnabled: isValid,
+                    isEnabled: isValid || isUploading,
                     component: AnyComponentWithIdentity(id: "done", component: AnyComponent(
                         Text(text: environment.strings.MediaPicker_Send, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
                     )),
@@ -2553,10 +2566,7 @@ final class ComposePollScreenComponent: Component {
                         guard let self, let controller = self.environment?.controller() as? ComposePollScreen else {
                             return
                         }
-                        if let input = self.validatedInput() {
-                            controller.completion(input)
-                            controller.dismiss()
-                        }
+                        controller.sendPressed()
                     }
                 )),
                 environment: {},
@@ -2765,14 +2775,27 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
         self.dismiss()
     }
     
-    @objc private func sendPressed() {
+    @objc fileprivate func sendPressed() {
         guard let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
             return
         }
-        if let input = componentView.validatedInput() {
-            self.completion(input)
+        let validatedInput = componentView.validatedInput()
+        if case let .ready(poll) = validatedInput {
+            self.completion(poll)
+            self.dismiss()
+        } else if case .isUploading = validatedInput {
+            //TODO:localize
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let controller = UndoOverlayController(
+                presentationData: presentationData,
+                content: .info(title: "Please wait", text: "Poll media is still uploading...", timeout: nil, customUndoText: nil),
+                position: .top,
+                action: { _ in
+                    return false
+                }
+            )
+            self.present(controller, in: .current)
         }
-        self.dismiss()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -38,6 +38,7 @@ import ChatMessageBubbleItemNode
 import ChatMessageSelectionNode
 import ManagedDiceAnimationNode
 import ChatMessageTransitionNode
+import TextFieldComponent
 import ChatLoadingNode
 import ChatRecentActionsController
 import UIKitRuntimeUtils
@@ -3507,15 +3508,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             return nil
         }
     }
-    
-    func chatPresentationInterfaceStateTextInputView(_ state: ChatPresentationInterfaceState) -> UITextView? {
-        var result: UITextView?
+        
+    func chatPresentationInterfaceStateTextFieldView(_ state: ChatPresentationInterfaceState) -> TextFieldComponent.View? {
+        var result: TextFieldComponent.View?
         if let focusedPollAddOptionMessageId = state.focusedPollAddOptionMessageId {
             self.historyNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == focusedPollAddOptionMessageId {
                     for contentNode in itemNode.contentNodes {
                         if let contentNode = contentNode as? ChatMessagePollBubbleContentNode {
-                            result = contentNode.newOptionInputTextView()
+                            result = contentNode.newOptionInputTextFieldView()
                         }
                     }
                 }
@@ -3678,9 +3679,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         
             var waitForKeyboardLayout = false
             var effectiveTextView: UITextView?
-            let customTextView = self.chatPresentationInterfaceStateTextInputView(chatPresentationInterfaceState)
+            let customTextView = self.chatPresentationInterfaceStateTextFieldView(chatPresentationInterfaceState)
             if let customTextView {
-                effectiveTextView = customTextView
+                effectiveTextView = customTextView.inputTextView
             } else if let mainTextView = self.textInputPanelNode?.textInputNode?.textView {
                 effectiveTextView = mainTextView
             }
@@ -3708,7 +3709,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 
                 if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
                     if let customTextView {
-                        customTextView.becomeFirstResponder()
+                        customTextView.activateInput()
                     } else {
                         self.ensureInputViewFocused()
                     }
