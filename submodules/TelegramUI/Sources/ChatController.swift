@@ -3777,17 +3777,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     disposables = DisposableDict()
                     strongSelf.selectMessagePollOptionDisposables = disposables
                 }
-                let signal = strongSelf.context.engine.messages.addPollAnswer(messageId: id, text: text, entities: entities, opaqueIdentifier: opaqueIdentifier, mediaReference: mediaReference)
+                let signal = strongSelf.context.engine.messages.addPollOption(messageId: id, text: text, entities: entities, mediaReference: mediaReference)
                 disposables.set((signal
-                |> deliverOnMainQueue).startStrict(next: { _ in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if strongSelf.selectPollOptionFeedback == nil {
-                        strongSelf.selectPollOptionFeedback = HapticFeedback()
-                    }
-                    strongSelf.selectPollOptionFeedback?.success()
-                }, error: { _ in
+                |> deliverOnMainQueue).startStrict(error: { _ in
                     guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                         return
                     }
@@ -3798,6 +3790,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                         return
                     }
+                    if strongSelf.selectPollOptionFeedback == nil {
+                        strongSelf.selectPollOptionFeedback = HapticFeedback()
+                    }
+                    strongSelf.selectPollOptionFeedback?.success()
+                    
                     if controllerInteraction.pollActionState.pollMessageIdsInProgress.removeValue(forKey: id) != nil {
                         Queue.mainQueue().after(1.0, {
                             strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

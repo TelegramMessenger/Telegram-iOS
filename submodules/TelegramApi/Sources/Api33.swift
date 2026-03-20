@@ -1,3 +1,77 @@
+public extension Api.fragment {
+    enum CollectibleInfo: TypeConstructorDescription {
+        public class Cons_collectibleInfo: TypeConstructorDescription {
+            public var purchaseDate: Int32
+            public var currency: String
+            public var amount: Int64
+            public var cryptoCurrency: String
+            public var cryptoAmount: Int64
+            public var url: String
+            public init(purchaseDate: Int32, currency: String, amount: Int64, cryptoCurrency: String, cryptoAmount: Int64, url: String) {
+                self.purchaseDate = purchaseDate
+                self.currency = currency
+                self.amount = amount
+                self.cryptoCurrency = cryptoCurrency
+                self.cryptoAmount = cryptoAmount
+                self.url = url
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("collectibleInfo", [("purchaseDate", self.purchaseDate as Any), ("currency", self.currency as Any), ("amount", self.amount as Any), ("cryptoCurrency", self.cryptoCurrency as Any), ("cryptoAmount", self.cryptoAmount as Any), ("url", self.url as Any)])
+            }
+        }
+        case collectibleInfo(Cons_collectibleInfo)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .collectibleInfo(let _data):
+                if boxed {
+                    buffer.appendInt32(1857945489)
+                }
+                serializeInt32(_data.purchaseDate, buffer: buffer, boxed: false)
+                serializeString(_data.currency, buffer: buffer, boxed: false)
+                serializeInt64(_data.amount, buffer: buffer, boxed: false)
+                serializeString(_data.cryptoCurrency, buffer: buffer, boxed: false)
+                serializeInt64(_data.cryptoAmount, buffer: buffer, boxed: false)
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, Any)]) {
+            switch self {
+            case .collectibleInfo(let _data):
+                return ("collectibleInfo", [("purchaseDate", _data.purchaseDate as Any), ("currency", _data.currency as Any), ("amount", _data.amount as Any), ("cryptoCurrency", _data.cryptoCurrency as Any), ("cryptoAmount", _data.cryptoAmount as Any), ("url", _data.url as Any)])
+            }
+        }
+
+        public static func parse_collectibleInfo(_ reader: BufferReader) -> CollectibleInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: String?
+            _6 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.fragment.CollectibleInfo.collectibleInfo(Cons_collectibleInfo(purchaseDate: _1!, currency: _2!, amount: _3!, cryptoCurrency: _4!, cryptoAmount: _5!, url: _6!))
+            }
+            else {
+                return nil
+            }
+        }
+    }
+}
 public extension Api.help {
     enum AppConfig: TypeConstructorDescription {
         public class Cons_appConfig: TypeConstructorDescription {
@@ -1610,74 +1684,6 @@ public extension Api.help {
         }
         public static func parse_userInfoEmpty(_ reader: BufferReader) -> UserInfo? {
             return Api.help.UserInfo.userInfoEmpty
-        }
-    }
-}
-public extension Api.messages {
-    enum AffectedFoundMessages: TypeConstructorDescription {
-        public class Cons_affectedFoundMessages: TypeConstructorDescription {
-            public var pts: Int32
-            public var ptsCount: Int32
-            public var offset: Int32
-            public var messages: [Int32]
-            public init(pts: Int32, ptsCount: Int32, offset: Int32, messages: [Int32]) {
-                self.pts = pts
-                self.ptsCount = ptsCount
-                self.offset = offset
-                self.messages = messages
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("affectedFoundMessages", [("pts", self.pts as Any), ("ptsCount", self.ptsCount as Any), ("offset", self.offset as Any), ("messages", self.messages as Any)])
-            }
-        }
-        case affectedFoundMessages(Cons_affectedFoundMessages)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .affectedFoundMessages(let _data):
-                if boxed {
-                    buffer.appendInt32(-275956116)
-                }
-                serializeInt32(_data.pts, buffer: buffer, boxed: false)
-                serializeInt32(_data.ptsCount, buffer: buffer, boxed: false)
-                serializeInt32(_data.offset, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.messages.count))
-                for item in _data.messages {
-                    serializeInt32(item, buffer: buffer, boxed: false)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .affectedFoundMessages(let _data):
-                return ("affectedFoundMessages", [("pts", _data.pts as Any), ("ptsCount", _data.ptsCount as Any), ("offset", _data.offset as Any), ("messages", _data.messages as Any)])
-            }
-        }
-
-        public static func parse_affectedFoundMessages(_ reader: BufferReader) -> AffectedFoundMessages? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: [Int32]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.AffectedFoundMessages.affectedFoundMessages(Cons_affectedFoundMessages(pts: _1!, ptsCount: _2!, offset: _3!, messages: _4!))
-            }
-            else {
-                return nil
-            }
         }
     }
 }

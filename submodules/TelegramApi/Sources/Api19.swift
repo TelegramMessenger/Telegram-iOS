@@ -1801,431 +1801,48 @@ public extension Api {
     }
 }
 public extension Api {
-    enum PhoneCall: TypeConstructorDescription {
-        public class Cons_phoneCall: TypeConstructorDescription {
-            public var flags: Int32
-            public var id: Int64
-            public var accessHash: Int64
-            public var date: Int32
-            public var adminId: Int64
-            public var participantId: Int64
-            public var gAOrB: Buffer
-            public var keyFingerprint: Int64
-            public var `protocol`: Api.PhoneCallProtocol
-            public var connections: [Api.PhoneConnection]
-            public var startDate: Int32
-            public var customParameters: Api.DataJSON?
-            public init(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gAOrB: Buffer, keyFingerprint: Int64, `protocol`: Api.PhoneCallProtocol, connections: [Api.PhoneConnection], startDate: Int32, customParameters: Api.DataJSON?) {
-                self.flags = flags
-                self.id = id
-                self.accessHash = accessHash
-                self.date = date
-                self.adminId = adminId
-                self.participantId = participantId
-                self.gAOrB = gAOrB
-                self.keyFingerprint = keyFingerprint
-                self.`protocol` = `protocol`
-                self.connections = connections
-                self.startDate = startDate
-                self.customParameters = customParameters
+    enum PersonalChannel: TypeConstructorDescription {
+        public class Cons_personalChannel: TypeConstructorDescription {
+            public var userId: Int64
+            public var channelId: Int64
+            public init(userId: Int64, channelId: Int64) {
+                self.userId = userId
+                self.channelId = channelId
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("phoneCall", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("date", self.date as Any), ("adminId", self.adminId as Any), ("participantId", self.participantId as Any), ("gAOrB", self.gAOrB as Any), ("keyFingerprint", self.keyFingerprint as Any), ("`protocol`", self.`protocol` as Any), ("connections", self.connections as Any), ("startDate", self.startDate as Any), ("customParameters", self.customParameters as Any)])
+                return ("personalChannel", [("userId", self.userId as Any), ("channelId", self.channelId as Any)])
             }
         }
-        public class Cons_phoneCallAccepted: TypeConstructorDescription {
-            public var flags: Int32
-            public var id: Int64
-            public var accessHash: Int64
-            public var date: Int32
-            public var adminId: Int64
-            public var participantId: Int64
-            public var gB: Buffer
-            public var `protocol`: Api.PhoneCallProtocol
-            public init(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gB: Buffer, `protocol`: Api.PhoneCallProtocol) {
-                self.flags = flags
-                self.id = id
-                self.accessHash = accessHash
-                self.date = date
-                self.adminId = adminId
-                self.participantId = participantId
-                self.gB = gB
-                self.`protocol` = `protocol`
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("phoneCallAccepted", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("date", self.date as Any), ("adminId", self.adminId as Any), ("participantId", self.participantId as Any), ("gB", self.gB as Any), ("`protocol`", self.`protocol` as Any)])
-            }
-        }
-        public class Cons_phoneCallDiscarded: TypeConstructorDescription {
-            public var flags: Int32
-            public var id: Int64
-            public var reason: Api.PhoneCallDiscardReason?
-            public var duration: Int32?
-            public init(flags: Int32, id: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?) {
-                self.flags = flags
-                self.id = id
-                self.reason = reason
-                self.duration = duration
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("phoneCallDiscarded", [("flags", self.flags as Any), ("id", self.id as Any), ("reason", self.reason as Any), ("duration", self.duration as Any)])
-            }
-        }
-        public class Cons_phoneCallEmpty: TypeConstructorDescription {
-            public var id: Int64
-            public init(id: Int64) {
-                self.id = id
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("phoneCallEmpty", [("id", self.id as Any)])
-            }
-        }
-        public class Cons_phoneCallRequested: TypeConstructorDescription {
-            public var flags: Int32
-            public var id: Int64
-            public var accessHash: Int64
-            public var date: Int32
-            public var adminId: Int64
-            public var participantId: Int64
-            public var gAHash: Buffer
-            public var `protocol`: Api.PhoneCallProtocol
-            public init(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gAHash: Buffer, `protocol`: Api.PhoneCallProtocol) {
-                self.flags = flags
-                self.id = id
-                self.accessHash = accessHash
-                self.date = date
-                self.adminId = adminId
-                self.participantId = participantId
-                self.gAHash = gAHash
-                self.`protocol` = `protocol`
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("phoneCallRequested", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("date", self.date as Any), ("adminId", self.adminId as Any), ("participantId", self.participantId as Any), ("gAHash", self.gAHash as Any), ("`protocol`", self.`protocol` as Any)])
-            }
-        }
-        public class Cons_phoneCallWaiting: TypeConstructorDescription {
-            public var flags: Int32
-            public var id: Int64
-            public var accessHash: Int64
-            public var date: Int32
-            public var adminId: Int64
-            public var participantId: Int64
-            public var `protocol`: Api.PhoneCallProtocol
-            public var receiveDate: Int32?
-            public init(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, `protocol`: Api.PhoneCallProtocol, receiveDate: Int32?) {
-                self.flags = flags
-                self.id = id
-                self.accessHash = accessHash
-                self.date = date
-                self.adminId = adminId
-                self.participantId = participantId
-                self.`protocol` = `protocol`
-                self.receiveDate = receiveDate
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("phoneCallWaiting", [("flags", self.flags as Any), ("id", self.id as Any), ("accessHash", self.accessHash as Any), ("date", self.date as Any), ("adminId", self.adminId as Any), ("participantId", self.participantId as Any), ("`protocol`", self.`protocol` as Any), ("receiveDate", self.receiveDate as Any)])
-            }
-        }
-        case phoneCall(Cons_phoneCall)
-        case phoneCallAccepted(Cons_phoneCallAccepted)
-        case phoneCallDiscarded(Cons_phoneCallDiscarded)
-        case phoneCallEmpty(Cons_phoneCallEmpty)
-        case phoneCallRequested(Cons_phoneCallRequested)
-        case phoneCallWaiting(Cons_phoneCallWaiting)
+        case personalChannel(Cons_personalChannel)
 
         public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
             switch self {
-            case .phoneCall(let _data):
+            case .personalChannel(let _data):
                 if boxed {
-                    buffer.appendInt32(810769141)
+                    buffer.appendInt32(431767677)
                 }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeInt64(_data.id, buffer: buffer, boxed: false)
-                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
-                serializeInt32(_data.date, buffer: buffer, boxed: false)
-                serializeInt64(_data.adminId, buffer: buffer, boxed: false)
-                serializeInt64(_data.participantId, buffer: buffer, boxed: false)
-                serializeBytes(_data.gAOrB, buffer: buffer, boxed: false)
-                serializeInt64(_data.keyFingerprint, buffer: buffer, boxed: false)
-                _data.`protocol`.serialize(buffer, true)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.connections.count))
-                for item in _data.connections {
-                    item.serialize(buffer, true)
-                }
-                serializeInt32(_data.startDate, buffer: buffer, boxed: false)
-                if Int(_data.flags) & Int(1 << 7) != 0 {
-                    _data.customParameters!.serialize(buffer, true)
-                }
-                break
-            case .phoneCallAccepted(let _data):
-                if boxed {
-                    buffer.appendInt32(912311057)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeInt64(_data.id, buffer: buffer, boxed: false)
-                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
-                serializeInt32(_data.date, buffer: buffer, boxed: false)
-                serializeInt64(_data.adminId, buffer: buffer, boxed: false)
-                serializeInt64(_data.participantId, buffer: buffer, boxed: false)
-                serializeBytes(_data.gB, buffer: buffer, boxed: false)
-                _data.`protocol`.serialize(buffer, true)
-                break
-            case .phoneCallDiscarded(let _data):
-                if boxed {
-                    buffer.appendInt32(1355435489)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeInt64(_data.id, buffer: buffer, boxed: false)
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    _data.reason!.serialize(buffer, true)
-                }
-                if Int(_data.flags) & Int(1 << 1) != 0 {
-                    serializeInt32(_data.duration!, buffer: buffer, boxed: false)
-                }
-                break
-            case .phoneCallEmpty(let _data):
-                if boxed {
-                    buffer.appendInt32(1399245077)
-                }
-                serializeInt64(_data.id, buffer: buffer, boxed: false)
-                break
-            case .phoneCallRequested(let _data):
-                if boxed {
-                    buffer.appendInt32(347139340)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeInt64(_data.id, buffer: buffer, boxed: false)
-                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
-                serializeInt32(_data.date, buffer: buffer, boxed: false)
-                serializeInt64(_data.adminId, buffer: buffer, boxed: false)
-                serializeInt64(_data.participantId, buffer: buffer, boxed: false)
-                serializeBytes(_data.gAHash, buffer: buffer, boxed: false)
-                _data.`protocol`.serialize(buffer, true)
-                break
-            case .phoneCallWaiting(let _data):
-                if boxed {
-                    buffer.appendInt32(-987599081)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                serializeInt64(_data.id, buffer: buffer, boxed: false)
-                serializeInt64(_data.accessHash, buffer: buffer, boxed: false)
-                serializeInt32(_data.date, buffer: buffer, boxed: false)
-                serializeInt64(_data.adminId, buffer: buffer, boxed: false)
-                serializeInt64(_data.participantId, buffer: buffer, boxed: false)
-                _data.`protocol`.serialize(buffer, true)
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    serializeInt32(_data.receiveDate!, buffer: buffer, boxed: false)
-                }
+                serializeInt64(_data.userId, buffer: buffer, boxed: false)
+                serializeInt64(_data.channelId, buffer: buffer, boxed: false)
                 break
             }
         }
 
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
-            case .phoneCall(let _data):
-                return ("phoneCall", [("flags", _data.flags as Any), ("id", _data.id as Any), ("accessHash", _data.accessHash as Any), ("date", _data.date as Any), ("adminId", _data.adminId as Any), ("participantId", _data.participantId as Any), ("gAOrB", _data.gAOrB as Any), ("keyFingerprint", _data.keyFingerprint as Any), ("`protocol`", _data.`protocol` as Any), ("connections", _data.connections as Any), ("startDate", _data.startDate as Any), ("customParameters", _data.customParameters as Any)])
-            case .phoneCallAccepted(let _data):
-                return ("phoneCallAccepted", [("flags", _data.flags as Any), ("id", _data.id as Any), ("accessHash", _data.accessHash as Any), ("date", _data.date as Any), ("adminId", _data.adminId as Any), ("participantId", _data.participantId as Any), ("gB", _data.gB as Any), ("`protocol`", _data.`protocol` as Any)])
-            case .phoneCallDiscarded(let _data):
-                return ("phoneCallDiscarded", [("flags", _data.flags as Any), ("id", _data.id as Any), ("reason", _data.reason as Any), ("duration", _data.duration as Any)])
-            case .phoneCallEmpty(let _data):
-                return ("phoneCallEmpty", [("id", _data.id as Any)])
-            case .phoneCallRequested(let _data):
-                return ("phoneCallRequested", [("flags", _data.flags as Any), ("id", _data.id as Any), ("accessHash", _data.accessHash as Any), ("date", _data.date as Any), ("adminId", _data.adminId as Any), ("participantId", _data.participantId as Any), ("gAHash", _data.gAHash as Any), ("`protocol`", _data.`protocol` as Any)])
-            case .phoneCallWaiting(let _data):
-                return ("phoneCallWaiting", [("flags", _data.flags as Any), ("id", _data.id as Any), ("accessHash", _data.accessHash as Any), ("date", _data.date as Any), ("adminId", _data.adminId as Any), ("participantId", _data.participantId as Any), ("`protocol`", _data.`protocol` as Any), ("receiveDate", _data.receiveDate as Any)])
+            case .personalChannel(let _data):
+                return ("personalChannel", [("userId", _data.userId as Any), ("channelId", _data.channelId as Any)])
             }
         }
 
-        public static func parse_phoneCall(_ reader: BufferReader) -> PhoneCall? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int64?
-            _5 = reader.readInt64()
-            var _6: Int64?
-            _6 = reader.readInt64()
-            var _7: Buffer?
-            _7 = parseBytes(reader)
-            var _8: Int64?
-            _8 = reader.readInt64()
-            var _9: Api.PhoneCallProtocol?
-            if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.PhoneCallProtocol
-            }
-            var _10: [Api.PhoneConnection]?
-            if let _ = reader.readInt32() {
-                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PhoneConnection.self)
-            }
-            var _11: Int32?
-            _11 = reader.readInt32()
-            var _12: Api.DataJSON?
-            if Int(_1!) & Int(1 << 7) != 0 {
-                if let signature = reader.readInt32() {
-                    _12 = Api.parse(reader, signature: signature) as? Api.DataJSON
-                }
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = _9 != nil
-            let _c10 = _10 != nil
-            let _c11 = _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 7) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.PhoneCall.phoneCall(Cons_phoneCall(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gAOrB: _7!, keyFingerprint: _8!, protocol: _9!, connections: _10!, startDate: _11!, customParameters: _12))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_phoneCallAccepted(_ reader: BufferReader) -> PhoneCall? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int64?
-            _5 = reader.readInt64()
-            var _6: Int64?
-            _6 = reader.readInt64()
-            var _7: Buffer?
-            _7 = parseBytes(reader)
-            var _8: Api.PhoneCallProtocol?
-            if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.PhoneCallProtocol
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PhoneCall.phoneCallAccepted(Cons_phoneCallAccepted(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gB: _7!, protocol: _8!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_phoneCallDiscarded(_ reader: BufferReader) -> PhoneCall? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Api.PhoneCallDiscardReason?
-            if Int(_1!) & Int(1 << 0) != 0 {
-                if let signature = reader.readInt32() {
-                    _3 = Api.parse(reader, signature: signature) as? Api.PhoneCallDiscardReason
-                }
-            }
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {
-                _4 = reader.readInt32()
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PhoneCall.phoneCallDiscarded(Cons_phoneCallDiscarded(flags: _1!, id: _2!, reason: _3, duration: _4))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_phoneCallEmpty(_ reader: BufferReader) -> PhoneCall? {
+        public static func parse_personalChannel(_ reader: BufferReader) -> PersonalChannel? {
             var _1: Int64?
             _1 = reader.readInt64()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.PhoneCall.phoneCallEmpty(Cons_phoneCallEmpty(id: _1!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_phoneCallRequested(_ reader: BufferReader) -> PhoneCall? {
-            var _1: Int32?
-            _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int64?
-            _5 = reader.readInt64()
-            var _6: Int64?
-            _6 = reader.readInt64()
-            var _7: Buffer?
-            _7 = parseBytes(reader)
-            var _8: Api.PhoneCallProtocol?
-            if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.PhoneCallProtocol
-            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PhoneCall.phoneCallRequested(Cons_phoneCallRequested(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, gAHash: _7!, protocol: _8!))
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_phoneCallWaiting(_ reader: BufferReader) -> PhoneCall? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int64?
-            _5 = reader.readInt64()
-            var _6: Int64?
-            _6 = reader.readInt64()
-            var _7: Api.PhoneCallProtocol?
-            if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.PhoneCallProtocol
-            }
-            var _8: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {
-                _8 = reader.readInt32()
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.PhoneCall.phoneCallWaiting(Cons_phoneCallWaiting(flags: _1!, id: _2!, accessHash: _3!, date: _4!, adminId: _5!, participantId: _6!, protocol: _7!, receiveDate: _8))
+            if _c1 && _c2 {
+                return Api.PersonalChannel.personalChannel(Cons_personalChannel(userId: _1!, channelId: _2!))
             }
             else {
                 return nil

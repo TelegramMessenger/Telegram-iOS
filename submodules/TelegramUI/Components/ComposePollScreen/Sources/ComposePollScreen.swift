@@ -487,7 +487,9 @@ final class ComposePollScreenComponent: Component {
                     text: pollOption.textInputState.text.string,
                     entities: entities,
                     opaqueIdentifier: optionData,
-                    media: pollOption.media?.media.media
+                    media: pollOption.media?.media.media,
+                    date: nil,
+                    addedBy: nil
                 ))
             }
             

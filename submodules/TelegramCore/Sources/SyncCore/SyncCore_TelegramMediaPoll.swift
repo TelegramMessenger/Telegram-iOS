@@ -6,12 +6,16 @@ public struct TelegramMediaPollOption: Equatable, PostboxCoding {
     public let entities: [MessageTextEntity]
     public let opaqueIdentifier: Data
     public let media: Media?
+    public let date: Int32?
+    public let addedBy: EnginePeer.Id?
 
-    public init(text: String, entities: [MessageTextEntity], opaqueIdentifier: Data, media: Media? = nil) {
+    public init(text: String, entities: [MessageTextEntity], opaqueIdentifier: Data, media: Media? = nil, date: Int32?, addedBy: EnginePeer.Id?) {
         self.text = text
         self.entities = entities
         self.opaqueIdentifier = opaqueIdentifier
         self.media = media
+        self.date = date
+        self.addedBy = addedBy
     }
 
     public init(decoder: PostboxDecoder) {
@@ -19,6 +23,8 @@ public struct TelegramMediaPollOption: Equatable, PostboxCoding {
         self.entities = decoder.decodeObjectArrayWithDecoderForKey("et")
         self.opaqueIdentifier = decoder.decodeDataForKey("i") ?? Data()
         self.media = decoder.decodeObjectForKey("md") as? Media
+        self.date = decoder.decodeOptionalInt32ForKey("d")
+        self.addedBy = decoder.decodeOptionalInt64ForKey("ab").flatMap { PeerId($0) }
     }
 
     public func encode(_ encoder: PostboxEncoder) {
@@ -30,15 +36,39 @@ public struct TelegramMediaPollOption: Equatable, PostboxCoding {
         } else {
             encoder.encodeNil(forKey: "md")
         }
+        if let date = self.date {
+            encoder.encodeInt32(date, forKey: "d")
+        } else {
+            encoder.encodeNil(forKey: "d")
+        }
+        if let addedBy = self.addedBy?.toInt64() {
+            encoder.encodeInt64(addedBy, forKey: "ab")
+        } else {
+            encoder.encodeNil(forKey: "ab")
+        }
     }
 
     public static func ==(lhs: TelegramMediaPollOption, rhs: TelegramMediaPollOption) -> Bool {
-        if lhs.text != rhs.text { return false }
-        if lhs.entities != rhs.entities { return false }
-        if lhs.opaqueIdentifier != rhs.opaqueIdentifier { return false }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.entities != rhs.entities {
+            return false
+        }
+        if lhs.opaqueIdentifier != rhs.opaqueIdentifier {
+            return false
+        }
         if let lhsMedia = lhs.media, let rhsMedia = rhs.media {
-            if !lhsMedia.isEqual(to: rhsMedia) { return false }
+            if !lhsMedia.isEqual(to: rhsMedia) {
+                return false
+            }
         } else if (lhs.media == nil) != (rhs.media == nil) {
+            return false
+        }
+        if lhs.date != rhs.date {
+            return false
+        }
+        if lhs.addedBy != rhs.addedBy {
             return false
         }
         return true
