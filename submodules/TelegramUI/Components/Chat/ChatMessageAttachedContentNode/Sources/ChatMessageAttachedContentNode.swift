@@ -1241,7 +1241,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                             }
                             
-                            if "".isEmpty {
+                            if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
                                 let closeButton: ComponentView<Empty>
                                 if let current = self.closeButton {
                                     closeButton = current

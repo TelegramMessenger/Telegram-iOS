@@ -169,10 +169,10 @@ public func peerMessageMediaPlayerType(_ message: EngineMessage) -> MediaManager
     return nil
 }
     
-public func peerMessagesMediaPlaylistAndItemId(_ message: EngineMessage, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool, isSavedMusic: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
+public func peerMessagesMediaPlaylistAndItemId(_ message: EngineMessage, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool, isSavedMusic: Bool, isAttachMusic: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
     if isSavedMusic {
         return (PeerMessagesMediaPlaylistId.savedMusic(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index))
-    } else if isGlobalSearch && !isDownloadList {
+    } else if isAttachMusic || (isGlobalSearch && !isDownloadList) {
         return (PeerMessagesMediaPlaylistId.custom, PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index))
     } else if isRecentActions && !isDownloadList {
         return (PeerMessagesMediaPlaylistId.recentActions(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index))

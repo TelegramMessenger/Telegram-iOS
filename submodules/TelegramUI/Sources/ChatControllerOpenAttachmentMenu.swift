@@ -403,9 +403,7 @@ extension ChatControllerImpl {
                         controller.prepareForReuse()
                         return true
                     }
-                    let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, audio: true, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
-                        attachmentController?.dismiss(animated: true)
-                        self?.presentFileGallery()
+                    let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, audio: true, bannedSendMedia: bannedSendFiles, presentGallery: {
                     }, presentFiles: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
                         self?.presentICloudFileGallery()

@@ -40,6 +40,7 @@ swift_library(
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/SearchInputPanelComponent",
         "//submodules/TelegramUI/Components/EdgeEffect",
+        "//submodules/TelegramUI/Components/MediaManager/PeerMessagesMediaPlaylist",
     ],
     visibility = [
         "//visibility:public",
