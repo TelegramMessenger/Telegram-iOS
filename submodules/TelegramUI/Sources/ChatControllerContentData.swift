@@ -99,6 +99,7 @@ extension ChatControllerImpl {
             var nextChannelToRead: NextChannelToRead?
             var nextChannelToReadDisplayName: Bool = false
             var isNotAccessible: Bool = false
+            var isManagedBot: Bool = false
             var hasBots: Bool = false
             var hasBotCommands: Bool = false
             var botMenuButton: BotMenuButton = .commands
@@ -820,8 +821,10 @@ extension ChatControllerImpl {
                     var sendPaidMessageStars: StarsAmount?
                     var alwaysShowGiftButton = false
                     var disallowedGifts: TelegramDisallowedGifts?
+                    var isManagedBot = false
                     if let peer = peerView.peers[peerView.peerId] {
                         if let cachedData = peerView.cachedData as? CachedUserData {
+                            isManagedBot = cachedData.botManagerId != nil
                             contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
                             if case let .known(value) = cachedData.businessIntro {
                                 businessIntro = value
@@ -1018,6 +1021,7 @@ extension ChatControllerImpl {
                     strongSelf.state.isNotAccessible = isNotAccessible
                     strongSelf.state.contactStatus = contactStatus
                     strongSelf.state.hasBots = hasBots
+                    strongSelf.state.isManagedBot = isManagedBot
                     strongSelf.state.hasBotCommands = hasBotCommands
                     strongSelf.state.botMenuButton = botMenuButton
                     strongSelf.state.isArchived = isArchived
@@ -1406,9 +1410,11 @@ extension ChatControllerImpl {
                     var sendPaidMessageStars: StarsAmount?
                     var alwaysShowGiftButton = false
                     var disallowedGifts: TelegramDisallowedGifts?
+                    var isManagedBot = false
                     if let peer = peerView.peers[peerView.peerId] {
                         copyProtectionEnabled = peer.isCopyProtectionEnabled
                         if let cachedData = peerView.cachedData as? CachedUserData {
+                            isManagedBot = cachedData.botManagerId != nil
                             contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
                             if case let .known(value) = cachedData.businessIntro {
                                 businessIntro = value
@@ -1719,6 +1725,7 @@ extension ChatControllerImpl {
                         strongSelf.state.isNotAccessible = isNotAccessible
                         strongSelf.state.contactStatus = contactStatus
                         strongSelf.state.hasBots = hasBots
+                        strongSelf.state.isManagedBot = isManagedBot
                         strongSelf.state.isArchived = isArchived
                         strongSelf.state.peerIsMuted = peerIsMuted
                         strongSelf.state.peerDiscussionId = peerDiscussionId

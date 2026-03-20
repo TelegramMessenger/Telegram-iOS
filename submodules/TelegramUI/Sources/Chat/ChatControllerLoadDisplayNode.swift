@@ -399,6 +399,7 @@ extension ChatControllerImpl {
             presentationInterfaceState = presentationInterfaceState.updatedChatLocation(contentData.chatLocation)
             presentationInterfaceState = presentationInterfaceState.updatedIsNotAccessible(contentData.state.isNotAccessible)
             presentationInterfaceState = presentationInterfaceState.updatedContactStatus(contentData.state.contactStatus)
+            presentationInterfaceState = presentationInterfaceState.updatedIsManagedBot(contentData.state.isManagedBot)
             presentationInterfaceState = presentationInterfaceState.updatedHasBots(contentData.state.hasBots)
             presentationInterfaceState = presentationInterfaceState.updatedHasBotCommands(contentData.state.hasBotCommands)
             presentationInterfaceState = presentationInterfaceState.updatedBotMenuButton(contentData.state.botMenuButton)
@@ -4506,6 +4507,19 @@ extension ChatControllerImpl {
                 return
             }
             self.chatDisplayNode.openAICompose()
+        }, openSetPeerAvatar: { [weak self] in
+            guard let self, let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+                return
+            }
+            self.context.sharedContext.displaySetPhoto(
+                parentController: self,
+                context: self.context,
+                peer: EnginePeer(peer),
+                completion: { _ in },
+                completedWithUploadingImage: { _, _ in
+                    return nil
+                }
+            )
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return

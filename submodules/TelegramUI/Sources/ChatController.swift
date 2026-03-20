@@ -145,6 +145,7 @@ import ChatInputAccessoryPanel
 import GlobalControlPanelsContext
 import ChatSearchNavigationContentNode
 import ChatAgeRestrictionAlertController
+import TextProcessingScreen
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -3894,11 +3895,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }, delay: true)
             }
         }, performTextSelectionAction: { [weak self] message, canCopy, text, entities, action in
-            guard let strongSelf = self else {
+            guard let self else {
                 return
             }
             
-            if let performTextSelectionAction = strongSelf.performTextSelectionAction {
+            if let performTextSelectionAction = self.performTextSelectionAction {
                 performTextSelectionAction(message, canCopy, text, entities, action)
                 return
             }
@@ -3907,15 +3908,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .copy:
                 storeAttributedTextInPasteboard(text)
             case .share:
-                let f = {
-                    guard let strongSelf = self else {
+                let f = { [weak self] in
+                    guard let self else {
                         return
                     }
-                    let shareController = ShareController(context: strongSelf.context, subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: strongSelf.updatedPresentationData)
-                    strongSelf.chatDisplayNode.dismissInput()
-                    strongSelf.present(shareController, in: .window(.root))
+                    let shareController = ShareController(context: self.context, subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: self.updatedPresentationData)
+                    self.chatDisplayNode.dismissInput()
+                    self.present(shareController, in: .window(.root))
                 }
-                if let currentContextController = strongSelf.currentContextController {
+                if let currentContextController = self.currentContextController {
                     currentContextController.dismiss(completion: {
                         f()
                     })
@@ -3924,38 +3925,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             case .lookup:
                 let controller = UIReferenceLibraryViewController(term: text.string)
-                if let window = strongSelf.effectiveNavigationController?.view.window {
+                if let window = self.effectiveNavigationController?.view.window {
                     controller.popoverPresentationController?.sourceView = window
                     controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
                     window.rootViewController?.present(controller, animated: true)
                 }
             case .speak:
-                if let speechHolder = speakText(context: strongSelf.context, text: text.string) {
+                if let speechHolder = speakText(context: self.context, text: text.string) {
                     speechHolder.completion = { [weak self, weak speechHolder] in
-                        if let strongSelf = self, strongSelf.currentSpeechHolder == speechHolder {
-                            strongSelf.currentSpeechHolder = nil
+                        if let self, self.currentSpeechHolder == speechHolder {
+                            self.currentSpeechHolder = nil
                         }
                     }
-                    strongSelf.currentSpeechHolder = speechHolder
+                    self.currentSpeechHolder = speechHolder
                 }
             case .translate:
-                strongSelf.chatDisplayNode.dismissInput()
-                let f = {
-                    let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
-                    |> take(1)
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self] sharedData in
-                        guard let strongSelf = self else {
+                self.chatDisplayNode.dismissInput()
+                let f: () -> Void = { [weak self] in
+                    Task { @MainActor in
+                        guard let self else {
                             return
                         }
+                        
+                        let sharedDataEntries = await self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings]).get()
                         let translationSettings: TranslationSettings
-                        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
-                            translationSettings = current
+                        if let value = sharedDataEntries.entries[ApplicationSpecificSharedDataKeys.translationSettings], let parsedValue = value.get(TranslationSettings.self) {
+                            translationSettings = parsedValue
                         } else {
-                            translationSettings = TranslationSettings.defaultSettings
+                            translationSettings = .defaultSettings
                         }
                         
                         var showTranslateIfTopical = false
-                        if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
+                        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
                             showTranslateIfTopical = true
                         }
                         
@@ -3963,31 +3964,61 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
                         
-                        presentTranslateScreen(
-                            context: context,
-                            text: text.string,
-                            entities: entities ?? [],
-                            canCopy: canCopy,
-                            fromLanguage: language,
-                            ignoredLanguages: translationSettings.ignoredLanguages,
-                            translateChat: { [weak self] _, toLang in
-                                self?.interfaceInteraction?.changeTranslationLanguage(toLang)
-                                self?.interfaceInteraction?.toggleTranslation(.translated)
-                            },
-                            pushController: { [weak self] c in
-                                self?.effectiveNavigationController?._keepModalDismissProgress = true
-                                self?.push(c)
-                            },
-                            presentController: { [weak self] c in
-                                self?.present(c, in: .window(.root))
-                            },
-                            display: { [weak self] c in
-                                self?.push(c)
+                        let translationConfiguration = TranslationConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+                        var useSystemTranslation = false
+                        switch translationConfiguration.manual {
+                        case .system:
+                            if #available(iOS 18.0, *) {
+                                useSystemTranslation = true
                             }
-                        )
-                    })
+                        default:
+                            break
+                        }
+                        
+                        if useSystemTranslation {
+                            presentTranslateScreen(
+                                context: context,
+                                text: text.string,
+                                entities: entities ?? [],
+                                canCopy: canCopy,
+                                fromLanguage: language,
+                                ignoredLanguages: translationSettings.ignoredLanguages,
+                                translateChat: { [weak self] _, toLang in
+                                    self?.interfaceInteraction?.changeTranslationLanguage(toLang)
+                                    self?.interfaceInteraction?.toggleTranslation(.translated)
+                                },
+                                pushController: { [weak self] c in
+                                    self?.effectiveNavigationController?._keepModalDismissProgress = true
+                                    self?.push(c)
+                                },
+                                presentController: { [weak self] c in
+                                    self?.present(c, in: .window(.root))
+                                },
+                                display: { [weak self] c in
+                                    self?.push(c)
+                                }
+                            )
+                        } else {
+                            self.push(await TextProcessingScreen(
+                                context: self.context,
+                                mode: .translate(fromLanguage: language),
+                                ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
+                                inputText: TextWithEntities(text: text.string, entities: entities ?? []),
+                                copyResult: canCopy ? { text in
+                                    storeMessageTextInPasteboard(text.text, entities: text.entities)
+                                } : nil,
+                                translateChat: { [weak self] toLang in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.interfaceInteraction?.changeTranslationLanguage(toLang)
+                                    self.interfaceInteraction?.toggleTranslation(.translated)
+                                }
+                            ))
+                        }
+                    }
                 }
-                if let currentContextController = strongSelf.currentContextController {
+                if let currentContextController = self.currentContextController {
                     currentContextController.dismiss(completion: {
                         f()
                     })
@@ -3995,7 +4026,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     f()
                 }
             case let .quote(range):
-                let completion: (ContainedViewLayoutTransition?) -> Void = { transition in
+                let completion: (ContainedViewLayoutTransition?) -> Void = { [weak self] transition in
                     guard let self else {
                         return
                     }
@@ -4009,13 +4040,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
-                if let messageId = message?.id, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) ?? message {
+                if let messageId = message?.id, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) ?? message {
                     var quoteData: EngineMessageReplyQuote?
                     
                     let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
                     let quoteText = (message.text as NSString).substring(with: nsRange)
                     
-                    let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: strongSelf.context.currentAppConfiguration.with({ $0 })))
+                    let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: self.context.currentAppConfiguration.with({ $0 })))
                     if !trimmedText.string.isEmpty {
                         quoteData = EngineMessageReplyQuote(text: trimmedText.string, offset: nsRange.location, entities: trimmedText.entities, media: nil)
                     }
@@ -4025,20 +4056,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         quote: quoteData,
                         innerSubject: nil
                     )
-                    if canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                        let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject) }).updatedSearch(nil).updatedShowCommands(false) }, completion: completion)
-                            strongSelf.updateItemNodesSearchTextHighlightStates()
-                            strongSelf.chatDisplayNode.ensureInputViewFocused()
+                    if canSendMessagesToChat(self.presentationInterfaceState) {
+                        let _ = self.presentVoiceMessageDiscardAlert(action: {
+                            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject) }).updatedSearch(nil).updatedShowCommands(false) }, completion: completion)
+                            self.updateItemNodesSearchTextHighlightStates()
+                            self.chatDisplayNode.ensureInputViewFocused()
                         }, alertAction: {
                             completion(nil)
                         }, delay: true)
                     } else {
-                        moveReplyMessageToAnotherChat(selfController: strongSelf, replySubject: replySubject)
+                        moveReplyMessageToAnotherChat(selfController: self, replySubject: replySubject)
                         completion(nil)
                     }
                 } else {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }) }, completion: completion)
+                    self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil) }) }, completion: completion)
                 }
             }
         }, displayImportedMessageTooltip: { [weak self] _ in
@@ -5378,6 +5409,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.push(controller)
             }
+        }, openSetPeerAvatar: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.interfaceInteraction?.openSetPeerAvatar()
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         

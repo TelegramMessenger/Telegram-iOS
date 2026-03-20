@@ -17,6 +17,7 @@ public final class ResizableSheetComponentEnvironment: Equatable {
     public let theme: PresentationTheme
     public let statusBarHeight: CGFloat
     public let safeInsets: UIEdgeInsets
+    public let inputHeight: CGFloat
     public let metrics: LayoutMetrics
     public let deviceMetrics: DeviceMetrics
     public let isDisplaying: Bool
@@ -30,6 +31,7 @@ public final class ResizableSheetComponentEnvironment: Equatable {
         theme: PresentationTheme,
         statusBarHeight: CGFloat,
         safeInsets: UIEdgeInsets,
+        inputHeight: CGFloat,
         metrics: LayoutMetrics,
         deviceMetrics: DeviceMetrics,
         isDisplaying: Bool,
@@ -42,6 +44,7 @@ public final class ResizableSheetComponentEnvironment: Equatable {
         self.theme = theme
         self.statusBarHeight = statusBarHeight
         self.safeInsets = safeInsets
+        self.inputHeight = inputHeight
         self.metrics = metrics
         self.deviceMetrics = deviceMetrics
         self.isDisplaying = isDisplaying
@@ -60,6 +63,9 @@ public final class ResizableSheetComponentEnvironment: Equatable {
             return false
         }
         if lhs.safeInsets != rhs.safeInsets {
+            return false
+        }
+        if lhs.inputHeight != rhs.inputHeight {
             return false
         }
         if lhs.metrics != rhs.metrics {
@@ -728,6 +734,13 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 }
             }
             
+            var bottomInsets = ContainerViewLayout.concentricInsets(bottomInset: sheetEnvironment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+            if sheetEnvironment.inputHeight > 0.0 {
+                bottomInsets.left = 16.0
+                bottomInsets.right = 16.0
+                bottomInsets.bottom = sheetEnvironment.inputHeight + 8.0
+            }
+            
             if let bottomItem = component.bottomItem {
                 var bottomItemTransition = transition
                 let bottomItemView: ComponentView<Empty>
@@ -739,7 +752,6 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                     self.bottomItemView = bottomItemView
                 }
                 
-                let bottomInsets = ContainerViewLayout.concentricInsets(bottomInset: sheetEnvironment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
                 let bottomItemSize = bottomItemView.update(
                     transition: bottomItemTransition,
                     component: bottomItem,
@@ -770,9 +782,9 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 }
             }
             
-            let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: rawSideInset, y: availableSize.height - edgeEffectHeight), size: CGSize(width: fillingSize, height: edgeEffectHeight))
+            let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: rawSideInset, y: availableSize.height - bottomInsets.bottom - edgeEffectHeight), size: CGSize(width: fillingSize, height: edgeEffectHeight + bottomInsets.bottom))
             transition.setFrame(view: self.bottomEdgeEffectView, frame: bottomEdgeEffectFrame)
-            self.bottomEdgeEffectView.update(content: .clear, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectFrame.height, transition: transition)
+            self.bottomEdgeEffectView.update(content: .clear, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: edgeEffectHeight, transition: transition)
             if self.bottomEdgeEffectView.superview == nil {
                 self.bottomContainer.insertSubview(self.bottomEdgeEffectView, at: 0)
             }

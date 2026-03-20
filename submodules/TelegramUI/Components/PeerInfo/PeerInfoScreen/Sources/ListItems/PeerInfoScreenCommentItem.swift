@@ -10,18 +10,24 @@ import TextNodeWithEntities
 import TextFormat
 
 final class PeerInfoScreenCommentItem: PeerInfoScreenItem {
+    enum Icon {
+        case managedBot
+    }
+    
     enum LinkAction {
         case tap(String)
     }
     
     let id: AnyHashable
+    let icon: Icon?
     let text: String
     let attributedPrefix: NSAttributedString?
     let useAccentLinkColor: Bool
     let linkAction: ((LinkAction) -> Void)?
     
-    init(id: AnyHashable, text: String, attributedPrefix: NSAttributedString? = nil, useAccentLinkColor: Bool = true, linkAction: ((LinkAction) -> Void)? = nil) {
+    init(id: AnyHashable, icon: Icon? = nil, text: String, attributedPrefix: NSAttributedString? = nil, useAccentLinkColor: Bool = true, linkAction: ((LinkAction) -> Void)? = nil) {
         self.id = id
+        self.icon = icon
         self.text = text
         self.attributedPrefix = attributedPrefix
         self.useAccentLinkColor = useAccentLinkColor

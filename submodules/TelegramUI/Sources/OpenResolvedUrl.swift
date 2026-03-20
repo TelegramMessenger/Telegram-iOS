@@ -45,6 +45,7 @@ import DeviceAccess
 import ProxyServerPreviewScreen
 import AuthConfirmationScreen
 import OpenInExternalAppUI
+import CreateBotScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -1937,5 +1938,17 @@ func openResolvedUrlImpl(
                     }
                 }
             })
+        case let .createBot(parentBot, username, title):
+            Task { @MainActor in
+                guard let controller = await CreateBotScreen(
+                    context: context,
+                    parentBot: parentBot,
+                    initialUsername: username,
+                    initialTitle: title
+                ) else {
+                    return
+                }
+                navigationController?.pushViewController(controller)
+            }
     }
 }

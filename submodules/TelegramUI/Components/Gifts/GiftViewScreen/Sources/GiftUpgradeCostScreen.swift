@@ -389,6 +389,7 @@ private final class SheetContainerComponent: CombinedComponent {
                         theme: theme,
                         statusBarHeight: environment.statusBarHeight,
                         safeInsets: environment.safeInsets,
+                        inputHeight: environment.inputHeight,
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,

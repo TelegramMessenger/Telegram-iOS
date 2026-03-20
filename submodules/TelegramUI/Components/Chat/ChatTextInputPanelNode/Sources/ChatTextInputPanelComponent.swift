@@ -761,8 +761,10 @@ public final class ChatTextInputPanelComponent: Component {
                     sendEmoji: { _, _, _ in
                     },
                     openAICompose: {
-                    }
-                    ,updateHistoryFilter: { _ in
+                    },
+                    openSetPeerAvatar: {
+                    },
+                    updateHistoryFilter: { _ in
                     },
                     updateChatLocationThread: { _, _ in
                     },

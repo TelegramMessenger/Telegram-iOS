@@ -3,6 +3,7 @@ import Foundation
 public enum AdditionalMessageHistoryViewData: Equatable {
     case cachedPeerData(PeerId)
     case cachedPeerDataMessages(PeerId)
+    case cachedPeerDataPeers(PeerId)
     case peerChatState(PeerId)
     case totalUnreadState
     case peerNotificationSettings(PeerId)
@@ -16,6 +17,7 @@ public enum AdditionalMessageHistoryViewData: Equatable {
 public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerData(PeerId, CachedPeerData?)
     case cachedPeerDataMessages(PeerId, [MessageId: Message]?)
+    case cachedPeerDataPeers(PeerId, [PeerId: Peer])
     case peerChatState(PeerId, PeerChatState?)
     case totalUnreadState(ChatListTotalUnreadState)
     case peerNotificationSettings(PeerNotificationSettings?)

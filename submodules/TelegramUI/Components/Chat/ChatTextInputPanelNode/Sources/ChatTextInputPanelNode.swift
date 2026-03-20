@@ -3554,11 +3554,11 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             aiButton.icon.tintColor = interfaceState.theme.chat.inputPanel.inputControlColor
             if let image = aiButton.icon.image {
                 let aiButtonSize = CGSize(width: 40.0, height: 40.0)
-                let aiButtonFrame = CGRect(origin: CGPoint(x: textInputContainerBackgroundFrame.width - aiButtonSize.width - 3.0, y: 0.0), size: aiButtonSize)
+                let aiButtonFrame = CGRect(origin: CGPoint(x: textInputContainerBackgroundFrame.width - aiButtonSize.width - 3.0, y: textInputNodeClippingContainerFrame.minY), size: aiButtonSize)
                 transition.updateFrame(view: aiButton.button, frame: aiButtonFrame)
                 transition.updateFrame(view: aiButton.icon, frame: image.size.centered(in: aiButtonFrame))
             }
-            let aiButtonAlpha: CGFloat = textInputContainerBackgroundFrame.height >= 78.0 ? 1.0 : 0.0
+            let aiButtonAlpha: CGFloat = actualTextFieldFrame.height >= 78.0 ? 1.0 : 0.0
             transition.updateAlpha(layer: aiButton.button.layer, alpha: aiButtonAlpha)
             transition.updateAlpha(layer: aiButton.icon.layer, alpha: aiButtonAlpha)
         } else if let aiButton = self.aiButton {

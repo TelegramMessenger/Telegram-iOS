@@ -424,6 +424,7 @@ final class PeerInfoScreenData {
     let webAppPermissions: WebAppPermissionsState?
     let savedMusicContext: ProfileSavedMusicContext?
     let savedMusicState: ProfileSavedMusicContext.State?
+    let managedByBot: EnginePeer?
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -478,7 +479,8 @@ final class PeerInfoScreenData {
         premiumGiftOptions: [PremiumGiftCodeOption],
         webAppPermissions: WebAppPermissionsState?,
         savedMusicContext: ProfileSavedMusicContext?,
-        savedMusicState: ProfileSavedMusicContext.State?
+        savedMusicState: ProfileSavedMusicContext.State?,
+        managedByBot: EnginePeer?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -522,6 +524,7 @@ final class PeerInfoScreenData {
         self.webAppPermissions = webAppPermissions
         self.savedMusicContext = savedMusicContext
         self.savedMusicState = savedMusicState
+        self.managedByBot = managedByBot
     }
 }
 
@@ -1044,7 +1047,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             premiumGiftOptions: [],
             webAppPermissions: nil,
             savedMusicContext: nil,
-            savedMusicState: nil
+            savedMusicState: nil,
+            managedByBot: nil
         )
     }
 }
@@ -1115,7 +1119,8 @@ func peerInfoScreenData(
                 premiumGiftOptions: [],
                 webAppPermissions: nil,
                 savedMusicContext: nil,
-                savedMusicState: nil
+                savedMusicState: nil,
+                managedByBot: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -1535,6 +1540,13 @@ func peerInfoScreenData(
                 
                 let peer = peerView.peers[userPeerId]
                 
+                var managedByBot: EnginePeer?
+                if let cachedData = peerView.cachedData as? CachedUserData, let botManagerId = cachedData.botManagerId {
+                    if let peer = peerView.peers[botManagerId] {
+                        managedByBot = EnginePeer(peer)
+                    }
+                }
+                
                 var globalSettings: TelegramGlobalSettings?
                 if let privacySettings {
                     globalSettings = TelegramGlobalSettings(
@@ -1603,7 +1615,8 @@ func peerInfoScreenData(
                     premiumGiftOptions: premiumGiftOptions,
                     webAppPermissions: webAppPermissions,
                     savedMusicContext: savedMusicContext,
-                    savedMusicState: savedMusicState
+                    savedMusicState: savedMusicState,
+                    managedByBot: managedByBot
                 )
             }
         case .channel:
@@ -1848,7 +1861,8 @@ func peerInfoScreenData(
                     premiumGiftOptions: [],
                     webAppPermissions: nil,
                     savedMusicContext: nil,
-                    savedMusicState: nil
+                    savedMusicState: nil,
+                    managedByBot: nil
                 )
             }
         case let .group(groupId):
@@ -2184,7 +2198,8 @@ func peerInfoScreenData(
                     premiumGiftOptions: [],
                     webAppPermissions: nil,
                     savedMusicContext: nil,
-                    savedMusicState: nil
+                    savedMusicState: nil,
+                    managedByBot: nil
                 ))
             }
         }

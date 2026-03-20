@@ -6,20 +6,36 @@ import ComponentFlow
 import MultilineTextComponent
 import TelegramCore
 
+func localizedStyleName(strings: PresentationStrings, styleId: TelegramComposeAIMessageMode.StyleId) -> String {
+    switch styleId {
+    case .neutral:
+        return strings.TextProcessingStyle_Neutral
+    case let .style(name):
+        if let value = strings.primaryComponent.dict["TextProcessingStyle_\(name)"] {
+            return value
+        } else {
+            return name.capitalized
+        }
+    }
+}
+
 final class TextProcessingStyleSelectionComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let selectedStyle: TelegramComposeAIMessageMode.Style
-    let updateStyle: (TelegramComposeAIMessageMode.Style) -> Void
+    let styles: [TelegramComposeAIMessageMode.Style]
+    let selectedStyle: TelegramComposeAIMessageMode.StyleId
+    let updateStyle: (TelegramComposeAIMessageMode.StyleId) -> Void
 
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
-        selectedStyle: TelegramComposeAIMessageMode.Style,
-        updateStyle: @escaping (TelegramComposeAIMessageMode.Style) -> Void
+        styles: [TelegramComposeAIMessageMode.Style],
+        selectedStyle: TelegramComposeAIMessageMode.StyleId,
+        updateStyle: @escaping (TelegramComposeAIMessageMode.StyleId) -> Void
     ) {
         self.theme = theme
         self.strings = strings
+        self.styles = styles
         self.selectedStyle = selectedStyle
         self.updateStyle = updateStyle
     }
@@ -31,10 +47,19 @@ final class TextProcessingStyleSelectionComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
+        if lhs.styles != rhs.styles {
+            return false
+        }
         if lhs.selectedStyle != rhs.selectedStyle {
             return false
         }
         return true
+    }
+
+    private final class ScrollView: UIScrollView {
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
     }
 
     final class View: UIView {
@@ -42,19 +67,33 @@ final class TextProcessingStyleSelectionComponent: Component {
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
 
-        private var itemViews: [TelegramComposeAIMessageMode.Style: ComponentView<Empty>] = [:]
+        private let scrollView: ScrollView
+        private var itemViews: [TelegramComposeAIMessageMode.StyleId: ComponentView<Empty>] = [:]
         private let selectedBackgroundView: UIImageView
-        
+
         override init(frame: CGRect) {
+            self.scrollView = ScrollView()
             self.selectedBackgroundView = UIImageView()
             self.selectedBackgroundView.isHidden = true
             self.selectedBackgroundView.alpha = 0.0
-            
+
             super.init(frame: frame)
-            
-            self.addSubview(self.selectedBackgroundView)
-            
-            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTapGesture(_:))))
+
+            self.scrollView.delaysContentTouches = false
+            self.scrollView.canCancelContentTouches = true
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+            self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
+            self.scrollView.showsVerticalScrollIndicator = false
+            self.scrollView.showsHorizontalScrollIndicator = false
+            self.scrollView.alwaysBounceHorizontal = false
+            self.scrollView.alwaysBounceVertical = false
+            self.scrollView.scrollsToTop = false
+            self.scrollView.clipsToBounds = false
+            self.addSubview(self.scrollView)
+
+            self.scrollView.addSubview(self.selectedBackgroundView)
+
+            self.scrollView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTapGesture(_:))))
         }
         
         required init?(coder: NSCoder) {
@@ -68,8 +107,13 @@ final class TextProcessingStyleSelectionComponent: Component {
             if case .ended = recognizer.state {
                 for (id, itemView) in self.itemViews {
                     if let itemComponentView = itemView.view {
-                        if itemComponentView.bounds.contains(self.convert(recognizer.location(in: self), to: itemComponentView)) {
-                            component.updateStyle(id)
+                        if itemComponentView.bounds.contains(self.scrollView.convert(recognizer.location(in: self.scrollView), to: itemComponentView)) {
+                            if component.selectedStyle == id {
+                                component.updateStyle(.neutral)
+                            } else {
+                                component.updateStyle(id)
+                            }
+                            self.scrollView.scrollRectToVisible(itemComponentView.frame.insetBy(dx: -100.0, dy: 0.0), animated: true)
                             break
                         }
                     }
@@ -88,15 +132,20 @@ final class TextProcessingStyleSelectionComponent: Component {
             self.component = component
             self.state = state
             
-            var styleData: [(id: TelegramComposeAIMessageMode.Style, icon: String, title: String)] = []
-            styleData.append((.neutral, "🏳️", "Neutral"))
-            styleData.append((.formal, "🤝", "Formal"))
-            styleData.append((.short, "🎯", "Short"))
-            styleData.append((.savage, "🍖", "Savage"))
-            styleData.append((.biblical, "🕯", "Biblical"))
-            styleData.append((.posh, "🍷", "Posh"))
+            var styleData: [(id: TelegramComposeAIMessageMode.StyleId, icon: String, title: String)] = []
+            for item in component.styles {
+                styleData.append((item.id, item.emoji, localizedStyleName(strings: component.strings, styleId: item.id)))
+            }
             
-            let itemSize = CGSize(width: floor(availableSize.width / CGFloat(styleData.count)), height: availableSize.height)
+            let minSlotWidth: CGFloat = max(50.0, floor(availableSize.width / 5.0))
+            let slotWidth = max(minSlotWidth, floor(availableSize.width / CGFloat(styleData.count)))
+            let contentWidth = slotWidth * CGFloat(styleData.count)
+            let itemSize = CGSize(width: slotWidth, height: availableSize.height)
+
+            self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
+            self.scrollView.contentSize = CGSize(width: contentWidth, height: availableSize.height)
+            self.scrollView.alwaysBounceHorizontal = contentWidth > availableSize.width
+
             var selectedItemFrame: CGRect?
             for i in 0 ..< styleData.count {
                 let style = styleData[i]
@@ -109,7 +158,7 @@ final class TextProcessingStyleSelectionComponent: Component {
                     itemView = ComponentView()
                     self.itemViews[style.id] = itemView
                 }
-                let itemFrame = CGRect(origin: CGPoint(x: CGFloat(i) * itemSize.width, y: 0.0), size: itemSize)
+                let itemFrame = CGRect(origin: CGPoint(x: CGFloat(i) * slotWidth, y: 0.0), size: itemSize)
                 let _ = itemView.update(
                     transition: itemTransition,
                     component: AnyComponent(ItemComponent(
@@ -122,7 +171,7 @@ final class TextProcessingStyleSelectionComponent: Component {
                 )
                 if let itemComponentView = itemView.view {
                     if itemComponentView.superview == nil {
-                        self.addSubview(itemComponentView)
+                        self.scrollView.addSubview(itemComponentView)
                     }
                     itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
                 }
@@ -130,7 +179,18 @@ final class TextProcessingStyleSelectionComponent: Component {
                     selectedItemFrame = CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.minY - 5.0), size: CGSize(width: itemFrame.width, height: itemFrame.height + 5.0 + 3.0))
                 }
             }
-            
+
+            var removedIds: [TelegramComposeAIMessageMode.StyleId] = []
+            for (id, itemView) in self.itemViews {
+                if !styleData.contains(where: { $0.id == id }) {
+                    removedIds.append(id)
+                    itemView.view?.removeFromSuperview()
+                }
+            }
+            for id in removedIds {
+                self.itemViews.removeValue(forKey: id)
+            }
+
             if self.selectedBackgroundView.image == nil {
                 self.selectedBackgroundView.image = generateStretchableFilledCircleImage(diameter: 16.0 * 2.0, color: .white)?.withRenderingMode(.alwaysTemplate)
             }

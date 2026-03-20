@@ -48,7 +48,7 @@ final class TextProcessingTranslateContentComponent: Component {
         
         fileprivate(set) var emojify: Bool = false
         fileprivate(set) var isSourceTextExpanded: Bool = false
-        fileprivate(set) var style: TelegramComposeAIMessageMode.Style = .neutral
+        fileprivate(set) var style: TelegramComposeAIMessageMode.StyleId = .neutral
         
         fileprivate(set) var isProcessing: Bool = false {
             didSet {
@@ -66,25 +66,28 @@ final class TextProcessingTranslateContentComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let styles: [TelegramComposeAIMessageMode.Style]
     let inputText: TextWithEntities
     let externalState: ExternalState
     let mode: Mode
-    let copyAction: () -> Void
-    let displayLanguageSelectionMenu: (UIView, String, TelegramComposeAIMessageMode.Style, Bool,  @escaping (String, TelegramComposeAIMessageMode.Style) -> Void) -> Void
+    let copyAction: (() -> Void)?
+    let displayLanguageSelectionMenu: (UIView, String, TelegramComposeAIMessageMode.StyleId, Bool,  @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void) -> Void
 
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        styles: [TelegramComposeAIMessageMode.Style],
         externalState: ExternalState,
         inputText: TextWithEntities,
         mode: Mode,
-        copyAction: @escaping () -> Void,
-        displayLanguageSelectionMenu: @escaping (UIView, String, TelegramComposeAIMessageMode.Style, Bool, @escaping (String, TelegramComposeAIMessageMode.Style) -> Void) -> Void
+        copyAction: (() -> Void)?,
+        displayLanguageSelectionMenu: @escaping (UIView, String, TelegramComposeAIMessageMode.StyleId, Bool, @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.styles = styles
         self.externalState = externalState
         self.inputText = inputText
         self.mode = mode
@@ -100,6 +103,9 @@ final class TextProcessingTranslateContentComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.styles != rhs.styles {
             return false
         }
         if lhs.externalState !== rhs.externalState {
@@ -270,27 +276,21 @@ final class TextProcessingTranslateContentComponent: Component {
                 toTitle = localizedLanguageName(strings: component.strings, language: component.externalState.result?.language ?? "")
                 if component.externalState.style != .neutral {
                     toTitle.append(" (")
-                    let styleName: String
-                    switch component.externalState.style {
-                    case .neutral:
-                        styleName = ""
-                    case .formal:
-                        styleName = "Formal"
-                    case .short:
-                        styleName = "Short"
-                    case .savage:
-                        styleName = "Savage"
-                    case .biblical:
-                        styleName = "Biblical"
-                    case .posh:
-                        styleName = "Posh"
-                    }
+                    let styleName = localizedStyleName(strings: component.strings, styleId: component.externalState.style)
                     toTitle.append(styleName)
                     toTitle.append(")")
                 }
             case .stylize, .fix:
                 fromPrefix = "Original:"
-                toPrefix = "Result"
+                if case .stylize = component.mode {
+                    if component.externalState.style == .neutral {
+                        toPrefix = "Original"
+                    } else {
+                        toPrefix = "Result"
+                    }
+                } else {
+                    toPrefix = "Result"
+                }
                 toTitle = ""
             }
             
@@ -301,6 +301,7 @@ final class TextProcessingTranslateContentComponent: Component {
                     component: AnyComponent(TextProcessingStyleSelectionComponent(
                         theme: component.theme,
                         strings: component.strings,
+                        styles: component.styles,
                         selectedStyle: component.externalState.style,
                         updateStyle: { [weak self] style in
                             guard let self, let component = self.component else {
@@ -311,10 +312,10 @@ final class TextProcessingTranslateContentComponent: Component {
                                 
                                 if let result = component.externalState.result {
                                     component.externalState.result = (result.language, nil, [])
+                                    self.beginTranslationIfNecessary(reset: true)
                                     if !self.isUpdating {
                                         self.state?.updated(transition: .spring(duration: 0.4))
                                     }
-                                    self.beginTranslationIfNecessary(reset: true)
                                 }
                             }
                         }
@@ -403,12 +404,12 @@ final class TextProcessingTranslateContentComponent: Component {
                         })
                     } : nil,
                     isExpanded: nil,
-                    copyAction: { [weak self] in
+                    copyAction: component.copyAction != nil ? { [weak self] in
                         guard let self, let component = self.component else {
                             return
                         }
-                        component.copyAction()
-                    },
+                        component.copyAction?()
+                    } : nil,
                     emojify: (component.mode == .translate || component.mode == .stylize) ? (
                         component.externalState.emojify,
                         { [weak self] in

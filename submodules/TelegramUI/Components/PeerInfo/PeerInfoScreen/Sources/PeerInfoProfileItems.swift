@@ -511,7 +511,15 @@ func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationD
                     items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: ItemBotAddToChat, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
                         interaction.openAddBotToGroup()
                     }))
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: ItemBotAddToChatInfo, text: presentationData.strings.Bot_AddToChatInfo))
+                    
+                    if let managedByBot = data.managedByBot {
+                        //TODO:localize
+                        items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: ItemBotAddToChatInfo, icon: .managedBot, text: "Created and managed by [@\(managedByBot.compactDisplayTitle)]()", linkAction: { _ in
+                            interaction.openPeerInfo(managedByBot._asPeer(), false)
+                        }))
+                    } else {
+                        items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: ItemBotAddToChatInfo, text: presentationData.strings.Bot_AddToChatInfo))
+                    }
                 }
             }
         }

@@ -27,10 +27,11 @@ final class TextProcessingLanguageSelectionComponent: Component {
     let sourceView: UIView
     let topLanguages: [Language]
     let selectedLanguageCode: String
-    let currentStyle: TelegramComposeAIMessageMode.Style
-    let displayStyles: Bool
-    let completion: (String, TelegramComposeAIMessageMode.Style) -> Void
+    let currentStyle: TelegramComposeAIMessageMode.StyleId
+    let displayStyles: [TelegramComposeAIMessageMode.Style]?
+    let completion: (String, TelegramComposeAIMessageMode.StyleId) -> Void
     let dismissed: () -> Void
+    let inputHeight: CGFloat
 
     init(
         theme: PresentationTheme,
@@ -38,10 +39,11 @@ final class TextProcessingLanguageSelectionComponent: Component {
         sourceView: UIView,
         topLanguages: [Language],
         selectedLanguageCode: String,
-        currentStyle: TelegramComposeAIMessageMode.Style,
-        displayStyles: Bool,
-        completion: @escaping (String, TelegramComposeAIMessageMode.Style) -> Void,
-        dismissed: @escaping () -> Void
+        currentStyle: TelegramComposeAIMessageMode.StyleId,
+        displayStyles: [TelegramComposeAIMessageMode.Style]?,
+        completion: @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void,
+        dismissed: @escaping () -> Void,
+        inputHeight: CGFloat
     ) {
         self.theme = theme
         self.strings = strings
@@ -52,6 +54,7 @@ final class TextProcessingLanguageSelectionComponent: Component {
         self.displayStyles = displayStyles
         self.completion = completion
         self.dismissed = dismissed
+        self.inputHeight = inputHeight
     }
 
     static func ==(lhs: TextProcessingLanguageSelectionComponent, rhs: TextProcessingLanguageSelectionComponent) -> Bool {
@@ -73,6 +76,9 @@ final class TextProcessingLanguageSelectionComponent: Component {
         if lhs.displayStyles != rhs.displayStyles {
             return false
         }
+        if lhs.inputHeight != rhs.inputHeight {
+            return false
+        }
         return true
     }
     
@@ -88,39 +94,45 @@ final class TextProcessingLanguageSelectionComponent: Component {
         let itemCount: Int
         let topSeparatedItemCount: Int
         let topSeparatorHeight: CGFloat
+        let searchSeparatorHeight: CGFloat
         let verticalInset: CGFloat
+        let searchItemHeight: CGFloat
         let contentHeight: CGFloat
-        
-        init(size: CGSize, itemHeight: CGFloat, itemCount: Int, topSeparatedItemCount: Int, verticalInset: CGFloat) {
+
+        init(size: CGSize, itemHeight: CGFloat, itemCount: Int, topSeparatedItemCount: Int, verticalInset: CGFloat, searchItemHeight: CGFloat) {
             self.size = size
             self.itemHeight = itemHeight
             self.itemCount = itemCount
             self.topSeparatedItemCount = topSeparatedItemCount
             self.topSeparatorHeight = 20.0
+            self.searchSeparatorHeight = 20.0
             self.verticalInset = verticalInset
-            var contentHeight = verticalInset * 2.0 + CGFloat(itemCount) * itemHeight
-            self.contentHeight = contentHeight
-            if self.topSeparatedItemCount != 0 {
+            self.searchItemHeight = searchItemHeight
+            var contentHeight = verticalInset * 2.0 + searchItemHeight + self.searchSeparatorHeight + CGFloat(itemCount) * itemHeight
+            if topSeparatedItemCount != 0 {
                 contentHeight += self.topSeparatorHeight
             }
+            self.contentHeight = contentHeight
         }
-        
+
         func indexRange(minY: CGFloat, maxY: CGFloat) -> Range<Int>? {
-            var firstIndex = Int(floor((minY - self.verticalInset - self.topSeparatorHeight) / self.itemHeight))
+            let itemsOriginY = self.verticalInset + self.searchItemHeight + self.searchSeparatorHeight
+            var firstIndex = Int(floor((minY - itemsOriginY - self.topSeparatorHeight) / self.itemHeight))
             firstIndex = max(0, firstIndex)
-            
-            var lastIndex = Int(ceil((maxY - self.verticalInset + self.topSeparatorHeight) / self.itemHeight))
+
+            var lastIndex = Int(ceil((maxY - itemsOriginY + self.topSeparatorHeight) / self.itemHeight))
             lastIndex = min(self.itemCount - 1, lastIndex)
-            
-            if firstIndex < lastIndex {
+
+            if firstIndex <= lastIndex {
                 return firstIndex ..< (lastIndex + 1)
             } else {
                 return nil
             }
         }
-        
+
         func frame(forItemAt index: Int) -> CGRect {
-            var rect = CGRect(origin: CGPoint(x: 0.0, y: self.verticalInset + CGFloat(index) * self.itemHeight), size: CGSize(width: self.size.width, height: self.itemHeight))
+            let itemsOriginY = self.verticalInset + self.searchItemHeight + self.searchSeparatorHeight
+            var rect = CGRect(origin: CGPoint(x: 0.0, y: itemsOriginY + CGFloat(index) * self.itemHeight), size: CGSize(width: self.size.width, height: self.itemHeight))
             if index >= self.topSeparatedItemCount && self.topSeparatedItemCount != 0 {
                 rect.origin.y += self.topSeparatorHeight
             }
@@ -137,12 +149,13 @@ final class TextProcessingLanguageSelectionComponent: Component {
         private var mainItemViews: [String: ComponentView<Empty>] = [:]
         private let mainMeasureItem = ComponentView<Empty>()
         
+        private let mainSearchSeparator: SimpleLayer
         private let mainTopSeparator: SimpleLayer
         
         private let stylesBackground: GlassBackgroundView
         private let stylesScrollView: ScrollView
         private let stylesSelectionView: UIImageView
-        private var stylesItemViews: [TelegramComposeAIMessageMode.Style: ComponentView<Empty>] = [:]
+        private var stylesItemViews: [TelegramComposeAIMessageMode.StyleId: ComponentView<Empty>] = [:]
         
         private var mainItems: [Language] = []
         private var mainTopItemCount: Int = 0
@@ -155,8 +168,39 @@ final class TextProcessingLanguageSelectionComponent: Component {
         private var ignoreScrolling: Bool = false
         
         private var updatedLanguage: String?
-        private var updatedStyle: TelegramComposeAIMessageMode.Style?
-        
+        private var updatedStyle: TelegramComposeAIMessageMode.StyleId?
+
+        private var searchQuery: String = "" {
+            didSet {
+                if self.searchQuery != oldValue {
+                    self.cachedFilteredItems = nil
+                }
+            }
+        }
+        private var searchItemView = ComponentView<Empty>()
+        private let searchExternalState = SearchItemComponent.ExternalState()
+        private var cachedFilteredItems: [Language]?
+
+        private var filteredMainItems: [Language] {
+            if let cached = self.cachedFilteredItems {
+                return cached
+            }
+            let result: [Language]
+            if self.searchQuery.isEmpty {
+                result = self.mainItems
+            } else {
+                let query = self.searchQuery.lowercased()
+                result = self.mainItems.filter { item in
+                    if item.id.hasPrefix("top-") {
+                        return false
+                    }
+                    return item.name.lowercased().contains(query)
+                }
+            }
+            self.cachedFilteredItems = result
+            return result
+        }
+
         override init(frame: CGRect) {
             self.dimView = UIView()
             
@@ -170,6 +214,8 @@ final class TextProcessingLanguageSelectionComponent: Component {
             self.mainScrollView = ScrollView()
             self.stylesScrollView = ScrollView()
             
+            self.mainSearchSeparator = SimpleLayer()
+            self.mainScrollView.layer.addSublayer(self.mainSearchSeparator)
             self.mainTopSeparator = SimpleLayer()
             self.mainScrollView.layer.addSublayer(self.mainTopSeparator)
             
@@ -219,7 +265,7 @@ final class TextProcessingLanguageSelectionComponent: Component {
                 return
             }
             if case .ended = recognizer.state {
-                if component.displayStyles, let updatedStyle = self.updatedStyle {
+                if component.displayStyles != nil, let updatedStyle = self.updatedStyle {
                     component.completion(component.selectedLanguageCode, updatedStyle)
                 }
                 self.animateOut()
@@ -227,14 +273,13 @@ final class TextProcessingLanguageSelectionComponent: Component {
         }
         
         private func animateIn() {
-            self.mainBackground.layer.animateSpring(from: 0.001, to: 1.0, keyPath: "transform.scale", duration: 0.5)
-            self.stylesBackground.layer.animateSpring(from: 0.001, to: 1.0, keyPath: "transform.scale", duration: 0.5)
+            self.backgroundContainer.layer.animateSpring(from: 0.001, to: 1.0, keyPath: "transform.scale", duration: 0.5)
             self.backgroundContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         
         private func animateOut() {
-            self.mainBackground.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
-            self.stylesBackground.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+            self.endEditing(true)
+            self.backgroundContainer.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
             self.backgroundContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
                 guard let self, let component = self.component else {
                     return
@@ -267,15 +312,19 @@ final class TextProcessingLanguageSelectionComponent: Component {
                 guard let itemLayout = self.mainItemLayout else {
                     return
                 }
-                let visibleBounds = scrollView.bounds
-                
+                let isSearchFocused = self.searchExternalState.isEditing
+                let fixedSearchHeight = itemLayout.searchItemHeight + itemLayout.searchSeparatorHeight
+                let scrollOffset: CGFloat = isSearchFocused ? fixedSearchHeight : 0.0
+                let visibleBounds = scrollView.bounds.offsetBy(dx: 0.0, dy: scrollOffset)
+
                 var validIds: [String] = []
+                let displayItems = self.filteredMainItems
                 if let indexRange = itemLayout.indexRange(minY: visibleBounds.minY, maxY: visibleBounds.maxY) {
                     for index in indexRange.lowerBound ..< indexRange.upperBound {
-                        if index >= self.mainItems.count {
+                        if index >= displayItems.count {
                             break
                         }
-                        let item = self.mainItems[index]
+                        let item = displayItems[index]
                         validIds.append(item.id)
                         
                         let itemView: ComponentView<Empty>
@@ -288,7 +337,8 @@ final class TextProcessingLanguageSelectionComponent: Component {
                             self.mainItemViews[item.id] = itemView
                         }
                         
-                        let itemFrame = itemLayout.frame(forItemAt: index)
+                        var itemFrame = itemLayout.frame(forItemAt: index)
+                        itemFrame.origin.y -= scrollOffset
                         let _ = itemView.update(
                             transition: itemTransition,
                             component: AnyComponent(LanguageItemComponent(
@@ -397,21 +447,25 @@ final class TextProcessingLanguageSelectionComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: mainWidth, height: 1000.0)
             )
-            let mainContentHeight = mainContainerInset * 2.0 + CGFloat(self.mainItems.count) * mainItemSize.height
+            let searchItemHeight: CGFloat = mainItemSize.height
+            let filteredItems = self.filteredMainItems
+            let effectiveTopItemCount = self.searchQuery.isEmpty ? self.mainTopItemCount : 0
+            let searchSeparatorHeight: CGFloat = 20.0
+            let mainContentHeight = mainContainerInset * 2.0 + searchItemHeight + searchSeparatorHeight + CGFloat(filteredItems.count) * mainItemSize.height + (effectiveTopItemCount != 0 ? 20.0 : 0.0)
             
-            var mainSize = CGSize(width: mainWidth, height: min(370.0, mainContentHeight))
+            let maxAvailableHeight = max(mainItemSize.height * 2.0, availableSize.height - component.inputHeight - containerSideInset * 2.0)
+            var mainSize = CGSize(width: mainWidth, height: min(min(370.0, maxAvailableHeight), mainContentHeight))
             
             var stylesSize: CGSize?
+            var selectedStyleItemFrame: CGRect?
             let stylesSpacing: CGFloat = 8.0
-            if component.displayStyles {
-                var styleData: [(id: TelegramComposeAIMessageMode.Style, icon: String, title: String)] = []
-                styleData.append((.neutral, "🏳️", "Neutral"))
-                styleData.append((.formal, "🤝", "Formal"))
-                styleData.append((.short, "🎯", "Short"))
-                styleData.append((.savage, "🍖", "Savage"))
-                styleData.append((.biblical, "🕯", "Biblical"))
-                styleData.append((.posh, "🍷", "Posh"))
-                
+            if let displayStyles = component.displayStyles {
+                var styleData: [(id: TelegramComposeAIMessageMode.StyleId, icon: String, title: String)] = []
+                styleData.append((.neutral, "🏳️", localizedStyleName(strings: component.strings, styleId: .neutral)))
+                for item in displayStyles {
+                    styleData.append((item.id, item.emoji, localizedStyleName(strings: component.strings, styleId: item.id)))
+                }
+
                 let stylesItemSize = CGSize(width: 82.0, height: 60.0)
                 var selectedItemFrame: CGRect?
                 stylesSize = CGSize(width: stylesItemSize.width, height: CGFloat(styleData.count) * stylesItemSize.height)
@@ -478,42 +532,103 @@ final class TextProcessingLanguageSelectionComponent: Component {
                         })
                     }
                 }
+                selectedStyleItemFrame = selectedItemFrame
             }
-            if let stylesSize {
-                mainSize.height = stylesSize.height
+            let stylesContentSize = stylesSize
+            if var stylesSizeValue = stylesSize {
+                let maxHeight = min(370.0, maxAvailableHeight)
+                stylesSizeValue.height = min(stylesSizeValue.height, maxHeight)
+                stylesSize = stylesSizeValue
+                mainSize.height = min(mainSize.height, stylesSizeValue.height)
             }
             
-            let mainItemLayout = ItemLayout(size: mainSize, itemHeight: mainItemSize.height, itemCount: self.mainItems.count, topSeparatedItemCount: self.mainTopItemCount, verticalInset: mainContainerInset)
+            let mainItemLayout = ItemLayout(size: mainSize, itemHeight: mainItemSize.height, itemCount: filteredItems.count, topSeparatedItemCount: effectiveTopItemCount, verticalInset: mainContainerInset, searchItemHeight: searchItemHeight)
             self.mainItemLayout = mainItemLayout
-            
+
+            let _ = self.searchItemView.update(
+                transition: transition,
+                component: AnyComponent(SearchItemComponent(
+                    theme: component.theme,
+                    placeholder: component.strings.Common_Search,
+                    externalState: self.searchExternalState,
+                    valueChanged: { [weak self] query in
+                        guard let self else {
+                            return
+                        }
+                        self.searchQuery = query
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: mainSize.width, height: searchItemHeight)
+            )
+            let isSearchFocused = self.searchExternalState.isEditing
+            if let searchView = self.searchItemView.view {
+                if isSearchFocused {
+                    if searchView.superview !== self.mainBackground.contentView {
+                        self.mainBackground.contentView.addSubview(searchView)
+                    }
+                    transition.setFrame(view: searchView, frame: CGRect(origin: CGPoint(x: 0.0, y: mainContainerInset), size: CGSize(width: mainSize.width, height: searchItemHeight)))
+                } else {
+                    if searchView.superview !== self.mainScrollView {
+                        self.mainScrollView.addSubview(searchView)
+                    }
+                    transition.setFrame(view: searchView, frame: CGRect(origin: CGPoint(x: 0.0, y: mainContainerInset), size: CGSize(width: mainSize.width, height: searchItemHeight)))
+                }
+            }
+
+            self.mainSearchSeparator.backgroundColor = component.theme.contextMenu.itemSeparatorColor.cgColor
+            if isSearchFocused {
+                if self.mainSearchSeparator.superlayer !== self.mainBackground.contentView.layer {
+                    self.mainBackground.contentView.layer.addSublayer(self.mainSearchSeparator)
+                }
+                var searchSeparatorFrame = CGRect(origin: CGPoint(x: 18.0, y: mainContainerInset + searchItemHeight), size: CGSize(width: mainItemLayout.size.width - 18.0 - 18.0, height: UIScreenPixel))
+                searchSeparatorFrame.origin.y += floorToScreenPixels((mainItemLayout.searchSeparatorHeight - searchSeparatorFrame.height) * 0.5)
+                transition.setFrame(layer: self.mainSearchSeparator, frame: searchSeparatorFrame)
+            } else {
+                if self.mainSearchSeparator.superlayer !== self.mainScrollView.layer {
+                    self.mainScrollView.layer.addSublayer(self.mainSearchSeparator)
+                }
+                var searchSeparatorFrame = CGRect(origin: CGPoint(x: 18.0, y: mainItemLayout.verticalInset + mainItemLayout.searchItemHeight), size: CGSize(width: mainItemLayout.size.width - 18.0 - 18.0, height: UIScreenPixel))
+                searchSeparatorFrame.origin.y += floorToScreenPixels((mainItemLayout.searchSeparatorHeight - searchSeparatorFrame.height) * 0.5)
+                transition.setFrame(layer: self.mainSearchSeparator, frame: searchSeparatorFrame)
+            }
+
+            let fixedSearchHeight = searchItemHeight + mainItemLayout.searchSeparatorHeight
+            let topSeparatorScrollOffset: CGFloat = isSearchFocused ? fixedSearchHeight : 0.0
             if mainItemLayout.topSeparatedItemCount != 0 {
                 self.mainTopSeparator.backgroundColor = component.theme.contextMenu.itemSeparatorColor.cgColor
                 self.mainTopSeparator.isHidden = false
-                var topSeparatorFrame = CGRect(origin: CGPoint(x: 18.0, y: mainItemLayout.verticalInset + CGFloat(mainItemLayout.topSeparatedItemCount) * mainItemLayout.itemHeight), size: CGSize(width: mainItemLayout.size.width - 18.0 - 18.0, height: UIScreenPixel))
+                var topSeparatorFrame = CGRect(origin: CGPoint(x: 18.0, y: mainItemLayout.verticalInset + mainItemLayout.searchItemHeight + mainItemLayout.searchSeparatorHeight + CGFloat(mainItemLayout.topSeparatedItemCount) * mainItemLayout.itemHeight - topSeparatorScrollOffset), size: CGSize(width: mainItemLayout.size.width - 18.0 - 18.0, height: UIScreenPixel))
                 topSeparatorFrame.origin.y += floorToScreenPixels((mainItemLayout.topSeparatorHeight - topSeparatorFrame.height) * 0.5)
                 transition.setFrame(layer: self.mainTopSeparator, frame: topSeparatorFrame)
             } else {
                 self.mainTopSeparator.isHidden = true
             }
-            
             self.ignoreScrolling = true
-            if self.mainScrollView.bounds.size != mainItemLayout.size || self.mainScrollView.contentSize.height != mainItemLayout.contentHeight {
+            if isSearchFocused {
+                let scrollViewOriginY = fixedSearchHeight
+                let scrollViewHeight = mainItemLayout.size.height - fixedSearchHeight
+                self.mainScrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: scrollViewOriginY), size: CGSize(width: mainItemLayout.size.width, height: max(0.0, scrollViewHeight)))
+                self.mainScrollView.contentSize = CGSize(width: mainItemLayout.size.width, height: mainItemLayout.contentHeight - fixedSearchHeight)
+                self.mainScrollView.contentOffset = .zero
+            } else {
                 self.mainScrollView.frame = CGRect(origin: CGPoint(), size: mainItemLayout.size)
                 self.mainScrollView.contentSize = CGSize(width: mainItemLayout.size.width, height: mainItemLayout.contentHeight)
             }
             self.ignoreScrolling = false
             self.updateScrolling(scrollView: self.mainScrollView, transition: transition)
             
-            transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: availableSize))
-            self.backgroundContainer.update(size: availableSize, isDark: component.theme.overallDarkAppearance, transition: transition)
-            
             let sourceLocation = component.sourceView.convert(component.sourceView.bounds.center, to: self)
+            let effectiveBottomBound = availableSize.height - component.inputHeight
             var mainFrame = CGRect(origin: CGPoint(x: floor(sourceLocation.x - mainItemLayout.size.width * 0.5), y: floor(sourceLocation.y - mainItemLayout.size.height * 0.5)), size: mainItemLayout.size)
             if mainFrame.origin.x + mainFrame.size.width > availableSize.width - containerSideInset {
                 mainFrame.origin.x = availableSize.width - containerSideInset - mainFrame.size.width
             }
-            if mainFrame.origin.y + mainFrame.size.height > availableSize.height - containerSideInset {
-                mainFrame.origin.y = availableSize.height - containerSideInset - mainFrame.size.height
+            if mainFrame.origin.y + mainFrame.size.height > effectiveBottomBound - containerSideInset {
+                mainFrame.origin.y = effectiveBottomBound - containerSideInset - mainFrame.size.height
             }
             if mainFrame.origin.x < containerSideInset {
                 mainFrame.origin.x = containerSideInset
@@ -521,20 +636,45 @@ final class TextProcessingLanguageSelectionComponent: Component {
             if mainFrame.origin.y < containerSideInset {
                 mainFrame.origin.y = containerSideInset
             }
-            
-            transition.setFrame(view: self.mainBackground, frame: mainFrame)
-            self.mainBackground.update(size: mainFrame.size, cornerRadius: 30.0, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
-            
+
+            let containerInset: CGFloat = 100.0
+            var unionRect = mainFrame
+            var stylesFrame: CGRect?
             if let stylesSize {
-                let stylesFrame = CGRect(origin: CGPoint(x: mainFrame.maxX + stylesSpacing, y: mainFrame.minY), size: stylesSize)
+                let frame = CGRect(origin: CGPoint(x: mainFrame.maxX + stylesSpacing, y: mainFrame.minY), size: stylesSize)
+                stylesFrame = frame
+                unionRect = unionRect.union(frame)
+            }
+            let containerFrame = unionRect.insetBy(dx: -containerInset, dy: -containerInset)
+
+            let anchorX = (sourceLocation.x - containerFrame.minX) / containerFrame.width
+            let anchorY = (sourceLocation.y - containerFrame.minY) / containerFrame.height
+            self.backgroundContainer.layer.anchorPoint = CGPoint(x: anchorX, y: anchorY)
+            self.backgroundContainer.layer.position = CGPoint(x: containerFrame.minX + anchorX * containerFrame.width, y: containerFrame.minY + anchorY * containerFrame.height)
+            self.backgroundContainer.bounds = CGRect(origin: .zero, size: containerFrame.size)
+            self.backgroundContainer.update(size: containerFrame.size, isDark: component.theme.overallDarkAppearance, transition: transition)
+
+            let mainLocalFrame = CGRect(origin: CGPoint(x: mainFrame.minX - containerFrame.minX, y: mainFrame.minY - containerFrame.minY), size: mainFrame.size)
+            transition.setFrame(view: self.mainBackground, frame: mainLocalFrame)
+            self.mainBackground.update(size: mainFrame.size, cornerRadius: 30.0, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
+
+            if let stylesFrame {
+                let stylesLocalFrame = CGRect(origin: CGPoint(x: stylesFrame.minX - containerFrame.minX, y: stylesFrame.minY - containerFrame.minY), size: stylesFrame.size)
                 if self.stylesBackground.superview == nil {
                     self.backgroundContainer.contentView.addSubview(self.stylesBackground)
                 }
-                transition.setFrame(view: self.stylesBackground, frame: stylesFrame)
+                transition.setFrame(view: self.stylesBackground, frame: stylesLocalFrame)
                 self.stylesBackground.update(size: stylesFrame.size, cornerRadius: 30.0, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
-                
+
                 transition.setFrame(view: self.stylesScrollView, frame: CGRect(origin: CGPoint(), size: stylesFrame.size))
-                self.stylesScrollView.contentSize = stylesFrame.size
+                self.stylesScrollView.contentSize = stylesContentSize ?? stylesFrame.size
+
+                if shouldAnimateIn, let selectedStyleItemFrame {
+                    let visibleHeight = stylesFrame.size.height
+                    let maxOffsetY = max(0.0, (stylesContentSize ?? stylesFrame.size).height - visibleHeight)
+                    let targetOffsetY = min(max(0.0, selectedStyleItemFrame.midY - visibleHeight * 0.5), maxOffsetY)
+                    self.stylesScrollView.contentOffset = CGPoint(x: 0.0, y: targetOffsetY)
+                }
             }
             
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
@@ -794,11 +934,188 @@ private final class StyleItemComponent: Component {
             return availableSize
         }
     }
-    
+
     func makeView() -> View {
         return View(frame: CGRect())
     }
-    
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class SearchItemComponent: Component {
+    final class ExternalState {
+        var isEditing: Bool = false
+    }
+
+    let theme: PresentationTheme
+    let placeholder: String
+    let externalState: ExternalState
+    let valueChanged: (String) -> Void
+
+    init(
+        theme: PresentationTheme,
+        placeholder: String,
+        externalState: ExternalState,
+        valueChanged: @escaping (String) -> Void
+    ) {
+        self.theme = theme
+        self.placeholder = placeholder
+        self.externalState = externalState
+        self.valueChanged = valueChanged
+    }
+
+    static func ==(lhs: SearchItemComponent, rhs: SearchItemComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView, UITextFieldDelegate {
+        private let icon = ComponentView<Empty>()
+        private let textField: UITextField
+        private let clearButton = ComponentView<Empty>()
+
+        private var component: SearchItemComponent?
+
+        override init(frame: CGRect) {
+            self.textField = UITextField()
+            super.init(frame: frame)
+
+            self.textField.autocorrectionType = .no
+            self.textField.autocapitalizationType = .none
+            self.textField.returnKeyType = .search
+            self.textField.delegate = self
+            self.textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
+            self.addSubview(self.textField)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        @objc private func textFieldChanged(_ textField: UITextField) {
+            self.component?.valueChanged(textField.text ?? "")
+            self.updateClearButton()
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            self.component?.externalState.isEditing = true
+            self.component?.valueChanged(textField.text ?? "")
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            self.component?.externalState.isEditing = false
+            self.component?.valueChanged(textField.text ?? "")
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            textField.resignFirstResponder()
+            return true
+        }
+
+        private func updateClearButton() {
+            if let clearView = self.clearButton.view {
+                clearView.isHidden = (self.textField.text ?? "").isEmpty
+            }
+        }
+
+        func update(component: SearchItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+
+            let size = CGSize(width: availableSize.width, height: 42.0)
+
+            // Search icon
+            let iconSize = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: "Chat/Context Menu/Search",
+                    tintColor: component.theme.contextMenu.primaryColor
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            let iconFrame = CGRect(origin: CGPoint(x: 23.0, y: floorToScreenPixels((size.height - iconSize.height) * 0.5)), size: iconSize)
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    iconView.isUserInteractionEnabled = false
+                    self.addSubview(iconView)
+                }
+                iconView.frame = iconFrame
+            }
+
+            // Text field
+            let inputInset: CGFloat = 60.0
+            let inputRightInset: CGFloat = 36.0
+            self.textField.font = Font.regular(17.0)
+            self.textField.textColor = component.theme.contextMenu.primaryColor
+            self.textField.attributedPlaceholder = NSAttributedString(
+                string: component.placeholder,
+                attributes: [
+                    .font: Font.regular(17.0),
+                    .foregroundColor: component.theme.contextMenu.secondaryColor
+                ]
+            )
+            self.textField.tintColor = component.theme.list.itemAccentColor
+            self.textField.keyboardAppearance = component.theme.overallDarkAppearance ? .dark : .light
+            self.textField.frame = CGRect(
+                x: inputInset,
+                y: 0.0,
+                width: size.width - inputInset - inputRightInset,
+                height: size.height
+            )
+
+            // Clear button
+            let clearSize = self.clearButton.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    Button(
+                        content: AnyComponent(
+                            BundleIconComponent(
+                                name: "Components/Search Bar/Clear",
+                                tintColor: component.theme.contextMenu.secondaryColor,
+                                maxSize: CGSize(width: 24.0, height: 24.0)
+                            )
+                        ),
+                        action: { [weak self] in
+                            guard let self else { return }
+                            self.textField.text = ""
+                            self.component?.valueChanged("")
+                            self.updateClearButton()
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: 30.0, height: 30.0)
+            )
+            let clearFrame = CGRect(
+                origin: CGPoint(
+                    x: size.width - clearSize.width - 10.0,
+                    y: floorToScreenPixels((size.height - clearSize.height) * 0.5)
+                ),
+                size: clearSize
+            )
+            if let clearView = self.clearButton.view {
+                if clearView.superview == nil {
+                    self.addSubview(clearView)
+                }
+                clearView.frame = clearFrame
+                clearView.isHidden = (self.textField.text ?? "").isEmpty
+            }
+
+            return size
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }

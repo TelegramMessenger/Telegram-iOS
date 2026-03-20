@@ -699,6 +699,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         } else {
             self.presentingViewController?.dismiss(animated: true, completion: nil)
         }
+        completion?()
     }
     
     public final func navigationNextSibling() -> UIViewController? {

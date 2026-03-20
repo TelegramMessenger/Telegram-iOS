@@ -260,8 +260,8 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
             case let .ChatInfoEntry(data, presentationData):
                 let item: ListViewItem
                 switch data {
-                case let .botInfo(title, text, photo, video):
-                    item = ChatBotInfoItem(title: title, text: text, photo: photo, video: video, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
+                case let .botInfo(title, text, photo, video, peer, managedByBot):
+                    item = ChatBotInfoItem(title: title, text: text, photo: photo, video: video, peer: peer, managedByBot: managedByBot, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
                 case let .userInfo(peer, verification, registrationDate, phoneCountry, groupsInCommonCount):
                     item = ChatUserInfoItem(peer: peer, verification: verification, registrationDate: registrationDate, phoneCountry: phoneCountry, groupsInCommonCount: groupsInCommonCount, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
                 case .newThreadInfo:
@@ -315,8 +315,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
             case let .ChatInfoEntry(data, presentationData):
                 let item: ListViewItem
                 switch data {
-                case let .botInfo(title, text, photo, video):
-                    item = ChatBotInfoItem(title: title, text: text, photo: photo, video: video, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
+                case let .botInfo(title, text, photo, video, peer, managedByBot):
+                    item = ChatBotInfoItem(title: title, text: text, photo: photo, video: video, peer: peer, managedByBot: managedByBot, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
                 case let .userInfo(peer, verification, registrationDate, phoneCountry, groupsInCommonCount):
                     item = ChatUserInfoItem(peer: peer, verification: verification, registrationDate: registrationDate, phoneCountry: phoneCountry, groupsInCommonCount: groupsInCommonCount, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
                 case .newThreadInfo:
@@ -1412,6 +1412,7 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
         if case let .peer(peerId) = self.chatLocation {
             additionalData.append(.cachedPeerData(peerId))
             additionalData.append(.cachedPeerDataMessages(peerId))
+            additionalData.append(.cachedPeerDataPeers(peerId))
             additionalData.append(.peerNotificationSettings(peerId))
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: peerId)))

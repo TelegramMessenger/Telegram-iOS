@@ -230,11 +230,14 @@ final class TextProcessingTextAreaComponent: Component {
                 let titleArrowSize = titleArrow.update(
                     transition: titleArrowTransition,
                     component: AnyComponent(BundleIconComponent(
-                        name: "Item List/ExpandableSelectorArrows", tintColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.8))),
+                        name: "Item List/ContextDisclosureArrow",
+                        tintColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.8),
+                        maxSize: CGSize(width: 8.0, height: 11.0)
+                    )),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
-                let titleArrowFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - titleArrowSize.height) * 0.5)), size: titleArrowSize)
+                let titleArrowFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: titleFrame.minY + 1.0 + floorToScreenPixels((titleFrame.height - titleArrowSize.height) * 0.5)), size: titleArrowSize)
                 if let titleArrowView = titleArrow.view {
                     if titleArrowView.superview == nil {
                         titleArrowView.isUserInteractionEnabled = false

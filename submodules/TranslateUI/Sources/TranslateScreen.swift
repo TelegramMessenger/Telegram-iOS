@@ -1026,6 +1026,7 @@ private final class TranslateSheetComponent: CombinedComponent {
                         theme: theme,
                         statusBarHeight: environment.statusBarHeight,
                         safeInsets: environment.safeInsets,
+                        inputHeight: 0.0,
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
