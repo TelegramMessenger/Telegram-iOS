@@ -3681,18 +3681,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
                         
             var waitForKeyboardLayout = false
-            var effectiveTextView: UITextView?
             let customTextView = self.chatPresentationInterfaceStateTextFieldView(chatPresentationInterfaceState)
-            if let customTextView {
-                effectiveTextView = customTextView.inputTextView
-            } else if let mainTextView = self.textInputPanelNode?.textInputNode?.textView {
-                effectiveTextView = mainTextView
-            }
-            if let textView = effectiveTextView {
+            if let textView = self.textInputPanelNode?.textInputNode?.textView {
                 let updatedInputView = self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState)
-                if textView.inputView !== updatedInputView {
-                    textView.inputView = updatedInputView
-                    if textView.isFirstResponder {
+                if let customTextView {
+                    if customTextView.isActive {
                         if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState), let validLayout = self.validLayout {
                             if case .compact = validLayout.0.metrics.widthClass {
                                 waitForKeyboardLayout = true
@@ -3700,7 +3693,20 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 waitForKeyboardLayout = true
                             }
                         }
-                        textView.reloadInputViews()
+                    }
+                } else {
+                    if textView.inputView !== updatedInputView {
+                        textView.inputView = updatedInputView
+                        if textView.isFirstResponder {
+                            if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState), let validLayout = self.validLayout {
+                                if case .compact = validLayout.0.metrics.widthClass {
+                                    waitForKeyboardLayout = true
+                                } else if let inputHeight = validLayout.0.inputHeight, inputHeight > 100.0 {
+                                    waitForKeyboardLayout = true
+                                }
+                            }
+                            textView.reloadInputViews()
+                        }
                     }
                 }
             }
@@ -3888,10 +3894,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             context: self.context,
             currentInputData: inputMediaNodeData,
             updatedInputData: self.inputMediaNodeDataPromise.get(),
-            defaultToEmojiTab: !self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.string.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || self.openStickersBeginWithEmoji,
+            defaultToEmojiTab: !self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.string.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || self.openStickersBeginWithEmoji || self.chatPresentationInterfaceState.focusedPollAddOptionMessageId != nil,
             interaction: ChatEntityKeyboardInputNode.Interaction(chatControllerInteraction: self.controllerInteraction, panelInteraction: interfaceInteraction),
             chatPeerId: peerId,
-            stateContext: self.inputMediaNodeStateContext
+            stateContext: self.inputMediaNodeStateContext,
+            displayBottomPanel: self.chatPresentationInterfaceState.focusedPollAddOptionMessageId == nil
         )
         self.openStickersBeginWithEmoji = false
         

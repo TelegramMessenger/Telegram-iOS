@@ -260,7 +260,7 @@ public extension TelegramEngine {
             return _internal_addPollOption(account: self.account, messageId: messageId, text: text, entities: entities, mediaReference: mediaReference)
         }
         
-        public func deletePollOption(messageId: MessageId, opaqueIdentifier: Data, mediaReference: AnyMediaReference? = nil) -> Signal<Never, DeletePollOptionError> {
+        public func deletePollOption(messageId: MessageId, opaqueIdentifier: Data) -> Signal<Never, DeletePollOptionError> {
             return _internal_deletePollOption(account: self.account, messageId: messageId, opaqueIdentifier: opaqueIdentifier)
         }
 

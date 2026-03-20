@@ -4130,16 +4130,13 @@ extension ChatControllerImpl {
             guard let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction else {
                 return
             }
-            
             if let textFieldView = strongSelf.chatDisplayNode.chatPresentationInterfaceStateTextFieldView(strongSelf.presentationInterfaceState) {
                 textFieldView.insertText(text)
                 return
             }
-            
             if !strongSelf.chatDisplayNode.isTextInputPanelActive {
                 return
             }
-            
             interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                 let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
                 
@@ -4161,6 +4158,10 @@ extension ChatControllerImpl {
             strongSelf.chatDisplayNode.updateTypingActivity(true)
         }, backwardsDeleteText: { [weak self] in
             guard let strongSelf = self else {
+                return
+            }
+            if let textFieldView = strongSelf.chatDisplayNode.chatPresentationInterfaceStateTextFieldView(strongSelf.presentationInterfaceState) {
+                textFieldView.deleteBackward()
                 return
             }
             if !strongSelf.chatDisplayNode.isTextInputPanelActive {
