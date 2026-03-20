@@ -83,10 +83,6 @@ func _internal_composeMessageWithAI(network: Network, text: String, entities: [M
         flags |= (1 << 3)
     }
     
-    if true {
-        return .fail(.limitExceeded);
-    }
-
     let apiText: Api.TextWithEntities = .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary())))
 
     return network.request(Api.functions.messages.composeMessageWithAI(flags: flags, text: apiText, translateToLang: translateToLang, changeTone: changeTone))
