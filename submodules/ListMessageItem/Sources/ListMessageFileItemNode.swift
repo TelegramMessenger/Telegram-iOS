@@ -367,6 +367,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private let extensionIconText: TextNode
     public let iconImageNode: TransformImageNode
     private let iconStatusNode: SemanticStatusNode
+    private let iconButtonNode: HighlightTrackingButtonNode
     
     private let restrictionNode: ASDisplayNode
     
@@ -480,6 +481,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.iconStatusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white)
         self.iconStatusNode.isUserInteractionEnabled = false
         
+        self.iconButtonNode = HighlightTrackingButtonNode()
+        
         self.restrictionNode = ASDisplayNode()
         self.restrictionNode.isHidden = true
         
@@ -499,6 +502,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.offsetContainerNode.addSubnode(self.extensionIconNode)
         self.offsetContainerNode.addSubnode(self.extensionIconText)
         self.offsetContainerNode.addSubnode(self.iconStatusNode)
+        self.offsetContainerNode.addSubnode(self.iconButtonNode)
         
         self.addSubnode(self.restrictionNode)
         self.addSubnode(self.separatorNode)
@@ -535,6 +539,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
             })
             transition.updateAlpha(node: strongSelf.dateNode, alpha: isExtracted ? 0.0 : 1.0)
         }
+        
+        self.iconButtonNode.addTarget(self, action: #selector(self.iconButtonPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -548,6 +554,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
     
     override func setupItem(_ item: ListMessageItem) {
         self.item = item
+    }
+    
+    @objc private func iconButtonPressed() {
+        guard let item = self.item, let message = item.message else {
+            return
+        }
+        item.interaction.toggleMediaPlayback?(message)
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -920,7 +933,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 
                 if statusUpdated && item.displayFileInfo {
                     if let file = selectedMedia as? TelegramMediaFile {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList, isSavedMusic: item.isSavedMusic)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList, isSavedMusic: item.isSavedMusic, isAttachMusic: item.isAttachMusic)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus, !item.isDownloadList {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -1265,6 +1278,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     
                     transition.updateFrame(node: strongSelf.iconStatusNode, frame: iconFrame)
                     
+                    strongSelf.iconButtonNode.isHidden = item.interaction.toggleMediaPlayback == nil
+                    strongSelf.iconButtonNode.frame = iconFrame.insetBy(dx: -8.0, dy: -8.0)
+                    
                     let _ = extensionTextApply()
                     
                     strongSelf.currentIconImage = iconImage
@@ -1331,7 +1347,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                         }))*/
                     }
-                    
+                                        
                     strongSelf.updateStatus(transition: transition)
                     
                     if item.message == nil {
@@ -1505,7 +1521,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         var descriptionOffset: CGFloat = 0.0
         
         var downloadingString: String?
-        if let resourceStatus = self.resourceStatus {
+        if let resourceStatus = self.resourceStatus, !item.isAttachMusic {
             var maybeFetchStatus: MediaResourceStatus = .Local
             switch resourceStatus {
                 case .playbackStatus:
