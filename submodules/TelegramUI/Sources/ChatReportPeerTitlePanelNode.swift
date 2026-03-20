@@ -494,7 +494,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let view = UIButton()
                 if case .setPhoto = button {
                     if view.image(for: []) == nil || themeUpdated {
-                        if let sourceImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/OpenCamera"), color: interfaceState.theme.rootController.navigationBar.accentTextColor) {
+                        if let sourceImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Camera"), color: interfaceState.theme.rootController.navigationBar.accentTextColor) {
                             let image = generateImage(CGSize(width: sourceImage.size.width + 6.0, height: sourceImage.size.height), rotatedContext: { size, context in
                                 UIGraphicsPushContext(context)
                                 defer {

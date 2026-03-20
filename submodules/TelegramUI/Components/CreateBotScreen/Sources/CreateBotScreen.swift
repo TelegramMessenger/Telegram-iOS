@@ -439,9 +439,14 @@ private final class CreateBotSheetComponent: Component {
                 
                 //TODO:localize
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                self.environment?.controller()?.present(standardTextAlertController(
-                    theme: AlertControllerTheme(presentationData: presentationData),
-                    title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self.environment?.controller()?.push(textAlertController(
+                    context: component.context,
+                    title: nil,
+                    text: text,
+                    actions: [
+                        .init(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                    ]
+                ))
             })
         }
 
