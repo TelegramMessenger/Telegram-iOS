@@ -512,7 +512,7 @@ final class TextProcessingTextAreaComponent: Component {
                     }
                 }
                 shimmerEffectNode.updateAbsoluteRect(shimmerEffectNode.bounds, within: shimmerEffectNode.bounds.size)
-                shimmerEffectNode.update(backgroundColor: component.theme.list.plainBackgroundColor, foregroundColor: component.theme.list.mediaPlaceholderColor, shimmeringColor: component.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerEffectNode.bounds.size)
+                shimmerEffectNode.update(backgroundColor: component.theme.list.itemBlocksBackgroundColor, foregroundColor: component.theme.list.mediaPlaceholderColor, shimmeringColor: component.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerEffectNode.bounds.size)
                 alphaTransition.setAlpha(view: shimmerEffectNode.view, alpha: 1.0)
             } else {
                 if let shimmerEffectNode = self.shimmerEffectNode {
