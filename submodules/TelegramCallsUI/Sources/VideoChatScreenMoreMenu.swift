@@ -8,7 +8,6 @@ import DeleteChatPeerActionSheetItem
 import PeerListItemComponent
 import LegacyComponents
 import LegacyUI
-import WebSearchUI
 import MapResourceToAvatarSizes
 import LegacyMediaPickerUI
 import AvatarNode

@@ -1387,7 +1387,7 @@ public class AttachmentController: ViewController, MinimizableController {
 //            let previousHasButton = self.hasButton
             let hasButton = self.panel.isButtonVisible && !self.isDismissing
             self.hasButton = hasButton
-            if let controller = self.controller, controller.buttons.count > 1 || controller.hasTextInput {
+            if let controller = self.controller, controller.buttons.count > 1 || controller.hasTextInput || self.panel.hasMediaAccessoryPanel {
                 hasPanel = true
             }
             if !self.isPanelVisible {

@@ -1089,10 +1089,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             if dateHeaderAtBottom, let header = item.header {
                 insets.top += header.height
             }
-            if !mergedBottom, case .blocks = item.style {
-                insets.bottom += 35.0
-            }
-            
+
             let separatorRightInset: CGFloat = item.systemStyle == .glass ? 16.0 : 0.0
             
             var verticalInset: CGFloat = 0.0
@@ -1680,7 +1677,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let item = self.item, case .selectable = item.selection {
-            if self.bounds.contains(point) {
+            if !self.iconButtonNode.isHidden && self.iconButtonNode.frame.contains(point) {
+                
+            } else if self.bounds.contains(point) {
                 return self.view
             }
         }

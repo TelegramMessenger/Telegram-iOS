@@ -89,7 +89,6 @@ swift_library(
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/TemporaryCachedPeerDataManager:TemporaryCachedPeerDataManager",
         "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
-        "//submodules/WebSearchUI:WebSearchUI",
         "//submodules/MapResourceToAvatarSizes:MapResourceToAvatarSizes",
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",

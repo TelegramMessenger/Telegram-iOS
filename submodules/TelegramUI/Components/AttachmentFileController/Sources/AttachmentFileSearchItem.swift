@@ -22,6 +22,7 @@ import ItemListPeerActionItem
 import GlassBackgroundComponent
 import ActivityIndicator
 import SearchBarNode
+import PeerMessagesMediaPlaylist
 
 final class AttachmentFileSearchItem: ItemListControllerSearch {
     let context: AccountContext
@@ -216,11 +217,13 @@ private final class AttachmentFileSearchItemNode: ItemListControllerSearchNode {
 private final class AttachmentFileSearchContainerInteraction {
     let context: AccountContext
     let send: (Message) -> Void
+    let toggleMediaPlayback: (Message) -> Void
     let expandSection: (Int32) -> Void
     
-    init(context: AccountContext, send: @escaping (Message) -> Void, expandSection: @escaping (Int32) -> Void) {
+    init(context: AccountContext, send: @escaping (Message) -> Void, toggleMediaPlayback: @escaping (Message) -> Void, expandSection: @escaping (Int32) -> Void) {
         self.context = context
         self.send = send
+        self.toggleMediaPlayback = toggleMediaPlayback
         self.expandSection = expandSection
     }
 }
@@ -322,13 +325,15 @@ private enum AttachmentFileSearchEntry: Comparable, Identifiable {
             let itemInteraction = ListMessageItemInteraction(openMessage: { message, _ in
                 interaction.send(message)
                 return false
-            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMediaPlayback: { message in
+                interaction.toggleMediaPlayback(message)
+            }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
             let displayFileInfo = mode == .audio
             let isStoryMusic = mode == .audio
             let isDownloadList = mode == .audio
             
-            return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), systemStyle: .glass, context: interaction.context, chatLocation: .peer(id: PeerId(0)), interaction: itemInteraction, message: message, selection: .none, displayHeader: false, isDownloadList: isDownloadList, isStoryMusic: isStoryMusic, displayFileInfo: displayFileInfo, displayBackground: true, style: .blocks, sectionId: section)
+            return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), systemStyle: .glass, context: interaction.context, chatLocation: .peer(id: PeerId(0)), interaction: itemInteraction, message: message, selection: .none, displayHeader: false, isDownloadList: isDownloadList, isStoryMusic: isStoryMusic, isAttachMusic: true, displayFileInfo: displayFileInfo, displayBackground: true, style: .blocks, sectionId: section)
         case let .showMore(text, section):
             return ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), style: .blocks, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: section, editing: false, action: {
                 interaction.expandSection(section)
@@ -459,10 +464,17 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         self.addSubnode(self.emptyResultsTextNode)
         
     
-        let interaction = AttachmentFileSearchContainerInteraction(context: context, send: { [weak self] message in
-            send(message)
-            self?.listNode.clearHighlightAnimated(true)
-        }, expandSection: { [weak self] section in
+        let interaction = AttachmentFileSearchContainerInteraction(
+            context: context,
+            send: { [weak self] message in
+                send(message)
+                self?.listNode.clearHighlightAnimated(true)
+            },
+            toggleMediaPlayback: { message in
+                let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil)
+                context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
+            },
+            expandSection: { [weak self] section in
             self?.expandedSections.insert(section)
         })
         

@@ -9,7 +9,6 @@ import ContextUI
 import DeleteChatPeerActionSheetItem
 import UndoUI
 import LegacyComponents
-import WebSearchUI
 import MapResourceToAvatarSizes
 import LegacyUI
 import LegacyMediaPickerUI
@@ -475,25 +474,6 @@ extension VideoChatScreenComponent.View {
             mixin.forceDark = true
             mixin.stickersContext = LegacyPaintStickersContext(context: currentCall.accountContext)
             let _ = self.currentAvatarMixin.swap(mixin)
-            mixin.requestSearchController = { [weak self] assetsController in
-                guard let self, let currentCall = self.currentCall, let environment = self.environment else {
-                    return
-                }
-                let controller = WebSearchController(context: currentCall.accountContext, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
-                    assetsController?.dismiss()
-                    
-                    guard let self else {
-                        return
-                    }
-                    self.updateProfilePhoto(result)
-                }))
-                controller.navigationPresentation = .modal
-                environment.controller()?.push(controller)
-                
-                if fromGallery {
-                    completion()
-                }
-            }
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {
                     completion()

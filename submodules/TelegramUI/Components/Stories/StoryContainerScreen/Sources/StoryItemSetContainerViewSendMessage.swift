@@ -1948,7 +1948,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                             }
                             attachmentController?.dismiss(animated: true)
                             self.presentICloudFileGallery(view: view, peer: peer, replyMessageId: nil, replyToStoryId: focusedStoryId)
-                        }, presentDocumentScanner: nil, send: { [weak view] mediaReference in
+                        }, presentDocumentScanner: nil, send: { [weak view] mediaReferences in
                             guard let view, let component = view.component else {
                                 return
                             }
@@ -1956,7 +1956,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                             if let sendPaidMessageStars = component.slice.additionalPeerData.sendPaidMessageStars {
                                 messageAttributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: false))
                             }
-                            let message: EnqueueMessage = .message(text: "", attributes: messageAttributes, inlineStickers: [:], mediaReference: mediaReference, threadId: nil, replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                            let message: EnqueueMessage = .message(text: "", attributes: messageAttributes, inlineStickers: [:], mediaReference: mediaReferences.first!, threadId: nil, replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                             let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: [message.withUpdatedReplyToMessageId(nil)])
                             |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
                                 if let self, let view {
