@@ -59,6 +59,15 @@ final class TextProcessingTranslateContentComponent: Component {
         }
         var isProcessingUpdated: ((Bool) -> Void)?
         
+        fileprivate(set) var nonPremiumFloodTriggered: Bool = false {
+            didSet {
+                if self.isProcessing != oldValue {
+                    self.nonPremiumFloodTriggeredUpdated?(self.nonPremiumFloodTriggered)
+                }
+            }
+        }
+        var nonPremiumFloodTriggeredUpdated: ((Bool) -> Void)?
+        
         init() {
         }
     }
@@ -161,56 +170,48 @@ final class TextProcessingTranslateContentComponent: Component {
             }
             
             if let result = component.externalState.result, result.text == nil, self.processDisposable == nil {
+                let mappedMode: TelegramComposeAIMessageMode?
+                
                 switch component.mode {
                 case .translate:
-                    component.externalState.isProcessing = true
-                    self.processDisposable = (component.context.engine.messages.composeAIMessage(
-                        text: component.inputText,
-                        mode: .translate(toLanguage: result.language, emojify: component.externalState.emojify, style: component.externalState.style)
-                    ) |> deliverOnMainQueue).startStrict(next: { [weak self] processedText in
-                        guard let self, let component = self.component, let processedText else {
-                            return
-                        }
-                        component.externalState.isProcessing = false
-                        component.externalState.result = (result.language, processedText.text, processedText.diffRanges)
-                        if !self.isUpdating {
-                            self.state?.updated(transition: .spring(duration: 0.4))
-                        }
-                    })
+                    mappedMode = .translate(toLanguage: result.language, emojify: component.externalState.emojify, style: component.externalState.style)
                 case .stylize:
                     if !component.externalState.emojify && component.externalState.style == .neutral {
+                        mappedMode = nil
                         component.externalState.isProcessing = false
                         component.externalState.result = (result.language, component.inputText, [])
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.4))
                         }
                     } else {
-                        component.externalState.isProcessing = true
-                        self.processDisposable = (component.context.engine.messages.composeAIMessage(
-                            text: component.inputText,
-                            mode: .stylize(emojify: component.externalState.emojify, style: component.externalState.style)
-                        ) |> deliverOnMainQueue).startStrict(next: { [weak self] processedText in
-                            guard let self, let component = self.component, let processedText else {
-                                return
-                            }
-                            component.externalState.isProcessing = false
-                            component.externalState.result = (result.language, processedText.text, processedText.diffRanges)
-                            if !self.isUpdating {
-                                self.state?.updated(transition: .spring(duration: 0.4))
-                            }
-                        })
+                        mappedMode = .stylize(emojify: component.externalState.emojify, style: component.externalState.style)
                     }
                 case .fix:
+                    mappedMode = .proofread
+                }
+                
+                if let mappedMode {
                     component.externalState.isProcessing = true
                     self.processDisposable = (component.context.engine.messages.composeAIMessage(
                         text: component.inputText,
-                        mode: .proofread
+                        mode: mappedMode
                     ) |> deliverOnMainQueue).startStrict(next: { [weak self] processedText in
-                        guard let self, let component = self.component, let processedText else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         component.externalState.isProcessing = false
                         component.externalState.result = (result.language, processedText.text, processedText.diffRanges)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        }
+                    }, error: { [weak self] error in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.externalState.isProcessing = false
+                        if case .nonPremiumFlood = error {
+                            component.externalState.nonPremiumFloodTriggered = true
+                        }
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.4))
                         }

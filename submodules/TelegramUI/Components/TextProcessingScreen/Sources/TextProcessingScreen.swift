@@ -25,6 +25,7 @@ final class TextProcessingContentComponent: Component {
     
     final class ExternalState {
         fileprivate(set) var isProcessing: Bool = false
+        fileprivate(set) var nonPremiumFloodTriggered: Bool = false
         fileprivate(set) var result: TextWithEntities?
         
         init() {
@@ -115,6 +116,12 @@ final class TextProcessingContentComponent: Component {
                     component.externalState.isProcessing = isProcessing
                 }
             }
+            self.translateState.nonPremiumFloodTriggeredUpdated = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.nonPremiumFloodTriggeredUpdated()
+            }
             self.stylizeState.resultUpdated = { [weak self] result in
                 guard let self, let component = self.component else {
                     return
@@ -130,6 +137,12 @@ final class TextProcessingContentComponent: Component {
                 if case .stylize = self.currentMode {
                     component.externalState.isProcessing = isProcessing
                 }
+            }
+            self.stylizeState.nonPremiumFloodTriggeredUpdated = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.nonPremiumFloodTriggeredUpdated()
             }
             self.fixState.resultUpdated = { [weak self] result in
                 guard let self, let component = self.component else {
@@ -147,10 +160,23 @@ final class TextProcessingContentComponent: Component {
                     component.externalState.isProcessing = isProcessing
                 }
             }
+            self.fixState.nonPremiumFloodTriggeredUpdated = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.nonPremiumFloodTriggeredUpdated()
+            }
         }
         
         required init?(coder: NSCoder) {
             preconditionFailure()
+        }
+        
+        private func nonPremiumFloodTriggeredUpdated() {
+            guard let component = self.component else {
+                return
+            }
+            component.externalState.nonPremiumFloodTriggered = self.translateState.nonPremiumFloodTriggered || self.stylizeState.nonPremiumFloodTriggered || self.fixState.nonPremiumFloodTriggered
         }
 
         func update(component: TextProcessingContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
@@ -250,6 +276,7 @@ final class TextProcessingContentComponent: Component {
                     component: AnyComponent(TabBarComponent(
                         theme: environment.theme,
                         tintSelectedItem: false,
+                        isLiftedStateEnabled: false,
                         strings: environment.strings,
                         items: tabs,
                         search: nil,
@@ -564,23 +591,49 @@ private final class TextProcessingSheetComponent: Component {
             let performMainAction: () -> Void
             var performSendAction: ((TextWithEntities) -> Void)?
             let isMainActionEnabled: Bool
-            switch component.mode {
-            case let .edit(completion, send):
-                performSendAction = send
-                isMainActionEnabled = !self.contentExternalState.isProcessing
+            //TODO:localize (for AI: don't remove this line)
+            let actionButtonTitle: String
+            
+            if self.contentExternalState.nonPremiumFloodTriggered {
+                isMainActionEnabled = true
+                actionButtonTitle = "Increase Limit"
                 performMainAction = { [weak self] in
-                    guard let self else {
+                    guard let self, let component = self.component else {
                         return
                     }
-                    if let result = self.contentExternalState.result {
-                        completion(result)
+                    
+                    let context = component.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = component.context.sharedContext.makePremiumDemoController(context: component.context, subject: .doubleLimits, forceDark: false, action: {
+                        let controller = component.context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
+                        replaceImpl?(controller)
+                    }, dismissed: nil)
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
                     }
-                    dismiss(true)
+                    self.environment?.controller()?.push(controller)
                 }
-            case .translate:
-                isMainActionEnabled = true
-                performMainAction = {
-                    dismiss(true)
+            } else {
+                switch component.mode {
+                case let .edit(completion, send):
+                    actionButtonTitle = "Apply"
+                    performSendAction = send
+                    isMainActionEnabled = !self.contentExternalState.isProcessing
+                    performMainAction = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if let result = self.contentExternalState.result {
+                            completion(result)
+                        }
+                        dismiss(true)
+                    }
+                case .translate:
+                    actionButtonTitle = "Close"
+                    isMainActionEnabled = true
+                    performMainAction = {
+                        dismiss(true)
+                    }
                 }
             }
             let copyCurrentResult = component.copyCurrentResult
@@ -594,16 +647,12 @@ private final class TextProcessingSheetComponent: Component {
                 }
             }
 
-            //TODO:localize (for AI: don't remove this line)
             let titleString: String
-            let actionButtonTitle: String
             switch component.mode {
             case .edit:
                 titleString = "AI Editor"
-                actionButtonTitle = "Apply"
             case .translate:
                 titleString = "Translation"
-                actionButtonTitle = "Close"
             }
 
             let sheetSize = self.sheet.update(

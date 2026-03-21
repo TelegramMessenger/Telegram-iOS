@@ -1775,7 +1775,7 @@ public extension TelegramEngine {
             return _internal_composeAIMessageStyles(account: self.account)
         }
         
-        public func composeAIMessage(text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult?, NoError> {
+        public func composeAIMessage(text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult, TelegramAIComposeMessageError> {
             return _internal_composeAIMessage(account: self.account, text: text, mode: mode)
         }
     }

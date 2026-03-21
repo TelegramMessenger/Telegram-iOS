@@ -471,7 +471,12 @@ func _internal_composeAIMessageStyles(account: Account) -> Signal<[TelegramCompo
     }
 }
 
-func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult?, NoError> {
+public enum TelegramAIComposeMessageError {
+    case generic
+    case nonPremiumFlood
+}
+
+func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult, TelegramAIComposeMessageError> {
     var flags: Int32 = 0
     var translateToLang: String?
     var changeTone: String?
@@ -505,14 +510,14 @@ func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: 
     
     return account.network.request(Api.functions.messages.composeMessageWithAI(flags: flags, text: inputText, translateToLang: translateToLang, changeTone: changeTone))
     |> delay(0.4, queue: .mainQueue())
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.messages.ComposedMessageWithAI?, NoError> in
-        return .single(nil)
-    }
-    |> mapToSignal { result -> Signal<TelegramAIComposeMessageResult?, NoError> in
-        guard let result else {
-            return .single(nil)
+    |> `catch` { error -> Signal<Api.messages.ComposedMessageWithAI, TelegramAIComposeMessageError> in
+        if error.errorDescription == "AICOMPOSE_FLOOD_PREMIUM" {
+            return .fail(.nonPremiumFlood)
+        } else {
+            return .fail(.generic)
         }
+    }
+    |> mapToSignal { result -> Signal<TelegramAIComposeMessageResult, TelegramAIComposeMessageError> in
         switch result {
         case let .composedMessageWithAI(composedMessageWithAI):
             var diffRanges: [Range<Int>] = []

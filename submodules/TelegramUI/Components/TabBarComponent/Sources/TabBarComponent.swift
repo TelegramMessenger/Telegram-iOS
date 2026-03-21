@@ -348,6 +348,7 @@ public final class TabBarComponent: Component {
     
     public let theme: PresentationTheme
     public let tintSelectedItem: Bool
+    public let isLiftedStateEnabled: Bool
     public let strings: PresentationStrings
     public let items: [Item]
     public let search: Search?
@@ -357,6 +358,7 @@ public final class TabBarComponent: Component {
     public init(
         theme: PresentationTheme,
         tintSelectedItem: Bool = true,
+        isLiftedStateEnabled: Bool = true,
         strings: PresentationStrings,
         items: [Item],
         search: Search?,
@@ -365,6 +367,7 @@ public final class TabBarComponent: Component {
     ) {
         self.theme = theme
         self.tintSelectedItem = tintSelectedItem
+        self.isLiftedStateEnabled = isLiftedStateEnabled
         self.strings = strings
         self.items = items
         self.search = search
@@ -377,6 +380,9 @@ public final class TabBarComponent: Component {
             return false
         }
         if lhs.tintSelectedItem != rhs.tintSelectedItem {
+            return false
+        }
+        if lhs.isLiftedStateEnabled != rhs.isLiftedStateEnabled {
             return false
         }
         if lhs.strings !== rhs.strings {
@@ -874,7 +880,7 @@ public final class TabBarComponent: Component {
             
             lensSelection.x = max(0.0, min(lensSelection.x, lensSize.width - lensSelection.width))
             
-            self.liquidLensView.update(size: lensSize, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: lensSize.height), inset: 4.0, isDark: component.theme.overallDarkAppearance, isLifted: self.selectionGestureState != nil, isCollapsed: isLensCollapsed, transition: transition)
+            self.liquidLensView.update(size: lensSize, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: lensSize.height), inset: 4.0, isDark: component.theme.overallDarkAppearance, isLifted: self.selectionGestureState != nil && component.isLiftedStateEnabled, isCollapsed: isLensCollapsed, transition: transition)
 
             var size = tabsSize
 

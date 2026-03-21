@@ -3558,7 +3558,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 transition.updateFrame(view: aiButton.button, frame: aiButtonFrame)
                 transition.updateFrame(view: aiButton.icon, frame: image.size.centered(in: aiButtonFrame))
             }
-            let aiButtonAlpha: CGFloat = actualTextFieldFrame.height >= 78.0 ? 1.0 : 0.0
+            let aiButtonAlpha: CGFloat = actualTextFieldFrame.height >= 70.0 ? 1.0 : 0.0
             transition.updateAlpha(layer: aiButton.button.layer, alpha: aiButtonAlpha)
             transition.updateAlpha(layer: aiButton.icon.layer, alpha: aiButtonAlpha)
         } else if let aiButton = self.aiButton {
