@@ -69,6 +69,7 @@ func chatHistoryEntriesForView(
     var adminRanks: [PeerId: CachedChannelAdminRank] = [:]
     var stickersEnabled = true
     var chatPeer: Peer?
+    var cachedPeerDataPeers: [PeerId: Peer] = [:]
     if let peerId = location.peerId {
         for additionalEntry in view.additionalData {
             if case let .cacheEntry(id, data) = additionalEntry {
@@ -97,6 +98,8 @@ func chatHistoryEntriesForView(
                         }
                     }
                 }
+            } else if case let .cachedPeerDataPeers(_, peers) = additionalEntry {
+                cachedPeerDataPeers = peers
             }
         }
     }
@@ -525,17 +528,19 @@ func chatHistoryEntriesForView(
                 }
             }
             if case let .peer(peerId) = location, peerId.isReplies {
-                entries.insert(.ChatInfoEntry(.botInfo(title: "", text: presentationData.strings.RepliesChat_DescriptionText, photo: nil, video: nil), presentationData), at: 0)
+                entries.insert(.ChatInfoEntry(.botInfo(title: "", text: presentationData.strings.RepliesChat_DescriptionText, photo: nil, video: nil, peer: nil, managedByBot: nil), presentationData), at: 0)
             } else if case let .peer(peerId) = location, peerId.isVerificationCodes {
-                entries.insert(.ChatInfoEntry(.botInfo(title: "", text: presentationData.strings.VerificationCodes_DescriptionText, photo: nil, video: nil), presentationData), at: 0)
+                entries.insert(.ChatInfoEntry(.botInfo(title: "", text: presentationData.strings.VerificationCodes_DescriptionText, photo: nil, video: nil, peer: nil, managedByBot: nil), presentationData), at: 0)
             } else if let cachedPeerData = cachedPeerData as? CachedUserData {
                 if let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                     if location.threadId == nil {
                         if let subject, case .pinnedMessages = subject {
                         } else {
-                            entries.insert(.ChatInfoEntry(.botInfo(title: presentationData.strings.Bot_DescriptionTitle, text: botInfo.description, photo: botInfo.photo, video: botInfo.video), presentationData), at: 0)
+                            entries.insert(.ChatInfoEntry(.botInfo(title: presentationData.strings.Bot_DescriptionTitle, text: botInfo.description, photo: botInfo.photo, video: botInfo.video, peer: nil, managedByBot: nil), presentationData), at: 0)
                         }
                     }
+                } else if let botManagerId = cachedPeerData.botManagerId, let managedByBot = cachedPeerDataPeers[botManagerId], let peer = chatPeer.flatMap(EnginePeer.init) {
+                    entries.insert(.ChatInfoEntry(.botInfo(title: "", text: "", photo: nil, video: nil, peer: peer, managedByBot: EnginePeer(managedByBot)), presentationData), at: 0)
                 } else if let peerStatusSettings = cachedPeerData.peerStatusSettings, peerStatusSettings.registrationDate != nil || peerStatusSettings.phoneCountry != nil {
                     if peerStatusSettings.flags.contains(.canAddContact) || peerStatusSettings.flags.contains(.canReport) || peerStatusSettings.flags.contains(.canBlock) {
                         

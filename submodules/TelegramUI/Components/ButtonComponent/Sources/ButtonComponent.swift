@@ -382,6 +382,7 @@ public final class ButtonComponent: Component {
 
     public let background: Background
     public let content: AnyComponentWithIdentity<Empty>
+    public let contentInsets: UIEdgeInsets?
     public let fitToContentWidth: Bool
     public let isEnabled: Bool
     public let tintWhenDisabled: Bool
@@ -392,6 +393,7 @@ public final class ButtonComponent: Component {
     public init(
         background: Background,
         content: AnyComponentWithIdentity<Empty>,
+        contentInsets: UIEdgeInsets? = nil,
         fitToContentWidth: Bool = false,
         isEnabled: Bool = true,
         tintWhenDisabled: Bool = true,
@@ -401,6 +403,7 @@ public final class ButtonComponent: Component {
     ) {
         self.background = background
         self.content = content
+        self.contentInsets = contentInsets
         self.fitToContentWidth = fitToContentWidth
         self.isEnabled = isEnabled
         self.tintWhenDisabled = tintWhenDisabled
@@ -414,6 +417,9 @@ public final class ButtonComponent: Component {
             return false
         }
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.contentInsets != rhs.contentInsets {
             return false
         }
         if lhs.fitToContentWidth != rhs.fitToContentWidth {
@@ -558,12 +564,19 @@ public final class ButtonComponent: Component {
             if [.glass, .actualGlass].contains(component.background.style), component.background.cornerRadius == 10.0 {
                 cornerRadius = availableSize.height * 0.5
             }
+            
+            var maxContentWidth = availableSize.width - cornerRadius
+            if let contentInsets = component.contentInsets {
+                if contentInsets.left == 0.0 && contentInsets.right == 0.0 {
+                    maxContentWidth = availableSize.width
+                }
+            }
 
             let contentSize = contentItem.view.update(
                 transition: contentItemTransition,
                 component: component.content.component,
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - cornerRadius, height: availableSize.height)
+                containerSize: CGSize(width: maxContentWidth, height: availableSize.height)
             )
             
             var size = availableSize

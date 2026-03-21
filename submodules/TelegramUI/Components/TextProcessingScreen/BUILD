@@ -33,6 +33,8 @@ swift_library(
         "//submodules/TelegramUI/Components/CheckComponent",
         "//submodules/ShimmerEffect",
         "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/ListActionItemComponent",
     ],
     visibility = [
         "//visibility:public",

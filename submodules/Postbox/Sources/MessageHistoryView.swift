@@ -835,6 +835,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
         }
         
         var updatedCachedPeerDataMessages = false
+        var updatedCachedPeerDataPeers = false
         var currentCachedPeerData: CachedPeerData?
         
         let additionalDatas = self.additionalDatas
@@ -848,11 +849,16 @@ final class MutableMessageHistoryView: MutablePostboxView {
                     if currentData?.messageIds != updatedData.messageIds {
                         updatedCachedPeerDataMessages = true
                     }
+                    if currentData?.peerIds != updatedData.peerIds {
+                        updatedCachedPeerDataPeers = true
+                    }
                     currentCachedPeerData = updatedData
                     updated[i] = .cachedPeerData(peerId, updatedData)
                     hasChanges = true
                 }
             case .cachedPeerDataMessages:
+                break
+            case .cachedPeerDataPeers:
                 break
             case let .message(id, currentMessages):
                 let currentGroupingKey = currentMessages.first?.groupingKey
@@ -987,6 +993,25 @@ final class MutableMessageHistoryView: MutablePostboxView {
                         }
                     }
                     updated[i] = .cachedPeerDataMessages(peerId, messages)
+                default:
+                    break
+                }
+            }
+        }
+        if updatedCachedPeerDataPeers {
+            hasChanges = true
+            for i in 0 ..< additionalDatas.count {
+                switch additionalDatas[i] {
+                case let .cachedPeerDataPeers(peerId, _):
+                    var peers: [PeerId: Peer] = [:]
+                    if let cachedData = currentCachedPeerData {
+                        for id in cachedData.peerIds {
+                            if let peer = postbox.peerTable.get(id) {
+                                peers[id] = peer
+                            }
+                        }
+                    }
+                    updated[i] = .cachedPeerDataPeers(peerId, peers)
                 default:
                     break
                 }

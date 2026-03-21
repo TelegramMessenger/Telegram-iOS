@@ -19,6 +19,506 @@ import PresentationDataUtils
 import LegacyComponents
 import LegacyMediaPickerUI
 
+private func sharedSetupProfilePhotoUpload(context: AccountContext, image: UIImage, mode: PeerInfoAvatarEditingMode) -> LocalFileMediaResource? {
+    guard let data = image.jpegData(compressionQuality: 0.6) else {
+        return nil
+    }
+    
+    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: mode == .custom)
+    
+    let _ = representation
+    
+    return resource
+}
+
+public extension PeerInfoScreenImpl {
+    static func displaySetPhoto(
+        parentController: ViewController,
+        context: AccountContext,
+        peer: EnginePeer,
+        completion: @escaping (UIImage?) -> Void = { _ in },
+        completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? = { _, _ in nil }
+    ) {
+        var isForum = false
+        if case let .channel(channel) = peer, channel.isForumOrMonoForum {
+            isForum = true
+        }
+        let _ = isForum
+        
+        let emojiMarkup: TelegramMediaImage.EmojiMarkup? = nil
+        
+        let mode: PeerInfoAvatarEditingMode = .generic
+            
+        let keyboardInputData = Promise<AvatarKeyboardInputData>()
+        keyboardInputData.set(AvatarEditorScreen.inputData(context: context, isGroup: peer.id.namespace != Namespaces.Peer.CloudUser))
+        
+        var hasPhotos = false
+        if !peer.profileImageRepresentations.isEmpty {
+            hasPhotos = true
+        }
+
+        let hasDeleteButton = hasPhotos
+        
+        struct ConfirmationAlert {
+            let title: String
+            let photoText: String
+            let videoText: String
+            let action: String
+        }
+        let confirmationAlert: ConfirmationAlert? = nil
+        
+        var dismissImpl: (() -> Void)?
+        var avatarPickerHolder: Any?
+        let _ = avatarPickerHolder
+        
+        let (mainController, pickerHolder) = context.sharedContext.makeAvatarMediaPickerScreen(context: context, getSourceRect: { return nil }, canDelete: hasDeleteButton, performDelete: {
+        }, completion: { [weak parentController] result, transitionView, transitionRect, transitionImage, fromCamera, transitionOut, cancelled in
+            avatarPickerHolder = nil
+            
+            guard let parentController else {
+                return
+            }
+            
+            var resultImage: UIImage?
+            let uploadStatusPromise = Promise<PeerInfoAvatarUploadStatus>(.progress(0.0))
+            
+            let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
+            if let asset = result as? PHAsset {
+                subject = .single(.asset(asset))
+            } else if let image = result as? UIImage {
+                subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight, fromCamera: false))
+            } else if let result = result as? Signal<CameraScreenImpl.Result, NoError> {
+                subject = result
+                |> map { value -> MediaEditorScreenImpl.Subject? in
+                    switch value {
+                    case .pendingImage:
+                        return nil
+                    case let .image(image):
+                        return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft, fromCamera: false)
+                    case let .video(video):
+                        return .video(videoPath: video.videoPath, thumbnail: video.coverImage, mirror: video.mirror, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: video.dimensions, duration: video.duration, videoPositionChanges: [], additionalVideoPosition: .topLeft, fromCamera: false)
+                    default:
+                        return nil
+                    }
+                }
+            } else {
+                let peerType: AvatarEditorScreen.PeerType
+                if case .legacyGroup = peer {
+                    peerType = .group
+                } else if case let .channel(channel) = peer {
+                    if case .group = channel.info {
+                        peerType = channel.isForumOrMonoForum ? .forum : .group
+                    } else {
+                        peerType = .channel
+                    }
+                } else {
+                    peerType = .user
+                }
+                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: peerType, markup: emojiMarkup)
+                controller.imageCompletion = { [weak parentController] image, commit in
+                    guard let parentController else {
+                        return
+                    }
+                    resultImage = image
+                    updateProfilePhoto(parentController: parentController, context: context, peer: peer, image: image, mode: mode, uploadStatus: uploadStatusPromise)
+                    commit()
+                }
+                controller.videoCompletion = { [weak parentController] image, url, values, markup, commit in
+                    resultImage = image
+                    let _ = parentController
+                    updateProfileVideo(context: context, image: image, video: nil, values: nil, markup: markup, mode: mode, uploadStatus: uploadStatusPromise)
+                    commit()
+                }
+                parentController.push(controller)
+                return
+            }
+            
+            let editorController = MediaEditorScreenImpl(
+                context: context,
+                mode: .avatarEditor,
+                subject: subject,
+                transitionIn: fromCamera ? .camera : transitionView.flatMap({ .gallery(
+                    MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(
+                        sourceView: $0,
+                        sourceRect: transitionRect,
+                        sourceImage: transitionImage
+                    )
+                ) }),
+                transitionOut: { finished, isNew in
+                    if !finished {
+                        if let transitionView {
+                            return MediaEditorScreenImpl.TransitionOut(
+                                destinationView: transitionView,
+                                destinationRect: transitionView.bounds,
+                                destinationCornerRadius: 0.0
+                            )
+                        }
+                    } else if let resultImage, let transitionOutView = completedWithUploadingImage(resultImage, uploadStatusPromise.get()) {
+                        transitionOutView.isHidden = true
+                        return MediaEditorScreenImpl.TransitionOut(
+                            destinationView: transitionOutView,
+                            destinationRect: transitionOutView.bounds,
+                            destinationCornerRadius: transitionOutView.bounds.height * 0.5,
+                            completion: { [weak transitionOutView] in
+                                transitionOutView?.isHidden = false
+                            }
+                        )
+                    }
+                    return nil
+                },
+                willComplete: { [weak parentController] image, isVideo, commit in
+                    if let confirmationAlert, let image {
+                        let controller = photoUpdateConfirmationController(context: context, peer: peer, image: image, text: isVideo ? confirmationAlert.videoText : confirmationAlert.photoText, doneTitle: confirmationAlert.action, commit: {
+                            commit()
+                        })
+                        parentController?.presentInGlobalOverlay(controller)
+                    } else {
+                        commit()
+                    }
+                },
+                completion: { [weak parentController] results, commit in
+                    guard let parentController else {
+                        return
+                    }
+                    guard let result = results.first else {
+                        return
+                    }
+                    switch result.media {
+                    case let .image(image, _):
+                        resultImage = image
+                        updateProfilePhoto(parentController: parentController, context: context, peer: peer, image: image, mode: mode, uploadStatus: uploadStatusPromise)
+                        commit({})
+                    case let .video(video, coverImage, values, _, _):
+                        if let coverImage {
+                            resultImage = coverImage
+                            updateProfileVideo(context: context, image: coverImage, video: video, values: values, markup: nil, mode: mode, uploadStatus: uploadStatusPromise)
+                        }
+                        commit({})
+                    default:
+                        break
+                    }
+                    dismissImpl?()
+                } as ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
+            )
+            editorController.cancelled = { _ in
+                cancelled()
+            }
+            parentController.push(editorController)
+        }, dismissed: {
+        })
+        avatarPickerHolder = pickerHolder
+        if let mainController {
+            dismissImpl = { [weak parentController, weak mainController] in
+                let _ = parentController
+                if let mainController, let navigationController = mainController.navigationController {
+                    var viewControllers = navigationController.viewControllers
+                    viewControllers = viewControllers.filter { c in
+                        return !(c is CameraScreen) && c !== mainController
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
+                }
+                /*if let self, let navigationController = self.parentController, let mainController {
+                    var viewControllers = navigationController.viewControllers
+                    viewControllers = viewControllers.filter { c in
+                        return !(c is CameraScreen) && c !== mainController
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
+                }*/
+            }
+            if mainController is ActionSheetController {
+                parentController.present(mainController, in: .window(.root))
+            } else {
+                mainController.navigationPresentation = .flatModal
+                mainController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+                parentController.push(mainController)
+            }
+        }
+    }
+    
+    static func updateProfilePhoto(parentController: ViewController, context: AccountContext, peer: EnginePeer, image: UIImage, mode: PeerInfoAvatarEditingMode, uploadStatus: Promise<PeerInfoAvatarUploadStatus>?) {
+        guard let resource = sharedSetupProfilePhotoUpload(context: context, image: image, mode: mode) else {
+            uploadStatus?.set(.single(.done))
+            return
+        }
+        
+        let postbox = context.account.postbox
+        let signal: Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError>
+        
+        signal = context.engine.peers.updatePeerPhoto(peerId: peer.id, photo: context.engine.peers.uploadedPeerPhoto(resource: resource), mapResourceToAvatarSizes: { resource, representations in
+            return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+        })
+        
+        var dismissStatus: (() -> Void)?
+        let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+        if "".isEmpty {
+            let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                //self?.controllerNode.updateAvatarDisposable.set(nil)
+                dismissStatus?()
+            }))
+            dismissStatus = { [weak statusController] in
+                statusController?.dismiss()
+            }
+            if let topController = parentController.navigationController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
+            } else {
+                parentController.presentInGlobalOverlay(statusController)
+            }
+        }
+
+        let updateAvatarDisposable = MetaDisposable()
+        updateAvatarDisposable.set((signal
+        |> deliverOnMainQueue).startStandalone(next: { [weak parentController] result in
+            guard let parentController else {
+                return
+            }
+            let _ = parentController
+            switch result {
+            case .complete:
+                uploadStatus?.set(.single(.done))
+            case let .progress(value):
+                uploadStatus?.set(.single(.progress(value)))
+            }
+            
+            if case .complete = result {
+                dismissStatus?()
+                
+                /*let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                    if let strongSelf = self, let peer {
+                        switch mode {
+                        case .fallback:
+                            (strongSelf.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicPhotoSuccess, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        case .custom:
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessPhotoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            
+                            let _ = (strongSelf.context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, peerId: strongSelf.peerId, fetch: peerInfoProfilePhotos(context: strongSelf.context, peerId: strongSelf.peerId)) |> ignoreValues).startStandalone()
+                        case .suggest:
+                            if let navigationController = (strongSelf.navigationController as? NavigationController) {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .default, completion: { _ in
+                                }))
+                            }
+                        case .accept:
+                            (strongSelf.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccessText, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                                if case .info = action {
+                                    self?.parentController?.openSettings(edit: false)
+                                }
+                                return false
+                            }), in: .current)
+                        default:
+                            break
+                        }
+                    }
+                })*/
+            }
+        }))
+    }
+    
+    static func updateProfileVideo(context: AccountContext, image: UIImage, video: Any?, values: Any?, markup: UploadPeerPhotoMarkup?) {
+        updateProfileVideo(context: context, image: image, video: video as? MediaEditorScreenImpl.MediaResult.VideoResult, values: values as? MediaEditorValues, markup: markup, mode: .generic, uploadStatus: nil)
+    }
+        
+    static func updateProfileVideo(context: AccountContext, image: UIImage, video: MediaEditorScreenImpl.MediaResult.VideoResult?, values: MediaEditorValues?, markup: UploadPeerPhotoMarkup?, mode: PeerInfoAvatarEditingMode, uploadStatus: Promise<PeerInfoAvatarUploadStatus>?) {
+        /*var uploadVideo = true
+        if let _ = markup {
+            if let data = self.context.currentAppConfiguration.with({ $0 }).data, let uploadVideoValue = data["upload_markup_video"] as? Bool, uploadVideoValue {
+                uploadVideo = true
+            } else {
+                uploadVideo = false
+            }
+        }
+        guard let photoResource = self.setupProfilePhotoUpload(image: image, mode: mode, indefiniteProgress: !uploadVideo) else {
+            uploadStatus?.set(.single(.done))
+            return
+        }
+        
+        var videoStartTimestamp: Double? = nil
+        if let values, let coverImageTimestamp =  values.coverImageTimestamp, coverImageTimestamp > 0.0 {
+            videoStartTimestamp = coverImageTimestamp - (values.videoTrimRange?.lowerBound ?? 0.0)
+        }
+    
+        let account = self.context.account
+        let context = self.context
+        
+        let videoResource: Signal<TelegramMediaResource?, UploadPeerPhotoError>
+        if uploadVideo, let video, let values {
+            var exportSubject: Signal<(MediaEditorVideoExport.Subject, Double), NoError>?
+            switch video {
+            case let .imageFile(path):
+                if let image = UIImage(contentsOfFile: path) {
+                    exportSubject = .single((.image(image: image), 3.0))
+                }
+            case let .videoFile(path):
+                let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
+                exportSubject = .single((.video(asset: asset, isStory: false), asset.duration.seconds))
+            case let .asset(localIdentifier):
+                exportSubject = Signal { subscriber in
+                    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+                    if fetchResult.count != 0 {
+                        let asset = fetchResult.object(at: 0)
+                        if asset.mediaType == .video {
+                            PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
+                                if let avAsset {
+                                    subscriber.putNext((.video(asset: avAsset, isStory: true), avAsset.duration.seconds))
+                                    subscriber.putCompletion()
+                                }
+                            }
+                        } else {
+                            let options = PHImageRequestOptions()
+                            options.deliveryMode = .highQualityFormat
+                            PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
+                                if let image {
+                                    subscriber.putNext((.image(image: image), 3.0))
+                                    subscriber.putCompletion()
+                                }
+                            }
+                        }
+                    }
+                    return EmptyDisposable
+                }
+            }
+            
+            if let exportSubject {
+                videoResource = exportSubject
+                |> castError(UploadPeerPhotoError.self)
+                |> mapToSignal { exportSubject, duration in
+                    return Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
+                        let configuration = recommendedVideoExportConfiguration(values: values, duration: duration, forceFullHd: true, frameRate: 60.0, isAvatar: true)
+                        let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
+                        let videoExport = MediaEditorVideoExport(postbox: context.account.postbox, subject: exportSubject, configuration: configuration, outputPath: tempFile.path, textScale: 2.0)
+                        let _ = (videoExport.status
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] status in
+                            guard let self else {
+                                return
+                            }
+                            switch status {
+                            case .completed:
+                                if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: .mappedIfSafe) {
+                                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                                    account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                    subscriber.putNext(resource)
+                                    subscriber.putCompletion()
+                                }
+                                EngineTempBox.shared.dispose(tempFile)
+                            case let .progress(progress):
+                                Queue.mainQueue().async {
+                                    self.controllerNode.state = self.controllerNode.state.withAvatarUploadProgress(.value(CGFloat(progress * 0.45)))
+                                    self.requestLayout(transition: .immediate)
+                                }
+                            default:
+                                break
+                            }
+                        })
+                        
+                        return EmptyDisposable
+                    }
+                }
+            } else {
+                videoResource = .single(nil)
+            }
+        } else {
+            videoResource = .single(nil)
+        }
+        
+        var dismissStatus: (() -> Void)?
+        if [.suggest, .fallback, .accept].contains(mode) {
+            let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: { [weak self] in
+                self?.controllerNode.updateAvatarDisposable.set(nil)
+                dismissStatus?()
+            }))
+            dismissStatus = { [weak statusController] in
+                statusController?.dismiss()
+            }
+            if let topController = self.navigationController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
+            } else if let topController = self.parentController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
+            } else {
+                self.presentInGlobalOverlay(statusController)
+            }
+        }
+        
+        let peerId = self.peerId
+        let isSettings = self.isSettings
+        let isMyProfile = self.isMyProfile
+        self.controllerNode.updateAvatarDisposable.set((videoResource
+        |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
+            if isSettings || isMyProfile {
+                if case .fallback = mode {
+                    return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    })
+                } else {
+                    return context.engine.accountData.updateAccountPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    })
+                }
+            } else if case .custom = mode {
+                return context.engine.contacts.updateContactPhoto(peerId: peerId, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mode: .custom, mapResourceToAvatarSizes: { resource, representations in
+                    return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                })
+            } else if case .suggest = mode {
+                return context.engine.contacts.updateContactPhoto(peerId: peerId, resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mode: .suggest, mapResourceToAvatarSizes: { resource, representations in
+                    return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                })
+            } else {
+                return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: photoResource), video: videoResource.flatMap { context.engine.peers.uploadedPeerVideo(resource: $0) |> map(Optional.init) }, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
+                    return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                })
+            }
+        }
+        |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+            guard let strongSelf = self else {
+                return
+            }
+            switch result {
+            case .complete:
+                uploadStatus?.set(.single(.done))
+                strongSelf.controllerNode.state = strongSelf.controllerNode.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
+            case let .progress(value):
+                uploadStatus?.set(.single(.progress(value)))
+                strongSelf.controllerNode.state = strongSelf.controllerNode.state.withAvatarUploadProgress(.value(CGFloat(0.45 + value * 0.55)))
+            }
+            if let (layout, navigationHeight) = strongSelf.controllerNode.validLayout {
+                strongSelf.controllerNode.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+            }
+            
+            if case .complete = result {
+                dismissStatus?()
+                
+                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.peerId))
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                    if let strongSelf = self, let peer {
+                        switch mode {
+                        case .fallback:
+                            (strongSelf.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicVideoSuccess, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        case .custom:
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, title: nil, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessVideoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            
+                            let _ = (strongSelf.context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, peerId: strongSelf.peerId, fetch: peerInfoProfilePhotos(context: strongSelf.context, peerId: strongSelf.peerId)) |> ignoreValues).startStandalone()
+                        case .suggest:
+                            if let navigationController = (strongSelf.navigationController as? NavigationController) {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .default, completion: { _ in
+                                }))
+                            }
+                        case .accept:
+                            (strongSelf.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccessText, round: true, undoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                                if case .info = action {
+                                    self?.parentController?.openSettings(edit: false)
+                                }
+                                return false
+                            }), in: .current)
+                        default:
+                            break
+                        }
+                    }
+                })
+            }
+        }))*/
+    }
+}
+
 extension PeerInfoScreenImpl {
     func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }, completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? = { _, _ in nil }) {
         guard !self.presentAccountFrozenInfoIfNeeded() else {

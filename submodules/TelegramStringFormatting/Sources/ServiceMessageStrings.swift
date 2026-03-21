@@ -1816,8 +1816,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = NSAttributedString(string: strings.Notification_CopyProtection_Request(peerName).string, font: titleFont, textColor: primaryTextColor)
                 }
-            case .managedBotCreated:
-                attributedString = nil
+            case let .managedBotCreated(botId):
+                let peerName = message.peers[botId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                let peerIds: [(Int, EnginePeer.Id?)] = [(0, botId)]
+                let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                attributedString = addAttributesToStringWithRanges(strings.Notification_ManagedBotCreated(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
             case let .pollOptionAppended(option):
                 var optionTitle = "DELETED"
                 for attribute in message.attributes {

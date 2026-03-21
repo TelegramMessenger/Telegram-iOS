@@ -15977,5 +15977,9 @@ Error: %8$@";
 "ChannelMessages.LinkTitle" = "LINK TO DIRECT MESSAGES";
 "Chat.ContactChannel" = "CONTACT CHANNEL";
 
+"TextProcessingStyle.Neutral" = "Neutral";
+
 "Notification.PollAddedOption" = "%1$@ added the option \"%2$@\" to the poll";
 "Notification.PollAddedOptionYou" = "You added the option \"%1$@\" to the poll";
+
+"Notification.ManagedBotCreated" = "%@ bot created";

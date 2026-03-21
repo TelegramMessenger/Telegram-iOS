@@ -2576,6 +2576,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             openStarsPurchase: { _ in
             },
             openRankInfo: { _, _, _ in
+            }, openSetPeerAvatar: {
             },
             automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
             pollActionState: ChatInterfacePollActionState(),
@@ -2686,6 +2687,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             present(legacyController)
         })
+    }
+    
+    public func displaySetPhoto(
+        parentController: ViewController,
+        context: AccountContext,
+        peer: EnginePeer,
+        completion: @escaping (UIImage?) -> Void,
+        completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
+    ) {
+        PeerInfoScreenImpl.displaySetPhoto(
+            parentController: parentController,
+            context: context,
+            peer: peer,
+            completion: completion,
+            completedWithUploadingImage: completedWithUploadingImage
+        )
     }
     
     public func makeInstantPageController(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController? {

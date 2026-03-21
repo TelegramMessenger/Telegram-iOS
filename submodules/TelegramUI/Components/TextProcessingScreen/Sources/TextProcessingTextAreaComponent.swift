@@ -24,6 +24,7 @@ final class TextProcessingTextAreaComponent: Component {
     let copyAction: (() -> Void)?
     let emojify: (value: Bool, toggle: () -> Void)?
     let text: TextWithEntities?
+    let loadingStateMeasuringText: String?
     let textCorrectionRanges: [Range<Int>]
 
     init(
@@ -36,6 +37,7 @@ final class TextProcessingTextAreaComponent: Component {
         copyAction: (() -> Void)?,
         emojify: (value: Bool, toggle: () -> Void)?,
         text: TextWithEntities?,
+        loadingStateMeasuringText: String?,
         textCorrectionRanges: [Range<Int>]
     ) {
         self.context = context
@@ -47,6 +49,7 @@ final class TextProcessingTextAreaComponent: Component {
         self.titleAction = titleAction
         self.emojify = emojify
         self.text = text
+        self.loadingStateMeasuringText = loadingStateMeasuringText
         self.textCorrectionRanges = textCorrectionRanges
     }
 
@@ -78,6 +81,9 @@ final class TextProcessingTextAreaComponent: Component {
         if lhs.text != rhs.text {
             return false
         }
+        if lhs.loadingStateMeasuringText != rhs.loadingStateMeasuringText {
+            return false
+        }
         if lhs.textCorrectionRanges != rhs.textCorrectionRanges {
             return false
         }
@@ -103,6 +109,8 @@ final class TextProcessingTextAreaComponent: Component {
         
         private let copyButton = ComponentView<Empty>()
         
+        private var previousText: TextWithEntities?
+        private var previousTextLineCount: Int?
         private let measureLoadingTextState = MultilineTextWithEntitiesComponent.External()
         private let measureLoadingText = ComponentView<Empty>()
         private var shimmerEffectNode: ShimmerEffectNode?
@@ -222,11 +230,14 @@ final class TextProcessingTextAreaComponent: Component {
                 let titleArrowSize = titleArrow.update(
                     transition: titleArrowTransition,
                     component: AnyComponent(BundleIconComponent(
-                        name: "Item List/ExpandableSelectorArrows", tintColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.8))),
+                        name: "Item List/ContextDisclosureArrow",
+                        tintColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.8),
+                        maxSize: CGSize(width: 8.0, height: 11.0)
+                    )),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
-                let titleArrowFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - titleArrowSize.height) * 0.5)), size: titleArrowSize)
+                let titleArrowFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: titleFrame.minY + 1.0 + floorToScreenPixels((titleFrame.height - titleArrowSize.height) * 0.5)), size: titleArrowSize)
                 if let titleArrowView = titleArrow.view {
                     if titleArrowView.superview == nil {
                         titleArrowView.isUserInteractionEnabled = false
@@ -301,8 +312,8 @@ final class TextProcessingTextAreaComponent: Component {
             
             let fontSize: CGFloat = 17.0
             let textValue = NSMutableAttributedString(attributedString: stringWithAppliedEntities(
-                component.text?.text ?? "",
-                entities: component.text?.entities ?? [],
+                component.text?.text ?? self.previousText?.text ?? "",
+                entities: component.text?.entities ?? self.previousText?.entities ?? [],
                 baseColor: component.theme.list.itemPrimaryTextColor,
                 linkColor: component.theme.list.itemAccentColor,
                 baseFont: Font.regular(fontSize),
@@ -347,8 +358,14 @@ final class TextProcessingTextAreaComponent: Component {
                 if textView.superview == nil {
                     textView.layer.anchorPoint = CGPoint()
                     self.textContainer.addSubview(textView)
+                    textView.alpha = 0.0
                 }
                 textView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
+                alphaTransition.setAlpha(view: textView, alpha: component.text != nil ? 1.0 : 0.0)
+            }
+            if component.text != nil, let layout = self.textState.layout {
+                self.previousText = component.text
+                self.previousTextLineCount = layout.numberOfLines
             }
             
             var textContainerFrame = textFrame
@@ -435,8 +452,29 @@ final class TextProcessingTextAreaComponent: Component {
                     shimmerEffectNode = current
                 } else {
                     shimmerEffectNode = ShimmerEffectNode()
+                    shimmerEffectNode.layer.allowsGroupOpacity = true
+                    shimmerEffectNode.alpha = 0.0
                     self.shimmerEffectNode = shimmerEffectNode
                     self.addSubview(shimmerEffectNode.view)
+                }
+                
+                var fakeLines = ""
+                if let previousTextLineCount = self.previousTextLineCount {
+                    for _ in 0 ..< min(20, previousTextLineCount) {
+                        if !fakeLines.isEmpty {
+                            fakeLines.append("\n")
+                        }
+                        fakeLines.append("a")
+                    }
+                } else if let loadingStateMeasuringText = component.loadingStateMeasuringText {
+                    fakeLines = loadingStateMeasuringText
+                } else {
+                    for _ in 0 ..< 4 {
+                        if !fakeLines.isEmpty {
+                            fakeLines.append("\n")
+                        }
+                        fakeLines.append("a")
+                    }
                 }
                 
                 let measureLoadingTextSize = self.measureLoadingText.update(
@@ -447,7 +485,7 @@ final class TextProcessingTextAreaComponent: Component {
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         placeholderColor: component.theme.list.mediaPlaceholderColor,
-                        text: .plain(NSAttributedString(string: "a\na\na\na", font: Font.regular(fontSize), textColor: .black)),
+                        text: .plain(NSAttributedString(string: fakeLines, font: Font.regular(fontSize), textColor: .black)),
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.12,
                         cutout: nil,
@@ -465,19 +503,23 @@ final class TextProcessingTextAreaComponent: Component {
                 
                 var shapes: [ShimmerEffectNode.Shape] = []
                 if let textLayout = self.measureLoadingTextState.layout {
-                    let lineWidths: [CGFloat] = [1.0, 0.9, 1.0, 0.8]
-                    var index = 0
-                    for lineRect in textLayout.linesRects() {
-                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: 0.0, y: lineRect.midY - 18.0), width: floor(textContainerFrame.width * lineWidths[index % lineWidths.count]), diameter: 6.0))
-                        index += 1
+                    var seed: UInt32 = 0x9E3779B9
+                    for (index, lineRect) in textLayout.linesRects().enumerated() {
+                        seed = seed &* 1664525 &+ UInt32(index) &+ 1013904223
+                        let normalized = CGFloat(seed >> 16) / CGFloat(0xFFFF)
+                        let width = 0.7 + normalized * 0.3
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: 0.0, y: lineRect.midY - 18.0), width: floor(textContainerFrame.width * width), diameter: 6.0))
                     }
                 }
                 shimmerEffectNode.updateAbsoluteRect(shimmerEffectNode.bounds, within: shimmerEffectNode.bounds.size)
                 shimmerEffectNode.update(backgroundColor: component.theme.list.plainBackgroundColor, foregroundColor: component.theme.list.mediaPlaceholderColor, shimmeringColor: component.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerEffectNode.bounds.size)
+                alphaTransition.setAlpha(view: shimmerEffectNode.view, alpha: 1.0)
             } else {
                 if let shimmerEffectNode = self.shimmerEffectNode {
                     self.shimmerEffectNode = nil
-                    shimmerEffectNode.view.removeFromSuperview()
+                    alphaTransition.setAlpha(view: shimmerEffectNode.view, alpha: 0.0, completion: { [weak shimmerEffectNode] _ in
+                        shimmerEffectNode?.view.removeFromSuperview()
+                    })
                 }
             }
             

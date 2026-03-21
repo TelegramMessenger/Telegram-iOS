@@ -83,10 +83,6 @@ func _internal_composeMessageWithAI(network: Network, text: String, entities: [M
         flags |= (1 << 3)
     }
     
-    if true {
-        return .fail(.limitExceeded);
-    }
-
     let apiText: Api.TextWithEntities = .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary())))
 
     return network.request(Api.functions.messages.composeMessageWithAI(flags: flags, text: apiText, translateToLang: translateToLang, changeTone: changeTone))
@@ -413,37 +409,28 @@ func _internal_togglePeerMessagesTranslationHidden(account: Account, peerId: Eng
 }
 
 public enum TelegramComposeAIMessageMode {
-    public enum Style {
+    public enum StyleId: Hashable {
         case neutral
-        case formal
-        case short
-        case savage
-        case biblical
-        case posh
+        case style(String)
     }
     
-    case translate(toLanguage: String, emojify: Bool, style: Style)
-    case stylize(emojify: Bool, style: Style)
-    case proofread
-}
-
-extension TelegramComposeAIMessageMode.Style {
-    var apiStyle: String {
-        switch self {
-        case .neutral:
-            return ""
-        case .formal:
-            return "formal"
-        case .short:
-            return "short"
-        case .savage:
-            return "savage"
-        case .biblical:
-            return "biblical"
-        case .posh:
-            return "posh"
+    public struct Style: Equatable {
+        public let name: String
+        public let emoji: String
+        
+        public var id: StyleId {
+            return .style(self.name)
+        }
+        
+        public init(name: String, emoji: String) {
+            self.name = name
+            self.emoji = emoji
         }
     }
+    
+    case translate(toLanguage: String, emojify: Bool, style: StyleId)
+    case stylize(emojify: Bool, style: StyleId)
+    case proofread
 }
 
 public final class TelegramAIComposeMessageResult {
@@ -465,6 +452,25 @@ extension TextWithEntities {
     }
 }
 
+func _internal_composeAIMessageStyles(account: Account) -> Signal<[TelegramComposeAIMessageMode.Style], NoError> {
+    return account.postbox.transaction { transaction -> [TelegramComposeAIMessageMode.Style] in
+        var result: [TelegramComposeAIMessageMode.Style] = []
+        if let data = currentAppConfiguration(transaction: transaction).data, let value = data["ai_compose_styles"] as? [[String]] {
+            for item in value {
+                if item.count >= 2 {
+                    result.append(TelegramComposeAIMessageMode.Style(name: item[1], emoji: item[0]))
+                }
+            }
+        }
+        #if DEBUG
+        for item in Array(result) {
+            result.append(TelegramComposeAIMessageMode.Style(name: item.name + "_", emoji: item.emoji))
+        }
+        #endif
+        return result
+    }
+}
+
 func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult?, NoError> {
     var flags: Int32 = 0
     var translateToLang: String?
@@ -478,8 +484,8 @@ func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: 
             flags |= (1 << 3)
         }
         
-        if style != .neutral {
-            changeTone = style.apiStyle
+        if case let .style(name) = style {
+            changeTone = name
             flags |= (1 << 2)
         }
     case let .stylize(emojify, style):
@@ -487,8 +493,8 @@ func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: 
             flags |= (1 << 3)
         }
         
-        if style != .neutral {
-            changeTone = style.apiStyle
+        if case let .style(name) = style {
+            changeTone = name
             flags |= (1 << 2)
         }
     case .proofread:

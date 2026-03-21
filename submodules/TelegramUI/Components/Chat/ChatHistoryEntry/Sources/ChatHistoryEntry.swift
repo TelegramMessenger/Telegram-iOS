@@ -45,7 +45,7 @@ public struct ChatMessageEntryAttributes: Equatable {
 }
 
 public enum ChatInfoData: Equatable {
-    case botInfo(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?)
+    case botInfo(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, peer: EnginePeer?, managedByBot: EnginePeer?)
     case userInfo(peer: EnginePeer, verification: PeerVerification?, registrationDate: String?, phoneCountry: String?, groupsInCommonCount: Int32)
     case newThreadInfo
 }

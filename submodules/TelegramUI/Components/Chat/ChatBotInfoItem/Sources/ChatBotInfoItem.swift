@@ -15,6 +15,10 @@ import TelegramUniversalVideoContent
 import WallpaperBackgroundNode
 import ChatControllerInteraction
 import ChatMessageBubbleContentNode
+import Markdown
+import ComponentFlow
+import PeerInfoCoverComponent
+import ComponentDisplayAdapters
 
 private let messageFont = Font.regular(17.0)
 private let messageBoldFont = Font.semibold(17.0)
@@ -27,15 +31,19 @@ public final class ChatBotInfoItem: ListViewItem {
     fileprivate let text: String
     fileprivate let photo: TelegramMediaImage?
     fileprivate let video: TelegramMediaFile?
+    fileprivate let peer: EnginePeer?
+    fileprivate let managedByBot: EnginePeer?
     fileprivate let controllerInteraction: ChatControllerInteraction
     fileprivate let presentationData: ChatPresentationData
     fileprivate let context: AccountContext
     
-    public init(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData, context: AccountContext) {
+    public init(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, peer: EnginePeer?, managedByBot: EnginePeer?, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData, context: AccountContext) {
         self.title = title
         self.text = text
         self.photo = photo
         self.video = video
+        self.peer = peer
+        self.managedByBot = managedByBot
         self.controllerInteraction = controllerInteraction
         self.presentationData = presentationData
         self.context = context
@@ -103,6 +111,8 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
     
     private var wallpaperBackgroundNode: WallpaperBackgroundNode?
     private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private var cover: ComponentView<Empty>?
     
     private var absolutePosition: (CGRect, CGSize)?
     
@@ -237,11 +247,44 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
             let verticalItemInset: CGFloat = 10.0
             let verticalContentInset: CGFloat = 8.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleString: NSAttributedString
+            let textString: NSAttributedString
+            let textSpacing: CGFloat
+            if let peer = item.peer, let managedByBot = item.managedByBot {
+                //TODO:localize
+                titleString = parseMarkdownIntoAttributedString("**\(peer.compactDisplayTitle)** is ready!", attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
+                    bold: MarkdownAttributeSet(font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
+                    link: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
+                    linkAttribute: { url in
+                        return ("URL", url)
+                    }
+                ))
+                let rawTextString = "Tap **Start** below to test your new chatbot. Its behavior is defined by **\(managedByBot.compactDisplayTitle)**."
+                textString = parseMarkdownIntoAttributedString(rawTextString, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
+                    bold: MarkdownAttributeSet(font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
+                    link: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.incoming.accentTextColor),
+                    linkAttribute: { url in
+                        return (TelegramTextAttributes.URL, url)
+                    }
+                ))
+                textSpacing = 16.0
+            } else {
+                titleString = NSAttributedString(string: item.title, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor)
+                textString = attributedText
+                textSpacing = 1.0
+            }
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var maxTextWidth: CGFloat = params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0
+            if item.managedByBot != nil {
+                maxTextWidth = min(maxTextWidth, 320.0 - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0)
+            }
             
-            let textSpacing: CGFloat = 1.0
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
             let textSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width), height: (titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing) + textLayout.size.height))
             
             var mediaUpdated = false
@@ -276,6 +319,12 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                 imageSize = imageDimensions
                 imageSize.height += 4.0
             }
+            var displayCover = false
+            if imageSize.width == 0.0, let _ = item.peer {
+                displayCover = true
+                imageDimensions = CGSize(width: 100.0, height: 50.0).aspectFitted(CGSize(width: textSize.width + horizontalContentInset * 2.0 - imageInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+                imageSize = imageDimensions
+            }
             
             let backgroundFrame = CGRect(origin: CGPoint(x: floor((params.width - textSize.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textSize.width + horizontalContentInset * 2.0, height: imageSize.height + textSize.height + verticalContentInset * 2.0))
             let titleFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + imageSize.height + verticalContentInset), size: titleLayout.size)
@@ -308,8 +357,50 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                     }
                     strongSelf.imageNode.frame = imageFrame
                     
+                    if displayCover, let peer = item.peer {
+                        let cover: ComponentView<Empty>
+                        if let current = strongSelf.cover {
+                            cover = current
+                        } else {
+                            cover = ComponentView()
+                            strongSelf.cover = cover
+                        }
+                        let _ = cover.update(
+                            transition: .immediate,
+                            component: AnyComponent(PeerInfoCoverComponent(
+                                context: item.context,
+                                subject: .managedBot(peer),
+                                files: [:],
+                                isDark: item.presentationData.theme.theme.overallDarkAppearance,
+                                avatarCenter: CGPoint(x: imageFrame.width * 0.5, y: imageFrame.height * 0.5),
+                                avatarScale: 1.0,
+                                defaultHeight: imageFrame.height,
+                                avatarTransitionFraction: 0.0,
+                                patternTransitionFraction: 0.0,
+                                patternIconScale: 1.0
+                            )),
+                            environment: {},
+                            containerSize: imageFrame.size
+                        )
+                        if let coverView = cover.view {
+                            if coverView.superview == nil {
+                                strongSelf.offsetContainer.view.addSubview(coverView)
+                                coverView.clipsToBounds = true
+                                coverView.layer.cornerRadius = item.presentationData.chatBubbleCorners.mainRadius + imageInset
+                                coverView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+                            }
+                            coverView.frame = imageFrame
+                        }
+                    } else {
+                        if let cover = strongSelf.cover {
+                            strongSelf.cover = nil
+                            cover.view?.removeFromSuperview()
+                        }
+                    }
+                    
                     let _ = titleApply()
                     let _ = textApply()
+                    
                     strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
                     strongSelf.backgroundNode.frame = backgroundFrame
                     strongSelf.titleNode.frame = titleFrame
@@ -423,6 +514,19 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - self.offsetContainer.frame.minX - textNodeFrame.minX, y: point.y - self.offsetContainer.frame.minY - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                if url.isEmpty {
+                    if let item = self.item, item.managedByBot != nil, case .tap = gesture {
+                        return ChatMessageBubbleContentTapAction(content: .custom({ [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.item?.controllerInteraction.openSetPeerAvatar()
+                        }), hasLongTapAction: false)
+                    }
+                    
+                    return ChatMessageBubbleContentTapAction(content: .none)
+                }
+                
                 var concealed = true
                 if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
@@ -471,9 +575,11 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                             self.item?.controllerInteraction.sendBotCommand(nil, command)
                         case let .hashtag(peerName, hashtag):
                             self.item?.controllerInteraction.openHashtag(peerName, hashtag)
+                        case let .custom(f):
+                            f()
                         default:
                             break
-                            }
+                        }
                         case .longTap, .doubleTap:
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 let tapAction = self.tapActionAtPoint(location, gesture: gesture, isEstimating: false)

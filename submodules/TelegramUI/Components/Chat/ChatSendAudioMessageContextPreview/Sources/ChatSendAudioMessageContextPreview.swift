@@ -513,7 +513,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
         }, requestToggleTodoMessageItem: { _, _, _ in
         }, displayTodoToggleUnavailable: { _ in
         }, openStarsPurchase: { _ in
-        }, openRankInfo: { _, _, _ in }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+        }, openRankInfo: { _, _, _ in }, openSetPeerAvatar: {}, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: self.context, backgroundNode: self.wallpaperBackgroundNode))
         
         let associatedData = ChatMessageItemAssociatedData(

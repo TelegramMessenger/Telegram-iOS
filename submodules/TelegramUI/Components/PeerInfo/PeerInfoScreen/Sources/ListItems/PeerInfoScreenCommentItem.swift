@@ -10,18 +10,24 @@ import TextNodeWithEntities
 import TextFormat
 
 final class PeerInfoScreenCommentItem: PeerInfoScreenItem {
+    enum Icon {
+        case managedBot
+    }
+    
     enum LinkAction {
         case tap(String)
     }
     
     let id: AnyHashable
+    let icon: Icon?
     let text: String
     let attributedPrefix: NSAttributedString?
     let useAccentLinkColor: Bool
     let linkAction: ((LinkAction) -> Void)?
     
-    init(id: AnyHashable, text: String, attributedPrefix: NSAttributedString? = nil, useAccentLinkColor: Bool = true, linkAction: ((LinkAction) -> Void)? = nil) {
+    init(id: AnyHashable, icon: Icon? = nil, text: String, attributedPrefix: NSAttributedString? = nil, useAccentLinkColor: Bool = true, linkAction: ((LinkAction) -> Void)? = nil) {
         self.id = id
+        self.icon = icon
         self.text = text
         self.attributedPrefix = attributedPrefix
         self.useAccentLinkColor = useAccentLinkColor
@@ -34,6 +40,7 @@ final class PeerInfoScreenCommentItem: PeerInfoScreenItem {
 }
 
 private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
+    private var iconView: UIImageView?
     private let textNode: ImmediateTextNodeWithEntities
     private var linkHighlightingNode: LinkHighlightingNode?
     private let activateArea: AccessibilityAreaNode
@@ -123,9 +130,40 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         self.textNode.lineSpacing = 0.12
         self.activateArea.accessibilityLabel = attributedText.string
         
-        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        var leftTextInset: CGFloat = 0.0
+        if let icon = item.icon {
+            leftTextInset += 18.0
+            
+            let iconView: UIImageView
+            if let current = self.iconView {
+                iconView = current
+            } else {
+                iconView = UIImageView()
+                self.iconView = iconView
+                self.view.addSubview(iconView)
+            }
+            
+            if iconView.image == nil {
+                switch icon {
+                case .managedBot:
+                    iconView.image = UIImage(bundleImageName: "Peer Info/ManagedBotInlineTextIcon")?.withRenderingMode(.alwaysTemplate)
+                }
+            }
+            iconView.tintColor = presentationData.theme.list.freeTextColor
+            
+            if let image = iconView.image {
+                iconView.frame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset + 1.0), size: image.size)
+            }
+        } else {
+            if let iconView = self.iconView {
+                self.iconView = nil
+                iconView.removeFromSuperview()
+            }
+        }
         
-        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: textSize)
+        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0 - leftTextInset, height: .greatestFiniteMagnitude))
+        
+        let textFrame = CGRect(origin: CGPoint(x: sideInset + leftTextInset, y: verticalInset), size: textSize)
         
         let height = textSize.height + verticalInset * 2.0
         

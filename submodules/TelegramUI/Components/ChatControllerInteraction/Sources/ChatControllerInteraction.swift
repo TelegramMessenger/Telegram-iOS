@@ -301,6 +301,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let displayTodoToggleUnavailable: (MessageId) -> Void
     public let openStarsPurchase: (Int64?) -> Void
     public let openRankInfo: (EnginePeer, ChatRankInfoScreenRole, String) -> Void
+    public let openSetPeerAvatar: () -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -476,6 +477,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         displayTodoToggleUnavailable: @escaping (MessageId) -> Void,
         openStarsPurchase: @escaping (Int64?) -> Void,
         openRankInfo: @escaping (EnginePeer, ChatRankInfoScreenRole, String) -> Void,
+        openSetPeerAvatar: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -605,6 +607,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.displayTodoToggleUnavailable = displayTodoToggleUnavailable
         self.openStarsPurchase = openStarsPurchase
         self.openRankInfo = openRankInfo
+        self.openSetPeerAvatar = openSetPeerAvatar
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

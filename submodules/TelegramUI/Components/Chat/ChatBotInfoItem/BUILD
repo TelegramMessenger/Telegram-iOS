@@ -25,6 +25,10 @@ swift_library(
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TelegramUI/Components/ChatControllerInteraction",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
+        "//submodules/Markdown",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoCoverComponent",
     ],
     visibility = [
         "//visibility:public",

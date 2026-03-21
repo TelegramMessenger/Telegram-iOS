@@ -683,6 +683,16 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     } else {
                         handleResolvedUrl(.sendGift(peerId: nil))
                     }
+                case "newbot":
+                    if let managerBotName = params["manager"] {
+                        let _ = (context.engine.peers.resolvePeerByName(name: managerBotName, referrer: nil)
+                        |> deliverOnMainQueue).start(next: { result in
+                            guard case let .result(peer) = result, let peer else {
+                                return
+                            }
+                            handleResolvedUrl(.createBot(parentBot: peer.id, username: params["username"], title: params["name"]))
+                        })
+                    }
                 default:
                     break
                 }

@@ -17,6 +17,7 @@ import MultiAnimationRenderer
 import AccountContext
 import PremiumUI
 import LegacyChatHeaderPanelComponent
+import AppBundle
 
 private enum ChatReportPeerTitleButton: Equatable {
     case block
@@ -27,6 +28,7 @@ private enum ChatReportPeerTitleButton: Equatable {
     case unarchive
     case addMembers
     case restartTopic
+    case setPhoto
     
     func title(strings: PresentationStrings) -> String {
         switch self {
@@ -54,13 +56,18 @@ private enum ChatReportPeerTitleButton: Equatable {
             return strings.Conversation_AddMembers
         case .restartTopic:
             return strings.Chat_PanelRestartTopic
+        case .setPhoto:
+            //TODO:localize
+            return "Set Profile Photo"
         }
     }
 }
 
 private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReportPeerTitleButton] {
     var buttons: [ChatReportPeerTitleButton] = []
-    if let peer = state.renderedPeer?.chatMainPeer as? TelegramUser, let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
+    if let _ = state.renderedPeer?.chatMainPeer as? TelegramUser, state.isManagedBot {
+        buttons.append(.setPhoto)
+    } else if let peer = state.renderedPeer?.chatMainPeer as? TelegramUser, let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
         if peerStatusSettings.contains(.autoArchived) {
             if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {
                 if peer.isDeleted {
@@ -444,7 +451,9 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
+        var themeUpdated = false
         if interfaceState.theme !== self.theme {
+            themeUpdated = true
             self.theme = interfaceState.theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelEncircledCloseIconImage(interfaceState.theme), for: [])
@@ -483,13 +492,30 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.buttons.removeAll()
             for button in updatedButtons {
                 let view = UIButton()
+                if case .setPhoto = button {
+                    if view.image(for: []) == nil || themeUpdated {
+                        if let sourceImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Camera"), color: interfaceState.theme.rootController.navigationBar.accentTextColor) {
+                            let image = generateImage(CGSize(width: sourceImage.size.width + 6.0, height: sourceImage.size.height), rotatedContext: { size, context in
+                                UIGraphicsPushContext(context)
+                                defer {
+                                    UIGraphicsPopContext()
+                                }
+                                
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                sourceImage.draw(at: CGPoint())
+                            })
+                            
+                            view.setImage(image?.withRenderingMode(.alwaysOriginal), for: [])
+                        }
+                    }
+                }
                 view.setTitle(button.title(strings: interfaceState.strings), for: [])
                 view.titleLabel?.font = Font.regular(16.0)
                 switch button {
-                    case .block, .reportSpam, .reportUserSpam:
+                case .block, .reportSpam, .reportUserSpam:
                     view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor, for: [])
                     view.setTitleColor(interfaceState.theme.chat.inputPanel.panelControlDestructiveColor.withAlphaComponent(0.7), for: [.highlighted])
-                    default:
+                default:
                     view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor, for: [])
                     view.setTitleColor(interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7), for: [.highlighted])
                 }
@@ -792,6 +818,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                     self.interfaceInteraction?.presentPeerContact()
                 case .restartTopic:
                     self.interfaceInteraction?.restartTopic()
+                case .setPhoto:
+                    self.interfaceInteraction?.openSetPeerAvatar()
                 }
                 break
             }

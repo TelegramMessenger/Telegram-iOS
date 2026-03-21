@@ -1253,7 +1253,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, requestToggleTodoMessageItem: { _, _, _ in
         }, displayTodoToggleUnavailable: { _ in
         }, openStarsPurchase: { _ in
-        }, openRankInfo: { _, _, _ in }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+        }, openRankInfo: { _, _, _ in }, openSetPeerAvatar: {}, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
             guard let strongSelf = self else {

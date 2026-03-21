@@ -387,6 +387,7 @@ func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId:
 
 public enum CreateBotError {
     case generic
+    case occupied
 }
 
 func _internal_createBot(account: Account, name: String, username: String, managerPeerId: PeerId, viaDeeplink: Bool) -> Signal<EnginePeer, CreateBotError> {
@@ -406,8 +407,12 @@ func _internal_createBot(account: Account, name: String, username: String, manag
             flags |= (1 << 0)
         }
         return account.network.request(Api.functions.bots.createBot(flags: flags, name: name, username: username, managerId: inputUser))
-        |> mapError { _ -> CreateBotError in
-            return .generic
+        |> mapError { error -> CreateBotError in
+            if error.errorDescription == "USERNAME_OCCUPIED" {
+                return .occupied
+            } else {
+                return .generic
+            }
         }
         |> mapToSignal { apiUser -> Signal<EnginePeer, CreateBotError> in
             return account.postbox.transaction { transaction -> EnginePeer in

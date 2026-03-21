@@ -327,6 +327,7 @@ public enum ResolvedUrl {
     case sendGift(peerId: PeerId?)
     case unknownDeepLink(path: String)
     case oauth(url: String)
+    case createBot(parentBot: PeerId, username: String?, title: String?)
     
     public enum ResolvedCollectible {
         case gift(StarGift.UniqueGift)
@@ -1431,6 +1432,13 @@ public protocol SharedAccountContext: AnyObject {
     func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
     func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void)
+    func displaySetPhoto(
+        parentController: ViewController,
+        context: AccountContext,
+        peer: EnginePeer,
+        completion: @escaping (UIImage?) -> Void,
+        completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?
+    )
     func openAddPeerMembers(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, parentController: ViewController, groupPeer: Peer, selectAddMemberDisposable: MetaDisposable, addMemberDisposable: MetaDisposable)
     func makeInstantPageController(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?) -> ViewController?
     func makeInstantPageController(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String?, sourceLocation: InstantPageSourceLocation) -> ViewController
