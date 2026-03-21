@@ -22,6 +22,7 @@ import ItemListPeerActionItem
 import GlassBackgroundComponent
 import ActivityIndicator
 import SearchBarNode
+import PeerMessagesMediaPlaylist
 
 final class AttachmentFileSearchItem: ItemListControllerSearch {
     let context: AccountContext

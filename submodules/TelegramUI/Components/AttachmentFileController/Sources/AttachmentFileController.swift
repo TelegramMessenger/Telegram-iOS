@@ -657,12 +657,14 @@ public func makeAttachmentFileControllerImpl(
             let gesture: ContextGesture? = anyRecognizer as? ContextGesture
 
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.KeyCommand_Play, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Play"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
-                c?.dismiss(completion: {})
-
-                let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message._asMessage()], 0, false)), canReorder: false, at: message.id, loadMore: nil)
-                context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
-            })))
+            if case .audio = mode {
+                items.append(.action(ContextMenuActionItem(text: "Play", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Play"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c?.dismiss(completion: {})
+                    
+                    let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message._asMessage()], 0, false)), canReorder: false, at: message.id, loadMore: nil)
+                    context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
+                })))
+            }
 
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                 c?.dismiss(completion: {})
