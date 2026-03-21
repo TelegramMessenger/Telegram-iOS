@@ -79,8 +79,8 @@ public func presentPollAttachmentScreen(
                 //self?.presentICloudFileGallery()
             }, presentDocumentScanner: {
                 //self?.presentDocumentScanner()
-            }, send: { mediaReference in
-                completion(mediaReference)
+            }, send: { mediaReferences in
+                completion(mediaReferences.first!)
             })
             guard let controller = controller as? AttachmentFileControllerImpl else {
                 return false

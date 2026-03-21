@@ -26,8 +26,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public var getController: (() -> ViewController?)?
     public var presentInGlobalOverlay: ((ViewController) -> Void)?
     
-    public init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool = false) {
-        self.containerNode = MediaNavigationAccessoryContainerNode(context: context, presentationData: presentationData, displayBackground: displayBackground)
+    public init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool = false, customTintColor: UIColor? = nil) {
+        self.containerNode = MediaNavigationAccessoryContainerNode(context: context, presentationData: presentationData, displayBackground: displayBackground, customTintColor: customTintColor)
         
         super.init()
         

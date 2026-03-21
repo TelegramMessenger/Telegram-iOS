@@ -26,7 +26,6 @@ import TooltipUI
 import LegacyUI
 import LegacyComponents
 import LegacyMediaPickerUI
-import WebSearchUI
 import MapResourceToAvatarSizes
 import SolidRoundedButtonNode
 import AudioBlob

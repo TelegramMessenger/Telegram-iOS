@@ -845,7 +845,7 @@ final class ComposePollScreenComponent: Component {
             
             var availableButtons: [AttachmentButtonType]
             switch subject {
-            case .description:
+            case .description, .quizAnswer:
                 availableButtons = [.gallery, .file, .location]
             default:
                 availableButtons = [.gallery, .sticker, .emoji, .location]

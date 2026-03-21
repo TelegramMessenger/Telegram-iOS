@@ -148,6 +148,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
     private var nameDisplayOrder: PresentationPersonNameOrder
+    private var customTintColor: UIColor?
     
     private let scrollNode: ASScrollNode
     private var initialContentOffset: CGFloat?
@@ -219,13 +220,14 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
     private weak var tooltipController: TooltipScreen?
     private let dismissedPromise = ValuePromise<Bool>(false)
     
-    public init(context: AccountContext, presentationData: PresentationData) {
+    public init(context: AccountContext, presentationData: PresentationData, customTintColor: UIColor? = nil) {
         self.context = context
         
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
         self.nameDisplayOrder = presentationData.nameDisplayOrder
+        self.customTintColor = customTintColor
         
         self.scrollNode = ASScrollNode()
         
@@ -260,13 +262,13 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         self.actionButton.displaysAsynchronously = false
         
         self.playPauseIconNode = PlayPauseIconNode()
-        self.playPauseIconNode.customColor = self.theme.rootController.navigationBar.accentTextColor
+        self.playPauseIconNode.customColor = customTintColor ?? self.theme.rootController.navigationBar.accentTextColor
         
-        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5), chapters: []))
+        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: customTintColor ?? self.theme.rootController.navigationBar.accentTextColor, bufferingColor: (customTintColor ?? self.theme.rootController.navigationBar.accentTextColor).withAlphaComponent(0.5), chapters: []))
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
-        self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
+        self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         
         super.init()
         
@@ -366,9 +368,9 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         self.rightMaskNode.image = maskImage
         
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
-        self.playPauseIconNode.customColor = self.theme.rootController.navigationBar.accentTextColor
+        self.playPauseIconNode.customColor = self.customTintColor ?? self.theme.rootController.navigationBar.accentTextColor
         self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
-        self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor, bufferingColor: self.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.5), chapters: []))
+        self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.customTintColor ?? self.theme.rootController.navigationBar.accentTextColor, bufferingColor: (self.customTintColor ?? self.theme.rootController.navigationBar.accentTextColor).withAlphaComponent(0.5), chapters: []))
         
         if let playbackBaseRate = self.playbackBaseRate {
             self.rateButton.setContent(.image(optionsRateImage(rate: playbackBaseRate.stringValue.uppercased(), color: self.theme.rootController.navigationBar.controlColor)))
@@ -481,11 +483,12 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         let rateButtonSize = CGSize(width: 30.0, height: minHeight)
         transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 27.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
         
-        transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
+        transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: 6.0 + 4.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
+        let originY: CGFloat = self.customTintColor != nil ? minHeight - UIScreenPixel : 0.0
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         self.accessibilityAreaNode.frame = CGRect(origin: CGPoint(x: self.actionButton.frame.maxX, y: 0.0), size: CGSize(width: self.rateButton.frame.minX - self.actionButton.frame.maxX, height: minHeight))
     }

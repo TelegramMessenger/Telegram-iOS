@@ -381,13 +381,20 @@ extension ChatControllerImpl {
                         self?.presentICloudFileGallery()
                     }, presentDocumentScanner: { [weak self] in
                         self?.presentDocumentScanner()
-                    }, send: { [weak self] mediaReference in
+                    }, send: { [weak self] mediaReferences in
                         guard let self else {
                             return
                         }
-                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                        var messages: [EnqueueMessage] = []
+                        var groupingKey: Int64?
+                        if mediaReferences.count > 1 {
+                            groupingKey = Int64.random(in: .min ..< .max)
+                        }
+                        for mediaReference in mediaReferences {
+                            messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                        }
                         self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
-                            self?.sendMessages([message], media: true, postpone: postpone)
+                            self?.sendMessages(messages, media: true, postpone: postpone)
                         })
                     })
                     if let controller = controller as? AttachmentFileControllerImpl {
@@ -407,13 +414,20 @@ extension ChatControllerImpl {
                     }, presentFiles: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
                         self?.presentICloudFileGallery()
-                    }, presentDocumentScanner: nil, send: { [weak self] mediaReference in
+                    }, presentDocumentScanner: nil, send: { [weak self] mediaReferences in
                         guard let self else {
                             return
                         }
-                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                        var messages: [EnqueueMessage] = []
+                        var groupingKey: Int64?
+                        if mediaReferences.count > 1 {
+                            groupingKey = Int64.random(in: .min ..< .max)
+                        }
+                        for mediaReference in mediaReferences {
+                            messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                        }
                         self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
-                            self?.sendMessages([message], media: true, postpone: postpone)
+                            self?.sendMessages(messages, media: true, postpone: postpone)
                         })
                     })
                     if let controller = controller as? AttachmentFileControllerImpl {

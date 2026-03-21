@@ -17,14 +17,14 @@ public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, ASGestu
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool, customTintColor: UIColor? = nil) {
         self.displayBackground = displayBackground
 
         self.presentationData = presentationData
         
         self.backgroundNode = ASDisplayNode()
         self.separatorNode = ASDisplayNode()
-        self.headerNode = MediaNavigationAccessoryHeaderNode(context: context, presentationData: presentationData)
+        self.headerNode = MediaNavigationAccessoryHeaderNode(context: context, presentationData: presentationData, customTintColor: customTintColor)
         
         super.init()
 
