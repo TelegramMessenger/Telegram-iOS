@@ -1061,7 +1061,10 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.mediaFrame = mediaFrame
 
                     if !recentVoterPeers.isEmpty {
-                        let avatarsFrame = CGRect(origin: CGPoint(x: trailingOriginX + 15.0 - ChatMessagePollOptionNode.avatarsSize.width, y: floor((contentLayoutHeight - ChatMessagePollOptionNode.avatarsSize.height) * 0.5)), size: ChatMessagePollOptionNode.avatarsSize)
+                        var avatarsFrame = CGRect(origin: CGPoint(x: trailingOriginX + 15.0 - ChatMessagePollOptionNode.avatarsSize.width, y: floor((contentLayoutHeight - ChatMessagePollOptionNode.avatarsSize.height) * 0.5)), size: ChatMessagePollOptionNode.avatarsSize)
+                        if recentVoterPeers.count > 1 {
+                            avatarsFrame.origin.x -= 15.0
+                        }
                         node.avatarsNode.frame = avatarsFrame
                         node.avatarsNode.updateLayout(size: avatarsFrame.size)
                         node.avatarsNode.update(context: context, peers: recentVoterPeers, synchronousLoad: attemptSynchronous, imageSize: MergedAvatarsNode.defaultMergedImageSize, imageSpacing: MergedAvatarsNode.defaultMergedImageSpacing, borderWidth: MergedAvatarsNode.defaultBorderWidth)
@@ -2192,7 +2195,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             context: item.context,
             updatedPresentationData: item.controllerInteraction.updatedPresentationData,
             subject: .option,
-            availableButtons: [.gallery, .sticker, .emoji, .location],
+            availableButtons: [.gallery, .sticker, .location],
             present: { [weak item] controller in
                 item?.controllerInteraction.navigationController()?.pushViewController(controller)
             },

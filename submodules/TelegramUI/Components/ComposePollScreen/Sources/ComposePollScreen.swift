@@ -848,7 +848,7 @@ final class ComposePollScreenComponent: Component {
             case .description, .quizAnswer:
                 availableButtons = [.gallery, .file, .location]
             default:
-                availableButtons = [.gallery, .sticker, .emoji, .location]
+                availableButtons = [.gallery, .sticker, .location]
             }
             
             let pollAttachmentSubject: PollAttachmentSubject

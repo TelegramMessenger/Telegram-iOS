@@ -1389,7 +1389,7 @@ public class AttachmentController: ViewController, MinimizableController {
             if let controller = self.controller, controller.buttons.count > 1 || controller.hasTextInput || self.panel.hasMediaAccessoryPanel {
                 hasPanel = true
             }
-            if !self.isPanelVisible {
+            if !self.isPanelVisible && !self.panel.hasMediaAccessoryPanel {
                 hasPanel = false
             }
             
@@ -1403,7 +1403,7 @@ public class AttachmentController: ViewController, MinimizableController {
             }
             
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, selectionCount: self.selectionCount, elevateProgress: !hasPanel && !hasButton, transition: transition)
+            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, selectionCount: self.selectionCount, elevateProgress: !hasPanel && !hasButton, hideButtons: !self.isPanelVisible && self.panel.hasMediaAccessoryPanel, transition: transition)
             
             if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight + panelOffset

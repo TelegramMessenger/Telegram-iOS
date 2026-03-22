@@ -1015,6 +1015,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     private var secondaryButtonState: AttachmentMainButtonState = .initial
     private var customBottomPanelBackgroundColor: UIColor?
     
+    private var hideButtons: Bool = false
     private var elevateProgress: Bool = false
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 0
@@ -1521,6 +1522,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                             isSelecting: strongSelf.isSelecting,
                             selectionCount: strongSelf.selectionCount,
                             elevateProgress: strongSelf.elevateProgress,
+                            hideButtons: strongSelf.hideButtons,
                             transition: .animated(duration: 0.4, curve: .spring)
                         )
                     }
@@ -1548,7 +1550,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
             
                 if let layout = strongSelf.validLayout {
-                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, selectionCount: strongSelf.selectionCount, elevateProgress: strongSelf.elevateProgress, transition: .immediate)
+                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, selectionCount: strongSelf.selectionCount, elevateProgress: strongSelf.elevateProgress, hideButtons: strongSelf.hideButtons, transition: .immediate)
                 }
             }
         }).strict()
@@ -1605,7 +1607,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     
     func requestLayout(transition: ContainedViewLayoutTransition) {
         if let layout = self.validLayout {
-            let _ = self.update(layout: layout, buttons: self.buttons, isSelecting: self.isSelecting, selectionCount: self.selectionCount, elevateProgress: self.elevateProgress, transition: transition)
+            let _ = self.update(layout: layout, buttons: self.buttons, isSelecting: self.isSelecting, selectionCount: self.selectionCount, elevateProgress: self.elevateProgress, hideButtons: self.hideButtons, transition: transition)
         }
     }
     
@@ -1815,12 +1817,13 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, nil, nil)
         }
         
+        let inset: CGFloat = self.hideButtons ? 19.0 : 0.0
         if isNewPanel {
-            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: 0.0, rightInset: 0.0, isHidden: false, transition: .immediate)
+            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: inset, rightInset: inset, isHidden: false, transition: .immediate)
             mediaAccessoryPanel.animateIn(transition: transition)
         } else {
             transition.updateFrame(node: mediaAccessoryPanel, frame: frame)
-            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: 0.0, rightInset: 0.0, isHidden: false, transition: transition)
+            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: inset, rightInset: inset, isHidden: false, transition: transition)
         }
     }
     
@@ -2204,6 +2207,16 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             self.scrollNode.view.isScrollEnabled = contentSize.width - self.scrollNode.view.bounds.width > 1.0
             self.liquidLensView?.clipsToBounds = self.scrollNode.view.isScrollEnabled
         }
+        
+        if !self.hideButtons && self.itemsContainer.isHidden {
+            Queue.mainQueue().after(0.3, {
+                self.itemsContainer.isHidden = false
+                self.selectedItemsContainer.isHidden = false
+            })
+        } else {
+            self.itemsContainer.isHidden = self.hideButtons
+            self.selectedItemsContainer.isHidden = self.hideButtons
+        }
     }
     
     private func loadTextNodeIfNeeded() {
@@ -2394,10 +2407,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
     }
     
-    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, selectionCount: Int, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, selectionCount: Int, elevateProgress: Bool, hideButtons: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         self.buttons = buttons
         self.elevateProgress = elevateProgress
+        self.hideButtons = hideButtons
         
         if selectionCount != self.selectionCount {
             self.selectionCount = selectionCount
@@ -2476,7 +2490,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 
         let glassPanelHeight: CGFloat = 62.0
         var bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: topAccessoryHeight + self.buttonSize.height + insets.bottom))
-        if buttons.count == 1 && topAccessoryHeight > 0.0 {
+        if (buttons.count == 1 || hideButtons) && topAccessoryHeight > 0.0 {
             bounds.size.height -= self.buttonSize.height
         }
         var mediaAccessoryPanelFrame: CGRect?
@@ -2522,7 +2536,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             
             let basePanelHeight = isSelecting ? max(0.0, textPanelHeight - 11.0) : glassPanelHeight
             var panelSize = CGSize(width: isSelecting ? textPanelWidth : buttonsPanelWidth, height: basePanelHeight + topAccessoryHeight)
-            if !isSelecting && buttons.count == 1 && topAccessoryHeight > 0.0 {
+            if !isSelecting && (buttons.count == 1 || hideButtons) && topAccessoryHeight > 0.0 {
                 panelSize.height = topAccessoryHeight
             }
             
@@ -2757,7 +2771,6 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             buttonTopInset = isNarrowButton ? 2.0 : 8.0
         }
         
-                
         if !self.animatingTransition {
             let buttonOriginX = layout.safeInsets.left + buttonSideInset
             let buttonOriginY = isAnyButtonVisible || self.fromMenu ? topAccessoryHeight + buttonTopInset : containerFrame.height
@@ -2868,7 +2881,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
         
         let inset: CGFloat = 3.0
-        liquidLensView.update(size: CGSize(width: panelSize.width - inset * 2.0, height: panelSize.height - inset * 2.0), cornerRadius: 28.0, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: panelSize.height - inset * 2.0), inset: 0.0, isDark: self.presentationData.theme.overallDarkAppearance, isLifted: isLifted, isCollapsed: self.isSelecting || self.buttons.count < 2, transition: transition)
+        liquidLensView.update(size: CGSize(width: panelSize.width - inset * 2.0, height: panelSize.height - inset * 2.0), cornerRadius: 28.0, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: panelSize.height - inset * 2.0), inset: 0.0, isDark: self.presentationData.theme.overallDarkAppearance, isLifted: isLifted, isCollapsed: self.isSelecting || self.buttons.count < 2 || self.hideButtons, transition: transition)
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
