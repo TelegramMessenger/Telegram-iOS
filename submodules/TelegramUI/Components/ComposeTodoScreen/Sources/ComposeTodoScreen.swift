@@ -1753,7 +1753,7 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
             peer: peer,
             initialData: initialData,
             completion: completion
-        ), navigationBarAppearance: .default, theme: .default)
+        ), navigationBarAppearance: .transparent, theme: .default)
         
         self._hasGlassStyle = true
         

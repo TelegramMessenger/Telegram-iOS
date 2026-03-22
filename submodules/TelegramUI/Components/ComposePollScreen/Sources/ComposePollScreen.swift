@@ -2736,7 +2736,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
             isQuiz: isQuiz,
             initialData: initialData,
             completion: completion
-        ), navigationBarAppearance: .default, theme: .default)
+        ), navigationBarAppearance: .transparent, theme: .default)
         
         self._hasGlassStyle = true
         

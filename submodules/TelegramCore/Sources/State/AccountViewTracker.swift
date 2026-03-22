@@ -164,13 +164,15 @@ private func fetchWebpage(account: Account, messageId: MessageId, threadId: Int6
 }
 
 private func fetchPoll(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
-    return account.postbox.loadedPeerWithId(messageId.peerId)
-    |> take(1)
-    |> mapToSignal { peer -> Signal<Void, NoError> in
-        guard let inputPeer = apiInputPeer(peer) else {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        guard let peer = transaction.getPeer(messageId.peerId), let inputPeer = apiInputPeer(peer) else {
             return .complete()
         }
-        return account.network.request(Api.functions.messages.getPollResults(peer: inputPeer, msgId: messageId.id, pollHash: 0))
+        var pollHash: Int64 = 0
+        if let message = transaction.getMessage(messageId), let poll = message.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {
+            pollHash = poll.pollHash
+        }
+        return account.network.request(Api.functions.messages.getPollResults(peer: inputPeer, msgId: messageId.id, pollHash: pollHash))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
@@ -182,6 +184,7 @@ private func fetchPoll(account: Account, messageId: MessageId) -> Signal<Void, N
             return .complete()
         }
     }
+    |> switchToLatest
 }
 
 private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocationInput, additionalData: [AdditionalMessageHistoryViewData]) -> [AdditionalMessageHistoryViewData] {

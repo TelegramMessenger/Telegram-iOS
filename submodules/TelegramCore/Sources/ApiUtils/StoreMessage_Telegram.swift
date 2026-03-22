@@ -454,7 +454,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             let (poll, results) = (messageMediaPollData.poll, messageMediaPollData.results)
             switch poll {
             case let .poll(pollData):
-                let (id, flags, question, answers, closePeriod, closeDate) = (pollData.id, pollData.flags, pollData.question, pollData.answers, pollData.closePeriod, pollData.closeDate)
+                let (id, flags, question, answers, closePeriod, closeDate, pollHash) = (pollData.id, pollData.flags, pollData.question, pollData.answers, pollData.closePeriod, pollData.closeDate, pollData.hash)
                 let publicity: TelegramMediaPollPublicity
                 if (flags & (1 << 1)) != 0 {
                     publicity = .public
@@ -486,7 +486,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 if let apiAttachedMedia = messageMediaPollData.attachedMedia {
                     parsedAttachedMedia = textMediaAndExpirationTimerFromApiMedia(apiAttachedMedia, peerId).media
                 }
-                return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, deadlineDate: closeDate, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: parsedAttachedMedia), nil, nil, nil, nil, nil)
+                return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod, deadlineDate: closeDate, pollHash: pollHash, openAnswers: openAnswers, revotingDisabled: revotingDisabled, shuffleAnswers: shuffleAnswers, hideResultsUntilClose: hideResultsUntilClose, attachedMedia: parsedAttachedMedia), nil, nil, nil, nil, nil)
             }
         case let .messageMediaToDo(messageMediaToDoData):
             let (todo, completions) = (messageMediaToDoData.todo, messageMediaToDoData.completions)
