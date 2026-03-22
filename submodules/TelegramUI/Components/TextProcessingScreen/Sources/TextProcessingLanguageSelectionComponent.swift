@@ -536,8 +536,15 @@ final class TextProcessingLanguageSelectionComponent: Component {
             }
             let stylesContentSize = stylesSize
             if var stylesSizeValue = stylesSize {
+                let stylesItemHeight: CGFloat = 60.0
                 let maxHeight = min(370.0, maxAvailableHeight)
-                stylesSizeValue.height = min(stylesSizeValue.height, maxHeight)
+                if stylesSizeValue.height > maxHeight {
+                    let n = floor(maxHeight / stylesItemHeight)
+                    let visibleHeight = (n - 0.5) * stylesItemHeight
+                    stylesSizeValue.height = max(stylesItemHeight, visibleHeight)
+                } else {
+                    stylesSizeValue.height = min(stylesSizeValue.height, maxHeight)
+                }
                 stylesSize = stylesSizeValue
                 mainSize.height = min(mainSize.height, stylesSizeValue.height)
             }
