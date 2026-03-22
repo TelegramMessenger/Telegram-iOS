@@ -461,9 +461,6 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
     }
     
     public func shouldDismissImmediately() -> Bool {
-        if self.hasBottomEdgeEffect {
-            self.onDismissImpl()
-        }
         return true
     }
 
