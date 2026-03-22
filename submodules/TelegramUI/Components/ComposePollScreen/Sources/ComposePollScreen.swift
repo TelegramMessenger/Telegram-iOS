@@ -851,9 +851,26 @@ final class ComposePollScreenComponent: Component {
                 availableButtons = [.gallery, .sticker, .emoji, .location]
             }
             
-            presentPollAttachmentScreen(context: component.context, updatedPresentationData: nil, availableButtons: availableButtons, inputMediaNodeData: self.inputMediaNodeDataPromise.get() |> map(Optional.init), present: { [weak self] c in
-                (self?.environment?.controller() as? ComposePollScreen)?.parentController()?.push(c)
-            }, completion: { [weak self] media in
+            let pollAttachmentSubject: PollAttachmentSubject
+            switch subject {
+            case .description:
+                pollAttachmentSubject = .description
+            case .quizAnswer:
+                pollAttachmentSubject = .quizAnswer
+            case .pollOption:
+                pollAttachmentSubject = .option
+            }
+            
+            presentPollAttachmentScreen(
+                context: component.context,
+                updatedPresentationData: nil,
+                subject: pollAttachmentSubject,
+                availableButtons: availableButtons,
+                inputMediaNodeData: self.inputMediaNodeDataPromise.get() |> map(Optional.init),
+                present: { [weak self] c in
+                    (self?.environment?.controller() as? ComposePollScreen)?.parentController()?.push(c)
+                },
+                completion: { [weak self] media in
                 guard let self else {
                     return
                 }
@@ -1729,7 +1746,13 @@ final class ComposePollScreenComponent: Component {
                     maximumNumberOfLines: 0
                 ))
             } else {
-                let remainingCount = component.initialData.maxPollAnswersCount - self.pollOptions.count
+                var filledOptionsCount = 0
+                for option in self.pollOptions {
+                    if option.textInputState.hasText {
+                        filledOptionsCount += 1
+                    }
+                }
+                let remainingCount = component.initialData.maxPollAnswersCount - filledOptionsCount
                 let rawString = environment.strings.CreatePoll_OptionCountFooterFormat(Int32(remainingCount))
                 
                 var pollOptionsFooterItems: [AnimatedTextComponent.Item] = []
@@ -2813,7 +2836,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     public func prepareForReuse() {
     }
     
-    public func requestDismiss(completion: @escaping () -> Void) {        
+    public func requestDismiss(completion: @escaping () -> Void) {
         completion()
     }
     

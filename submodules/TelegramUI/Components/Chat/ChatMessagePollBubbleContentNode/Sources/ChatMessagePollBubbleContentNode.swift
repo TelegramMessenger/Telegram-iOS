@@ -1368,6 +1368,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     var attachPressed: (() -> Void)?
     var mediaPressed: (() -> Void)?
     var modeSelectorPressed: (() -> Void)?
+    var requestSave: (() -> Void)?
     
     static let characterLimit = 100
     private static let leftInset: CGFloat = 50.0
@@ -1449,17 +1450,25 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
             hideKeyboard: self.currentFocusedTextInputIsMedia,
             customInputView: nil,
             placeholder: NSAttributedString(string: strings.CreatePoll_AddOption, font: font, textColor: currentPlaceholderColor),
+            placeholderVerticalOffset: 1.0 + UIScreenPixel,
             resetText: nil,
             isOneLineWhenUnfocused: false,
             characterLimit: ChatMessagePollAddOptionNode.characterLimit,
             enableInlineAnimations: true,
-            emptyLineHandling: .allowed,
+            emptyLineHandling: .notAllowed,
             formatMenuAvailability: .none,
+            returnKeyType: .done,
             lockedFormatAction: {
             },
             present: { _ in
             },
             paste: { _ in
+            },
+            returnKeyAction: { [weak self] in
+                self?.requestSave?()
+            },
+            backspaceKeyAction: {
+                
             }
         )
     }
@@ -2150,17 +2159,14 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return
         }
-        item.controllerInteraction.updatePresentationState { [weak item] state in
-            var focusedTextInputIsMedia = false
+        item.controllerInteraction.updatePresentationState { state in
             let updatedState = state.updatedInputMode({ inputMode in
                 if case .media = inputMode {
                     return .text
                 } else {
-                    focusedTextInputIsMedia = true
                     return .media(mode: .other, expanded: .none, focused: true)
                 }
             })
-            item?.controllerInteraction.focusedTextInputIsMedia = focusedTextInputIsMedia
             
             return updatedState
         }
@@ -2185,6 +2191,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         presentPollAttachmentScreen(
             context: item.context,
             updatedPresentationData: item.controllerInteraction.updatedPresentationData,
+            subject: .option,
             availableButtons: [.gallery, .sticker, .emoji, .location],
             present: { [weak item] controller in
                 item?.controllerInteraction.navigationController()?.pushViewController(controller)
@@ -2290,6 +2297,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             
             let optionData = "\(poll.options.count)".data(using: .utf8)!
             item.controllerInteraction.requestAddMessagePollOption(item.message.id, trimmedNewOptionText, entities, optionData, self.currentNewOptionMedia?.media)
+            return
+        } else if self.newOptionIsFocused {
             return
         }
 
@@ -2931,6 +2940,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 addOptionNode.modeSelectorPressed = { [weak self] in
                                     self?.toggleNewOptionInputMode()
+                                }
+                                addOptionNode.requestSave = { [weak self] in
+                                    self?.buttonPressed()
                                 }
                                 addOptionNode.focusUpdated = { [weak self] focused in
                                     guard let self else {

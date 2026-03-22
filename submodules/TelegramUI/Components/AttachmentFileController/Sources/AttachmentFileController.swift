@@ -26,6 +26,7 @@ import ContextUI
 private final class AttachmentFileControllerArguments {
     let context: AccountContext
     let isAudio: Bool
+    let isAttach: Bool
     let openGallery: () -> Void
     let openFiles: () -> Void
     let scanDocument: () -> Void
@@ -38,9 +39,10 @@ private final class AttachmentFileControllerArguments {
     let setMessageSelection: ([MessageId], Message?, Bool) -> Void
     let openMessageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)
 
-    init(context: AccountContext, isAudio: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, scanDocument: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, expandRecentMusic: @escaping () -> Void, send: @escaping (Message) -> Void, toggleMediaPlayback: @escaping (Message) -> Void, isSelectionActive: @escaping () -> Bool, toggleMessageSelection: @escaping (Message) -> Void, setMessageSelection: @escaping ([MessageId], Message?, Bool) -> Void, openMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)) {
+    init(context: AccountContext, isAudio: Bool, isAttach: Bool, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, scanDocument: @escaping () -> Void, expandSavedMusic: @escaping () -> Void, expandRecentMusic: @escaping () -> Void, send: @escaping (Message) -> Void, toggleMediaPlayback: @escaping (Message) -> Void, isSelectionActive: @escaping () -> Bool, toggleMessageSelection: @escaping (Message) -> Void, setMessageSelection: @escaping ([MessageId], Message?, Bool) -> Void, openMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)) {
         self.context = context
         self.isAudio = isAudio
+        self.isAttach = isAttach
         self.openGallery = openGallery
         self.openFiles = openFiles
         self.scanDocument = scanDocument
@@ -250,7 +252,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
 
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
-            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: arguments.context.account.peerId), interaction: interaction, message: message, selection: selection, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: arguments.context.account.peerId), interaction: interaction, message: message, selection: selection, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: arguments.isAttach, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
         case let .savedShowMore(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
                 arguments.expandSavedMusic()
@@ -275,8 +277,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
 
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
-
-            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: selection, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: selection, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: arguments.isAttach, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
         case let .recentShowMore(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
                 arguments.expandRecentMusic()
@@ -301,8 +302,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
 
             let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
-
-            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: selection, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: true, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
+            return ListMessageItem(presentationData: chatPresentationData, systemStyle: .glass, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: selection, displayHeader: false, isDownloadList: arguments.isAudio, isStoryMusic: true, isAttachMusic: arguments.isAttach, displayFileInfo: true, displayBackground: true, style: .blocks, sectionId: self.section)
         case let .globalShowMore(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.downArrowImage(theme), title: text, sectionId: self.section, editing: false, action: {
 
@@ -434,6 +434,8 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
     fileprivate var caption: NSAttributedString?
     fileprivate var selectionCount = ValuePromise<Int>(0)
     
+    fileprivate var bottomEdgeColor: UIColor = .clear
+    
     fileprivate var mulitpleCompletion: ((AttachmentMediaPickerSendMode, AttachmentMediaPickerAttachmentMode, ChatSendMessageActionSheetController.SendParameters?) -> Void)?
 
     var delayDisappear = false
@@ -441,6 +443,7 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
     var hasBottomEdgeEffect = true
 
     var resetForReuseImpl: () -> Void = {}
+    var onDismissImpl: () -> Void = {}
     public func resetForReuse() {
         self.resetForReuseImpl()
         self.scrollToTop?()
@@ -451,12 +454,23 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
         self.visibleBottomContentOffsetChanged?(self.visibleBottomContentOffset)
         self.delayDisappear = false
     }
+    
+    public func requestDismiss(completion: @escaping () -> Void) {
+        self.onDismissImpl()
+        completion()
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        if self.hasBottomEdgeEffect {
+            self.onDismissImpl()
+        }
+        return true
+    }
 
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         return AttachmentFileContext(controller: self)
     }
 
-    private var topEdgeEffectView: EdgeEffectView?
     private var bottomEdgeEffectView: EdgeEffectView?
 
     var isSearching: Bool = false {
@@ -468,21 +482,7 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        let topEdgeEffectView: EdgeEffectView
-        if let current = self.topEdgeEffectView {
-            topEdgeEffectView = current
-        } else {
-            topEdgeEffectView = EdgeEffectView()
-            if let navigationBar = self.navigationBar {
-                self.view.insertSubview(topEdgeEffectView, belowSubview: navigationBar.view)
-            }
-            self.topEdgeEffectView = topEdgeEffectView
-        }
-
         let edgeEffectHeight: CGFloat = 88.0
-        let topEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: edgeEffectHeight))
-        transition.updateFrame(view: topEdgeEffectView, frame: topEdgeEffectFrame)
-        topEdgeEffectView.update(content: .clear, blur: true, alpha: 1.0, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: ComponentTransition(transition))
 
         if self.hasBottomEdgeEffect {
             let bottomEdgeEffectView: EdgeEffectView
@@ -497,7 +497,7 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
             let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - edgeEffectHeight - layout.additionalInsets.bottom), size: CGSize(width: layout.size.width, height: edgeEffectHeight))
             transition.updateFrame(view: bottomEdgeEffectView, frame: bottomEdgeEffectFrame)
             transition.updateAlpha(layer: bottomEdgeEffectView.layer, alpha: self.isSearching ? 0.0 : 1.0)
-            bottomEdgeEffectView.update(content: .clear, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectFrame.height, transition: ComponentTransition(transition))
+            bottomEdgeEffectView.update(content: self.bottomEdgeColor, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectFrame.height, transition: ComponentTransition(transition))
         } else if let bottomEdgeEffectView = self.bottomEdgeEffectView {
             bottomEdgeEffectView.removeFromSuperview()
         }
@@ -521,13 +521,32 @@ private func messageSelectionState(state: AttachmentFileControllerState, message
 
 public enum AttachmentFileControllerMode {
     case recent
-    case audio
+    case audio(story: Bool)
+    
+    var isAudio: Bool {
+        if case .audio = self {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+public enum AttachmentFileControllerSource: Equatable {
+    public enum PollMode: Equatable {
+        case description
+        case quizAnswer
+    }
+    
+    case generic
+    case poll(PollMode)
 }
 
 public func makeAttachmentFileControllerImpl(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     mode: AttachmentFileControllerMode = .recent,
+    source: AttachmentFileControllerSource = .generic,
     bannedSendMedia: (Int32, Bool)?,
     presentGallery: @escaping () -> Void,
     presentFiles: @escaping () -> Void,
@@ -549,10 +568,20 @@ public func makeAttachmentFileControllerImpl(
     var updateIsSearchingImpl: ((Bool) -> Void)?
     var updateSelectionCountImpl: ((Int) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
-
+    var updateBottomColorImpl: ((UIColor) -> Void)?
+    
+    var isAudio = false
+    var isAttach = true
+    if case let .audio(isStory) = mode {
+        isAudio = true
+        isAttach = !isStory
+    }
+    
+    var didPreviewAudio = false
     let arguments = AttachmentFileControllerArguments(
         context: context,
-        isAudio: mode == .audio,
+        isAudio: isAudio,
+        isAttach: isAttach,
         openGallery: {
             presentGallery()
         },
@@ -603,6 +632,8 @@ public func makeAttachmentFileControllerImpl(
             }
         },
         toggleMediaPlayback: { message in
+            didPreviewAudio = true
+            
             let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil)
             context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
         },
@@ -727,7 +758,7 @@ public func makeAttachmentFileControllerImpl(
 
     let existingCloseButton = Atomic<BarComponentHostNode?>(value: nil)
     let existingSearchButton = Atomic<BarComponentHostNode?>(value: nil)
-
+    
     let previousRecentDocuments = Atomic<[Message]?>(value: nil)
     let signal = combineLatest(queue: Queue.mainQueue(),
         presentationData,
@@ -823,21 +854,32 @@ public func makeAttachmentFileControllerImpl(
         }
 
         var rightNavigationButton: ItemListNavigationButton?
-        if bannedSendMedia == nil && (recentDocuments == nil || (recentDocuments?.count ?? 0) > 10 || (mode == .audio && hasAudioSearch)) {
+        if bannedSendMedia == nil && (recentDocuments == nil || (recentDocuments?.count ?? 0) > 10 || (mode.isAudio && hasAudioSearch)) {
             rightNavigationButton = searchButtonNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: {}) }
         }
 
         let title: String
+        var subtitle: String?
         switch mode {
         case .recent:
             title = presentationData.strings.Attachment_File
         case .audio:
             title = presentationData.strings.MediaEditor_Audio_Title
         }
-
+        
+        if case let .poll(pollMode) = source {
+            //TODO:localize
+            switch pollMode {
+            case .description:
+                subtitle = "Add file to the poll description"
+            case .quizAnswer:
+                subtitle = "Add file to the quiz explanation"
+            }
+        }
+        
         let controllerState = ItemListControllerState(
             presentationData: ItemListPresentationData(presentationData),
-            title: .text(title),
+            title: subtitle.flatMap { .textWithSubtitle(title, $0) } ?? .text(title),
             leftNavigationButton: leftNavigationButton,
             rightNavigationButton: rightNavigationButton,
             backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back),
@@ -881,6 +923,8 @@ public func makeAttachmentFileControllerImpl(
 
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: attachmentFileControllerEntries(presentationData: presentationData, mode: mode, state: state, savedMusic: savedMusic, recentDocuments: recentDocuments, hasScan: presentDocumentScanner != nil, empty: bannedSendMedia != nil), style: .blocks, emptyStateItem: emptyItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
 
+        updateBottomColorImpl?(presentationData.theme.list.blocksBackgroundColor)
+        
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
         actionsDisposable.dispose()
@@ -888,7 +932,6 @@ public func makeAttachmentFileControllerImpl(
     }
 
     let controller = AttachmentFileControllerImpl(context: context, state: signal, hideNavigationBarBackground: true)
-
     controller.mulitpleCompletion = { _, _, _ in
         let _ = stateValue.with({ state in
             if let selectedMessageIds = state.selectedMessageIds {
@@ -928,12 +971,25 @@ public func makeAttachmentFileControllerImpl(
             updatedState.selectedMessageIds = nil
             return updatedState
         }
+        
+        if didPreviewAudio {
+            context.sharedContext.mediaManager.setPlaylist(nil, type: .music, control: .playback(.pause))
+        }
+    }
+    controller.onDismissImpl = {
+        if didPreviewAudio {
+            context.sharedContext.mediaManager.setPlaylist(nil, type: .music, control: .playback(.pause))
+        }
     }
     updateIsSearchingImpl = { [weak controller] isSearching in
         controller?.isSearching = isSearching
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss(animated: true)
+        
+        if didPreviewAudio {
+            context.sharedContext.mediaManager.setPlaylist(nil, type: .music, control: .playback(.pause))
+        }
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
@@ -950,6 +1006,9 @@ public func makeAttachmentFileControllerImpl(
     presentInGlobalOverlayImpl = { [weak controller] c in
         controller?.presentInGlobalOverlay(c)
     }
+    updateBottomColorImpl = { [weak controller] color in
+        controller?.bottomEdgeColor = color
+    }
     return controller
 }
 
@@ -962,15 +1021,16 @@ public func storyAudioPickerController(
     var dismissImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
     let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
-    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, style: .glass, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false)
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, style: .glass, chatLocation: nil, buttons: [.audio], initialButton: .audio, fromMenu: false, hasTextInput: false)
     controller.requestController = { _, present in
-        let filePickerController = makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: .audio, bannedSendMedia: nil, presentGallery: {}, presentFiles: {
+        let filePickerController = makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: .audio(story: true), bannedSendMedia: nil, presentGallery: {}, presentFiles: {
             selectFromFiles()
             dismissImpl?()
         }, presentDocumentScanner: nil, send: { files in
             completion(files.first!)
             dismissImpl?()
         }) as! AttachmentFileControllerImpl
+        filePickerController.hasBottomEdgeEffect = false
         present(filePickerController, filePickerController.mediaPickerContext)
         return true
     }

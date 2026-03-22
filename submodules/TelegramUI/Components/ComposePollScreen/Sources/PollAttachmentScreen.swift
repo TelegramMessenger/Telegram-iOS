@@ -16,9 +16,16 @@ import LocationUI
 import AttachmentFileController
 import ChatEntityKeyboardInputNode
 
+public enum PollAttachmentSubject {
+    case description
+    case quizAnswer
+    case option
+}
+
 public func presentPollAttachmentScreen(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
+    subject: PollAttachmentSubject,
     availableButtons: [AttachmentButtonType],
     inputMediaNodeData: Signal<ChatEntityKeyboardInputNode.InputData?, NoError> = .single(nil),
     present: @escaping (ViewController) -> Void,
@@ -36,16 +43,18 @@ public func presentPollAttachmentScreen(
             return nil
         }
     )
-//    attachmentController.getSourceRect = { [weak self] in
-//        if let strongSelf = self {
-//            return strongSelf.chatDisplayNode.frameForAttachmentButton()?.offsetBy(dx: strongSelf.chatDisplayNode.supernode?.frame.minX ?? 0.0, dy: 0.0)
-//        } else {
-//            return nil
-//        }
-//    }
     attachmentController.requestController = { [weak attachmentController] type, controllerCompletion in
         switch type {
         case .gallery:
+            let mediaPickerPollSubject: MediaPickerScreenImpl.Subject.AssetsMode.PollMode
+            switch subject {
+            case .description:
+                mediaPickerPollSubject = .description
+            case .quizAnswer:
+                mediaPickerPollSubject = .quizAnswer
+            case .option:
+                mediaPickerPollSubject = .option
+            }
             let controller = MediaPickerScreenImpl(
                 context: context,
                 updatedPresentationData: updatedPresentationData,
@@ -54,7 +63,7 @@ public func presentPollAttachmentScreen(
                 threadTitle: nil,
                 chatLocation: nil,
                 enableMultiselection: false,
-                subject: .assets(nil, .poll(.option))
+                subject: .assets(nil, .poll(mediaPickerPollSubject))
             )
             controller.getCaptionPanelView = {
                 return nil
@@ -71,24 +80,49 @@ public func presentPollAttachmentScreen(
             controllerCompletion(controller, controller.mediaPickerContext)
             return true
         case .file:
-            let controller = context.sharedContext.makeAttachmentFileController(context: context, updatedPresentationData: updatedPresentationData, audio: false, bannedSendMedia: nil, presentGallery: { [weak attachmentController] in
-                attachmentController?.dismiss(animated: true)
-                //self?.presentFileGallery()
-            }, presentFiles: { [weak attachmentController] in
-                attachmentController?.dismiss(animated: true)
-                //self?.presentICloudFileGallery()
-            }, presentDocumentScanner: {
-                //self?.presentDocumentScanner()
-            }, send: { mediaReferences in
-                completion(mediaReferences.first!)
-            })
-            guard let controller = controller as? AttachmentFileControllerImpl else {
-                return false
+            let filePickerPollSubject: AttachmentFileControllerSource.PollMode
+            switch subject {
+            case .description:
+                filePickerPollSubject = .description
+            case .quizAnswer:
+                filePickerPollSubject = .quizAnswer
+            default:
+                filePickerPollSubject = .description
             }
+            let controller = makeAttachmentFileControllerImpl(
+                context: context,
+                updatedPresentationData: updatedPresentationData,
+                source: .poll(filePickerPollSubject),
+                bannedSendMedia: nil,
+                presentGallery: {},
+                presentFiles: { [weak attachmentController] in
+                    attachmentController?.dismiss(animated: true)
+                    //TODO
+                },
+                presentDocumentScanner: nil,
+                send: { mediaReferences in
+                    completion(mediaReferences.first!)
+                }
+            ) as! AttachmentFileControllerImpl
             controllerCompletion(controller, controller.mediaPickerContext)
             return true
         case .location:
-            let controller = LocationPickerController(context: context, style: .glass, updatedPresentationData: updatedPresentationData, mode: .share(peer: nil, selfPeer: nil, hasLiveLocation: false), completion: { location, _, _, _, _ in
+            let locationPickerPollSubject: LocationPickerController.Source.PollMode
+            switch subject {
+            case .description:
+                locationPickerPollSubject = .description
+            case .quizAnswer:
+                locationPickerPollSubject = .quizAnswer
+            case .option:
+                locationPickerPollSubject = .option
+            }
+            let controller = LocationPickerController(
+                context: context,
+                style: .glass,
+                updatedPresentationData: updatedPresentationData,
+                mode: .share(peer: nil, selfPeer: nil, hasLiveLocation: false),
+                source: .poll(locationPickerPollSubject),
+                completion: { location, _, _, _, _ in
                 completion(.standalone(media: location))
             })
             controllerCompletion(controller, controller.mediaPickerContext)
@@ -100,9 +134,23 @@ public func presentPollAttachmentScreen(
                 guard let content = content?.stickers else {
                     return
                 }
-                let controller = StickerAttachmentScreen(context: context, mode: .stickers(content), completion: { sticker in
-                    completion(sticker)
-                })
+                let stickerPickerPollSubject: StickerAttachmentScreen.Source.PollMode
+                switch subject {
+                case .description:
+                    stickerPickerPollSubject = .description
+                case .quizAnswer:
+                    stickerPickerPollSubject = .quizAnswer
+                case .option:
+                    stickerPickerPollSubject = .option
+                }
+                let controller = StickerAttachmentScreen(
+                    context: context,
+                    mode: .stickers(content),
+                    source: .poll(stickerPickerPollSubject),
+                    completion: { sticker in
+                        completion(sticker)
+                    }
+                )
                 controllerCompletion(controller, controller.mediaPickerContext)
             })
             return true
@@ -113,9 +161,23 @@ public func presentPollAttachmentScreen(
                 guard let content = content?.emoji else {
                     return
                 }
-                let controller = StickerAttachmentScreen(context: context, mode: .emoji(content), completion: { sticker in
-                    completion(sticker)
-                })
+                let stickerPickerPollSubject: StickerAttachmentScreen.Source.PollMode
+                switch subject {
+                case .description:
+                    stickerPickerPollSubject = .description
+                case .quizAnswer:
+                    stickerPickerPollSubject = .quizAnswer
+                case .option:
+                    stickerPickerPollSubject = .option
+                }
+                let controller = StickerAttachmentScreen(
+                    context: context,
+                    mode: .emoji(content),
+                    source: .poll(stickerPickerPollSubject),
+                    completion: { sticker in
+                        completion(sticker)
+                    }
+                )
                 controllerCompletion(controller, controller.mediaPickerContext)
             })
             return true

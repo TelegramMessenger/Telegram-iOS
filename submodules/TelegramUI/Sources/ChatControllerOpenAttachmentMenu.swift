@@ -413,7 +413,7 @@ extension ChatControllerImpl {
                     let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, audio: true, bannedSendMedia: bannedSendFiles, presentGallery: {
                     }, presentFiles: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
-                        self?.presentICloudFileGallery()
+                        self?.presentICloudFileGallery(documentTypes: ["public.mp3", "public.mpeg-4-audio", "public.aac-audio", "org.xiph.flac"])
                     }, presentDocumentScanner: nil, send: { [weak self] mediaReferences in
                         guard let self else {
                             return
@@ -1154,7 +1154,7 @@ extension ChatControllerImpl {
         })
     }
     
-    func presentICloudFileGallery(editingMessage: Bool = false) {
+    func presentICloudFileGallery(editingMessage: Bool = false, documentTypes: [String] = ["public.item"]) {
         let _ = (self.context.engine.data.get(
             TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
@@ -1167,7 +1167,7 @@ extension ChatControllerImpl {
             let (accountPeer, limits, premiumLimits) = result
             let isPremium = accountPeer?.isPremium ?? false
             
-            strongSelf.present(legacyICloudFilePicker(theme: strongSelf.presentationData.theme, completion: { [weak self] urls in
+            strongSelf.present(legacyICloudFilePicker(theme: strongSelf.presentationData.theme, documentTypes: documentTypes, completion: { [weak self] urls in
                 if let strongSelf = self, !urls.isEmpty {
                     var signals: [Signal<ICloudFileDescription?, NoError>] = []
                     for url in urls {

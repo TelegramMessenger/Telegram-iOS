@@ -15,6 +15,10 @@ import ChatPresentationInterfaceState
 import PagerComponent
 import FeaturedStickersScreen
 import TelegramNotices
+import CounterControllerTitleView
+import GlassBackgroundComponent
+import GlassBarButtonComponent
+import BundleIconComponent
 
 final class StickerAttachmentScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -49,8 +53,10 @@ final class StickerAttachmentScreenComponent: Component {
     final class View: UIView, UIScrollViewDelegate {
         fileprivate let keyboardView: ComponentView<Empty>
         private let keyboardClippingView: KeyboardClippingView
+        private let panelBackgroundView: GlassBackgroundView
+        private let panelClippingView: UIView
         private let panelHostView: PagerExternalTopPanelContainer
-        private let panelSeparatorView: UIView
+        private let cancelButton: ComponentView<Empty>
         
         private var component: StickerAttachmentScreenComponent?
         private(set) weak var state: EmptyComponentState?
@@ -109,14 +115,17 @@ final class StickerAttachmentScreenComponent: Component {
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
             self.keyboardClippingView = KeyboardClippingView()
+            self.panelBackgroundView = GlassBackgroundView()
+            self.panelClippingView = UIView()
             self.panelHostView = PagerExternalTopPanelContainer()
-            self.panelSeparatorView = UIView()
+            self.cancelButton = ComponentView<Empty>()
             
             super.init(frame: frame)
             
             self.addSubview(self.keyboardClippingView)
-            self.addSubview(self.panelSeparatorView)
-            self.addSubview(self.panelHostView)
+            self.addSubview(self.panelBackgroundView)
+            self.panelBackgroundView.contentView.addSubview(self.panelClippingView)
+            self.panelClippingView.addSubview(self.panelHostView)
             
             self.interaction = ChatEntityKeyboardInputNode.Interaction(
                 sendSticker: { [weak self] file, _, _, _, _, _, _, _, _ in
@@ -200,10 +209,7 @@ final class StickerAttachmentScreenComponent: Component {
             (self.environment?.controller() as? StickerAttachmentScreen)?.dismiss(animated: true)
         }
         
-        func updateContent() {
-            guard let component = self.component else {
-                return
-            }
+        func updateContent(component: StickerAttachmentScreenComponent) {
             self.emojiContent?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] groupId, item, _, _, _, _ in
                     guard let self, let component = self.component else {
@@ -599,7 +605,7 @@ final class StickerAttachmentScreenComponent: Component {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 customContentView: nil,
-                useOpaqueTheme: false,
+                useOpaqueTheme: true,
                 hideBackground: true,
                 stateContext: nil,
                 addImage: nil
@@ -872,7 +878,7 @@ final class StickerAttachmentScreenComponent: Component {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 customContentView: nil,
-                useOpaqueTheme: false,
+                useOpaqueTheme: true,
                 hideBackground: true,
                 stateContext: nil,
                 addImage: nil
@@ -884,7 +890,6 @@ final class StickerAttachmentScreenComponent: Component {
             self.environment = environment
             
             self.backgroundColor = environment.theme.list.plainBackgroundColor
-            self.panelSeparatorView.backgroundColor = .clear
             
             if self.component == nil {
                 let data = combineLatest(
@@ -933,10 +938,7 @@ final class StickerAttachmentScreenComponent: Component {
                         }
                         self.stickerContent = stickerContent
                     }
-                    Queue.mainQueue().justDispatch {
-                        self.updateContent()
-                        self.state?.updated()
-                    }
+                    self.updateContent(component: component)
                 }))
             }
             
@@ -962,15 +964,15 @@ final class StickerAttachmentScreenComponent: Component {
                     theme: environment.theme,
                     strings: environment.strings,
                     isContentInFocus: true,
-                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0 + topInset, left: 0.0, bottom: 0.0, right: 0.0),
-                    topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
+                    containerInsets: UIEdgeInsets(top: topPanelHeight + topInset - 11.0, left: 0.0, bottom: 0.0, right: 0.0),
+                    topPanelInsets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 12.0),
                     emojiContent: self.emojiContent,
                     stickerContent: self.stickerContent,
                     maskContent: nil,
                     gifContent: nil,
                     hasRecentGifs: false,
                     availableGifSearchEmojies: [],
-                    defaultToEmojiTab: emojiContent != nil,
+                    defaultToEmojiTab: self.emojiContent != nil,
                     externalTopPanelContainer: self.panelHostView,
                     externalBottomPanelContainer: nil,
                     externalTintMaskContainer: nil,
@@ -993,6 +995,16 @@ final class StickerAttachmentScreenComponent: Component {
                         self.forceUpdate = true
                         self.searchVisible = searchVisible
                         self.state?.updated(transition: transition)
+                        
+                        let transition: ComponentTransition = .easeInOut(duration: 0.2)
+                        if let controller = self.environment?.controller() as? StickerAttachmentScreen {
+                            if let titleView = controller.navigationItem.titleView {
+                                transition.setAlpha(view: titleView, alpha: searchVisible ? 0.0 : 1.0)
+                            }
+                            if searchVisible {
+                                controller.requestAttachmentMenuExpansion()
+                            }
+                        }
                     },
                     hideTopPanelUpdated: { _, _ in
                     },
@@ -1053,28 +1065,57 @@ final class StickerAttachmentScreenComponent: Component {
                     self.keyboardClippingView.addSubview(keyboardComponentView)
                 }
                 
-//                if panelBackgroundColor.alpha < 0.01 {
-//                    self.keyboardClippingView.clipsToBounds = true
-//                } else {
-                    self.keyboardClippingView.clipsToBounds = false
-//                }
+                self.keyboardClippingView.clipsToBounds = false
                 
                 transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight - topInset)))
                 self.keyboardClippingView.hitEdgeInsets = UIEdgeInsets(top: -topPanelHeight - topInset, left: 0.0, bottom: 0.0, right: 0.0)
                 
+                let panelBackgroundFrame = CGRect(origin: CGPoint(x: 12.0, y: topPanelHeight + topInset - 29.0), size: CGSize(width: availableSize.width - 24.0, height: 44.0))
+                
+                self.panelClippingView.clipsToBounds = true
+                self.panelClippingView.layer.cornerRadius = panelBackgroundFrame.height * 0.5
+                transition.setFrame(view: self.panelClippingView, frame: CGRect(origin: .zero, size: panelBackgroundFrame.size))
+                
+                self.panelBackgroundView.update(size: panelBackgroundFrame.size, cornerRadius: panelBackgroundFrame.size.height * 0.5, isDark: environment.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, isVisible: !self.searchVisible, transition: transition)
+                transition.setFrame(view: self.panelBackgroundView, frame: panelBackgroundFrame)
+                
                 transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight - topInset), size: keyboardSize))
-                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
-                
-                let topPanelAlpha: CGFloat
-                if self.searchVisible || self.keyboardContentId == AnyHashable("gifs") {
-                    topPanelAlpha = 0.0
-                } else {
-                    topPanelAlpha = max(0.0, min(1.0, (self.topPanelScrollingOffset / 20.0)))
-                }
+                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: -12.0, y: 8.0 - UIScreenPixel), size: CGSize(width: keyboardSize.width, height: 0.0)))
+            }
             
-                transition.setAlpha(view: self.panelSeparatorView, alpha: topPanelAlpha)
-                
-                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - UIScreenPixel), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
+            let barButtonSize = CGSize(width: 44.0, height: 44.0)
+            let cancelButtonSize = self.cancelButton.update(
+                transition: transition,
+                component: AnyComponent(GlassBarButtonComponent(
+                    size: barButtonSize,
+                    backgroundColor: nil,
+                    isDark: environment.theme.overallDarkAppearance,
+                    state: .glass,
+                    component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
+                        BundleIconComponent(
+                            name: "Navigation/Close",
+                            tintColor: environment.theme.chat.inputPanel.panelControlColor
+                        )
+                    )),
+                    action: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        (self.environment?.controller() as? StickerAttachmentScreen)?.dismiss(animated: true)
+                    }
+                )),
+                environment: {},
+                containerSize: barButtonSize
+            )
+            let cancelButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: cancelButtonSize)
+            if let cancelButtonView = self.cancelButton.view {
+                if cancelButtonView.superview == nil {
+                    self.addSubview(cancelButtonView)
+                }
+                transition.setBounds(view: cancelButtonView, bounds: CGRect(origin: .zero, size: cancelButtonFrame.size))
+                transition.setPosition(view: cancelButtonView, position: cancelButtonFrame.center)
+                transition.setAlpha(view: cancelButtonView, alpha: self.searchVisible ? 0.0 : 1.0)
+                transition.setScale(view: cancelButtonView, scale: self.searchVisible ? 0.001 : 1.0)
             }
             
             return availableSize
@@ -1096,11 +1137,21 @@ final class StickerAttachmentScreen: ViewControllerComponentContainer, Attachmen
         case emoji(EmojiPagerContentComponent)
     }
     
+    enum Source: Equatable {
+        enum PollMode: Equatable {
+            case description
+            case quizAnswer
+            case option
+        }
+        
+        case poll(PollMode)
+    }
+    
     private let context: AccountContext
     private let mode: Mode
     private let completion: (AnyMediaReference) -> Void
     
-    init(context: AccountContext, mode: Mode, completion: @escaping (AnyMediaReference) -> Void) {
+    init(context: AccountContext, mode: Mode, source: Source, completion: @escaping (AnyMediaReference) -> Void) {
         self.context = context
         self.mode = mode
         self.completion = completion
@@ -1109,9 +1160,43 @@ final class StickerAttachmentScreen: ViewControllerComponentContainer, Attachmen
             context: context,
             mode: mode,
             completion: completion
-        ), navigationBarAppearance: .default, theme: .default)
+        ), navigationBarAppearance: .transparent, theme: .default)
         
         self._hasGlassStyle = true
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        switch source {
+        case let .poll(pollMode):
+            //TODO:localize
+            let title: String
+            let subtitle: String
+            switch mode {
+            case .stickers:
+                title = "Sticker"
+                switch pollMode {
+                case .description:
+                    subtitle = "Add sticker to the poll description"
+                case .quizAnswer:
+                    subtitle = "Add sticker to the quiz explanation"
+                case .option:
+                    subtitle = "Add sticker to this option"
+                }
+            case .emoji:
+                title = "Emoji"
+                switch pollMode {
+                case .description:
+                    subtitle = "Add emoji to the poll description"
+                case .quizAnswer:
+                    subtitle = "Add emoji to the quiz explanation"
+                case .option:
+                    subtitle = "Add emoji to this option"
+                }
+            }
+            let titleView = CounterControllerTitleView(theme: presentationData.theme, verticalOffset: -2.0)
+            titleView.title = CounterControllerTitle(title: title, counter: subtitle)
+            self.navigationItem.titleView = titleView
+        }
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
     }
     
     required init(coder: NSCoder) {

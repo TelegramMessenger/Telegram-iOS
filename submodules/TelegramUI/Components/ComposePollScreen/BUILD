@@ -56,7 +56,8 @@ swift_library(
         "//submodules/Components/PagerComponent",
         "//submodules/FeaturedStickersScreen",
         "//submodules/TelegramNotices",
-        "//submodules/StickerPeekUI:StickerPeekUI",
+        "//submodules/StickerPeekUI",
+        "//submodules/CounterControllerTitleView",
     ],
     visibility = [
         "//visibility:public",

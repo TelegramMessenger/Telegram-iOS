@@ -327,6 +327,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public var canReadHistory: Bool = false
     public var summarizedMessageIds: Set<MessageId> = Set()
     public var focusedTextInputIsMedia: Bool = false
+    public var focusedPollAddOptionMessageId: MessageId?
     
     private var isOpeningMediaValue: Bool = false
     public var isOpeningMedia: Bool {

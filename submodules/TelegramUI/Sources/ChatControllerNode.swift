@@ -3565,6 +3565,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.controller?.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams()), scrollPosition: .top(-18.0))
             }
             
+            var focusedTextInputIsMedia = false
+            if case .media = chatPresentationInterfaceState.inputMode {
+                focusedTextInputIsMedia = true
+            }
+            self.controllerInteraction.focusedTextInputIsMedia = focusedTextInputIsMedia
+            self.controllerInteraction.focusedPollAddOptionMessageId = chatPresentationInterfaceState.focusedPollAddOptionMessageId
+            
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             

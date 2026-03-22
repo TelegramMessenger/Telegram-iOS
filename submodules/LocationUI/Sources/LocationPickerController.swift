@@ -11,6 +11,7 @@ import CoreLocation
 import PresentationDataUtils
 import DeviceAccess
 import AttachmentUI
+import CounterControllerTitleView
 
 public enum LocationPickerMode {
     case share(peer: EnginePeer?, selfPeer: EnginePeer?, hasLiveLocation: Bool)
@@ -52,9 +53,16 @@ class LocationPickerInteraction {
 }
 
 public final class LocationPickerController: ViewController, AttachmentContainable {
-    public enum Source {
+    public enum Source: Equatable {
+        public enum PollMode: Equatable {
+            case description
+            case quizAnswer
+            case option
+        }
+        
         case generic
         case story
+        case poll(PollMode)
     }
     
     private var controllerNode: LocationPickerControllerNode {
@@ -63,7 +71,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     
     private let context: AccountContext
     private let mode: LocationPickerMode
-    private let source: Source
+    let source: Source
     let initialLocation: CLLocationCoordinate2D?
     private let completion: (TelegramMediaMap, Int64?, String?, String?, String?) -> Void
     private var presentationData: PresentationData
@@ -115,7 +123,6 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         if case .glass = style {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         } else {
-            self.title = self.presentationData.strings.Map_ChooseLocationTitle
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         }
         self.updateBarButtons()

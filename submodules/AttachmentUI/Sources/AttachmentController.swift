@@ -1384,7 +1384,6 @@ public class AttachmentController: ViewController, MinimizableController {
                         
             var containerInsets = containerLayout.intrinsicInsets
             var hasPanel = false
-//            let previousHasButton = self.hasButton
             let hasButton = self.panel.isButtonVisible && !self.isDismissing
             self.hasButton = hasButton
             if let controller = self.controller, controller.buttons.count > 1 || controller.hasTextInput || self.panel.hasMediaAccessoryPanel {
@@ -1405,6 +1404,7 @@ public class AttachmentController: ViewController, MinimizableController {
             
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
             let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, selectionCount: self.selectionCount, elevateProgress: !hasPanel && !hasButton, transition: transition)
+            
             if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight + panelOffset
             }
@@ -1526,7 +1526,7 @@ public class AttachmentController: ViewController, MinimizableController {
     public var forceSourceRect = false
     
     fileprivate var isStandalone: Bool {
-        return self.buttons.contains(.standalone)
+        return self.buttons.contains(.standalone) || self.buttons.count == 1
     }
     
     public func convertToStandalone() {

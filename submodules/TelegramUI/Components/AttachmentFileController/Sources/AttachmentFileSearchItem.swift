@@ -74,12 +74,11 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
     func titleContentNode(current: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)? {
         switch self.mode {
         case .audio:
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             if let current = current as? AttachmentFileSearchNavigationContentNode {
-                current.updateTheme(presentationData.theme)
+                current.updateTheme(self.presentationData.theme)
                 return current
             } else {
-                return AttachmentFileSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, cancel: self.cancel, focus: self.focus, updateActivity: { _ in
+                return AttachmentFileSearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, cancel: self.cancel, focus: self.focus, updateActivity: { _ in
                 })
             }
         default:
@@ -164,7 +163,7 @@ private final class AttachmentFileSearchItemNode: ItemListControllerSearchNode {
                         strings: self.presentationData.strings,
                         metrics: layout.metrics,
                         safeInsets: layout.safeInsets,
-                        placeholder: self.mode == .audio ? self.presentationData.strings.Attachment_FilesSearchPlaceholder : self.presentationData.strings.Attachment_FilesSearchPlaceholder,
+                        placeholder: self.presentationData.strings.Attachment_FilesSearchPlaceholder,
                         updated: { [weak self] query in
                             guard let self else {
                                 return
@@ -329,9 +328,9 @@ private enum AttachmentFileSearchEntry: Comparable, Identifiable {
                 interaction.toggleMediaPlayback(message)
             }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
-            let displayFileInfo = mode == .audio
-            let isStoryMusic = mode == .audio
-            let isDownloadList = mode == .audio
+            let displayFileInfo = mode.isAudio
+            let isStoryMusic = mode.isAudio
+            let isDownloadList = mode.isAudio
             
             return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), systemStyle: .glass, context: interaction.context, chatLocation: .peer(id: PeerId(0)), interaction: itemInteraction, message: message, selection: .none, displayHeader: false, isDownloadList: isDownloadList, isStoryMusic: isStoryMusic, isAttachMusic: true, displayFileInfo: displayFileInfo, displayBackground: true, style: .blocks, sectionId: section)
         case let .showMore(text, section):
@@ -661,6 +660,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         }
                     }
                 } else {
+                    entries.append(.header(title: " ", section: 0))
                     var index: Int32 = 0
                     for _ in 0 ..< 16 {
                         entries.append(.file(index: index, message: nil, section: 0))
@@ -1009,6 +1009,20 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
     
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
+        
+        let searchBarTheme = SearchBarNodeTheme(
+            background: .clear,
+            separator: .clear,
+            inputFill: .clear,
+            primaryText: theme.chat.inputPanel.panelControlColor,
+            placeholder: theme.chat.inputPanel.inputPlaceholderColor,
+            inputIcon: theme.chat.inputPanel.inputControlColor,
+            inputClear: theme.chat.inputPanel.panelControlColor,
+            accent: theme.chat.inputPanel.panelControlAccentColor,
+            keyboard: theme.rootController.keyboardColor
+        )
+        
+        self.searchBar.updateThemeAndStrings(theme: searchBarTheme, presentationTheme: theme, strings: self.strings)
         if let params = self.params {
             let _ = self.updateLayout(size: params.size, leftInset: params.leftInset, rightInset: params.rightInset, transition: .immediate)
         }
@@ -1022,7 +1036,7 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
     }
     
     override var nominalHeight: CGFloat {
-        return 60.0
+        return 68.0
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
