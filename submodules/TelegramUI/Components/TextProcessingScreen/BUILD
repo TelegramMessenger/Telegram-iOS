@@ -35,6 +35,10 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
+        "//submodules/TelegramUI/Components/TooltipComponent",
+        "//submodules/TelegramUI/Components/ToastComponent",
+        "//submodules/TelegramNotices",
+        "//submodules/Markdown",
     ],
     visibility = [
         "//visibility:public",

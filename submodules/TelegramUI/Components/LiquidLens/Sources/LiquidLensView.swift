@@ -58,6 +58,14 @@ private final class RestingBackgroundView: UIVisualEffectView {
 }
 
 public final class LiquidLensView: UIView {
+    public final class TransitionInfo {
+        public let disableAnimationWorkarounds: Bool
+        
+        public init(disableAnimationWorkarounds: Bool) {
+            self.disableAnimationWorkarounds = disableAnimationWorkarounds
+        }
+    }
+    
     public enum Kind {
         case externalContainer
         case builtinContainer
@@ -374,8 +382,11 @@ public final class LiquidLensView: UIView {
                 lensView.bounds = lensBounds
             }
             
-            lensView.layer.removeAllAnimations()
-            lensView.bounds = lensBounds
+            if let info = transition.userData(TransitionInfo.self), info.disableAnimationWorkarounds {
+            } else {
+                lensView.layer.removeAllAnimations()
+                lensView.bounds = lensBounds
+            }
             
             if !transition.animation.isImmediate {
                 self.isAnimating = true

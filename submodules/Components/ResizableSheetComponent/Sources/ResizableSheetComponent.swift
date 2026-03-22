@@ -211,7 +211,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         }
         
         private let dimView: UIView
-        private let containerView: UIView
+        public let containerView: UIView
         private let backgroundLayer: SimpleLayer
         private let navigationBarContainer: SparseContainerView
         private let bottomContainer: SparseContainerView
@@ -505,10 +505,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             
             self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
-            self.scrollContentClippingView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            self.backgroundLayer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            self.navigationBarContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            self.bottomContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.containerView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
         
         func animateOut(initialVelocity: CGFloat? = nil, completion: @escaping () -> Void) {
@@ -518,20 +515,14 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             if let initialVelocity = initialVelocity {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.35, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                 
-                transition.updatePosition(layer: self.scrollContentClippingView.layer, position: CGPoint(x: self.scrollContentClippingView.layer.position.x, y: self.scrollContentClippingView.layer.position.y + animateOffset), completion: { _ in
+                transition.updatePosition(layer: self.containerView.layer, position: CGPoint(x: self.containerView.layer.position.x, y: self.containerView.layer.position.y + animateOffset), completion: { _ in
                     completion()
                 })
-                transition.updatePosition(layer: self.backgroundLayer, position: CGPoint(x: self.backgroundLayer.position.x, y: self.backgroundLayer.position.y + animateOffset))
-                transition.updatePosition(layer: self.navigationBarContainer.layer, position: CGPoint(x: self.navigationBarContainer.layer.position.x, y: self.navigationBarContainer.layer.position.y + animateOffset))
-                transition.updatePosition(layer: self.bottomContainer.layer, position: CGPoint(x: self.bottomContainer.layer.position.x, y: self.bottomContainer.layer.position.y + animateOffset))
             } else {
                 let duration: Double = 0.25
-                self.scrollContentClippingView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
+                self.containerView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
                     completion()
                 })
-                self.backgroundLayer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
-                self.navigationBarContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
-                self.bottomContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             }
         }
       

@@ -417,13 +417,18 @@ final class TextProcessingTextAreaComponent: Component {
                         action: {
                             isExpanded.toggle()
                         },
-                        animateAlpha: false,
+                        animateAlpha: true,
                         animateScale: false,
                         animateContents: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 100.0)
                 )
+                
+                if isExpanded.value && textLayout.trailingLineWidth >= availableSize.width - sideInset - expandButtonSize.width - 8.0 {
+                    textContainerFrame.size.height += 22.0
+                }
+                
                 let expandButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - expandButtonSize.width, y: textContainerFrame.maxY - expandButtonSize.height - 2.0), size: expandButtonSize)
                 if let expandButtonView = expandButton.view {
                     if expandButtonView.superview == nil {
@@ -434,7 +439,9 @@ final class TextProcessingTextAreaComponent: Component {
                     expandButtonTransition.setBounds(view: expandButtonView, bounds: CGRect(origin: CGPoint(), size: expandButtonFrame.size))
                     
                     expandButtonTransition.setFrame(view: expandShadow, frame: expandButtonFrame.insetBy(dx: -expandShadowExtent, dy: -expandShadowExtent))
+                    expandButtonTransition.setAlpha(view: expandShadow, alpha: isExpanded.value ? 0.0 : 1.0)
                 }
+                
             } else {
                 if let expandButton = self.expandButton {
                     self.expandButton = nil
@@ -443,6 +450,12 @@ final class TextProcessingTextAreaComponent: Component {
                 if let expandShadow = self.expandShadow {
                     self.expandShadow = nil
                     expandShadow.removeFromSuperview()
+                }
+                
+                if component.copyAction != nil, let textLayout = self.textState.layout {
+                    if textLayout.trailingLineWidth >= availableSize.width - sideInset - 32.0 {
+                        textContainerFrame.size.height += 28.0
+                    }
                 }
             }
             

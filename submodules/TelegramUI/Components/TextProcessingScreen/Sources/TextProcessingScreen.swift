@@ -19,6 +19,9 @@ import TranslateUI
 import LottieComponent
 import ListSectionComponent
 import ListActionItemComponent
+import ToastComponent
+import TelegramNotices
+import Markdown
 
 final class TextProcessingContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -37,6 +40,7 @@ final class TextProcessingContentComponent: Component {
     let mode: TextProcessingScreen.Mode
     let styles: [TelegramComposeAIMessageMode.Style]
     let inputText: TextWithEntities
+    let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: (() -> Void)?
     let translateChat: ((String) -> Void)?
     let displayLanguageSelectionMenu: (UIView, String, TelegramComposeAIMessageMode.StyleId, Bool,  @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void) -> Void
@@ -47,6 +51,7 @@ final class TextProcessingContentComponent: Component {
         mode: TextProcessingScreen.Mode,
         styles: [TelegramComposeAIMessageMode.Style],
         inputText: TextWithEntities,
+        shouldDisplayStyleNotice: Bool,
         copyCurrentResult: (() -> Void)?,
         translateChat: ((String) -> Void)?,
         displayLanguageSelectionMenu: @escaping (UIView, String, TelegramComposeAIMessageMode.StyleId, Bool, @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void) -> Void
@@ -56,6 +61,7 @@ final class TextProcessingContentComponent: Component {
         self.context = context
         self.mode = mode
         self.inputText = inputText
+        self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
         self.displayLanguageSelectionMenu = displayLanguageSelectionMenu
@@ -100,71 +106,33 @@ final class TextProcessingContentComponent: Component {
             self.addSubview(self.currentContentBackground)
             self.addSubview(self.currentContentContainer)
             
-            self.translateState.resultUpdated = { [weak self] result in
-                guard let self, let component = self.component else {
-                    return
-                }
-                if case .translate = self.currentMode {
-                    component.externalState.result = result?.text
-                }
+            
+            self.translateState.resultUpdated = { [weak self] _ in
+                self?.externalStatesUpdated()
             }
-            self.translateState.isProcessingUpdated = { [weak self] isProcessing in
-                guard let self, let component = self.component else {
-                    return
-                }
-                if case .translate = self.currentMode {
-                    component.externalState.isProcessing = isProcessing
-                }
+            self.translateState.isProcessingUpdated = { [weak self] _ in
+                self?.externalStatesUpdated()
             }
             self.translateState.nonPremiumFloodTriggeredUpdated = { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                self.nonPremiumFloodTriggeredUpdated()
+                self?.externalStatesUpdated()
             }
-            self.stylizeState.resultUpdated = { [weak self] result in
-                guard let self, let component = self.component else {
-                    return
-                }
-                if case .stylize = self.currentMode {
-                    component.externalState.result = result?.text
-                }
+            self.stylizeState.resultUpdated = { [weak self] _ in
+                self?.externalStatesUpdated()
             }
-            self.stylizeState.isProcessingUpdated = { [weak self] isProcessing in
-                guard let self, let component = self.component else {
-                    return
-                }
-                if case .stylize = self.currentMode {
-                    component.externalState.isProcessing = isProcessing
-                }
+            self.stylizeState.isProcessingUpdated = { [weak self] _ in
+                self?.externalStatesUpdated()
             }
             self.stylizeState.nonPremiumFloodTriggeredUpdated = { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                self.nonPremiumFloodTriggeredUpdated()
+                self?.externalStatesUpdated()
             }
-            self.fixState.resultUpdated = { [weak self] result in
-                guard let self, let component = self.component else {
-                    return
-                }
-                if case .fix = self.currentMode {
-                    component.externalState.result = result?.text
-                }
+            self.fixState.resultUpdated = { [weak self] _ in
+                self?.externalStatesUpdated()
             }
-            self.fixState.isProcessingUpdated = { [weak self] isProcessing in
-                guard let self, let component = self.component else {
-                    return
-                }
-                if case .fix = self.currentMode {
-                    component.externalState.isProcessing = isProcessing
-                }
+            self.fixState.isProcessingUpdated = { [weak self] _ in
+                self?.externalStatesUpdated()
             }
             self.fixState.nonPremiumFloodTriggeredUpdated = { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                self.nonPremiumFloodTriggeredUpdated()
+                self?.externalStatesUpdated()
             }
         }
         
@@ -172,11 +140,28 @@ final class TextProcessingContentComponent: Component {
             preconditionFailure()
         }
         
-        private func nonPremiumFloodTriggeredUpdated() {
+        private func externalStatesUpdated() {
             guard let component = self.component else {
                 return
             }
+            
+            switch self.currentMode {
+            case .translate:
+                component.externalState.isProcessing = self.translateState.isProcessing
+                component.externalState.result = self.translateState.result?.text
+            case .stylize:
+                component.externalState.isProcessing = self.stylizeState.isProcessing
+                component.externalState.result = self.stylizeState.result?.text
+            case .fix:
+                component.externalState.isProcessing = self.fixState.isProcessing
+                component.externalState.result = self.fixState.result?.text
+            }
+            
             component.externalState.nonPremiumFloodTriggered = self.translateState.nonPremiumFloodTriggered || self.stylizeState.nonPremiumFloodTriggered || self.fixState.nonPremiumFloodTriggered
+            
+            /*#if DEBUG
+            component.externalState.nonPremiumFloodTriggered = true
+            #endif*/
         }
 
         func update(component: TextProcessingContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
@@ -188,6 +173,10 @@ final class TextProcessingContentComponent: Component {
             let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.2)
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            
+            if self.component == nil {
+                self.stylizeState.displayStyleTooltip = component.shouldDisplayStyleNotice
+            }
             
             self.component = component
             self.state = state
@@ -213,6 +202,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .translate {
                             self.currentMode = .translate
+                            self.externalStatesUpdated()
                         }
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.4))
@@ -228,11 +218,13 @@ final class TextProcessingContentComponent: Component {
                         icon: .bundleIcon(name: "TextProcessing/TabStylize")
                     )),
                     action: { [weak self] _ in
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         if self.currentMode != .stylize {
                             self.currentMode = .stylize
+                            let _ = ApplicationSpecificNotice.incrementAITextProcessingStyleSelection(accountManager: component.context.sharedContext.accountManager).startStandalone()
+                            self.externalStatesUpdated()
                         }
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.4))
@@ -253,6 +245,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .fix {
                             self.currentMode = .fix
+                            self.externalStatesUpdated()
                         }
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.4))
@@ -505,6 +498,7 @@ private final class TextProcessingSheetComponent: Component {
     let ignoredTranslationLanguages: [String]
     let styles: [TelegramComposeAIMessageMode.Style]
     let inputText: TextWithEntities
+    let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: ((TextWithEntities) -> Void)?
     let translateChat: ((String) -> Void)?
 
@@ -514,6 +508,7 @@ private final class TextProcessingSheetComponent: Component {
         ignoredTranslationLanguages: [String],
         styles: [TelegramComposeAIMessageMode.Style],
         inputText: TextWithEntities,
+        shouldDisplayStyleNotice: Bool,
         copyCurrentResult: ((TextWithEntities) -> Void)?,
         translateChat: ((String) -> Void)?
     ) {
@@ -522,6 +517,7 @@ private final class TextProcessingSheetComponent: Component {
         self.ignoredTranslationLanguages = ignoredTranslationLanguages
         self.styles = styles
         self.inputText = inputText
+        self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
     }
@@ -532,6 +528,7 @@ private final class TextProcessingSheetComponent: Component {
 
     final class View: UIView {
         private let sheet = ComponentView<(ViewControllerComponentContainer.Environment, ResizableSheetComponentEnvironment)>()
+        private var toast: ComponentView<Empty>?
         private var languageSelectionMenu: ComponentView<Empty>?
         private let animateOut = ActionSlot<Action<Void>>()
         private let contentExternalState = TextProcessingContentComponent.ExternalState()
@@ -593,10 +590,12 @@ private final class TextProcessingSheetComponent: Component {
             let isMainActionEnabled: Bool
             //TODO:localize (for AI: don't remove this line)
             let actionButtonTitle: String
+            var actionButtonShowsIncreaseLimit = false
             
             if self.contentExternalState.nonPremiumFloodTriggered {
                 isMainActionEnabled = true
                 actionButtonTitle = "Increase Limit"
+                actionButtonShowsIncreaseLimit = true
                 performMainAction = { [weak self] in
                     guard let self, let component = self.component else {
                         return
@@ -664,6 +663,7 @@ private final class TextProcessingSheetComponent: Component {
                         mode: component.mode,
                         styles: component.styles,
                         inputText: component.inputText,
+                        shouldDisplayStyleNotice: component.shouldDisplayStyleNotice,
                         copyCurrentResult: component.copyCurrentResult != nil ? {
                             copyCurrentResultImpl()
                         } : nil,
@@ -725,6 +725,7 @@ private final class TextProcessingSheetComponent: Component {
                         ActionButtonsComponent(
                             theme: theme,
                             actionTitle: actionButtonTitle,
+                            actionButtonShowsIncreaseLimit: actionButtonShowsIncreaseLimit,
                             action: isMainActionEnabled ? performMainAction : nil,
                             sendAction: performSendAction.flatMap { [weak self] performSendAction in
                                 return {
@@ -738,29 +739,6 @@ private final class TextProcessingSheetComponent: Component {
                                 }
                             }
                         )
-                        /*ButtonComponent(
-                            background: ButtonComponent.Background(
-                                style: .glass,
-                                color: theme.list.itemCheckColors.fillColor,
-                                foreground: theme.list.itemCheckColors.foregroundColor,
-                                pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
-                            ),
-                            content: AnyComponentWithIdentity(
-                                id: AnyHashable(0),
-                                component: AnyComponent(ButtonTextContentComponent(
-                                    text: actionButtonTitle,
-                                    badge: 0,
-                                    textColor: theme.list.itemCheckColors.foregroundColor,
-                                    badgeBackground: theme.list.itemCheckColors.foregroundColor,
-                                    badgeForeground: theme.list.itemCheckColors.fillColor
-                                ))
-                            ),
-                            isEnabled: isMainActionEnabled,
-                            displaysProgress: false,
-                            action: {
-                                performMainAction()
-                            }
-                        )*/
                     ),
                     backgroundColor: .color(theme.list.blocksBackgroundColor),
                     animateOut: self.animateOut
@@ -791,6 +769,69 @@ private final class TextProcessingSheetComponent: Component {
                     self.addSubview(sheetView)
                 }
                 transition.setFrame(view: sheetView, frame: CGRect(origin: .zero, size: sheetSize))
+            }
+            
+            if self.contentExternalState.nonPremiumFloodTriggered {
+                let sideInset: CGFloat = 8.0
+                
+                let toast: ComponentView<Empty>
+                var toastTransition = transition
+                if let current = self.toast {
+                    toast = current
+                } else {
+                    toastTransition = toastTransition.withAnimation(.none)
+                    toast = ComponentView()
+                    self.toast = toast
+                }
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let playOnce = ActionSlot<Void>()
+                let toastSize = toast.update(
+                    transition: toastTransition,
+                    component: AnyComponent(ToastContentComponent(
+                        icon: AnyComponent(LottieComponent(
+                            content: LottieComponent.AppBundleContent(name: "PremiumStar"),
+                            startingPosition: .begin,
+                            size: CGSize(width: 32.0, height: 32.0),
+                            playOnce: playOnce
+                        )),
+                        content: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: "Daily limit reached", font: Font.semibold(14.0), textColor: .white)),
+                            ))),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                                text: .markdown(text: "Get **Telegram Premium** for **50x** more text edits per day.", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
+                                maximumNumberOfLines: 0
+                            )))
+                        ], alignment: .left, spacing: 6.0)),
+                        insets: UIEdgeInsets(top: 10.0, left: 12.0, bottom: 10.0, right: 10.0),
+                        iconSpacing: 12.0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                )
+                if let toastView = toast.view {
+                    if toastView.superview == nil, let sheetView = self.sheet.view as? ResizableSheetComponent<ViewControllerComponentContainer.Environment>.View {
+                        sheetView.containerView.addSubview(toastView)
+                        if !transition.animation.isImmediate {
+                            toastView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        }
+                        
+                        if let toastView = toastView as? ToastContentComponent.View, let iconView = toastView.iconView as? LottieComponent.View {
+                            iconView.playOnce()
+                        }
+                    }
+                    toastTransition.setFrame(view: toastView, frame: CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - 94.0 - toastSize.height), size: toastSize))
+                }
+            } else {
+                if let toast = self.toast {
+                    self.toast = nil
+                    if let toastView = toast.view {
+                        toastView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak toastView] _ in
+                            toastView?.removeFromSuperview()
+                        })
+                    }
+                }
             }
 
             if let languageSelectionMenuDataValue = self.languageSelectionMenuData {
@@ -867,6 +908,8 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         self.context = context
         
         let styles = await context.engine.messages.composeAIMessageStyles().get()
+        
+        let shouldDisplayStyleNotice = await ApplicationSpecificNotice.getAITextProcessingStyleSelection(accountManager: context.sharedContext.accountManager).get() < 3
 
         super.init(
             context: context,
@@ -876,6 +919,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
                 ignoredTranslationLanguages: ignoredTranslationLanguages,
                 styles: styles,
                 inputText: inputText,
+                shouldDisplayStyleNotice: shouldDisplayStyleNotice,
                 copyCurrentResult: copyResult,
                 translateChat: translateChat
             ),
@@ -1028,17 +1072,20 @@ private final class TitleComponent: Component {
 private final class ActionButtonsComponent: Component {
     let theme: PresentationTheme
     let actionTitle: String
+    let actionButtonShowsIncreaseLimit: Bool
     let action: (() -> Void)?
     let sendAction: (() -> Void)?
     
     init(
         theme: PresentationTheme,
         actionTitle: String,
+        actionButtonShowsIncreaseLimit: Bool,
         action: (() -> Void)?,
         sendAction: (() -> Void)?
     ) {
         self.theme = theme
         self.actionTitle = actionTitle
+        self.actionButtonShowsIncreaseLimit = actionButtonShowsIncreaseLimit
         self.action = action
         self.sendAction = sendAction
     }
@@ -1048,6 +1095,9 @@ private final class ActionButtonsComponent: Component {
             return false
         }
         if lhs.actionTitle != rhs.actionTitle {
+            return false
+        }
+        if lhs.actionButtonShowsIncreaseLimit != rhs.actionButtonShowsIncreaseLimit {
             return false
         }
         if (lhs.action == nil) != (rhs.action == nil) {
@@ -1084,6 +1134,17 @@ private final class ActionButtonsComponent: Component {
                 actionButtonWidth -= 52.0 + spacing
             }
             
+            var actionButtonContents: [AnyComponentWithIdentity<Empty>] = []
+            actionButtonContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                text: .plain(NSAttributedString(string: component.actionTitle, font: Font.semibold(17.0), textColor: component.theme.list.itemCheckColors.foregroundColor))
+            ))))
+            if component.actionButtonShowsIncreaseLimit {
+                actionButtonContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(IncreaseLimitBadgeComponent(
+                    fillColor: component.theme.list.itemCheckColors.foregroundColor,
+                    foregroundColor: .clear
+                ))))
+            }
+            
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -1095,12 +1156,9 @@ private final class ActionButtonsComponent: Component {
                     ),
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
-                        component: AnyComponent(ButtonTextContentComponent(
-                            text: component.actionTitle,
-                            badge: 0,
-                            textColor: component.theme.list.itemCheckColors.foregroundColor,
-                            badgeBackground: component.theme.list.itemCheckColors.foregroundColor,
-                            badgeForeground: component.theme.list.itemCheckColors.fillColor
+                        component: AnyComponent(HStack(
+                            actionButtonContents,
+                            spacing: 6.0
                         ))
                     ),
                     isEnabled: component.action != nil,
@@ -1164,6 +1222,89 @@ private final class ActionButtonsComponent: Component {
             }
 
             return CGSize(width: availableSize.width, height: actionButtonSize.height)
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class IncreaseLimitBadgeComponent: Component {
+    let fillColor: UIColor
+    let foregroundColor: UIColor
+    
+    init(
+        fillColor: UIColor,
+        foregroundColor: UIColor
+    ) {
+        self.fillColor = fillColor
+        self.foregroundColor = foregroundColor
+    }
+    
+    static func ==(lhs: IncreaseLimitBadgeComponent, rhs: IncreaseLimitBadgeComponent) -> Bool {
+        if lhs.fillColor != rhs.fillColor {
+            return false
+        }
+        if lhs.foregroundColor != rhs.foregroundColor {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let iconView: UIImageView
+        
+        private var component: IncreaseLimitBadgeComponent?
+        private weak var state: EmptyComponentState?
+
+        override init(frame: CGRect) {
+            self.iconView = UIImageView()
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.iconView)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: IncreaseLimitBadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            let leftInset: CGFloat = 4.0
+            let rightInset: CGFloat = 3.0
+            let topInset: CGFloat = 1.0
+            let bottomInset: CGFloat = 0.0
+            
+            let text = NSAttributedString(string: "X50", font: Font.with(size: 14.0, design: .round, weight: .semibold), textColor: .clear)
+            let rawTextSize = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
+            let textSize = CGSize(width: ceil(rawTextSize.width), height: ceil(rawTextSize.height))
+            let backgroundSize = CGSize(width: leftInset + rightInset + textSize.width, height: topInset + bottomInset + textSize.height)
+            
+            self.iconView.image = generateImage(backgroundSize, rotatedContext: { size, context in
+                UIGraphicsPushContext(context)
+                defer {
+                    UIGraphicsPopContext()
+                }
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(component.fillColor.cgColor)
+                UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 4.0).fill()
+                
+                if component.foregroundColor.alpha != 1.0 {
+                    context.setBlendMode(.copy)
+                }
+                text.draw(at: CGPoint(x: leftInset, y: topInset))
+            })
+            self.iconView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
+
+            return backgroundSize
         }
     }
     

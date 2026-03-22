@@ -137,8 +137,23 @@ final class TextProcessingStyleSelectionComponent: Component {
                 styleData.append((item.id, item.emoji, localizedStyleName(strings: component.strings, styleId: item.id)))
             }
             
-            let minSlotWidth: CGFloat = max(50.0, floor(availableSize.width / 5.0))
-            let slotWidth = max(minSlotWidth, floor(availableSize.width / CGFloat(styleData.count)))
+            let minSlotWidth: CGFloat = 50.0
+            let slotWidth: CGFloat
+            if CGFloat(styleData.count) * minSlotWidth <= availableSize.width {
+                slotWidth = floor(availableSize.width / CGFloat(styleData.count))
+            } else {
+                var resolved: CGFloat = minSlotWidth
+                var targetVisible: CGFloat = min(7.5, floor((availableSize.width + 16.0) / 60.0) + 0.5)
+                while targetVisible >= 1.5 {
+                    let candidateWidth = floor((availableSize.width + 16.0) / targetVisible)
+                    if candidateWidth >= minSlotWidth {
+                        resolved = candidateWidth
+                        break
+                    }
+                    targetVisible -= 1.0
+                }
+                slotWidth = resolved
+            }
             let contentWidth = slotWidth * CGFloat(styleData.count)
             let itemSize = CGSize(width: slotWidth, height: availableSize.height)
 

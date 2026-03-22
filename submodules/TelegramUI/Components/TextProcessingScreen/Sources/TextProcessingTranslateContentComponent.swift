@@ -10,6 +10,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import TelegramCore
 import TranslateUI
+import TooltipComponent
 
 private let languageRecognizer = NLLanguageRecognizer()
 
@@ -49,6 +50,7 @@ final class TextProcessingTranslateContentComponent: Component {
         fileprivate(set) var emojify: Bool = false
         fileprivate(set) var isSourceTextExpanded: Bool = false
         fileprivate(set) var style: TelegramComposeAIMessageMode.StyleId = .neutral
+        var displayStyleTooltip: Bool = false
         
         fileprivate(set) var isProcessing: Bool = false {
             didSet {
@@ -134,6 +136,8 @@ final class TextProcessingTranslateContentComponent: Component {
         private let targetText = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
         
+        private var styleTooltip: (dimView: UIView, tooltip: ComponentView<Empty>)?
+        
         private var component: TextProcessingTranslateContentComponent?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
@@ -217,6 +221,16 @@ final class TextProcessingTranslateContentComponent: Component {
                         }
                     })
                 }
+            }
+        }
+        
+        @objc private func onTooltipTapGesture(_ recognizer: UITapGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            if case .ended = recognizer.state {
+                component.externalState.displayStyleTooltip = false
+                self.state?.updated(transition: .easeInOut(duration: 0.2))
             }
         }
 
@@ -449,8 +463,56 @@ final class TextProcessingTranslateContentComponent: Component {
             }
 
             contentHeight += bottomInset
+            
+            let size = CGSize(width: availableSize.width, height: contentHeight)
+            
+            if component.externalState.displayStyleTooltip, let sourceTextView = self.sourceText.view {
+                let tooltip: ComponentView<Empty>
+                let dimView: UIView
+                var tooltipTransition = transition
+                if let current = self.styleTooltip {
+                    tooltip = current.tooltip
+                    dimView = current.dimView
+                } else {
+                    tooltipTransition = tooltipTransition.withAnimation(.none)
+                    tooltip = ComponentView()
+                    dimView = UIView()
+                    dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTooltipTapGesture(_:))))
+                    self.styleTooltip = (dimView, tooltip)
+                }
+                let tooltipSize = tooltip.update(
+                    transition: tooltipTransition,
+                    component: AnyComponent(TooltipComponent(
+                        content: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: "Select Style", font: Font.regular(15.0), textColor: .white))
+                        ))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 200.0, height: 200.0)
+                )
+                transition.setFrame(view: dimView, frame: CGRect(origin: CGPoint(), size: size))
+                let tooltipFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - tooltipSize.width) * 0.5), y: sourceTextView.frame.maxY + 12.0), size: tooltipSize)
+                if let tooltipView = tooltip.view as? TooltipComponent.View {
+                    if tooltipView.superview == nil {
+                        self.addSubview(dimView)
+                        self.addSubview(tooltipView)
+                    }
+                    tooltipTransition.setFrame(view: tooltipView, frame: tooltipFrame)
+                    tooltipView.updateBackground(relativeArrowTargetPosition: CGPoint(x: tooltipFrame.width * 0.5, y: 0.0))
+                }
+            } else {
+                if let styleTooltip = self.styleTooltip {
+                    self.styleTooltip = nil
+                    styleTooltip.dimView.removeFromSuperview()
+                    if let tooltipView = styleTooltip.tooltip.view {
+                        transition.setAlpha(view: tooltipView, alpha: 0.0, completion: { [weak tooltipView] _ in
+                            tooltipView?.removeFromSuperview()
+                        })
+                    }
+                }
+            }
 
-            return CGSize(width: availableSize.width, height: contentHeight)
+            return size
         }
     }
 

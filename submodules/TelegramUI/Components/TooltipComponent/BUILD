@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ToastComponent",
-    module_name = "ToastComponent",
+    name = "TooltipComponent",
+    module_name = "TooltipComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -12,8 +12,6 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/ComponentFlow",
-        "//submodules/Components/ComponentDisplayAdapters",
-        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
     ],
     visibility = [
         "//visibility:public",
