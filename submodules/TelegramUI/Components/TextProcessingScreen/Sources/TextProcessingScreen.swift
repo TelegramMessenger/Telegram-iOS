@@ -790,7 +790,7 @@ private final class TextProcessingSheetComponent: Component {
                     transition: toastTransition,
                     component: AnyComponent(ToastContentComponent(
                         icon: AnyComponent(LottieComponent(
-                            content: LottieComponent.AppBundleContent(name: "anim_infotip"),
+                            content: LottieComponent.AppBundleContent(name: "PremiumStar"),
                             startingPosition: .begin,
                             size: CGSize(width: 32.0, height: 32.0),
                             playOnce: playOnce
