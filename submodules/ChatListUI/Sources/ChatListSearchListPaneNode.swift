@@ -3534,7 +3534,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     return (message.map { $0._asMessage() }, a, b)
                 }, canReorder: false, at: message.id, loadMore: {
                     loadMore()
-                })
+                }, hidePanel: false)
             }
             
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: .peer(id: message.id.peerId), chatFilterTag: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: true, mode: mode, navigationController: navigationController, dismissInput: {

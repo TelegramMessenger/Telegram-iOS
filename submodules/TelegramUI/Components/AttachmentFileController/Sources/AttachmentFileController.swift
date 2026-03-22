@@ -638,7 +638,7 @@ public func makeAttachmentFileControllerImpl(
         toggleMediaPlayback: { message in
             didPreviewAudio = true
             
-            let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil)
+            let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil, hidePanel: true)
             context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
         },
         isSelectionActive: {
@@ -696,7 +696,7 @@ public func makeAttachmentFileControllerImpl(
                 items.append(.action(ContextMenuActionItem(text: "Play", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Play"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c?.dismiss(completion: {})
                     
-                    let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message._asMessage()], 0, false)), canReorder: false, at: message.id, loadMore: nil)
+                    let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message._asMessage()], 0, false)), canReorder: false, at: message.id, loadMore: nil, hidePanel: true)
                     context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
                 })))
             }

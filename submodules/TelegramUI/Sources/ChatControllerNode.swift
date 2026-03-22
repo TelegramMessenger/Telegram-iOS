@@ -1377,19 +1377,23 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         if self.chatPresentationInterfaceState.search == nil, let mediaPlayback = self.controller?.globalControlPanelsContextState?.mediaPlayback {
-            headerPanels.append(HeaderPanelContainerComponent.Panel(
-                key: "media",
-                orderIndex: 1,
-                component: AnyComponent(MediaPlaybackHeaderPanelComponent(
-                    context: self.context,
-                    theme: self.chatPresentationInterfaceState.theme,
-                    strings: self.chatPresentationInterfaceState.strings,
-                    data: mediaPlayback,
-                    controller: { [weak self] in
-                        return self?.controller
-                    }
-                )))
-            )
+            if let playlistLocation = mediaPlayback.playlistLocation as? PeerMessagesPlaylistLocation, case let .custom(_, _, _, _, hidePanel) = playlistLocation, hidePanel {
+                
+            } else {
+                headerPanels.append(HeaderPanelContainerComponent.Panel(
+                    key: "media",
+                    orderIndex: 1,
+                    component: AnyComponent(MediaPlaybackHeaderPanelComponent(
+                        context: self.context,
+                        theme: self.chatPresentationInterfaceState.theme,
+                        strings: self.chatPresentationInterfaceState.strings,
+                        data: mediaPlayback,
+                        controller: { [weak self] in
+                            return self?.controller
+                        }
+                    )))
+                )
+            }
         }
         if self.chatPresentationInterfaceState.search == nil, let liveLocation = self.controller?.globalControlPanelsContextState?.liveLocation {
             headerPanels.append(HeaderPanelContainerComponent.Panel(

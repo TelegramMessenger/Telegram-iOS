@@ -81,7 +81,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.playlistLocation = playlistLocation
         self.getParentController = getParentController
         
-        if let playlistLocation = playlistLocation as? PeerMessagesPlaylistLocation, case let .custom(messages, canReorder, at, loadMore) = playlistLocation.effectiveLocation(context: context) {
+        if let playlistLocation = playlistLocation as? PeerMessagesPlaylistLocation, case let .custom(messages, canReorder, at, loadMore, _) = playlistLocation.effectiveLocation(context: context) {
             self.source = .custom(messages: messages, messageId: at, quote: nil, isSavedMusic: true, canReorder: canReorder, loadMore: loadMore)
             self.isGlobalSearch = false
         } else {
@@ -372,8 +372,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.historyNode.messageInCurrentHistoryView(id) {
                 var playlistLocation: PeerMessagesPlaylistLocation?
                 if let location = strongSelf.playlistLocation as? PeerMessagesPlaylistLocation {
-                    if case let .custom(messages, canReorder, _, loadMore) = location {
-                        playlistLocation = .custom(messages: messages, canReorder: canReorder, at: id, loadMore: loadMore)
+                    if case let .custom(messages, canReorder, _, loadMore, hidePanel) = location {
+                        playlistLocation = .custom(messages: messages, canReorder: canReorder, at: id, loadMore: loadMore, hidePanel: hidePanel)
                     } else if case let .savedMusic(context, _, canReorder) = location {
                         playlistLocation = .savedMusic(context: context, at: id.id, canReorder: canReorder)
                     }

@@ -484,7 +484,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 self?.listNode.clearHighlightAnimated(true)
             },
             toggleMediaPlayback: { message in
-                let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil)
+                let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil, hidePanel: true)
                 context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
             },
             expandSection: { [weak self] section in
