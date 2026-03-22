@@ -2183,7 +2183,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             switch selection {
                                 case .none:
                                     break
-                                case let .selectable(selected):
+                                case let .selectable(selected, _):
                                     itemSelection = selected
                             }
                             break

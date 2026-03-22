@@ -348,16 +348,30 @@ struct AttachmentFileSearchContainerTransition {
     let isSearching: Bool
     let isEmpty: Bool
     let query: String
+    let crossfade: Bool
 }
 
-private func attachmentFileSearchContainerPreparedRecentTransition(from fromEntries: [AttachmentFileSearchEntry], to toEntries: [AttachmentFileSearchEntry], isSearching: Bool, isEmpty: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: AttachmentFileSearchContainerInteraction, mode: AttachmentFileControllerMode) -> AttachmentFileSearchContainerTransition {
+private func attachmentFileSearchContainerPreparedRecentTransition(
+    from fromEntries: [AttachmentFileSearchEntry],
+    to toEntries: [AttachmentFileSearchEntry],
+    isSearching: Bool,
+    isEmpty: Bool,
+    query: String,
+    context: AccountContext,
+    presentationData: PresentationData,
+    nameSortOrder: PresentationPersonNameOrder,
+    nameDisplayOrder: PresentationPersonNameOrder,
+    interaction: AttachmentFileSearchContainerInteraction,
+    mode: AttachmentFileControllerMode,
+    crossfade: Bool
+) -> AttachmentFileSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction, mode: mode), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction, mode: mode), directionHint: nil) }
     
-    return AttachmentFileSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query)
+    return AttachmentFileSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query, crossfade: crossfade)
 }
 
 
@@ -553,7 +567,9 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                     }
                 )
                 
-                if let data = context.currentAppConfiguration.with({ $0 }).data, let searchBot = data["music_search_username"] as? String, !searchBot.isEmpty {
+                let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                if let data = context.currentAppConfiguration.with({ $0 }).data, let searchBot = data["music_search_username"] as? String, !searchBot.isEmpty, trimmedQuery.count >= 3 {
                     globalMusic = .single(nil)
                     |> then(
                         context.engine.peers.resolvePeerByName(name: searchBot, referrer: nil)
@@ -567,7 +583,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                             guard let peer = peer else {
                                 return .single(nil)
                             }
-                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query, offset: "")
+                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: trimmedQuery, offset: "")
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }
@@ -673,13 +689,27 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         }
         
         let previousSearchItems = Atomic<[AttachmentFileSearchEntry]?>(value: nil)
+        let previousHadGlobalItems = Atomic<Bool>(value: false)
         self.searchDisposable.set((combineLatest(searchQuery, foundItems, self.presentationDataPromise.get())
         |> deliverOnMainQueue).startStrict(next: { [weak self] query, entries, presentationData in
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 updateActivity(false)
                 let firstTime = previousEntries == nil
-                let transition = attachmentFileSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: query ?? "", context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction, mode: mode)
+                
+                var hasGlobalItems = false
+                if let entries {
+                    for entry in entries {
+                        if case let .header(_, section) = entry, section == 2 {
+                            hasGlobalItems = true
+                        }
+                    }
+                }
+                let hadGlobalItems = previousHadGlobalItems.swap(hasGlobalItems)
+                
+                let crossfade = hadGlobalItems != hasGlobalItems
+                
+                let transition = attachmentFileSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: query ?? "", context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction, mode: mode, crossfade: crossfade)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
@@ -738,6 +768,10 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
             options.insert(.PreferSynchronousResourceLoading)
             
             //options.insert(.AnimateInsertion)
+            
+            if transition.crossfade {
+                options.insert(.AnimateCrossfade)
+            }
             
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in

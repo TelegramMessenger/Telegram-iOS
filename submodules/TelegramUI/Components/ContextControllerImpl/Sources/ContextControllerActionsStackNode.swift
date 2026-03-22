@@ -20,6 +20,7 @@ import LottieComponent
 import TextNodeWithEntities
 import ContextUI
 import LensTransition
+import BalancedTextComponent
 
 public protocol ContextControllerActionsListItemNode: ASDisplayNode {
     func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)
@@ -39,6 +40,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
     private var item: ContextMenuActionItem
     
     private let titleLabelNode: ImmediateTextNodeWithEntities
+    private let balancedTitleLabel = ComponentView<Empty>()
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private let additionalIconNode: ASImageNode
@@ -282,7 +284,13 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
             titleColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
         }
         
+        var balanceTitleAttributedText: NSAttributedString?
         if self.item.parseMarkdown || !self.item.entities.isEmpty {
+            var balancedTextLayout = false
+            if self.item.parseMarkdown, case .twoLinesMax = self.item.textLayout {
+                balancedTextLayout = true
+            }
+            
             let attributedText: NSAttributedString
             if !self.item.entities.isEmpty {
                 let inputStateText = ChatTextInputStateText(text: self.item.text, attributes: self.item.entities.compactMap { entity -> ChatTextInputStateTextAttribute? in
@@ -324,18 +332,25 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                     )
                 )
             }
-            self.titleLabelNode.attributedText = attributedText
-            self.titleLabelNode.linkHighlightColor = presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5)
-            self.titleLabelNode.highlightAttributeAction = { attributes in
-                if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
-                    return NSAttributedString.Key(rawValue: "URL")
-                } else {
-                    return nil
+            
+            if self.item.entities.isEmpty && balancedTextLayout {
+                self.titleLabelNode.isHidden = true
+                balanceTitleAttributedText = attributedText
+            } else {
+                self.titleLabelNode.isHidden = false
+                self.titleLabelNode.attributedText = attributedText
+                self.titleLabelNode.linkHighlightColor = presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5)
+                self.titleLabelNode.highlightAttributeAction = { attributes in
+                    if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                        return NSAttributedString.Key(rawValue: "URL")
+                    } else {
+                        return nil
+                    }
                 }
-            }
-            self.titleLabelNode.tapAttributeAction = { [weak item] attributes, _ in
-                if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
-                    item?.textLinkAction()
+                self.titleLabelNode.tapAttributeAction = { [weak item] attributes, _ in
+                    if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                        item?.textLinkAction()
+                    }
                 }
             }
         } else {
@@ -506,7 +521,22 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         
         maxTextWidth = max(1.0, maxTextWidth)
         
-        let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
+        let titleSize: CGSize
+        if let balanceTitleAttributedText {
+            titleSize = self.balancedTitleLabel.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    BalancedTextComponent(
+                        text: .plain(balanceTitleAttributedText),
+                        maximumNumberOfLines: 2
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: maxTextWidth, height: 1000.0)
+            )
+        } else {
+            titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
+        }
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
         
         var minSize = CGSize()
@@ -549,7 +579,16 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                 subtitleFrame.origin.x = titleFrame.minX
             }
             
-            transition.updateFrameAdditive(node: self.titleLabelNode, frame: titleFrame)
+            if let _ = balanceTitleAttributedText {
+                if let balancedTitleLabelView = self.balancedTitleLabel.view {
+                    if balancedTitleLabelView.superview == nil {
+                        self.view.addSubview(balancedTitleLabelView)
+                    }
+                    transition.updateFrameAdditive(view: balancedTitleLabelView, frame: titleFrame)
+                }
+            } else {
+                transition.updateFrameAdditive(node: self.titleLabelNode, frame: titleFrame)
+            }
             transition.updateFrameAdditive(node: self.subtitleNode, frame: subtitleFrame)
             
             if let badgeIconNode = self.badgeIconNode, let iconSize = badgeIconNode.image?.size {

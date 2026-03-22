@@ -247,7 +247,7 @@ func chatHistoryEntriesForView(
             if let messageGroupingKey = message.groupingKey {
                 let selection: ChatHistoryMessageSelection
                 if let selectedMessages = selectedMessages {
-                    selection = .selectable(selected: selectedMessages.contains(message.id))
+                    selection = .selectable(selected: selectedMessages.contains(message.id), num: nil)
                 } else {
                     selection = .none
                 }
@@ -293,7 +293,7 @@ func chatHistoryEntriesForView(
             } else {
                 let selection: ChatHistoryMessageSelection
                 if let selectedMessages = selectedMessages {
-                    selection = .selectable(selected: selectedMessages.contains(message.id))
+                    selection = .selectable(selected: selectedMessages.contains(message.id), num: nil)
                 } else {
                     selection = .none
                 }
@@ -308,7 +308,7 @@ func chatHistoryEntriesForView(
         } else {
             let selection: ChatHistoryMessageSelection
             if let selectedMessages = selectedMessages {
-                selection = .selectable(selected: selectedMessages.contains(message.id))
+                selection = .selectable(selected: selectedMessages.contains(message.id), num: nil)
             } else {
                 selection = .none
             }

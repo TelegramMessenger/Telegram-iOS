@@ -404,7 +404,7 @@ final class AttachmentFileContext: AttachmentMediaPickerContext {
     }
 
     func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
-        self.controller?.mulitpleCompletion?(mode, .files, parameters)
+        self.controller?.mulitpleCompletion?(mode, .files, parameters, self.controller?.caption)
     }
 
     func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
@@ -436,7 +436,7 @@ public class AttachmentFileControllerImpl: ItemListController, AttachmentFileCon
     
     fileprivate var bottomEdgeColor: UIColor = .clear
     
-    fileprivate var mulitpleCompletion: ((AttachmentMediaPickerSendMode, AttachmentMediaPickerAttachmentMode, ChatSendMessageActionSheetController.SendParameters?) -> Void)?
+    fileprivate var mulitpleCompletion: ((AttachmentMediaPickerSendMode, AttachmentMediaPickerAttachmentMode, ChatSendMessageActionSheetController.SendParameters?, NSAttributedString?) -> Void)?
 
     var delayDisappear = false
 
@@ -508,15 +508,19 @@ private struct AttachmentFileControllerState: Equatable {
     var searching: Bool
     var savedMusicExpanded: Bool
     var recentMusicExpanded: Bool
-    var selectedMessageIds: Set<MessageId>?
+    var selectedMessageIds: [MessageId]?
     var messageMap: [MessageId: EngineMessage]
 }
 
 private func messageSelectionState(state: AttachmentFileControllerState, message: Message?) -> ChatHistoryMessageSelection {
-    guard let message = message, let selectedMessageIds = state.selectedMessageIds else {
+    guard let message, let selectedMessageIds = state.selectedMessageIds else {
         return .none
     }
-    return .selectable(selected: selectedMessageIds.contains(message.id))
+    if let index = selectedMessageIds.firstIndex(where: { $0 == message.id }) {
+        return .selectable(selected: true, num: index)
+    } else {
+        return .selectable(selected: false, num: nil)
+    }
 }
 
 public enum AttachmentFileControllerMode {
@@ -551,7 +555,7 @@ public func makeAttachmentFileControllerImpl(
     presentGallery: @escaping () -> Void,
     presentFiles: @escaping () -> Void,
     presentDocumentScanner: (() -> Void)?,
-    send: @escaping ([AnyMediaReference]) -> Void
+    send: @escaping ([AnyMediaReference], Bool, Int32?, NSAttributedString?) -> Void
 ) -> AttachmentFileController {
     let actionsDisposable = DisposableSet()
 
@@ -609,7 +613,7 @@ public func makeAttachmentFileControllerImpl(
         send: { message in
             if message.id.namespace == Namespaces.Message.Local {
                 if let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile {
-                    send([.standalone(media: file)])
+                    send([.standalone(media: file)], false, nil, nil)
                     dismissImpl?()
                 }
             } else {
@@ -625,7 +629,7 @@ public func makeAttachmentFileControllerImpl(
                 }
                 |> deliverOnMainQueue).startStandalone(next: { messages in
                     if let message = messages.first, let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile {
-                        send([.message(message: MessageReference(message), media: file)])
+                        send([.message(message: MessageReference(message), media: file)], false, nil, nil)
                     }
                     dismissImpl?()
                 })
@@ -647,9 +651,9 @@ public func makeAttachmentFileControllerImpl(
                 }
                 let messageId = message.id
                 if selectedMessageIds.contains(messageId) {
-                    selectedMessageIds.remove(messageId)
+                    selectedMessageIds.removeAll(where: { $0 == messageId })
                 } else {
-                    selectedMessageIds.insert(messageId)
+                    selectedMessageIds.append(messageId)
                 }
                 var updatedState = state
                 updatedState.selectedMessageIds = selectedMessageIds
@@ -665,9 +669,9 @@ public func makeAttachmentFileControllerImpl(
                 }
                 for messageId in messageIds {
                     if value {
-                        selectedMessageIds.insert(messageId)
+                        selectedMessageIds.append(messageId)
                     } else {
-                        selectedMessageIds.remove(messageId)
+                        selectedMessageIds.removeAll(where: { $0 == messageId })
                     }
                 }
                 var updatedState = state
@@ -701,8 +705,8 @@ public func makeAttachmentFileControllerImpl(
                 c?.dismiss(completion: {})
                 updateState { state in
                     var updatedState = state
-                    var selectedMessageIds = updatedState.selectedMessageIds ?? Set()
-                    selectedMessageIds.insert(message.id)
+                    var selectedMessageIds = updatedState.selectedMessageIds ?? []
+                    selectedMessageIds.append(message.id)
                     updatedState.selectedMessageIds = selectedMessageIds
                     updatedState.messageMap[message.id] = message
                     updateSelectionCountImpl?(selectedMessageIds.count)
@@ -932,7 +936,7 @@ public func makeAttachmentFileControllerImpl(
     }
 
     let controller = AttachmentFileControllerImpl(context: context, state: signal, hideNavigationBarBackground: true)
-    controller.mulitpleCompletion = { _, _, _ in
+    controller.mulitpleCompletion = { sendMode, _, _, caption in
         let _ = stateValue.with({ state in
             if let selectedMessageIds = state.selectedMessageIds {
                 var mediaReferences: [AnyMediaReference] = []
@@ -941,7 +945,7 @@ public func makeAttachmentFileControllerImpl(
                         mediaReferences.append(.standalone(media: file))
                     }
                 }
-                send(mediaReferences)
+                send(mediaReferences, sendMode == .silently, nil, caption)
                 dismissImpl?()
             }
         })
@@ -1026,7 +1030,7 @@ public func storyAudioPickerController(
         let filePickerController = makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: .audio(story: true), bannedSendMedia: nil, presentGallery: {}, presentFiles: {
             selectFromFiles()
             dismissImpl?()
-        }, presentDocumentScanner: nil, send: { files in
+        }, presentDocumentScanner: nil, send: { files, _, _, _ in
             completion(files.first!)
             dismissImpl?()
         }) as! AttachmentFileControllerImpl

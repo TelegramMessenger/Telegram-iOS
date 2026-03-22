@@ -2750,7 +2750,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, audio: Bool, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, presentDocumentScanner: (() -> Void)?, send: @escaping ([AnyMediaReference]) -> Void) -> AttachmentFileController {
+    public func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, audio: Bool, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, presentDocumentScanner: (() -> Void)?, send: @escaping ([AnyMediaReference], Bool, Int32?, NSAttributedString?) -> Void) -> AttachmentFileController {
         return makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: audio ? .audio(story: false) : .recent, bannedSendMedia: bannedSendMedia, presentGallery: presentGallery, presentFiles: presentFiles, presentDocumentScanner: presentDocumentScanner, send: send)
     }
     

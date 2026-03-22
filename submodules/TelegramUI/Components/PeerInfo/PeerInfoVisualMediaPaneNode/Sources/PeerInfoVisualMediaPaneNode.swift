@@ -532,7 +532,7 @@ private final class ItemView: UIView, SparseItemGridView {
         }
 
         if let item = self.item, let messageItem = self.messageItem, let itemNode = itemNode as? ListMessageFileItemNode {
-            if case let .selectable(selected) = messageItem.selection {
+            if case let .selectable(selected, _) = messageItem.selection {
                 self.interaction?.toggleMessagesSelection([item.message.id], !selected)
             } else {
                 itemNode.activateMedia()
@@ -560,7 +560,7 @@ private final class ItemView: UIView, SparseItemGridView {
             interaction: interaction,
             message: item.message,
             selection: isSelected.flatMap { isSelected in
-                return .selectable(selected: isSelected)
+                return .selectable(selected: isSelected, num: nil)
             } ?? .none,
             displayHeader: false
         )

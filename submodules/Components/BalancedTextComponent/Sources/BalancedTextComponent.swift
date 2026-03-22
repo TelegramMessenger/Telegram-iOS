@@ -184,7 +184,7 @@ public final class BalancedTextComponent: Component {
             
             var bestSize: (availableWidth: CGFloat, info: TextNodeLayout)
             
-            let info = self.textView.updateLayoutFullInfo(availableSize)
+            let info  = self.textView.updateLayoutFullInfo(availableSize)
             bestSize = (availableSize.width, info)
             
             if component.balanced && info.numberOfLines > 1 {

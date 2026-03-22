@@ -100,7 +100,7 @@ public func presentPollAttachmentScreen(
                     //TODO
                 },
                 presentDocumentScanner: nil,
-                send: { mediaReferences in
+                send: { mediaReferences, _, _, _ in
                     completion(mediaReferences.first!)
                 }
             ) as! AttachmentFileControllerImpl

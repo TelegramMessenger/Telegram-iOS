@@ -381,7 +381,7 @@ extension ChatControllerImpl {
                         self?.presentICloudFileGallery()
                     }, presentDocumentScanner: { [weak self] in
                         self?.presentDocumentScanner()
-                    }, send: { [weak self] mediaReferences in
+                    }, send: { [weak self] mediaReferences, silentPosting, scheduleTime, caption in
                         guard let self else {
                             return
                         }
@@ -390,9 +390,26 @@ extension ChatControllerImpl {
                         if mediaReferences.count > 1 {
                             groupingKey = Int64.random(in: .min ..< .max)
                         }
-                        for mediaReference in mediaReferences {
-                            messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                        
+                        var attributes: [MessageAttribute] = []
+                        var text = ""
+                        if let caption {
+                            text = caption.string
+                            let entities = generateTextEntities(text, enabledTypes: .all, currentEntities: generateChatInputTextEntities(caption))
+                            if !entities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                            }
                         }
+                        
+                        for mediaReference in mediaReferences {
+                            if messages.count == 10 {
+                                groupingKey = Int64.random(in: .min ..< .max)
+                            }
+                            let isLast = mediaReference == mediaReferences.last
+                            
+                            messages.append(.message(text: isLast ? text : "", attributes: isLast ? attributes : [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                        }
+                        messages = self.transformEnqueueMessages(messages, silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: nil, postpone: false)
                         self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
                             self?.sendMessages(messages, media: true, postpone: postpone)
                         })
@@ -414,7 +431,7 @@ extension ChatControllerImpl {
                     }, presentFiles: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
                         self?.presentICloudFileGallery(documentTypes: ["public.mp3", "public.mpeg-4-audio", "public.aac-audio", "org.xiph.flac"])
-                    }, presentDocumentScanner: nil, send: { [weak self] mediaReferences in
+                    }, presentDocumentScanner: nil, send: { [weak self] mediaReferences, silentPosting, scheduleTime, caption in
                         guard let self else {
                             return
                         }
@@ -423,9 +440,26 @@ extension ChatControllerImpl {
                         if mediaReferences.count > 1 {
                             groupingKey = Int64.random(in: .min ..< .max)
                         }
-                        for mediaReference in mediaReferences {
-                            messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                        
+                        var attributes: [MessageAttribute] = []
+                        var text = ""
+                        if let caption {
+                            text = caption.string
+                            let entities = generateTextEntities(text, enabledTypes: .all, currentEntities: generateChatInputTextEntities(caption))
+                            if !entities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                            }
                         }
+                        
+                        for mediaReference in mediaReferences {
+                            if messages.count == 10 {
+                                groupingKey = Int64.random(in: .min ..< .max)
+                            }
+                            let isLast = mediaReference == mediaReferences.last
+                            
+                            messages.append(.message(text: isLast ? text : "", attributes: isLast ? attributes : [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                        }
+                        messages = self.transformEnqueueMessages(messages, silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: nil, postpone: false)
                         self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
                             self?.sendMessages(messages, media: true, postpone: postpone)
                         })
