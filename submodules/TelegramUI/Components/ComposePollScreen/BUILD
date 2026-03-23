@@ -58,6 +58,7 @@ swift_library(
         "//submodules/TelegramNotices",
         "//submodules/StickerPeekUI",
         "//submodules/CounterControllerTitleView",
+        "//submodules/TelegramUI/Components/EdgeEffect",
     ],
     visibility = [
         "//visibility:public",
