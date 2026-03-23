@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ToastComponent",
         "//submodules/TelegramNotices",
         "//submodules/Markdown",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

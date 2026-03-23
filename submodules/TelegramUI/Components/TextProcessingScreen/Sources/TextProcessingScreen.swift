@@ -22,6 +22,7 @@ import ListActionItemComponent
 import ToastComponent
 import TelegramNotices
 import Markdown
+import TelegramUIPreferences
 
 final class TextProcessingContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -40,6 +41,7 @@ final class TextProcessingContentComponent: Component {
     let mode: TextProcessingScreen.Mode
     let styles: [TelegramComposeAIMessageMode.Style]
     let inputText: TextWithEntities
+    let initialEditState: TextProcessingScreen.EditState?
     let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: (() -> Void)?
     let translateChat: ((String) -> Void)?
@@ -51,6 +53,7 @@ final class TextProcessingContentComponent: Component {
         mode: TextProcessingScreen.Mode,
         styles: [TelegramComposeAIMessageMode.Style],
         inputText: TextWithEntities,
+        initialEditState: TextProcessingScreen.EditState?,
         shouldDisplayStyleNotice: Bool,
         copyCurrentResult: (() -> Void)?,
         translateChat: ((String) -> Void)?,
@@ -61,6 +64,7 @@ final class TextProcessingContentComponent: Component {
         self.context = context
         self.mode = mode
         self.inputText = inputText
+        self.initialEditState = initialEditState
         self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
@@ -105,7 +109,6 @@ final class TextProcessingContentComponent: Component {
             
             self.addSubview(self.currentContentBackground)
             self.addSubview(self.currentContentContainer)
-            
             
             self.translateState.resultUpdated = { [weak self] _ in
                 self?.externalStatesUpdated()
@@ -162,6 +165,30 @@ final class TextProcessingContentComponent: Component {
             /*#if DEBUG
             component.externalState.nonPremiumFloodTriggered = true
             #endif*/
+        }
+        
+        private func saveState() {
+            guard let component = self.component else {
+                return
+            }
+            if case let .edit(saveRestoreStateId, _, _) = component.mode, let saveRestoreStateId {
+                let mappedMode: Int32
+                switch self.currentMode {
+                case .translate:
+                    mappedMode = 0
+                case .stylize:
+                    mappedMode = 1
+                case .fix:
+                    mappedMode = 2
+                }
+                
+                let state = TextProcessingScreen.EditState(
+                    selectedMode: mappedMode
+                )
+                let _ = component.context.engine.preferences.update(id: ApplicationSpecificPreferencesKeys.textProcessingEditingState(peerId: saveRestoreStateId), { _ in
+                    return EnginePreferencesEntry(state)
+                })
+            }
         }
 
         func update(component: TextProcessingContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
@@ -498,6 +525,7 @@ private final class TextProcessingSheetComponent: Component {
     let ignoredTranslationLanguages: [String]
     let styles: [TelegramComposeAIMessageMode.Style]
     let inputText: TextWithEntities
+    let initialEditState: TextProcessingScreen.EditState?
     let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: ((TextWithEntities) -> Void)?
     let translateChat: ((String) -> Void)?
@@ -508,6 +536,7 @@ private final class TextProcessingSheetComponent: Component {
         ignoredTranslationLanguages: [String],
         styles: [TelegramComposeAIMessageMode.Style],
         inputText: TextWithEntities,
+        initialEditState: TextProcessingScreen.EditState?,
         shouldDisplayStyleNotice: Bool,
         copyCurrentResult: ((TextWithEntities) -> Void)?,
         translateChat: ((String) -> Void)?
@@ -517,6 +546,7 @@ private final class TextProcessingSheetComponent: Component {
         self.ignoredTranslationLanguages = ignoredTranslationLanguages
         self.styles = styles
         self.inputText = inputText
+        self.initialEditState = initialEditState
         self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
@@ -614,7 +644,7 @@ private final class TextProcessingSheetComponent: Component {
                 }
             } else {
                 switch component.mode {
-                case let .edit(completion, send):
+                case let .edit(_, completion, send):
                     actionButtonTitle = "Apply"
                     performSendAction = send
                     isMainActionEnabled = !self.contentExternalState.isProcessing
@@ -663,6 +693,7 @@ private final class TextProcessingSheetComponent: Component {
                         mode: component.mode,
                         styles: component.styles,
                         inputText: component.inputText,
+                        initialEditState: component.initialEditState,
                         shouldDisplayStyleNotice: component.shouldDisplayStyleNotice,
                         copyCurrentResult: component.copyCurrentResult != nil ? {
                             copyCurrentResultImpl()
@@ -891,8 +922,16 @@ private final class TextProcessingSheetComponent: Component {
 
 public class TextProcessingScreen: ViewControllerComponentContainer {
     public enum Mode {
-        case edit(completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?)
+        case edit(saveRestoreStateId: EnginePeer.Id?, completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?)
         case translate(fromLanguage: String?)
+    }
+    
+    struct EditState: Codable {
+        var selectedMode: Int32
+        
+        init(selectedMode: Int32) {
+            self.selectedMode = selectedMode
+        }
     }
     
     private let context: AccountContext
@@ -908,8 +947,14 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         self.context = context
         
         let styles = await context.engine.messages.composeAIMessageStyles().get()
-        
         let shouldDisplayStyleNotice = await ApplicationSpecificNotice.getAITextProcessingStyleSelection(accountManager: context.sharedContext.accountManager).get() < 3
+        
+        var initialEditState: EditState?
+        if case let .edit(saveRestoreStateId, _, _) = mode, let saveRestoreStateId {
+            initialEditState = await context.engine.data.get(
+                TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.textProcessingEditingState(peerId: saveRestoreStateId))
+            ).get()?.get(EditState.self)
+        }
 
         super.init(
             context: context,
@@ -919,6 +964,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
                 ignoredTranslationLanguages: ignoredTranslationLanguages,
                 styles: styles,
                 inputText: inputText,
+                initialEditState: initialEditState,
                 shouldDisplayStyleNotice: shouldDisplayStyleNotice,
                 copyCurrentResult: copyResult,
                 translateChat: translateChat

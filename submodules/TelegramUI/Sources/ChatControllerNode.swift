@@ -4482,6 +4482,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.controller?.push(await TextProcessingScreen(
                 context: self.context,
                 mode: .edit(
+                    saveRestoreStateId: self.chatLocation.peerId,
                     completion: { [weak self] text in
                         guard let self, let controller = self.controller else {
                             return

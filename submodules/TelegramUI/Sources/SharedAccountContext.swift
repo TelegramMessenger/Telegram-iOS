@@ -100,6 +100,7 @@ import ChatParticipantRightsScreen
 import PeerCopyProtectionInfoScreen
 import ChatRankInfoScreen
 import RankChatPreviewItem
+import CreateBotScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -4362,6 +4363,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             rankRole: rankRole
         )
         return RankChatPreviewItem(context: context, systemStyle: .glass, theme: theme, componentTheme: theme, strings: strings, sectionId: sectionId, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, messageItems: [messageItem])
+    }
+    
+    public func makeCreateBotScreen(
+        context: AccountContext,
+        parentBot: EnginePeer.Id,
+        initialUsername: String?,
+        initialTitle: String?,
+        openAutomatically: Bool,
+        completion: @escaping (EnginePeer.Id?) -> Void
+    ) async -> ViewController? {
+        return await CreateBotScreen(
+            context: context,
+            parentBot: parentBot,
+            initialUsername: initialUsername,
+            initialTitle: initialTitle,
+            openAutomatically: openAutomatically,
+            completion: completion
+        )
     }
 }
 
