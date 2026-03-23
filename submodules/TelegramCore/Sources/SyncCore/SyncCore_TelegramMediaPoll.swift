@@ -258,9 +258,10 @@ public final class TelegramMediaPoll: Media, Equatable {
     public let revotingDisabled: Bool
     public let shuffleAnswers: Bool
     public let hideResultsUntilClose: Bool
+    public let isCreator: Bool
     public let attachedMedia: Media?
 
-    public init(pollId: MediaId, publicity: TelegramMediaPollPublicity, kind: TelegramMediaPollKind, text: String, textEntities: [MessageTextEntity], options: [TelegramMediaPollOption], correctAnswers: [Data]?, results: TelegramMediaPollResults, isClosed: Bool, deadlineTimeout: Int32?, deadlineDate: Int32?, pollHash: Int64, openAnswers: Bool = false, revotingDisabled: Bool = false, shuffleAnswers: Bool = false, hideResultsUntilClose: Bool = false, attachedMedia: Media? = nil) {
+    public init(pollId: MediaId, publicity: TelegramMediaPollPublicity, kind: TelegramMediaPollKind, text: String, textEntities: [MessageTextEntity], options: [TelegramMediaPollOption], correctAnswers: [Data]?, results: TelegramMediaPollResults, isClosed: Bool, deadlineTimeout: Int32?, deadlineDate: Int32?, pollHash: Int64, openAnswers: Bool = false, revotingDisabled: Bool = false, shuffleAnswers: Bool = false, hideResultsUntilClose: Bool = false, isCreator: Bool = false, attachedMedia: Media? = nil) {
         self.pollId = pollId
         self.publicity = publicity
         self.kind = kind
@@ -277,6 +278,7 @@ public final class TelegramMediaPoll: Media, Equatable {
         self.revotingDisabled = revotingDisabled
         self.shuffleAnswers = shuffleAnswers
         self.hideResultsUntilClose = hideResultsUntilClose
+        self.isCreator = isCreator
         self.attachedMedia = attachedMedia
     }
 
@@ -301,6 +303,7 @@ public final class TelegramMediaPoll: Media, Equatable {
         self.revotingDisabled = decoder.decodeInt32ForKey("rd", orElse: 0) != 0
         self.shuffleAnswers = decoder.decodeInt32ForKey("sa", orElse: 0) != 0
         self.hideResultsUntilClose = decoder.decodeInt32ForKey("hr", orElse: 0) != 0
+        self.isCreator = decoder.decodeInt32ForKey("cr", orElse: 0) != 0
         self.attachedMedia = decoder.decodeObjectForKey("am") as? Media
     }
 
@@ -335,6 +338,7 @@ public final class TelegramMediaPoll: Media, Equatable {
         encoder.encodeInt32(self.revotingDisabled ? 1 : 0, forKey: "rd")
         encoder.encodeInt32(self.shuffleAnswers ? 1 : 0, forKey: "sa")
         encoder.encodeInt32(self.hideResultsUntilClose ? 1 : 0, forKey: "hr")
+        encoder.encodeInt32(self.isCreator ? 1 : 0, forKey: "cr")
         if let attachedMedia = self.attachedMedia {
             encoder.encodeObject(attachedMedia, forKey: "am")
         } else {
@@ -402,6 +406,9 @@ public final class TelegramMediaPoll: Media, Equatable {
         if lhs.hideResultsUntilClose != rhs.hideResultsUntilClose {
             return false
         }
+        if lhs.isCreator != rhs.isCreator {
+            return false
+        }
         if let lhsMedia = lhs.attachedMedia, let rhsMedia = rhs.attachedMedia {
             if !lhsMedia.isEqual(to: rhsMedia) { return false }
         } else if (lhs.attachedMedia == nil) != (rhs.attachedMedia == nil) {
@@ -435,6 +442,6 @@ public final class TelegramMediaPoll: Media, Equatable {
         } else {
             updatedResults = results
         }
-        return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, textEntities: self.textEntities, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed, deadlineTimeout: self.deadlineTimeout, deadlineDate: self.deadlineDate, pollHash: self.pollHash, openAnswers: self.openAnswers, revotingDisabled: self.revotingDisabled, shuffleAnswers: self.shuffleAnswers, hideResultsUntilClose: self.hideResultsUntilClose, attachedMedia: self.attachedMedia)
+        return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, textEntities: self.textEntities, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed, deadlineTimeout: self.deadlineTimeout, deadlineDate: self.deadlineDate, pollHash: self.pollHash, openAnswers: self.openAnswers, revotingDisabled: self.revotingDisabled, shuffleAnswers: self.shuffleAnswers, hideResultsUntilClose: self.hideResultsUntilClose, isCreator: self.isCreator, attachedMedia: self.attachedMedia)
     }
 }
