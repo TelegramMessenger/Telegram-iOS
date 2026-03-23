@@ -509,7 +509,6 @@ func _internal_composeAIMessage(account: Account, text: TextWithEntities, mode: 
     let inputText: Api.TextWithEntities = .textWithEntities(Api.TextWithEntities.Cons_textWithEntities(text: text.text, entities: apiEntitiesFromMessageTextEntities(text.entities, associatedPeers: SimpleDictionary())))
     
     return account.network.request(Api.functions.messages.composeMessageWithAI(flags: flags, text: inputText, translateToLang: translateToLang, changeTone: changeTone))
-    |> delay(0.4, queue: .mainQueue())
     |> `catch` { error -> Signal<Api.messages.ComposedMessageWithAI, TelegramAIComposeMessageError> in
         if error.errorDescription == "AICOMPOSE_FLOOD_PREMIUM" {
             return .fail(.nonPremiumFlood)

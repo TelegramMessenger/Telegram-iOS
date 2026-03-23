@@ -66,6 +66,7 @@ import GroupCallHeaderPanelComponent
 import PresentationDataUtils
 import TextProcessingScreen
 import Pasteboard
+import UndoUI
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -4501,7 +4502,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         controller.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                             return state.updatedInterfaceState { interfaceState in
                                 return interfaceState.withUpdatedEffectiveInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(text.text, entities: text.entities)))
-                            }
+                            }.updatedInputMode({ _ in return .text })
                         })
                     },
                     send: { [weak self] text in
@@ -4514,16 +4515,61 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             }
                         })
                         self.sendCurrentMessage()
+                    },
+                    sendContextActions: self.chatLocation.peerId.flatMap { peerId in return TextProcessingScreen.SendContextActions(
+                            peerId: peerId,
+                            send: { [weak self] text, mode, parameters in
+                                guard let self, let controller = self.controller else {
+                                    return
+                                }
+                                controller.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                                    return state.updatedInterfaceState { interfaceState in
+                                        return interfaceState.withUpdatedEffectiveInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(text.text, entities: text.entities)))
+                                    }
+                                })
+                                switch mode {
+                                case .generic:
+                                    controller.controllerInteraction?.sendCurrentMessage(false, parameters?.effect.flatMap(ChatSendMessageEffect.init))
+                                case .silently:
+                                    controller.controllerInteraction?.sendCurrentMessage(true, parameters?.effect.flatMap(ChatSendMessageEffect.init))
+                                case .whenOnline:
+                                    controller.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: parameters?.effect.flatMap(ChatSendMessageEffect.init)) { [weak self] in
+                                        guard let self, let controller = self.controller else {
+                                            return
+                                        }
+                                        controller.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: controller.presentationInterfaceState.subject != .scheduledMessages, {
+                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                                        })
+                                        controller.openScheduledMessages()
+                                    }
+                                }
+                            },
+                            schedule: { [weak self] text, params in
+                                guard let self, let controller = self.controller else {
+                                    return
+                                }
+                                controller.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                                    return state.updatedInterfaceState { interfaceState in
+                                        return interfaceState.withUpdatedEffectiveInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(text.text, entities: text.entities)))
+                                    }
+                                })
+                                controller.controllerInteraction?.scheduleCurrentMessage(params)
+                            }
+                        )
                     }
                 ),
                 ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                 inputText: TextWithEntities(text: inputText.string, entities: entities),
                 copyResult: { [weak self] text in
-                    guard let self else {
+                    guard let self, let controller = self.controller else {
                         return
                     }
-                    let _ = self
                     storeMessageTextInPasteboard(text.text, entities: text.entities)
+                    
+                    let infoText = controller.presentationData.strings.Conversation_TextCopied
+                    controller.present(UndoOverlayController(presentationData: controller.presentationData, content: .copy(text: infoText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                            return true
+                    }), in: .current)
                 },
                 translateChat: nil
             ))

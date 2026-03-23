@@ -435,11 +435,15 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             let sendButtonScale: CGFloat
-            switch self.presentationAnimationState {
-            case .initial:
-                sendButtonScale = 0.75
-            default:
+            if component.sourceSendButton is ContextExtractedContentContainingView {
                 sendButtonScale = 1.0
+            } else {
+                switch self.presentationAnimationState {
+                case .initial:
+                    sendButtonScale = 0.75
+                default:
+                    sendButtonScale = 1.0
+                }
             }
             
             var reminders = false
@@ -1121,7 +1125,12 @@ final class ChatSendMessageContextScreenComponent: Component {
                 }
             }
             
-            let sendButtonSize = CGSize(width: min(sourceSendButtonFrame.width, 40.0), height: sourceSendButtonFrame.height)
+            let sendButtonSize: CGSize
+            if component.sourceSendButton is ContextExtractedContentContainingView {
+                sendButtonSize = sourceSendButtonFrame.size
+            } else {
+                sendButtonSize = CGSize(width: min(sourceSendButtonFrame.width, 40.0), height: sourceSendButtonFrame.height)
+            }
             var readySendButtonFrame = CGRect(origin: CGPoint(x: sourceSendButtonFrame.maxX - sendButtonSize.width, y: sourceSendButtonFrame.minY), size: sendButtonSize)
             
             var sourceActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - 8.0 - actionsStackSize.width, y: sourceMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
@@ -1139,23 +1148,36 @@ final class ChatSendMessageContextScreenComponent: Component {
                 }
             }
             
-            var readyActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: readyMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
+            var readyActionsStackFrame: CGRect
+            if component.sourceSendButton is ContextExtractedContentContainingView {
+                readyActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - 8.0 - actionsStackSize.width, y: readyMessageItemFrame.maxY + messageActionsSpacing + 4.0), size: actionsStackSize)
+            } else {
+                readyActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: readyMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
+            }
             if !isMessageVisible {
-                readyActionsStackFrame.origin.y = readySendButtonFrame.maxY - readyActionsStackFrame.height - 5.0
+                if component.sourceSendButton is ContextExtractedContentContainingView {
+                    readyActionsStackFrame.origin.y = readySendButtonFrame.maxY - readyActionsStackFrame.height
+                } else {
+                    readyActionsStackFrame.origin.y = readySendButtonFrame.maxY - readyActionsStackFrame.height - 5.0
+                }
             }
             
             let bottomOverflow = readyActionsStackFrame.maxY - (availableSize.height - environment.safeInsets.bottom)
             if bottomOverflow > 0.0 {
                 readyMessageItemFrame.origin.y -= bottomOverflow
                 readyActionsStackFrame.origin.y -= bottomOverflow
-                readySendButtonFrame.origin.y -= bottomOverflow
+                if !(component.sourceSendButton is ContextExtractedContentContainingView) {
+                    readySendButtonFrame.origin.y -= bottomOverflow
+                }
             }
-            
+
             let inputCoverOverflow = readyMessageItemFrame.maxY + 7.0 - (availableSize.height - environment.inputHeight)
             if inputCoverOverflow > 0.0 {
                 readyMessageItemFrame.origin.y -= inputCoverOverflow
                 readyActionsStackFrame.origin.y -= inputCoverOverflow
-                readySendButtonFrame.origin.y -= inputCoverOverflow
+                if !(component.sourceSendButton is ContextExtractedContentContainingView) {
+                    readySendButtonFrame.origin.y -= inputCoverOverflow
+                }
             }
             
             if let mediaPreview {

@@ -4077,8 +4077,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 mode: .translate(fromLanguage: language),
                                 ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                                 inputText: TextWithEntities(text: text.string, entities: entities ?? []),
-                                copyResult: canCopy ? { text in
+                                copyResult: canCopy ? { [weak self] text in
+                                    guard let self else {
+                                        return
+                                    }
                                     storeMessageTextInPasteboard(text.text, entities: text.entities)
+                                    
+                                    let infoText = self.presentationData.strings.Conversation_TextCopied
+                                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: infoText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                                            return true
+                                    }), in: .current)
                                 } : nil,
                                 translateChat: { [weak self] toLang in
                                     guard let self else {

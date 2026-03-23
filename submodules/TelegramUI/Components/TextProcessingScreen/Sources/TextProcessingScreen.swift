@@ -172,7 +172,7 @@ final class TextProcessingContentComponent: Component {
             guard let component = self.component else {
                 return
             }
-            if case let .edit(saveRestoreStateId, _, _) = component.mode, let saveRestoreStateId {
+            if case let .edit(saveRestoreStateId, _, _, _) = component.mode, let saveRestoreStateId {
                 let mappedMode: Int32
                 switch self.currentMode {
                 case .translate:
@@ -598,12 +598,13 @@ private final class TextProcessingSheetComponent: Component {
         
         private func displayLongPressSendMenu(sourceSendButton: UIView) {
             Task { @MainActor [weak self, weak sourceSendButton] in
-                guard let self, let sourceSendButton, let component = self.component, case let .edit(peerId, _, _) = component.mode, let peerId else {
+                guard let self, let sourceSendButton, let component = self.component, case let .edit(_, _, _, sendContextActions) = component.mode, let sendContextActions else {
                     return
                 }
                 guard let controller = self.environment?.controller() else {
                     return
                 }
+                let peerId = sendContextActions.peerId
                 let previousSupportedOrientations = controller.supportedOrientations
                 
                 let availableMessageEffects = await (component.context.availableMessageEffects |> take(1)).get()
@@ -674,33 +675,28 @@ private final class TextProcessingSheetComponent: Component {
                         self.environment?.controller()?.supportedOrientations = previousSupportedOrientations
                     },
                     sendMessage: { [weak self] mode, parameters in
-                        guard let self else {
+                        guard let self, let result = self.contentExternalState.result else {
                             return
                         }
-                        /*switch mode {
-                        case .generic:
-                            selfController.controllerInteraction?.sendCurrentMessage(false, parameters?.effect.flatMap(ChatSendMessageEffect.init))
-                        case .silently:
-                            selfController.controllerInteraction?.sendCurrentMessage(true, parameters?.effect.flatMap(ChatSendMessageEffect.init))
-                        case .whenOnline:
-                            selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: parameters?.effect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
-                                guard let selfController else {
-                                    return
-                                }
-                                selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: selfController.presentationInterfaceState.subject != .scheduledMessages, {
-                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
-                                })
-                                selfController.openScheduledMessages()
+                        sendContextActions.send(result, mode, parameters)
+                        let controller = self.environment?.controller
+                        self.animateOut.invoke(Action { _ in
+                            if let controller = controller?() {
+                                controller.dismiss(completion: nil)
                             }
-                        }*/
-                        let _ = self
+                        })
                     },
                     schedule: { [weak self] params in
-                        guard let self else {
+                        guard let self, let result = self.contentExternalState.result else {
                             return
                         }
-                        let _ = self
-                        //selfController.controllerInteraction?.scheduleCurrentMessage(params)
+                        sendContextActions.schedule(result, params)
+                        let controller = self.environment?.controller
+                        self.animateOut.invoke(Action { _ in
+                            if let controller = controller?() {
+                                controller.dismiss(completion: nil)
+                            }
+                        })
                     }, editPrice: { _ in
                     }, openPremiumPaywall: { [weak self] c in
                         guard let self else {
@@ -741,6 +737,7 @@ private final class TextProcessingSheetComponent: Component {
 
             let performMainAction: () -> Void
             var performSendAction: ((TextWithEntities) -> Void)?
+            var hasLongPressActions = false
             let isMainActionEnabled: Bool
             //TODO:localize (for AI: don't remove this line)
             let actionButtonTitle: String
@@ -768,10 +765,11 @@ private final class TextProcessingSheetComponent: Component {
                 }
             } else {
                 switch component.mode {
-                case let .edit(_, completion, send):
+                case let .edit(_, completion, send, sendContextActions):
                     actionButtonTitle = "Apply"
                     performSendAction = send
                     isMainActionEnabled = !self.contentExternalState.isProcessing
+                    hasLongPressActions = sendContextActions != nil
                     performMainAction = { [weak self] in
                         guard let self else {
                             return
@@ -893,7 +891,7 @@ private final class TextProcessingSheetComponent: Component {
                                     }
                                 }
                             },
-                            longPressSendAction: performSendAction != nil ? { [weak self] sourceView in
+                            longPressSendAction: (performSendAction != nil && hasLongPressActions) ? { [weak self] sourceView in
                                 guard let self else {
                                     return
                                 }
@@ -1051,8 +1049,20 @@ private final class TextProcessingSheetComponent: Component {
 }
 
 public class TextProcessingScreen: ViewControllerComponentContainer {
+    public final class SendContextActions {
+        public let peerId: EnginePeer.Id
+        public let send: (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
+        public let schedule: (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void
+        
+        public init(peerId: EnginePeer.Id, send: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void, schedule: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void) {
+            self.peerId = peerId
+            self.send = send
+            self.schedule = schedule
+        }
+    }
+    
     public enum Mode {
-        case edit(saveRestoreStateId: EnginePeer.Id?, completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?)
+        case edit(saveRestoreStateId: EnginePeer.Id?, completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?, sendContextActions: SendContextActions?)
         case translate(fromLanguage: String?)
     }
     
@@ -1080,7 +1090,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         let shouldDisplayStyleNotice = await ApplicationSpecificNotice.getAITextProcessingStyleSelection(accountManager: context.sharedContext.accountManager).get() < 3
         
         var initialEditState: EditState?
-        if case let .edit(saveRestoreStateId, _, _) = mode, let saveRestoreStateId {
+        if case let .edit(saveRestoreStateId, _, _, _) = mode, let saveRestoreStateId {
             initialEditState = await context.engine.data.get(
                 TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.textProcessingEditingState(peerId: saveRestoreStateId))
             ).get()?.get(EditState.self)
@@ -1294,12 +1304,15 @@ private final class ActionButtonsComponent: Component {
     final class View: UIView {
         private let actionButton = ComponentView<Empty>()
         private let sendButton = ComponentView<Empty>()
-        
+        private let extractedContainerView = ContextExtractedContentContainingView()
+
         private var component: ActionButtonsComponent?
         private weak var state: EmptyComponentState?
 
         override init(frame: CGRect) {
             super.init(frame: frame)
+
+            self.addSubview(self.extractedContainerView)
         }
 
         required init?(coder: NSCoder) {
@@ -1392,10 +1405,7 @@ private final class ActionButtonsComponent: Component {
                         guard let self else {
                             return
                         }
-                        guard let sourceView = self.sendButton.view else {
-                            return
-                        }
-                        component.longPressSendAction?(sourceView)
+                        component.longPressSendAction?(self.extractedContainerView)
                     }
                 )),
                 environment: {},
@@ -1404,13 +1414,16 @@ private final class ActionButtonsComponent: Component {
             let sendButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sendButtonSize.width, y: 0.0), size: sendButtonSize)
             if let sendButtonView = self.sendButton.view {
                 if sendButtonView.superview == nil {
-                    self.addSubview(sendButtonView)
+                    self.extractedContainerView.contentView.addSubview(sendButtonView)
                 }
-                transition.setPosition(view: sendButtonView, position: sendButtonFrame.center)
-                transition.setBounds(view: sendButtonView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
-                transition.setAlpha(view: sendButtonView, alpha: component.sendAction != nil ? 1.0 : 0.0)
-                transition.setScale(view: sendButtonView, scale: component.sendAction != nil ? 1.0 : 0.001)
+                sendButtonView.frame = CGRect(origin: CGPoint(), size: sendButtonFrame.size)
             }
+            transition.setPosition(view: self.extractedContainerView, position: sendButtonFrame.center)
+            transition.setBounds(view: self.extractedContainerView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
+            transition.setPosition(view: self.extractedContainerView.contentView, position: CGPoint(x: sendButtonFrame.width * 0.5, y: sendButtonFrame.height * 0.5))
+            transition.setBounds(view: self.extractedContainerView.contentView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
+            transition.setAlpha(view: self.extractedContainerView, alpha: component.sendAction != nil ? 1.0 : 0.0)
+            transition.setScale(view: self.extractedContainerView, scale: component.sendAction != nil ? 1.0 : 0.001)
 
             return CGSize(width: availableSize.width, height: actionButtonSize.height)
         }
