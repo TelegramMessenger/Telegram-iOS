@@ -80,7 +80,7 @@ public func makeChatSendMessageActionSheetController(
     hasEntityKeyboard: Bool,
     gesture: ContextGesture?,
     sourceSendButton: UIView,
-    textInputView: UITextView,
+    textInputView: UITextView?,
     emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
     wallpaperBackgroundNode: WallpaperBackgroundNode? = nil,
     completion: @escaping () -> Void,
