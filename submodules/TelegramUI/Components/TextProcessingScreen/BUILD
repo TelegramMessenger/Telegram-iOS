@@ -40,6 +40,7 @@ swift_library(
         "//submodules/TelegramNotices",
         "//submodules/Markdown",
         "//submodules/TelegramUIPreferences",
+        "//submodules/ChatSendMessageActionUI",
     ],
     visibility = [
         "//visibility:public",

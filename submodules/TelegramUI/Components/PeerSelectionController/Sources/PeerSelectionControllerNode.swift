@@ -765,7 +765,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     )),
                     hasEntityKeyboard: hasEntityKeyboard,
                     gesture: gesture,
-                    sourceSendButton: node,
+                    sourceSendButton: node.view,
                     textInputView: textInputNode.textView,
                     emojiViewProvider: textInputPanelNode.emojiViewProvider,
                     completion: {

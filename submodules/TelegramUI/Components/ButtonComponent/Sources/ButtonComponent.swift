@@ -389,7 +389,8 @@ public final class ButtonComponent: Component {
     public let allowActionWhenDisabled: Bool
     public let displaysProgress: Bool
     public let action: () -> Void
-    
+    public let longPressAction: (() -> Void)?
+
     public init(
         background: Background,
         content: AnyComponentWithIdentity<Empty>,
@@ -399,7 +400,8 @@ public final class ButtonComponent: Component {
         tintWhenDisabled: Bool = true,
         allowActionWhenDisabled: Bool = false,
         displaysProgress: Bool = false,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        longPressAction: (() -> Void)? = nil
     ) {
         self.background = background
         self.content = content
@@ -410,6 +412,7 @@ public final class ButtonComponent: Component {
         self.allowActionWhenDisabled = allowActionWhenDisabled
         self.displaysProgress = displaysProgress
         self.action = action
+        self.longPressAction = longPressAction
     }
 
     public static func ==(lhs: ButtonComponent, rhs: ButtonComponent) -> Bool {
@@ -437,6 +440,9 @@ public final class ButtonComponent: Component {
         if lhs.displaysProgress != rhs.displaysProgress {
             return false
         }
+        if (lhs.longPressAction == nil) != (rhs.longPressAction == nil) {
+            return false
+        }
         return true
     }
 
@@ -462,6 +468,7 @@ public final class ButtonComponent: Component {
         private var contentItem: ContentItem?
         
         private var activityIndicator: ActivityIndicator?
+        private var longPressGesture: UILongPressGestureRecognizer?
         
         override init(frame: CGRect) {
             self.containerView = UIView()
@@ -479,7 +486,12 @@ public final class ButtonComponent: Component {
             self.addSubview(self.button)
             
             self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-            
+
+            let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressed(_:)))
+            longPressGesture.isEnabled = false
+            self.longPressGesture = longPressGesture
+            self.button.addGestureRecognizer(longPressGesture)
+
             self.button.highligthedChanged = { [weak self] highlighted in
                 if let self, let component = self.component, component.isEnabled {
                     switch component.background.style {
@@ -530,6 +542,13 @@ public final class ButtonComponent: Component {
             }
             component.action()
         }
+
+        @objc private func longPressed(_ gesture: UILongPressGestureRecognizer) {
+            guard gesture.state == .began, let component = self.component else {
+                return
+            }
+            component.longPressAction?()
+        }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             return super.hitTest(point, with: event)
@@ -538,6 +557,8 @@ public final class ButtonComponent: Component {
         func update(component: ButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.componentState = state
+
+            self.longPressGesture?.isEnabled = component.longPressAction != nil
             
             self.button.isEnabled = (component.isEnabled || component.allowActionWhenDisabled) && !component.displaysProgress
                         

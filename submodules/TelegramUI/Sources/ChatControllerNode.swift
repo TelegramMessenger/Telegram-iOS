@@ -4462,7 +4462,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             let effectiveInputText: NSAttributedString
-            if effectivePresentationInterfaceState.interfaceState.editMessage != nil && effectivePresentationInterfaceState.interfaceState.postSuggestionState != nil {
+            if effectivePresentationInterfaceState.interfaceState.editMessage != nil {
                 effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.effectiveInputState.inputText)
             } else {
                 effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)

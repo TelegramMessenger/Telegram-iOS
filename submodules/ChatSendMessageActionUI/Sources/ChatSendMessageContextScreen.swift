@@ -59,8 +59,8 @@ final class ChatSendMessageContextScreenComponent: Component {
     let peerId: EnginePeer.Id?
     let params: SendMessageActionSheetControllerParams
     let hasEntityKeyboard: Bool
-    let gesture: ContextGesture
-    let sourceSendButton: ASDisplayNode
+    let gesture: ContextGesture?
+    let sourceSendButton: UIView
     let textInputView: UITextView
     let emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     let wallpaperBackgroundNode: WallpaperBackgroundNode?
@@ -80,8 +80,8 @@ final class ChatSendMessageContextScreenComponent: Component {
         peerId: EnginePeer.Id?,
         params: SendMessageActionSheetControllerParams,
         hasEntityKeyboard: Bool,
-        gesture: ContextGesture,
-        sourceSendButton: ASDisplayNode,
+        gesture: ContextGesture?,
+        sourceSendButton: UIView,
         textInputView: UITextView,
         emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
         wallpaperBackgroundNode: WallpaperBackgroundNode?,
@@ -286,7 +286,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     guard let self, let component = self.component else {
                         return
                     }
-                    let stableSourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
+                    let stableSourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton, to: self)
                     if self.stableSourceSendButtonFrame != stableSourceSendButtonFrame {
                         self.stableSourceSendButtonFrame = stableSourceSendButtonFrame
                         if !self.isUpdating {
@@ -331,7 +331,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     self.mediaCaptionIsAbove = editMessage.mediaCaptionIsAbove?.0 ?? false
                 }
                 
-                component.gesture.externalUpdated = { [weak self] view, location in
+                component.gesture?.externalUpdated = { [weak self] view, location in
                     guard let self, let actionsStackNode = self.actionsStackNode else {
                         return
                     }
@@ -346,7 +346,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     }
                     actionsStackNode.highlightGestureMoved(location: self.convert(localPoint, to: actionsStackNode.view))
                 }
-                component.gesture.externalEnded = { [weak self] viewAndLocation in
+                component.gesture?.externalEnded = { [weak self] viewAndLocation in
                     guard let self, let actionsStackNode = self.actionsStackNode else {
                         return
                     }
@@ -423,13 +423,13 @@ final class ChatSendMessageContextScreenComponent: Component {
             let sourceSendButtonFrame: CGRect
             switch self.presentationAnimationState {
             case .animatedOut:
-                sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
+                sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton, to: self)
                 self.stableSourceSendButtonFrame = sourceSendButtonFrame
             default:
                 if let stableSourceSendButtonFrame = self.stableSourceSendButtonFrame {
                     sourceSendButtonFrame = stableSourceSendButtonFrame
                 } else {
-                    sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
+                    sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton, to: self)
                     self.stableSourceSendButtonFrame = sourceSendButtonFrame
                 }
             }
@@ -1431,8 +1431,8 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
         peerId: EnginePeer.Id?,
         params: SendMessageActionSheetControllerParams,
         hasEntityKeyboard: Bool,
-        gesture: ContextGesture,
-        sourceSendButton: ASDisplayNode,
+        gesture: ContextGesture?,
+        sourceSendButton: UIView,
         textInputView: UITextView,
         emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
         wallpaperBackgroundNode: WallpaperBackgroundNode?,

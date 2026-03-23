@@ -64,7 +64,7 @@ final class SendButton: HighlightTrackingButton {
         context: AccountContext,
         presentationData: PresentationData,
         backgroundNode: WallpaperBackgroundNode?,
-        sourceSendButton: ASDisplayNode,
+        sourceSendButton: UIView,
         isAnimatedIn: Bool,
         isLoadingEffectAnimation: Bool,
         size: CGSize,
@@ -93,7 +93,7 @@ final class SendButton: HighlightTrackingButton {
                 self.sourceCustomContentView = nil
             }
             
-            if let sourceSendButton = sourceSendButton as? ChatSendMessageActionSheetControllerSourceSendButtonNode {
+            if let sourceSendButton = sourceSendButton.asyncdisplaykit_node as? ChatSendMessageActionSheetControllerSourceSendButtonNode {
                 if let sourceCustomContentView = sourceSendButton.makeCustomContents() {
                     self.sourceCustomContentView = sourceCustomContentView
                     sourceCustomContentView.alpha = sourceCustomContentViewAlpha

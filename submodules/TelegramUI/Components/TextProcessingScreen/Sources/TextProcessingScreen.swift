@@ -23,6 +23,7 @@ import ToastComponent
 import TelegramNotices
 import Markdown
 import TelegramUIPreferences
+import ChatSendMessageActionUI
 
 final class TextProcessingContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -98,7 +99,7 @@ final class TextProcessingContentComponent: Component {
         
         private var currentContent: (mode: Mode, view: ComponentView<Empty>)?
         
-        private var currentMode: Mode = .translate
+        private var currentMode: Mode = .stylize
         
         override init(frame: CGRect) {
             self.currentContentBackground = UIImageView()
@@ -229,6 +230,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .translate {
                             self.currentMode = .translate
+                            self.saveState()
                             self.externalStatesUpdated()
                         }
                         if !self.isUpdating {
@@ -250,6 +252,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .stylize {
                             self.currentMode = .stylize
+                            self.saveState()
                             let _ = ApplicationSpecificNotice.incrementAITextProcessingStyleSelection(accountManager: component.context.sharedContext.accountManager).startStandalone()
                             self.externalStatesUpdated()
                         }
@@ -272,6 +275,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .fix {
                             self.currentMode = .fix
+                            self.saveState()
                             self.externalStatesUpdated()
                         }
                         if !self.isUpdating {
@@ -591,6 +595,126 @@ private final class TextProcessingSheetComponent: Component {
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
+        
+        private func displayLongPressSendMenu(sourceSendButton: UIView) {
+            Task { @MainActor [weak self, weak sourceSendButton] in
+                guard let self, let sourceSendButton, let component = self.component, case let .edit(peerId, _, _) = component.mode, let peerId else {
+                    return
+                }
+                guard let controller = self.environment?.controller() else {
+                    return
+                }
+                let previousSupportedOrientations = controller.supportedOrientations
+                
+                let availableMessageEffects = await (component.context.availableMessageEffects |> take(1)).get()
+                let hasPremium = await (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId))
+                |> map { peer -> Bool in
+                    guard case let .user(user) = peer else {
+                        return false
+                    }
+                    return user.isPremium
+                }).get()
+                
+                let peerStatus = await (component.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Presence(id: peerId)
+                )).get()
+                guard let peer = await (component.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )).get() else {
+                    return
+                }
+                
+                let initialData = await ChatSendMessageContextScreen.initialData(context: component.context, currentMessageEffectId: nil).get()
+                
+                var sendWhenOnlineAvailable = false
+                if let peerStatus, case let .present(until) = peerStatus.status {
+                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                    if currentTime > until {
+                        sendWhenOnlineAvailable = true
+                    }
+                }
+                if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 777000 {
+                    sendWhenOnlineAvailable = false
+                }
+                
+                let messageActionsController = makeChatSendMessageActionSheetController(
+                    initialData: initialData,
+                    context: component.context,
+                    updatedPresentationData: nil,
+                    peerId: peerId,
+                    params: .sendMessage(SendMessageActionSheetControllerParams.SendMessage(
+                        isScheduledMessages: false,
+                        mediaPreview: nil,
+                        mediaCaptionIsAbove: nil,
+                        messageEffect: (nil, { [weak self] updatedEffect in
+                            guard let self else {
+                                return
+                            }
+                            let _ = self
+                            let _ = updatedEffect
+                        }),
+                        attachment: false,
+                        canSendWhenOnline: sendWhenOnlineAvailable,
+                        forwardMessageIds: [],
+                        canMakePaidContent: false,
+                        currentPrice: nil,
+                        hasTimers: false,
+                        sendPaidMessageStars: nil,
+                        isMonoforum: peer._asPeer().isMonoForum
+                    )),
+                    hasEntityKeyboard: false,
+                    gesture: nil,
+                    sourceSendButton: sourceSendButton,
+                    textInputView: UITextView(),
+                    emojiViewProvider: nil,
+                    completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.supportedOrientations = previousSupportedOrientations
+                    },
+                    sendMessage: { [weak self] mode, parameters in
+                        guard let self else {
+                            return
+                        }
+                        /*switch mode {
+                        case .generic:
+                            selfController.controllerInteraction?.sendCurrentMessage(false, parameters?.effect.flatMap(ChatSendMessageEffect.init))
+                        case .silently:
+                            selfController.controllerInteraction?.sendCurrentMessage(true, parameters?.effect.flatMap(ChatSendMessageEffect.init))
+                        case .whenOnline:
+                            selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: parameters?.effect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
+                                guard let selfController else {
+                                    return
+                                }
+                                selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: selfController.presentationInterfaceState.subject != .scheduledMessages, {
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                                })
+                                selfController.openScheduledMessages()
+                            }
+                        }*/
+                        let _ = self
+                    },
+                    schedule: { [weak self] params in
+                        guard let self else {
+                            return
+                        }
+                        let _ = self
+                        //selfController.controllerInteraction?.scheduleCurrentMessage(params)
+                    }, editPrice: { _ in
+                    }, openPremiumPaywall: { [weak self] c in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.push(c)
+                    },
+                    reactionItems: nil,
+                    availableMessageEffects: availableMessageEffects,
+                    isPremium: hasPremium
+                )
+                controller.present(messageActionsController, in: .window(.root))
+            }
+        }
 
         func update(component: TextProcessingSheetComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.component = component
@@ -768,7 +892,13 @@ private final class TextProcessingSheetComponent: Component {
                                         dismiss(true)
                                     }
                                 }
-                            }
+                            },
+                            longPressSendAction: performSendAction != nil ? { [weak self] sourceView in
+                                guard let self else {
+                                    return
+                                }
+                                self.displayLongPressSendMenu(sourceSendButton: sourceView)
+                            } : nil
                         )
                     ),
                     backgroundColor: .color(theme.list.blocksBackgroundColor),
@@ -1121,19 +1251,22 @@ private final class ActionButtonsComponent: Component {
     let actionButtonShowsIncreaseLimit: Bool
     let action: (() -> Void)?
     let sendAction: (() -> Void)?
+    let longPressSendAction: ((UIView) -> Void)?
     
     init(
         theme: PresentationTheme,
         actionTitle: String,
         actionButtonShowsIncreaseLimit: Bool,
         action: (() -> Void)?,
-        sendAction: (() -> Void)?
+        sendAction: (() -> Void)?,
+        longPressSendAction: ((UIView) -> Void)?
     ) {
         self.theme = theme
         self.actionTitle = actionTitle
         self.actionButtonShowsIncreaseLimit = actionButtonShowsIncreaseLimit
         self.action = action
         self.sendAction = sendAction
+        self.longPressSendAction = longPressSendAction
     }
     
     static func ==(lhs: ActionButtonsComponent, rhs: ActionButtonsComponent) -> Bool {
@@ -1150,6 +1283,9 @@ private final class ActionButtonsComponent: Component {
             return false
         }
         if (lhs.sendAction == nil) != (rhs.sendAction == nil) {
+            return false
+        }
+        if (lhs.longPressSendAction == nil) != (rhs.longPressSendAction == nil) {
             return false
         }
         return true
@@ -1251,6 +1387,15 @@ private final class ActionButtonsComponent: Component {
                             return
                         }
                         component.sendAction?()
+                    },
+                    longPressAction: component.longPressSendAction == nil ? nil : { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        guard let sourceView = self.sendButton.view else {
+                            return
+                        }
+                        component.longPressSendAction?(sourceView)
                     }
                 )),
                 environment: {},
