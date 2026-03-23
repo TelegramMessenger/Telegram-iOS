@@ -849,6 +849,8 @@ final class ComposePollScreenComponent: Component {
                 return
             }
             
+            self.endEditing(true)
+            
             guard replace || !self.openAttachMediaContextMenu(subject: subject) else {
                 return
             }

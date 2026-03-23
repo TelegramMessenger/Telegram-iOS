@@ -1511,7 +1511,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             })
                             
-                            effectiveFile = image.video
+                            if var video = image.video {
+                                if video.immediateThumbnailData == nil {
+                                    video = video.withUpdatedImmediateThumnailData(image.immediateThumbnailData)
+                                }
+                                effectiveFile = video
+                            }                            
                         } else if let image = media as? TelegramMediaWebFile {
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
