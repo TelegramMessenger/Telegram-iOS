@@ -919,6 +919,8 @@ public func makeAttachmentFileControllerImpl(
                 arguments.send(message)
             }, dismissInput: {
                 dismissInputImpl?()
+            }, didPreviewAudio: {
+                didPreviewAudio = true
             })
         }
 
