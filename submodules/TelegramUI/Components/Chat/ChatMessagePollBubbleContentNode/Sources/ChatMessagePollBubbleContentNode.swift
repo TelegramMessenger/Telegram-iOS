@@ -2318,20 +2318,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        var canAlwaysViewResults = false
-        if let peer = item.message.peers[item.message.id.peerId] {
-            if let group = peer as? TelegramGroup {
-                switch group.role {
-                case .creator, .admin:
-                    canAlwaysViewResults = true
-                default:
-                    break
-                }
-            } else if let channel = peer as? TelegramChannel, let _ = channel.adminRights {
-                canAlwaysViewResults = true
-            }
-        }
-        
+        let canAlwaysViewResults = poll.isCreator        
         if !hasSelection || (canAlwaysViewResults && selectedOpaqueIdentifiers.isEmpty) {
             if !Namespaces.Message.allNonRegular.contains(item.message.id.namespace) {
                 switch poll.publicity {
@@ -2751,7 +2738,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         pollOptionsFinalizeLayouts.append((optionResult != nil, result.1))
                     }
 
-                    let displayAddOption = poll.openAnswers && !isClosed && !hasVoted && poll.pollId.namespace == Namespaces.Media.CloudPoll
+                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll
                     if displayAddOption {
                         let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, item.controllerInteraction.focusedTextInputIsMedia, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, addOptionResult.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
@@ -3187,11 +3174,20 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = buttonViewResultsTextApply()
                             strongSelf.buttonViewResultsTextNode.frame = buttonViewResultsTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
 
-                            strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: resultSize.width, height: 44.0))
-
                             strongSelf.updateSelection()
                             strongSelf.updatePollTooltipMessageState(animated: false)
 
+                            var buttonWidth: CGFloat = 0.0
+                            if !strongSelf.buttonSaveTextNode.isHidden {
+                                buttonWidth = strongSelf.buttonSaveTextNode.frame.width
+                            } else if !strongSelf.buttonViewResultsTextNode.isHidden {
+                                buttonWidth = strongSelf.buttonViewResultsTextNode.frame.width
+                            } else if !strongSelf.buttonSubmitActiveTextNode.isHidden {
+                                buttonWidth = strongSelf.buttonSubmitActiveTextNode.frame.width
+                            }
+                            buttonWidth = floor(buttonWidth * 1.1)
+                            strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonWidth) / 2.0), y: verticalOffset), size: CGSize(width: buttonWidth, height: 44.0))
+                            
                             strongSelf.updateIsTranslating(isTranslating)
                         }
                     })
@@ -3283,20 +3279,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
         let isClosed = isPollEffectivelyClosed(message: item.message, poll: poll)
         
-        var canAlwaysViewResults = false
-        if !poll.hideResultsUntilClose, let peer = item.message.peers[item.message.id.peerId] {
-            if let group = peer as? TelegramGroup {
-                switch group.role {
-                case .creator, .admin:
-                    canAlwaysViewResults = true
-                default:
-                    break
-                }
-            } else if let channel = peer as? TelegramChannel, let _ = channel.adminRights {
-                canAlwaysViewResults = true
-            }
-        }
-
+        let canAlwaysViewResults = !poll.hideResultsUntilClose && poll.isCreator
         var hasAnyVotes = false
         var hasResults = false
         if isClosed {
