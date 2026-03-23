@@ -1660,7 +1660,11 @@ public final class PresentationTheme: Equatable {
     
     public func withModalBlocksBackground() -> PresentationTheme {
         if self.list.blocksBackgroundColor.rgb == self.list.plainBackgroundColor.rgb {
-            let list = self.list.withUpdated(blocksBackgroundColor: self.list.modalBlocksBackgroundColor, itemBlocksBackgroundColor: self.list.itemModalBlocksBackgroundColor)
+            let list = self.list.withUpdated(
+                blocksBackgroundColor: self.list.modalBlocksBackgroundColor,
+                itemPlaceholderTextColor: self.overallDarkAppearance ? self.list.itemPlaceholderTextColor.withMultipliedBrightnessBy(1.25) : nil,
+                itemBlocksBackgroundColor: self.list.itemModalBlocksBackgroundColor
+            )
             return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
         } else {
             return self

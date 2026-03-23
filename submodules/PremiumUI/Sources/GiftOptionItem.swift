@@ -303,7 +303,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
             var editingOffset: CGFloat = 0.0
             
             if let isSelected = item.isSelected {
-                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, isSelected, .regular)
+                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, isSelected, .regular, nil)
                 selectableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0
             }

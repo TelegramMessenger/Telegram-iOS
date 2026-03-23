@@ -1667,17 +1667,23 @@ public extension Api {
         }
         public class Cons_updateMessagePoll: TypeConstructorDescription {
             public var flags: Int32
+            public var peer: Api.Peer?
+            public var msgId: Int32?
+            public var topMsgId: Int32?
             public var pollId: Int64
             public var poll: Api.Poll?
             public var results: Api.PollResults
-            public init(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults) {
+            public init(flags: Int32, peer: Api.Peer?, msgId: Int32?, topMsgId: Int32?, pollId: Int64, poll: Api.Poll?, results: Api.PollResults) {
                 self.flags = flags
+                self.peer = peer
+                self.msgId = msgId
+                self.topMsgId = topMsgId
                 self.pollId = pollId
                 self.poll = poll
                 self.results = results
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("updateMessagePoll", [("flags", self.flags as Any), ("pollId", self.pollId as Any), ("poll", self.poll as Any), ("results", self.results as Any)])
+                return ("updateMessagePoll", [("flags", self.flags as Any), ("peer", self.peer as Any), ("msgId", self.msgId as Any), ("topMsgId", self.topMsgId as Any), ("pollId", self.pollId as Any), ("poll", self.poll as Any), ("results", self.results as Any)])
             }
         }
         public class Cons_updateMessagePollVote: TypeConstructorDescription {
@@ -3414,9 +3420,18 @@ public extension Api {
                 break
             case .updateMessagePoll(let _data):
                 if boxed {
-                    buffer.appendInt32(-1398708869)
+                    buffer.appendInt32(-699641301)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    _data.peer!.serialize(buffer, true)
+                }
+                if Int(_data.flags) & Int(1 << 1) != 0 {
+                    serializeInt32(_data.msgId!, buffer: buffer, boxed: false)
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    serializeInt32(_data.topMsgId!, buffer: buffer, boxed: false)
+                }
                 serializeInt64(_data.pollId, buffer: buffer, boxed: false)
                 if Int(_data.flags) & Int(1 << 0) != 0 {
                     _data.poll!.serialize(buffer, true)
@@ -4228,7 +4243,7 @@ public extension Api {
             case .updateMessageID(let _data):
                 return ("updateMessageID", [("id", _data.id as Any), ("randomId", _data.randomId as Any)])
             case .updateMessagePoll(let _data):
-                return ("updateMessagePoll", [("flags", _data.flags as Any), ("pollId", _data.pollId as Any), ("poll", _data.poll as Any), ("results", _data.results as Any)])
+                return ("updateMessagePoll", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("msgId", _data.msgId as Any), ("topMsgId", _data.topMsgId as Any), ("pollId", _data.pollId as Any), ("poll", _data.poll as Any), ("results", _data.results as Any)])
             case .updateMessagePollVote(let _data):
                 return ("updateMessagePollVote", [("pollId", _data.pollId as Any), ("peer", _data.peer as Any), ("options", _data.options as Any), ("qts", _data.qts as Any)])
             case .updateMessageReactions(let _data):
@@ -5956,24 +5971,41 @@ public extension Api {
         public static func parse_updateMessagePoll(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Api.Poll?
-            if Int(_1!) & Int(1 << 0) != 0 {
+            var _2: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {
                 if let signature = reader.readInt32() {
-                    _3 = Api.parse(reader, signature: signature) as? Api.Poll
+                    _2 = Api.parse(reader, signature: signature) as? Api.Peer
                 }
             }
-            var _4: Api.PollResults?
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {
+                _3 = reader.readInt32()
+            }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                _4 = reader.readInt32()
+            }
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: Api.Poll?
+            if Int(_1!) & Int(1 << 0) != 0 {
+                if let signature = reader.readInt32() {
+                    _6 = Api.parse(reader, signature: signature) as? Api.Poll
+                }
+            }
+            var _7: Api.PollResults?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.PollResults
+                _7 = Api.parse(reader, signature: signature) as? Api.PollResults
             }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateMessagePoll(Cons_updateMessagePoll(flags: _1!, pollId: _2!, poll: _3, results: _4!))
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Update.updateMessagePoll(Cons_updateMessagePoll(flags: _1!, peer: _2, msgId: _3, topMsgId: _4, pollId: _5!, poll: _6, results: _7!))
             }
             else {
                 return nil

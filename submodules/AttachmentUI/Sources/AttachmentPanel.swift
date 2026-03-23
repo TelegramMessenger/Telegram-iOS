@@ -1015,9 +1015,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     private var secondaryButtonState: AttachmentMainButtonState = .initial
     private var customBottomPanelBackgroundColor: UIColor?
     
+    private var hideButtons: Bool = false
     private var elevateProgress: Bool = false
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 0
+    private var selectionOverrideIndex: Int?
     private(set) var isSelecting: Bool = false
     private var selectionCount: Int = 0
     
@@ -1025,12 +1027,30 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     var isButtonVisible: Bool {
         return self.mainButtonState.isVisible || self.secondaryButtonState.isVisible
     }
-    var hasMediaAccessoryPanel: Bool {
-        if case .glass = self.panelStyle {
-            return self.playlistStateAndType != nil
-        } else {
+    private var peerMessagesPlaylistLocation: PeerMessagesPlaylistLocation? {
+        return self.playlistLocation as? PeerMessagesPlaylistLocation
+    }
+    private var currentButtonType: AttachmentButtonType? {
+        let selectedIndex = self.selectionOverrideIndex ?? self.selectedIndex
+        guard selectedIndex >= 0 && selectedIndex < self.buttons.count else {
+            return nil
+        }
+        return self.buttons[selectedIndex]
+    }
+    private var shouldDisplayMediaAccessoryPanel: Bool {
+        guard case .glass = self.panelStyle, self.playlistStateAndType != nil else {
             return false
         }
+        guard let playlistLocation = self.peerMessagesPlaylistLocation, case .custom = playlistLocation else {
+            return false
+        }
+        guard let currentButtonType = self.currentButtonType, case .audio = currentButtonType else {
+            return false
+        }
+        return true
+    }
+    var hasMediaAccessoryPanel: Bool {
+        return self.shouldDisplayMediaAccessoryPanel
     }
     
     private var validLayout: ContainerViewLayout?
@@ -1470,11 +1490,13 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     return
                 }
                 let hadMediaAccessoryPanel = strongSelf.hasMediaAccessoryPanel
+                let updatedPeerMessagesPlaylistLocation = playlistStateAndType?.1.playlistLocation as? PeerMessagesPlaylistLocation
                 if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.1.item) ||
                     !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.1, playlistStateAndType?.1.previousItem) ||
                     !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.2, playlistStateAndType?.1.nextItem) ||
                     strongSelf.playlistStateAndType?.3 != playlistStateAndType?.1.order ||
-                    strongSelf.playlistStateAndType?.4 != playlistStateAndType?.2 {
+                    strongSelf.playlistStateAndType?.4 != playlistStateAndType?.2 ||
+                    strongSelf.peerMessagesPlaylistLocation != updatedPeerMessagesPlaylistLocation {
                     
                     if let playlistStateAndType {
                         strongSelf.playlistStateAndType = (
@@ -1500,6 +1522,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                             isSelecting: strongSelf.isSelecting,
                             selectionCount: strongSelf.selectionCount,
                             elevateProgress: strongSelf.elevateProgress,
+                            hideButtons: strongSelf.hideButtons,
                             transition: .animated(duration: 0.4, curve: .spring)
                         )
                     }
@@ -1527,7 +1550,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
             
                 if let layout = strongSelf.validLayout {
-                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, selectionCount: strongSelf.selectionCount, elevateProgress: strongSelf.elevateProgress, transition: .immediate)
+                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, selectionCount: strongSelf.selectionCount, elevateProgress: strongSelf.elevateProgress, hideButtons: strongSelf.hideButtons, transition: .immediate)
                 }
             }
         }).strict()
@@ -1584,7 +1607,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     
     func requestLayout(transition: ContainedViewLayoutTransition) {
         if let layout = self.validLayout {
-            let _ = self.update(layout: layout, buttons: self.buttons, isSelecting: self.isSelecting, selectionCount: self.selectionCount, elevateProgress: self.elevateProgress, transition: transition)
+            let _ = self.update(layout: layout, buttons: self.buttons, isSelecting: self.isSelecting, selectionCount: self.selectionCount, elevateProgress: self.elevateProgress, hideButtons: self.hideButtons, transition: transition)
         }
     }
     
@@ -1702,40 +1725,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             )
         }
     }
-    
-    private func openCurrentMusicPlayer() {
-        guard let (state, _, _, order, type, account) = self.playlistStateAndType,
-              let id = state.id as? PeerMessagesMediaPlaylistItemId,
-              let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation else {
-            return
-        }
         
-        guard type == .music else {
-            self.context.sharedContext.navigateToChat(accountId: self.context.account.id, peerId: id.messageId.peerId, messageId: id.messageId)
-            return
-        }
-        
-        if case .custom = playlistLocation {
-            let controllerContext: AccountContext
-            if account.id == self.context.account.id {
-                controllerContext = self.context
-            } else {
-                controllerContext = self.context.sharedContext.makeTempAccountContext(account: account)
-            }
-            let controller = self.context.sharedContext.makeOverlayAudioPlayerController(
-                context: controllerContext,
-                chatLocation: .peer(id: id.messageId.peerId),
-                type: type,
-                initialMessageId: id.messageId,
-                initialOrder: order,
-                playlistLocation: playlistLocation,
-                parentNavigationController: self.controller?.navigationController as? NavigationController
-            )
-            self.view.window?.endEditing(true)
-            self.present(controller)
-        }
-    }
-    
     private func makeMediaAccessoryPanel() -> MediaNavigationAccessoryPanel {
         let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context, presentationData: self.presentationData, displayBackground: false, customTintColor: self.presentationData.theme.rootController.tabBar.textColor)
         mediaAccessoryPanel.getController = { [weak self] in
@@ -1784,14 +1774,14 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 self.context.sharedContext.mediaManager.playlistControl(.previous, type: type)
             }
         }
-        mediaAccessoryPanel.tapAction = { [weak self] in
-            self?.openCurrentMusicPlayer()
+        mediaAccessoryPanel.tapAction = {
         }
         return mediaAccessoryPanel
     }
     
     private func updateMediaAccessoryPanel(frame: CGRect?, transition: ContainedViewLayoutTransition) {
         guard case .glass = self.panelStyle,
+              self.hasMediaAccessoryPanel,
               let frame,
               let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType else {
             self.dismissMediaAccessoryPanel(transition: transition)
@@ -1827,12 +1817,13 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, nil, nil)
         }
         
+        let inset: CGFloat = self.hideButtons ? 19.0 : 0.0
         if isNewPanel {
-            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: 0.0, rightInset: 0.0, isHidden: false, transition: .immediate)
+            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: inset, rightInset: inset, isHidden: false, transition: .immediate)
             mediaAccessoryPanel.animateIn(transition: transition)
         } else {
             transition.updateFrame(node: mediaAccessoryPanel, frame: frame)
-            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: 0.0, rightInset: 0.0, isHidden: false, transition: transition)
+            mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: inset, rightInset: inset, isHidden: false, transition: transition)
         }
     }
     
@@ -1869,8 +1860,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     }
     
     func updateSelectedIndex(_ index: Int) {
+        let hadMediaAccessoryPanel = self.hasMediaAccessoryPanel
         self.selectedIndex = index
         self.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
+        if hadMediaAccessoryPanel != self.hasMediaAccessoryPanel {
+            self.requestLayout(transition: .immediate)
+        }
     }
     
     var buttonSize: CGSize {
@@ -1949,6 +1944,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     }
                     let button = self.buttons[index]
                     self.skipLensUpdate = true
+                    self.selectionOverrideIndex = index
                     if self.selectionChanged(button) {
                         self.selectedIndex = index
                         if self.buttons.count > 5, let button = self.itemViews[button.key] {
@@ -1972,6 +1968,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                             self.updateItemContainers(contentOffset: newBounds.minX, transition: transition)
                         }
                     }
+                    self.selectionOverrideIndex = nil
                     self.skipLensUpdate = false
                 }
                 self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
@@ -1986,8 +1983,13 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             return
         }
         
+        var buttons = self.buttons
+        if buttons.count == 1 {
+            buttons.removeAll()
+        }
+        
         var width = layout.size.width
-        if self.buttons.count == 3 {
+        if buttons.count == 3 {
             width = smallPanelWidth
         }
         
@@ -1999,11 +2001,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             panelSideInset = 3.0
         }
                 
-        var distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - self.buttonSize.width) / CGFloat(max(1, self.buttons.count - 1)))
-        if self.buttons.count == 3 {
-            distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - 32.0) / CGFloat(max(1, self.buttons.count - 1)))
+        var distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - self.buttonSize.width) / CGFloat(max(1, buttons.count - 1)))
+        if buttons.count == 3 {
+            distanceBetweenNodes = floorToScreenPixels((width - panelSideInset * 2.0 - 32.0) / CGFloat(max(1, buttons.count - 1)))
         }
-        let internalWidth = distanceBetweenNodes * CGFloat(self.buttons.count - 1)
+        let internalWidth = distanceBetweenNodes * CGFloat(max(0, buttons.count - 1))
         var buttonWidth = self.buttonSize.width
         var leftNodeOriginX: CGFloat
         var maxButtonsToFit = 5
@@ -2016,11 +2018,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         case .legacy:
             leftNodeOriginX = (width - internalWidth) / 2.0
         }
-        if self.buttons.count == 3 {
+        if buttons.count == 3 {
             leftNodeOriginX = floor((layout.size.width - width) / 2.0) + 16.0
         }
                 
-        if self.buttons.count > maxButtonsToFit && layout.size.width < layout.size.height {
+        if buttons.count > maxButtonsToFit && layout.size.width < layout.size.height {
             switch self.panelStyle {
             case .glass:
                 buttonWidth = smallGlassButtonSize.width
@@ -2036,12 +2038,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         
         var selectionFrame = CGRect()
         var mostRightX = 0.0
-        for i in 0 ..< self.buttons.count {
+        for i in 0 ..< buttons.count {
             let originX = floorToScreenPixels(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonWidth / 2.0)
             let buttonFrame = CGRect(origin: CGPoint(x: originX, y: -3.0), size: CGSize(width: buttonWidth, height: self.buttonSize.height))
             mostRightX = buttonFrame.maxX
             
-            let type = self.buttons[i]
+            let type = buttons[i]
             let _ = validIds.insert(type.key)
             
             var buttonTransition = transition
@@ -2096,20 +2098,22 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     context: self.context,
                     style: self.panelStyle == .glass ? .glass : .legacy,
                     type: type,
-                    isFirstOrLast: i == 0 || i == self.buttons.count - 1,
+                    isFirstOrLast: i == 0 || i == buttons.count - 1,
                     isSelected: false,
                     strings: self.presentationData.strings,
                     theme: self.presentationData.theme,
                     action: { [weak self] in
                         if let strongSelf = self {
+                            strongSelf.selectionOverrideIndex = i
                             if strongSelf.selectionChanged(type) {
                                 strongSelf.selectedIndex = i
                                 strongSelf.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
                                 
-                                if strongSelf.buttons.count > 5, let button = strongSelf.itemViews[type.key] {
+                                if buttons.count > 5, let button = strongSelf.itemViews[type.key] {
                                     strongSelf.scrollNode.view.scrollRectToVisible(button.frame.insetBy(dx: -35.0, dy: 0.0), animated: true)
                                 }
                             }
+                            strongSelf.selectionOverrideIndex = nil
                         }
                     }, longPressAction: { [weak self] in
                         if let strongSelf = self, i == strongSelf.selectedIndex {
@@ -2128,7 +2132,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     context: self.context,
                     style: self.panelStyle == .glass ? .glass : .legacy,
                     type: type,
-                    isFirstOrLast: i == 0 || i == self.buttons.count - 1,
+                    isFirstOrLast: i == 0 || i == buttons.count - 1,
                     isSelected: true,
                     strings: self.presentationData.strings,
                     theme: self.presentationData.theme,
@@ -2202,6 +2206,16 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             self.scrollNode.view.contentSize = contentSize
             self.scrollNode.view.isScrollEnabled = contentSize.width - self.scrollNode.view.bounds.width > 1.0
             self.liquidLensView?.clipsToBounds = self.scrollNode.view.isScrollEnabled
+        }
+        
+        if !self.hideButtons && self.itemsContainer.isHidden {
+            Queue.mainQueue().after(0.3, {
+                self.itemsContainer.isHidden = false
+                self.selectedItemsContainer.isHidden = false
+            })
+        } else {
+            self.itemsContainer.isHidden = self.hideButtons
+            self.selectedItemsContainer.isHidden = self.hideButtons
         }
     }
     
@@ -2393,10 +2407,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
     }
     
-    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, selectionCount: Int, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, selectionCount: Int, elevateProgress: Bool, hideButtons: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         self.buttons = buttons
         self.elevateProgress = elevateProgress
+        self.hideButtons = hideButtons
         
         if selectionCount != self.selectionCount {
             self.selectionCount = selectionCount
@@ -2433,7 +2448,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
         
         let topAccessoryHeight: CGFloat
-        if case .glass = self.panelStyle, self.playlistStateAndType != nil {
+        if self.hasMediaAccessoryPanel {
             topAccessoryHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
         } else {
             topAccessoryHeight = 0.0
@@ -2474,7 +2489,10 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         self.updateViews(transition: .immediate)
                 
         let glassPanelHeight: CGFloat = 62.0
-        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: self.buttonSize.height + insets.bottom + topAccessoryHeight))
+        var bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: topAccessoryHeight + self.buttonSize.height + insets.bottom))
+        if (buttons.count == 1 || hideButtons) && topAccessoryHeight > 0.0 {
+            bounds.size.height -= self.buttonSize.height
+        }
         var mediaAccessoryPanelFrame: CGRect?
         if case .glass = self.panelStyle {
             let backgroundView: GlassBackgroundView
@@ -2517,9 +2535,19 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             }
             
             let basePanelHeight = isSelecting ? max(0.0, textPanelHeight - 11.0) : glassPanelHeight
-            let panelSize = CGSize(width: isSelecting ? textPanelWidth : buttonsPanelWidth, height: basePanelHeight + topAccessoryHeight)
+            var panelSize = CGSize(width: isSelecting ? textPanelWidth : buttonsPanelWidth, height: basePanelHeight + topAccessoryHeight)
+            if !isSelecting && (buttons.count == 1 || hideButtons) && topAccessoryHeight > 0.0 {
+                panelSize.height = topAccessoryHeight
+            }
             
-            let cornerRadius: CGFloat = isSelecting ? min(20.0, basePanelHeight * 0.5) : glassPanelHeight * 0.5
+            let cornerRadius: CGFloat
+            if isSelecting {
+                cornerRadius = min(20.0, basePanelHeight * 0.5)
+            } else if self.hasMediaAccessoryPanel {
+                cornerRadius = 18.5
+            } else {
+                cornerRadius = glassPanelHeight * 0.5
+            }
             let backgroundOriginX: CGFloat = isSelecting ? panelSideInset : floorToScreenPixels((layout.size.width - panelSize.width) / 2.0)
             
             backgroundView.update(size: panelSize, cornerRadius: cornerRadius, isDark: self.presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: ComponentTransition(transition))
@@ -2705,7 +2733,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         containerTransition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: UIScreenPixel)))
                 
         if case .glass = self.panelStyle {
-            transition.updateFrameAsPositionAndBounds(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: self.isSelecting ? panelSideInset - defaultPanelSideInset : panelSideInset, y: topAccessoryHeight + (self.isSelecting ? -11.0 : 0.0)), size: CGSize(width: layout.size.width - panelSideInset * 2.0, height: self.buttonSize.height)))
+            let scrollFrame = CGRect(origin: CGPoint(x: self.isSelecting ? panelSideInset - defaultPanelSideInset : panelSideInset, y: topAccessoryHeight + (self.isSelecting ? -11.0 : 0.0)), size: CGSize(width: layout.size.width - panelSideInset * 2.0, height: self.buttonSize.height))
+            transition.updatePosition(node: self.scrollNode, position: scrollFrame.center)
+            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: self.scrollNode.view.contentOffset.x, y: 0.0), size: scrollFrame.size))
         }
 
         if let progress = self.loadingProgress {
@@ -2741,7 +2771,6 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             buttonTopInset = isNarrowButton ? 2.0 : 8.0
         }
         
-                
         if !self.animatingTransition {
             let buttonOriginX = layout.safeInsets.left + buttonSideInset
             let buttonOriginY = isAnyButtonVisible || self.fromMenu ? topAccessoryHeight + buttonTopInset : containerFrame.height
@@ -2852,7 +2881,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
         
         let inset: CGFloat = 3.0
-        liquidLensView.update(size: CGSize(width: panelSize.width - inset * 2.0, height: panelSize.height - inset * 2.0), cornerRadius: 28.0, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: panelSize.height - inset * 2.0), inset: 0.0, isDark: self.presentationData.theme.overallDarkAppearance, isLifted: isLifted, isCollapsed: self.isSelecting || self.buttons.count < 2, transition: transition)
+        liquidLensView.update(size: CGSize(width: panelSize.width - inset * 2.0, height: panelSize.height - inset * 2.0), cornerRadius: 28.0, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: panelSize.height - inset * 2.0), inset: 0.0, isDark: self.presentationData.theme.overallDarkAppearance, isLifted: isLifted, isCollapsed: self.isSelecting || self.buttons.count < 2 || self.hideButtons, transition: transition)
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {

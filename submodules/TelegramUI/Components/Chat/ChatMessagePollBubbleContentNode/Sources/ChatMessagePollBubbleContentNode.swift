@@ -1061,7 +1061,10 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.mediaFrame = mediaFrame
 
                     if !recentVoterPeers.isEmpty {
-                        let avatarsFrame = CGRect(origin: CGPoint(x: trailingOriginX + 15.0 - ChatMessagePollOptionNode.avatarsSize.width, y: floor((contentLayoutHeight - ChatMessagePollOptionNode.avatarsSize.height) * 0.5)), size: ChatMessagePollOptionNode.avatarsSize)
+                        var avatarsFrame = CGRect(origin: CGPoint(x: trailingOriginX + 15.0 - ChatMessagePollOptionNode.avatarsSize.width, y: floor((contentLayoutHeight - ChatMessagePollOptionNode.avatarsSize.height) * 0.5)), size: ChatMessagePollOptionNode.avatarsSize)
+                        if recentVoterPeers.count > 1 {
+                            avatarsFrame.origin.x -= 15.0
+                        }
                         node.avatarsNode.frame = avatarsFrame
                         node.avatarsNode.updateLayout(size: avatarsFrame.size)
                         node.avatarsNode.update(context: context, peers: recentVoterPeers, synchronousLoad: attemptSynchronous, imageSize: MergedAvatarsNode.defaultMergedImageSize, imageSpacing: MergedAvatarsNode.defaultMergedImageSpacing, borderWidth: MergedAvatarsNode.defaultBorderWidth)
@@ -1368,6 +1371,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     var attachPressed: (() -> Void)?
     var mediaPressed: (() -> Void)?
     var modeSelectorPressed: (() -> Void)?
+    var requestSave: (() -> Void)?
     
     static let characterLimit = 100
     private static let leftInset: CGFloat = 50.0
@@ -1449,17 +1453,25 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
             hideKeyboard: self.currentFocusedTextInputIsMedia,
             customInputView: nil,
             placeholder: NSAttributedString(string: strings.CreatePoll_AddOption, font: font, textColor: currentPlaceholderColor),
+            placeholderVerticalOffset: 1.0 + UIScreenPixel,
             resetText: nil,
             isOneLineWhenUnfocused: false,
             characterLimit: ChatMessagePollAddOptionNode.characterLimit,
             enableInlineAnimations: true,
-            emptyLineHandling: .allowed,
+            emptyLineHandling: .notAllowed,
             formatMenuAvailability: .none,
+            returnKeyType: .done,
             lockedFormatAction: {
             },
             present: { _ in
             },
             paste: { _ in
+            },
+            returnKeyAction: { [weak self] in
+                self?.requestSave?()
+            },
+            backspaceKeyAction: {
+                
             }
         )
     }
@@ -2150,17 +2162,14 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return
         }
-        item.controllerInteraction.updatePresentationState { [weak item] state in
-            var focusedTextInputIsMedia = false
+        item.controllerInteraction.updatePresentationState { state in
             let updatedState = state.updatedInputMode({ inputMode in
                 if case .media = inputMode {
                     return .text
                 } else {
-                    focusedTextInputIsMedia = true
                     return .media(mode: .other, expanded: .none, focused: true)
                 }
             })
-            item?.controllerInteraction.focusedTextInputIsMedia = focusedTextInputIsMedia
             
             return updatedState
         }
@@ -2185,7 +2194,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         presentPollAttachmentScreen(
             context: item.context,
             updatedPresentationData: item.controllerInteraction.updatedPresentationData,
-            availableButtons: [.gallery, .sticker, .emoji, .location],
+            subject: .option,
+            availableButtons: [.gallery, .sticker, .location],
             present: { [weak item] controller in
                 item?.controllerInteraction.navigationController()?.pushViewController(controller)
             },
@@ -2291,6 +2301,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             let optionData = "\(poll.options.count)".data(using: .utf8)!
             item.controllerInteraction.requestAddMessagePollOption(item.message.id, trimmedNewOptionText, entities, optionData, self.currentNewOptionMedia?.media)
             return
+        } else if self.newOptionIsFocused {
+            return
         }
 
         var hasSelection = false
@@ -2306,20 +2318,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        var canAlwaysViewResults = false
-        if let peer = item.message.peers[item.message.id.peerId] {
-            if let group = peer as? TelegramGroup {
-                switch group.role {
-                case .creator, .admin:
-                    canAlwaysViewResults = true
-                default:
-                    break
-                }
-            } else if let channel = peer as? TelegramChannel, let _ = channel.adminRights {
-                canAlwaysViewResults = true
-            }
-        }
-        
+        let canAlwaysViewResults = poll.isCreator        
         if !hasSelection || (canAlwaysViewResults && selectedOpaqueIdentifiers.isEmpty) {
             if !Namespaces.Message.allNonRegular.contains(item.message.id.namespace) {
                 switch poll.publicity {
@@ -2739,7 +2738,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         pollOptionsFinalizeLayouts.append((optionResult != nil, result.1))
                     }
 
-                    let displayAddOption = poll.openAnswers && !isClosed && !hasVoted && poll.pollId.namespace == Namespaces.Media.CloudPoll
+                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll
                     if displayAddOption {
                         let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, item.controllerInteraction.focusedTextInputIsMedia, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, addOptionResult.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
@@ -2931,6 +2930,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 addOptionNode.modeSelectorPressed = { [weak self] in
                                     self?.toggleNewOptionInputMode()
+                                }
+                                addOptionNode.requestSave = { [weak self] in
+                                    self?.buttonPressed()
                                 }
                                 addOptionNode.focusUpdated = { [weak self] focused in
                                     guard let self else {
@@ -3172,11 +3174,20 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = buttonViewResultsTextApply()
                             strongSelf.buttonViewResultsTextNode.frame = buttonViewResultsTextFrame.offsetBy(dx: 0.0, dy: verticalOffset)
 
-                            strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: resultSize.width, height: 44.0))
-
                             strongSelf.updateSelection()
                             strongSelf.updatePollTooltipMessageState(animated: false)
 
+                            var buttonWidth: CGFloat = 0.0
+                            if !strongSelf.buttonSaveTextNode.isHidden {
+                                buttonWidth = strongSelf.buttonSaveTextNode.frame.width
+                            } else if !strongSelf.buttonViewResultsTextNode.isHidden {
+                                buttonWidth = strongSelf.buttonViewResultsTextNode.frame.width
+                            } else if !strongSelf.buttonSubmitActiveTextNode.isHidden {
+                                buttonWidth = strongSelf.buttonSubmitActiveTextNode.frame.width
+                            }
+                            buttonWidth = floor(buttonWidth * 1.1)
+                            strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonWidth) / 2.0), y: verticalOffset), size: CGSize(width: buttonWidth, height: 44.0))
+                            
                             strongSelf.updateIsTranslating(isTranslating)
                         }
                     })
@@ -3268,20 +3279,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
         let isClosed = isPollEffectivelyClosed(message: item.message, poll: poll)
         
-        var canAlwaysViewResults = false
-        if !poll.hideResultsUntilClose, let peer = item.message.peers[item.message.id.peerId] {
-            if let group = peer as? TelegramGroup {
-                switch group.role {
-                case .creator, .admin:
-                    canAlwaysViewResults = true
-                default:
-                    break
-                }
-            } else if let channel = peer as? TelegramChannel, let _ = channel.adminRights {
-                canAlwaysViewResults = true
-            }
-        }
-
+        let canAlwaysViewResults = !poll.hideResultsUntilClose && poll.isCreator
         var hasAnyVotes = false
         var hasResults = false
         if isClosed {

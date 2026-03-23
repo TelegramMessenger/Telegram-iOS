@@ -351,17 +351,19 @@ public extension Api {
             public var flags: Int32
             public var messagesNotifyFrom: Api.ReactionNotificationsFrom?
             public var storiesNotifyFrom: Api.ReactionNotificationsFrom?
+            public var pollVotesNotifyFrom: Api.ReactionNotificationsFrom?
             public var sound: Api.NotificationSound
             public var showPreviews: Api.Bool
-            public init(flags: Int32, messagesNotifyFrom: Api.ReactionNotificationsFrom?, storiesNotifyFrom: Api.ReactionNotificationsFrom?, sound: Api.NotificationSound, showPreviews: Api.Bool) {
+            public init(flags: Int32, messagesNotifyFrom: Api.ReactionNotificationsFrom?, storiesNotifyFrom: Api.ReactionNotificationsFrom?, pollVotesNotifyFrom: Api.ReactionNotificationsFrom?, sound: Api.NotificationSound, showPreviews: Api.Bool) {
                 self.flags = flags
                 self.messagesNotifyFrom = messagesNotifyFrom
                 self.storiesNotifyFrom = storiesNotifyFrom
+                self.pollVotesNotifyFrom = pollVotesNotifyFrom
                 self.sound = sound
                 self.showPreviews = showPreviews
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("reactionsNotifySettings", [("flags", self.flags as Any), ("messagesNotifyFrom", self.messagesNotifyFrom as Any), ("storiesNotifyFrom", self.storiesNotifyFrom as Any), ("sound", self.sound as Any), ("showPreviews", self.showPreviews as Any)])
+                return ("reactionsNotifySettings", [("flags", self.flags as Any), ("messagesNotifyFrom", self.messagesNotifyFrom as Any), ("storiesNotifyFrom", self.storiesNotifyFrom as Any), ("pollVotesNotifyFrom", self.pollVotesNotifyFrom as Any), ("sound", self.sound as Any), ("showPreviews", self.showPreviews as Any)])
             }
         }
         case reactionsNotifySettings(Cons_reactionsNotifySettings)
@@ -370,7 +372,7 @@ public extension Api {
             switch self {
             case .reactionsNotifySettings(let _data):
                 if boxed {
-                    buffer.appendInt32(1457736048)
+                    buffer.appendInt32(1910827608)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 if Int(_data.flags) & Int(1 << 0) != 0 {
@@ -378,6 +380,9 @@ public extension Api {
                 }
                 if Int(_data.flags) & Int(1 << 1) != 0 {
                     _data.storiesNotifyFrom!.serialize(buffer, true)
+                }
+                if Int(_data.flags) & Int(1 << 2) != 0 {
+                    _data.pollVotesNotifyFrom!.serialize(buffer, true)
                 }
                 _data.sound.serialize(buffer, true)
                 _data.showPreviews.serialize(buffer, true)
@@ -388,7 +393,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .reactionsNotifySettings(let _data):
-                return ("reactionsNotifySettings", [("flags", _data.flags as Any), ("messagesNotifyFrom", _data.messagesNotifyFrom as Any), ("storiesNotifyFrom", _data.storiesNotifyFrom as Any), ("sound", _data.sound as Any), ("showPreviews", _data.showPreviews as Any)])
+                return ("reactionsNotifySettings", [("flags", _data.flags as Any), ("messagesNotifyFrom", _data.messagesNotifyFrom as Any), ("storiesNotifyFrom", _data.storiesNotifyFrom as Any), ("pollVotesNotifyFrom", _data.pollVotesNotifyFrom as Any), ("sound", _data.sound as Any), ("showPreviews", _data.showPreviews as Any)])
             }
         }
 
@@ -407,21 +412,28 @@ public extension Api {
                     _3 = Api.parse(reader, signature: signature) as? Api.ReactionNotificationsFrom
                 }
             }
-            var _4: Api.NotificationSound?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            var _4: Api.ReactionNotificationsFrom?
+            if Int(_1!) & Int(1 << 2) != 0 {
+                if let signature = reader.readInt32() {
+                    _4 = Api.parse(reader, signature: signature) as? Api.ReactionNotificationsFrom
+                }
             }
-            var _5: Api.Bool?
+            var _5: Api.NotificationSound?
             if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.Bool
+                _5 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            }
+            var _6: Api.Bool?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Bool
             }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.ReactionsNotifySettings.reactionsNotifySettings(Cons_reactionsNotifySettings(flags: _1!, messagesNotifyFrom: _2, storiesNotifyFrom: _3, sound: _4!, showPreviews: _5!))
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.ReactionsNotifySettings.reactionsNotifySettings(Cons_reactionsNotifySettings(flags: _1!, messagesNotifyFrom: _2, storiesNotifyFrom: _3, pollVotesNotifyFrom: _4, sound: _5!, showPreviews: _6!))
             }
             else {
                 return nil

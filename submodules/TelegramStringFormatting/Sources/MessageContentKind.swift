@@ -466,7 +466,7 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     case .expiredVideoMessage:
         return (NSAttributedString(string: strings.Message_VideoMessageExpired), true)
     case let .poll(text):
-        return (NSAttributedString(string: "📊 \(text)"), false)
+        return (NSAttributedString(string: text), false)
     case let .todo(text):
         return (NSAttributedString(string: "☑️ \(text)"), false)
     case let .restricted(text):

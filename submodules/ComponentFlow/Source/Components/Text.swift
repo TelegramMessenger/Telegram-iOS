@@ -83,6 +83,18 @@ public final class Text: Component {
         self.color = color
         self.tintColor = tintColor
     }
+    
+    public convenience init(attributedString: NSAttributedString, tintColor: UIColor? = nil) {
+        let attributes = attributedString.attributes(at: 0, effectiveRange: nil)
+        let font = attributes[.font] as? UIFont ?? UIFont.systemFont(ofSize: UIFont.systemFontSize)
+        let color = attributes[.foregroundColor] as? UIColor ?? .black
+        self.init(
+            text: attributedString.string,
+            font: font,
+            color: color,
+            tintColor: tintColor
+        )
+    }
 
     public static func ==(lhs: Text, rhs: Text) -> Bool {
         if lhs.text != rhs.text {

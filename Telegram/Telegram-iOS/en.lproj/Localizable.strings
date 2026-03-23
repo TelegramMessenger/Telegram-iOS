@@ -15983,3 +15983,12 @@ Error: %8$@";
 "Notification.PollAddedOptionYou" = "You added the option \"%1$@\" to the poll";
 
 "Notification.ManagedBotCreated" = "%@ bot created";
+
+"Chat.PolOptionAddedTimestamp.Date" = "Added by %1$@ %2$@";
+"Chat.PolOptionAddedTimestamp.TodayAt" = "Added by %1$@ today at %2$@";
+"Chat.PolOptionAddedTimestamp.YesterdayAt" = "Added by %1$@ yesterday at %2$@";
+
+
+"Chat.PolOptionAddedTimestampYou.Date" = "Added by you %1$@";
+"Chat.PolOptionAddedTimestampYou.TodayAt" = "Added by you today at %1$@";
+"Chat.PolOptionAddedTimestampYou.YesterdayAt" = "Added by you yesterday at %1$@";

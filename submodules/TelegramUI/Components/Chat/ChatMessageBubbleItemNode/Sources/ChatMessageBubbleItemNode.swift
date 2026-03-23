@@ -815,6 +815,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if strongSelf.selectionNode != nil {
                 return .none
             }
+            if let item = strongSelf.item, item.controllerInteraction.focusedPollAddOptionMessageId != nil {
+                return .none
+            }
             if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
                 if case let .action(action) = action, !action.contextMenuOnLongPress {
                     return .none
@@ -2180,7 +2183,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             switch selection {
                                 case .none:
                                     break
-                                case let .selectable(selected):
+                                case let .selectable(selected, _):
                                     itemSelection = selected
                             }
                             break

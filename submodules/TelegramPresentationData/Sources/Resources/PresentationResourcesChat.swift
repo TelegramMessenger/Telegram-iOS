@@ -1277,9 +1277,9 @@ public struct PresentationResourcesChat {
                 let foregroundColor: UIColor
                 switch type {
                 case .incoming:
-                    foregroundColor = theme.chat.message.incoming.mediaActiveControlColor
+                    foregroundColor = theme.chat.message.incoming.accentTextColor
                 case .outgoing:
-                    foregroundColor = theme.chat.message.outgoing.mediaActiveControlColor
+                    foregroundColor = theme.chat.message.outgoing.accentTextColor
                 case .free:
                     foregroundColor = theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText
                 }
@@ -1303,14 +1303,40 @@ public struct PresentationResourcesChat {
                 let foregroundColor: UIColor
                 switch type {
                 case .incoming:
-                    foregroundColor = theme.chat.message.incoming.mediaActiveControlColor
+                    foregroundColor = theme.chat.message.incoming.accentTextColor
                 case .outgoing:
-                    foregroundColor = theme.chat.message.outgoing.mediaActiveControlColor
+                    foregroundColor = theme.chat.message.outgoing.accentTextColor
                 case .free:
                     foregroundColor = theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText
                 }
                 
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ReplyStoryIcon"), color: foregroundColor) {
+                    UIGraphicsPushContext(context)
+                    
+                    let fittedSize = image.size
+                    image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - fittedSize.width) * 0.5), y: floor((size.height - fittedSize.height) * 0.5)), size: fittedSize), blendMode: .normal, alpha: 1.0)
+                    
+                    UIGraphicsPopContext()
+                }
+            })
+        })
+    }
+    
+    public static func chatReplyPollIndicatorIcon(_ theme: PresentationTheme, type: ChatExpiredStoryIndicatorType) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatReplyStoryIndicatorIcon(type: type), { theme in
+            return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                let foregroundColor: UIColor
+                switch type {
+                case .incoming:
+                    foregroundColor = theme.chat.message.incoming.accentTextColor
+                case .outgoing:
+                    foregroundColor = theme.chat.message.outgoing.accentTextColor
+                case .free:
+                    foregroundColor = theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText
+                }
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/PollReplyIcon"), color: foregroundColor) {
                     UIGraphicsPushContext(context)
                     
                     let fittedSize = image.size
@@ -1417,8 +1443,8 @@ public struct PresentationResourcesChat {
                 context.setFillColor(UIColor.white.cgColor)
 
                 let lineHeight = 2.0 - UIScreenPixel
-                context.addPath(CGPath(roundedRect: CGRect(x: 1.0, y: 7.0, width: 15.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
-                context.addPath(CGPath(roundedRect: CGRect(x: 8.0, y: 0.0, width: lineHeight, height: 15.0), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.addPath(CGPath(roundedRect: CGRect(x: 1.0, y: 7.0 - UIScreenPixel, width: 15.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
+                context.addPath(CGPath(roundedRect: CGRect(x: 8.0 - UIScreenPixel, y: 0.0, width: lineHeight, height: 15.0), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
                 context.fillPath()
             })
         })

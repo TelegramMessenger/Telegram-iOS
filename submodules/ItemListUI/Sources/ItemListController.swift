@@ -699,14 +699,14 @@ private final class ItemListTextWithSubtitleTitleView: UIView, NavigationBarTitl
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.isOpaque = false
         
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.displaysAsynchronously = false
         self.subtitleNode.maximumNumberOfLines = 1
         self.subtitleNode.isOpaque = false
         
-        self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(12.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
         
         super.init(frame: CGRect())
         
@@ -719,8 +719,8 @@ private final class ItemListTextWithSubtitleTitleView: UIView, NavigationBarTitl
     }
     
     func updateTheme(theme: PresentationTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.medium(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
-        self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: Font.regular(12.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
         if let size = self.validLayout {
             let _ = self.updateLayout(availableSize: size, transition: .immediate)
         }
@@ -741,7 +741,7 @@ private final class ItemListTextWithSubtitleTitleView: UIView, NavigationBarTitl
         
         let titleSize = self.titleNode.updateLayout(size)
         let subtitleSize = self.subtitleNode.updateLayout(size)
-        let spacing: CGFloat = 0.0
+        let spacing: CGFloat = 1.0
         let contentHeight = titleSize.height + spacing + subtitleSize.height
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - contentHeight) / 2.0)), size: titleSize)
         let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + spacing), size: subtitleSize)

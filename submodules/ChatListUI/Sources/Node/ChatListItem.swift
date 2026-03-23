@@ -2380,6 +2380,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentStoryIcon: UIImage?
             var currentGiftIcon: UIImage?
             var currentLocationIcon: UIImage?
+            var currentPollIcon: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -2394,7 +2395,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     selectionControlStyle = .compact
                 }
                 
-                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, item.selected, selectionControlStyle)
+                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, item.selected, selectionControlStyle, nil)
                 if promoInfo == nil && !isPeerGroup {
                     selectableControlSizeAndApply = sizeAndApply
                 }
@@ -2555,6 +2556,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var displayStoryReplyIcon = false
             var displayGiftIcon = false
             var displayLocationIcon = false
+            var displayPollIcon = false
             var ignoreForwardedIcon = false
             
             switch contentData {
@@ -2867,7 +2869,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 displayStoryReplyIcon = true
                             } else {
                                 for media in message.media {
-                                    if let _ = media as? TelegramMediaMap {
+                                    if let _ = media as? TelegramMediaPoll {
+                                        displayPollIcon = true
+                                    } else if let _ = media as? TelegramMediaMap {
                                         displayLocationIcon = true
                                     } else if let action = media as? TelegramMediaAction {
                                         switch action.action {
@@ -3048,6 +3052,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentLocationIcon = PresentationResourcesChatList.locationIcon(item.presentationData.theme)
             }
             
+            if displayPollIcon {
+                currentPollIcon = PresentationResourcesChatList.pollIcon(item.presentationData.theme)
+            }
+            
             if let currentForwardedIcon {
                 textLeftCutout += currentForwardedIcon.size.width
                 if !contentImageSpecs.isEmpty {
@@ -3077,6 +3085,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if let currentLocationIcon {
                 textLeftCutout += currentLocationIcon.size.width
+                if !contentImageSpecs.isEmpty {
+                    textLeftCutout += forwardedIconSpacing
+                } else {
+                    textLeftCutout += contentImageTrailingSpace
+                }
+            }
+            
+            if let currentPollIcon {
+                textLeftCutout += currentPollIcon.size.width
                 if !contentImageSpecs.isEmpty {
                     textLeftCutout += forwardedIconSpacing
                 } else {
@@ -4744,6 +4761,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         messageTypeIconOffset.y -= 2.0 - UIScreenPixel
                     } else if let currentLocationIcon {
                         messageTypeIcon = currentLocationIcon
+                        messageTypeIconOffset.y -= 2.0 - UIScreenPixel
+                    } else if let currentPollIcon {
+                        messageTypeIcon = currentPollIcon
                         messageTypeIconOffset.y -= 2.0 - UIScreenPixel
                     }
                     

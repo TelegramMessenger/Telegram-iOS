@@ -245,7 +245,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
             return
         }
         
-        if case let .selectable(selected) = self.selection {
+        if case let .selectable(selected, _) = self.selection {
             self.interaction.toggleMessagesSelection([message.id], !selected)
         } else {
             if !self.displayFileInfo || self.isAttachMusic {

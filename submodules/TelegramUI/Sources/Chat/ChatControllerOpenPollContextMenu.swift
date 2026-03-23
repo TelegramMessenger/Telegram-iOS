@@ -14,6 +14,7 @@ import ChatControllerInteraction
 import Pasteboard
 import TelegramStringFormatting
 import TelegramPresentationData
+import AvatarNode
 
 private enum OptionsId: Hashable {
     case item
@@ -37,8 +38,16 @@ extension ChatControllerImpl {
             }
         }
         
-        let _ = (contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: self.presentationInterfaceState, context: self.context, messages: [message], controllerInteraction: self.controllerInteraction, selectAll: false, interfaceInteraction: self.interfaceInteraction, messageNode: params.messageNode as? ChatMessageItemView)
-        |> deliverOnMainQueue).start(next: { [weak self] actions in
+        var addedByPeer: Signal<EnginePeer?, NoError> = .single(nil)
+        if let peerId = pollOption.addedBy {
+            addedByPeer = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        }
+        
+        let _ = combineLatest(
+            queue: Queue.mainQueue(),
+            contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: self.presentationInterfaceState, context: self.context, messages: [message], controllerInteraction: self.controllerInteraction, selectAll: false, interfaceInteraction: self.interfaceInteraction, messageNode: params.messageNode as? ChatMessageItemView),
+            addedByPeer
+        ).start(next: { [weak self] actions, addedByPeer in
             guard let self else {
                 return
             }
@@ -146,7 +155,7 @@ extension ChatControllerImpl {
                 })))
             }
             
-            if pollOption.date != nil {
+            if let addedByPeer, let date = pollOption.date {
                 //TODO:localize
                 items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self]  _, f in
                     f(.default)
@@ -155,6 +164,49 @@ extension ChatControllerImpl {
                         return
                     }
                     let _ = self.context.engine.messages.deletePollOption(messageId: message.id, opaqueIdentifier: pollOption.opaqueIdentifier).start()
+                })))
+                
+                items.append(.separator)
+                
+                let peerName = "**\(addedByPeer.compactDisplayTitle)**"
+                let dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: date, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
+                    dateFormatString: { value in
+                        if addedByPeer.id == self.context.account.peerId {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_Date(value).string, ranges: [])
+                        } else {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_Date(peerName, value).string, ranges: [])
+                        }
+                    },
+                    tomorrowFormatString: { value in
+                        if addedByPeer.id == self.context.account.peerId {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_TodayAt(value).string, ranges: [])
+                        } else {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_TodayAt(peerName, value).string, ranges: [])
+                        }
+                    },
+                    todayFormatString: { value in
+                        if addedByPeer.id == self.context.account.peerId {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_TodayAt(value).string, ranges: [])
+                        } else {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_TodayAt(peerName, value).string, ranges: [])
+                        }
+                    },
+                    yesterdayFormatString: { value in
+                        if addedByPeer.id == self.context.account.peerId {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_YesterdayAt(value).string, ranges: [])
+                        } else {
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_YesterdayAt(peerName, value).string, ranges: [])
+                        }
+                    }
+                )).string
+                
+                let avatarSize = CGSize(width: 24.0, height: 24.0)
+                items.append(.action(ContextMenuActionItem(text: dateText, textFont: .small, parseMarkdown: true, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: self.context.account, peer: addedByPeer, size: avatarSize)), action: { [weak self] _, f in
+                    f(.default)
+                    guard let self else {
+                        return
+                    }
+                    self.openPeer(peer: addedByPeer, navigation: .chat(textInputState: nil, subject: nil, peekData: nil), fromMessage: nil)
                 })))
             }
             

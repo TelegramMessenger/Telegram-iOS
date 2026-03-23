@@ -130,6 +130,7 @@ public enum PresentationResourceKey: Int32 {
     case chatListStoryReplyIcon
     case chatListGiftIcon
     case chatListLocationIcon
+    case chatListPollIcon
     
     case chatListGeneralTopicIcon
     case chatListGeneralTopicTemplateIcon
@@ -420,4 +421,5 @@ public enum PresentationResourceParameterKey: Hashable {
     
     case chatExpiredStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
     case chatReplyStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
+    case chatReplyPollIndicatorIcon(type: ChatExpiredStoryIndicatorType)
 }

@@ -2149,7 +2149,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if isActive {
             self.setLivePhotoVideoVisible(true, animated: animated)
             videoNode.seek(0.0)
-            videoNode.play()
+            videoNode.playOnceWithSound(playAndRecord: false)
         } else {
             videoNode.pause()
             videoNode.seek(0.0)

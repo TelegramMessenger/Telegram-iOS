@@ -32,6 +32,7 @@ import GlassBarButtonComponent
 import ChatScheduleTimeController
 import ContextUI
 import StickerPeekUI
+import EdgeEffect
 
 public final class ComposedPoll {
     public struct Text {
@@ -177,6 +178,9 @@ final class ComposePollScreenComponent: Component {
     final class View: UIView, UIScrollViewDelegate {
         private let scrollView: ScrollView
         
+        private var topEdgeEffectView: EdgeEffectView
+        private var bottomEdgeEffectView: EdgeEffectView
+         
         private var reactionInput: ComponentView<Empty>?
         private let pollTextSection = ComponentView<Empty>()
         private let quizAnswerSection = ComponentView<Empty>()
@@ -267,12 +271,18 @@ final class ComposePollScreenComponent: Component {
             self.scrollView.contentInsetAdjustmentBehavior = .never
             self.scrollView.alwaysBounceVertical = true
             
+            self.topEdgeEffectView = EdgeEffectView()
+            self.bottomEdgeEffectView = EdgeEffectView()
+            
             self.pollOptionsSectionContainer = ListSectionContentView(frame: CGRect())
             
             super.init(frame: frame)
             
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
+            
+            self.addSubview(self.topEdgeEffectView)
+            self.addSubview(self.bottomEdgeEffectView)
             
             let reorderRecognizer = ReorderGestureRecognizer(
                 shouldBegin: { [weak self] point in
@@ -848,12 +858,29 @@ final class ComposePollScreenComponent: Component {
             case .description, .quizAnswer:
                 availableButtons = [.gallery, .file, .location]
             default:
-                availableButtons = [.gallery, .sticker, .emoji, .location]
+                availableButtons = [.gallery, .sticker, .location]
             }
             
-            presentPollAttachmentScreen(context: component.context, updatedPresentationData: nil, availableButtons: availableButtons, inputMediaNodeData: self.inputMediaNodeDataPromise.get() |> map(Optional.init), present: { [weak self] c in
-                (self?.environment?.controller() as? ComposePollScreen)?.parentController()?.push(c)
-            }, completion: { [weak self] media in
+            let pollAttachmentSubject: PollAttachmentSubject
+            switch subject {
+            case .description:
+                pollAttachmentSubject = .description
+            case .quizAnswer:
+                pollAttachmentSubject = .quizAnswer
+            case .pollOption:
+                pollAttachmentSubject = .option
+            }
+            
+            presentPollAttachmentScreen(
+                context: component.context,
+                updatedPresentationData: nil,
+                subject: pollAttachmentSubject,
+                availableButtons: availableButtons,
+                inputMediaNodeData: self.inputMediaNodeDataPromise.get() |> map(Optional.init),
+                present: { [weak self] c in
+                    (self?.environment?.controller() as? ComposePollScreen)?.parentController()?.push(c)
+                },
+                completion: { [weak self] media in
                 guard let self else {
                     return
                 }
@@ -1729,7 +1756,13 @@ final class ComposePollScreenComponent: Component {
                     maximumNumberOfLines: 0
                 ))
             } else {
-                let remainingCount = component.initialData.maxPollAnswersCount - self.pollOptions.count
+                var filledOptionsCount = 0
+                for option in self.pollOptions {
+                    if option.textInputState.hasText {
+                        filledOptionsCount += 1
+                    }
+                }
+                let remainingCount = component.initialData.maxPollAnswersCount - filledOptionsCount
                 let rawString = environment.strings.CreatePoll_OptionCountFooterFormat(Int32(remainingCount))
                 
                 var pollOptionsFooterItems: [AnimatedTextComponent.Item] = []
@@ -2624,6 +2657,15 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
+            let edgeEffectHeight: CGFloat = 88.0
+            let topEdgeEffectFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.topEdgeEffectView, frame: topEdgeEffectFrame)
+            self.topEdgeEffectView.update(content: theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: transition)
+            
+            let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - edgeEffectHeight - environment.additionalInsets.bottom), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.bottomEdgeEffectView, frame: bottomEdgeEffectFrame)
+            self.bottomEdgeEffectView.update(content: theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectFrame.height, transition: transition)
+            
             return availableSize
         }
     }
@@ -2713,7 +2755,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
             isQuiz: isQuiz,
             initialData: initialData,
             completion: completion
-        ), navigationBarAppearance: .default, theme: .default)
+        ), navigationBarAppearance: .transparent, theme: .default)
         
         self._hasGlassStyle = true
         
@@ -2813,7 +2855,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     public func prepareForReuse() {
     }
     
-    public func requestDismiss(completion: @escaping () -> Void) {        
+    public func requestDismiss(completion: @escaping () -> Void) {
         completion()
     }
     

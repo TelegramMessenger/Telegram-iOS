@@ -284,6 +284,24 @@ public struct PresentationResourcesChatList {
         })
     }
     
+    public static func pollIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListPollIcon.rawValue, { theme in
+            if let image =  UIImage(bundleImageName: "Chat List/PollBadgeIcon") {
+                return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context in
+                    if let cgImage = image.cgImage {
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                       
+                        context.clip(to: CGRect(origin: .zero, size: size).insetBy(dx: 2.0, dy: 2.0), mask: cgImage)
+                        context.setFillColor(theme.chatList.muteIconColor.cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                    }
+                })
+            } else {
+                return nil
+            }
+        })
+    }
+    
     public static func verifiedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListVerifiedIcon.rawValue, { theme in
             if let backgroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconForeground") {

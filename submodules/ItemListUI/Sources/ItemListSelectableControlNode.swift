@@ -22,8 +22,8 @@ public final class ItemListSelectableControlNode: ASDisplayNode {
         self.addSubnode(self.checkNode)
     }
     
-    public static func asyncLayout(_ node: ItemListSelectableControlNode?) -> (_ strokeColor: UIColor, _ fillColor: UIColor, _ foregroundColor: UIColor, _ selected: Bool, _ style: Style) -> (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode) {
-        return { strokeColor, fillColor, foregroundColor, selected, style in
+    public static func asyncLayout(_ node: ItemListSelectableControlNode?) -> (_ strokeColor: UIColor, _ fillColor: UIColor, _ foregroundColor: UIColor, _ selected: Bool, _ style: Style, _ num: Int?) -> (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode) {
+        return { strokeColor, fillColor, foregroundColor, selected, style, num in
             let resultNode: ItemListSelectableControlNode
             if let node = node {
                 resultNode = node
@@ -53,6 +53,9 @@ public final class ItemListSelectableControlNode: ASDisplayNode {
                     checkOffset = 16.0
                 }
                 resultNode.checkNode.frame = CGRect(origin: CGPoint(x: checkOffset, y: floorToScreenPixels((size.height - checkSize.height) / 2.0)), size: checkSize)
+                if let num {
+                    resultNode.checkNode.content = .counter(num)
+                }
                 resultNode.checkNode.setSelected(selected, animated: animated)
                 return resultNode
             })

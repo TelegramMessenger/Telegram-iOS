@@ -421,6 +421,7 @@ private func pushedNotificationSettings(network: Network, settings: GlobalNotifi
         flags: reactionFlags,
         messagesNotifyFrom: reactionsMessages,
         storiesNotifyFrom: reactionsStories,
+        pollVotesNotifyFrom: nil,
         sound: settings.reactionSettings.sound.apiSound,
         showPreviews: settings.reactionSettings.hideSender == .hide ? .boolFalse : .boolTrue
     ))

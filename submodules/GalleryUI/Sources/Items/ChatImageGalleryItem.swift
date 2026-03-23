@@ -1213,7 +1213,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let message = self.message else {
             return false
         }
-
         var canDelete = false
         if let peer = message.peers[message.id.peerId] {
             if peer is TelegramUser || peer is TelegramSecretChat {
@@ -1230,6 +1229,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 canDelete = false
             }
         } else {
+            canDelete = false
+        }
+        if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
             canDelete = false
         }
         return canDelete

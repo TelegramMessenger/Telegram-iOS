@@ -1948,7 +1948,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
                             }
                             attachmentController?.dismiss(animated: true)
                             self.presentICloudFileGallery(view: view, peer: peer, replyMessageId: nil, replyToStoryId: focusedStoryId)
-                        }, presentDocumentScanner: nil, send: { [weak view] mediaReferences in
+                        }, presentDocumentScanner: nil, send: { [weak view] mediaReferences, _, _, _ in
                             guard let view, let component = view.component else {
                                 return
                             }

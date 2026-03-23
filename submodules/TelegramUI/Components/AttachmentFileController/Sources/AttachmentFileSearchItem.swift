@@ -74,12 +74,11 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
     func titleContentNode(current: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)? {
         switch self.mode {
         case .audio:
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             if let current = current as? AttachmentFileSearchNavigationContentNode {
-                current.updateTheme(presentationData.theme)
+                current.updateTheme(self.presentationData.theme)
                 return current
             } else {
-                return AttachmentFileSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, cancel: self.cancel, focus: self.focus, updateActivity: { _ in
+                return AttachmentFileSearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, cancel: self.cancel, focus: self.focus, updateActivity: { _ in
                 })
             }
         default:
@@ -164,7 +163,7 @@ private final class AttachmentFileSearchItemNode: ItemListControllerSearchNode {
                         strings: self.presentationData.strings,
                         metrics: layout.metrics,
                         safeInsets: layout.safeInsets,
-                        placeholder: self.mode == .audio ? self.presentationData.strings.Attachment_FilesSearchPlaceholder : self.presentationData.strings.Attachment_FilesSearchPlaceholder,
+                        placeholder: self.presentationData.strings.Attachment_FilesSearchPlaceholder,
                         updated: { [weak self] query in
                             guard let self else {
                                 return
@@ -329,9 +328,9 @@ private enum AttachmentFileSearchEntry: Comparable, Identifiable {
                 interaction.toggleMediaPlayback(message)
             }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
             
-            let displayFileInfo = mode == .audio
-            let isStoryMusic = mode == .audio
-            let isDownloadList = mode == .audio
+            let displayFileInfo = mode.isAudio
+            let isStoryMusic = mode.isAudio
+            let isDownloadList = mode.isAudio
             
             return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), systemStyle: .glass, context: interaction.context, chatLocation: .peer(id: PeerId(0)), interaction: itemInteraction, message: message, selection: .none, displayHeader: false, isDownloadList: isDownloadList, isStoryMusic: isStoryMusic, isAttachMusic: true, displayFileInfo: displayFileInfo, displayBackground: true, style: .blocks, sectionId: section)
         case let .showMore(text, section):
@@ -349,16 +348,30 @@ struct AttachmentFileSearchContainerTransition {
     let isSearching: Bool
     let isEmpty: Bool
     let query: String
+    let crossfade: Bool
 }
 
-private func attachmentFileSearchContainerPreparedRecentTransition(from fromEntries: [AttachmentFileSearchEntry], to toEntries: [AttachmentFileSearchEntry], isSearching: Bool, isEmpty: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: AttachmentFileSearchContainerInteraction, mode: AttachmentFileControllerMode) -> AttachmentFileSearchContainerTransition {
+private func attachmentFileSearchContainerPreparedRecentTransition(
+    from fromEntries: [AttachmentFileSearchEntry],
+    to toEntries: [AttachmentFileSearchEntry],
+    isSearching: Bool,
+    isEmpty: Bool,
+    query: String,
+    context: AccountContext,
+    presentationData: PresentationData,
+    nameSortOrder: PresentationPersonNameOrder,
+    nameDisplayOrder: PresentationPersonNameOrder,
+    interaction: AttachmentFileSearchContainerInteraction,
+    mode: AttachmentFileControllerMode,
+    crossfade: Bool
+) -> AttachmentFileSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction, mode: mode), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction, mode: mode), directionHint: nil) }
     
-    return AttachmentFileSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query)
+    return AttachmentFileSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query, crossfade: crossfade)
 }
 
 
@@ -471,7 +484,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 self?.listNode.clearHighlightAnimated(true)
             },
             toggleMediaPlayback: { message in
-                let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil)
+                let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil, hidePanel: true)
                 context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
             },
             expandSection: { [weak self] section in
@@ -554,7 +567,9 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                     }
                 )
                 
-                if let data = context.currentAppConfiguration.with({ $0 }).data, let searchBot = data["music_search_username"] as? String, !searchBot.isEmpty {
+                let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                if let data = context.currentAppConfiguration.with({ $0 }).data, let searchBot = data["music_search_username"] as? String, !searchBot.isEmpty, trimmedQuery.count >= 3 {
                     globalMusic = .single(nil)
                     |> then(
                         context.engine.peers.resolvePeerByName(name: searchBot, referrer: nil)
@@ -568,7 +583,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                             guard let peer = peer else {
                                 return .single(nil)
                             }
-                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query, offset: "")
+                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: trimmedQuery, offset: "")
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }
@@ -661,6 +676,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         }
                     }
                 } else {
+                    entries.append(.header(title: " ", section: 0))
                     var index: Int32 = 0
                     for _ in 0 ..< 16 {
                         entries.append(.file(index: index, message: nil, section: 0))
@@ -673,13 +689,27 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         }
         
         let previousSearchItems = Atomic<[AttachmentFileSearchEntry]?>(value: nil)
+        let previousHadGlobalItems = Atomic<Bool>(value: false)
         self.searchDisposable.set((combineLatest(searchQuery, foundItems, self.presentationDataPromise.get())
         |> deliverOnMainQueue).startStrict(next: { [weak self] query, entries, presentationData in
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 updateActivity(false)
                 let firstTime = previousEntries == nil
-                let transition = attachmentFileSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: query ?? "", context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction, mode: mode)
+                
+                var hasGlobalItems = false
+                if let entries {
+                    for entry in entries {
+                        if case let .header(_, section) = entry, section == 2 {
+                            hasGlobalItems = true
+                        }
+                    }
+                }
+                let hadGlobalItems = previousHadGlobalItems.swap(hasGlobalItems)
+                
+                let crossfade = hadGlobalItems != hasGlobalItems
+                
+                let transition = attachmentFileSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: query ?? "", context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction, mode: mode, crossfade: crossfade)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
@@ -738,6 +768,10 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
             options.insert(.PreferSynchronousResourceLoading)
             
             //options.insert(.AnimateInsertion)
+            
+            if transition.crossfade {
+                options.insert(.AnimateCrossfade)
+            }
             
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
@@ -1009,6 +1043,20 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
     
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
+        
+        let searchBarTheme = SearchBarNodeTheme(
+            background: .clear,
+            separator: .clear,
+            inputFill: .clear,
+            primaryText: theme.chat.inputPanel.panelControlColor,
+            placeholder: theme.chat.inputPanel.inputPlaceholderColor,
+            inputIcon: theme.chat.inputPanel.inputControlColor,
+            inputClear: theme.chat.inputPanel.panelControlColor,
+            accent: theme.chat.inputPanel.panelControlAccentColor,
+            keyboard: theme.rootController.keyboardColor
+        )
+        
+        self.searchBar.updateThemeAndStrings(theme: searchBarTheme, presentationTheme: theme, strings: self.strings)
         if let params = self.params {
             let _ = self.updateLayout(size: params.size, leftInset: params.leftInset, rightInset: params.rightInset, transition: .immediate)
         }
@@ -1022,7 +1070,7 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
     }
     
     override var nominalHeight: CGFloat {
-        return 60.0
+        return 68.0
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {

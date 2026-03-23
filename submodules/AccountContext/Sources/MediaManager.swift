@@ -28,7 +28,7 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
     case singleMessage(MessageId)
     case recentActions(Message)
     case savedMusic(context: ProfileSavedMusicContext, at: Int32, canReorder: Bool)
-    case custom(messages: Signal<([Message], Int32, Bool), NoError>, canReorder: Bool, at: MessageId, loadMore: (() -> Void)?)
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, canReorder: Bool, at: MessageId, loadMore: (() -> Void)?, hidePanel: Bool)
 
     public var playlistId: PeerMessagesMediaPlaylistId {
         switch self {
@@ -84,7 +84,8 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
                         return
                     }
                     savedMusicContext.loadMore()
-                }
+                },
+                hidePanel: false
             )
         default:
             return self
@@ -93,7 +94,7 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
     
     public var messageId: MessageId? {
         switch self {
-            case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, _, messageId, _):
+            case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, _, messageId, _, _):
                 return messageId
             default:
                 return nil
@@ -134,8 +135,8 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
                 } else {
                     return false
                 }
-            case let .custom(_, _, lhsAt, _):
-                if case let .custom(_, _, rhsAt, _) = rhs, lhsAt == rhsAt {
+            case let .custom(_, _, lhsAt, _, _):
+                if case let .custom(_, _, rhsAt, _, _) = rhs, lhsAt == rhsAt {
                     return true
                 } else {
                     return false

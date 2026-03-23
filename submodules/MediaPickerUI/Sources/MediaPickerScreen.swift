@@ -412,8 +412,13 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if case .glass = controller.style {
                 self.containerNode.view.addSubview(self.topEdgeEffectView)
                 
-                if case let .assets(_, mode) = controller.subject, [.default, .story].contains(mode) {
-                    self.containerNode.view.addSubview(self.bottomEdgeEffectView)
+                if case let .assets(_, mode) = controller.subject {
+                    switch mode {
+                    case .default, .story, .poll:
+                        self.containerNode.view.addSubview(self.bottomEdgeEffectView)
+                    default:
+                        break
+                    }
                 }
             }
             
@@ -2046,6 +2051,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.titleView.title = presentationData.strings.MediaPicker_ChooseCover
                 case let .poll(pollMode):
                     self.titleView.title = presentationData.strings.MediaPicker_Recents
+                    //TODO:localize
                     switch pollMode {
                     case .description:
                         self.titleView.subtitle = "Add media to the poll description"
@@ -2560,7 +2566,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 titleIsEnabled = false
             }
             
-            self.titleView.updateTitle(title: title, isEnabled: titleIsEnabled, animated: true)
+            self.titleView.updateTitle(title: title, subtitle: self.titleView.subtitle, isEnabled: titleIsEnabled, animated: true)
             self.cancelButtonNode.setState(isEnabled ? .cancel : .back, animated: true)
             isBack = !isEnabled
             

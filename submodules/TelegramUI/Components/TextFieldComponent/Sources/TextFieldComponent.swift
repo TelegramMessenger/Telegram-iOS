@@ -153,6 +153,7 @@ public final class TextFieldComponent: Component {
     public let hideKeyboard: Bool
     public let customInputView: UIView?
     public let placeholder: NSAttributedString?
+    public let placeholderVerticalOffset: CGFloat
     public let prefix: NSAttributedString?
     public let suffix: NSAttributedString?
     public let resetText: NSAttributedString?
@@ -185,6 +186,7 @@ public final class TextFieldComponent: Component {
         hideKeyboard: Bool,
         customInputView: UIView?,
         placeholder: NSAttributedString? = nil,
+        placeholderVerticalOffset: CGFloat = 0.0,
         prefix: NSAttributedString? = nil,
         suffix: NSAttributedString? = nil,
         resetText: NSAttributedString?,
@@ -216,6 +218,7 @@ public final class TextFieldComponent: Component {
         self.hideKeyboard = hideKeyboard
         self.customInputView = customInputView
         self.placeholder = placeholder
+        self.placeholderVerticalOffset = placeholderVerticalOffset
         self.prefix = prefix
         self.suffix = suffix
         self.resetText = resetText
@@ -269,6 +272,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.placeholderVerticalOffset != rhs.placeholderVerticalOffset {
             return false
         }
         if lhs.prefix != rhs.prefix {
@@ -365,6 +371,7 @@ public final class TextFieldComponent: Component {
             self.textView.layer.isOpaque = false
             self.textView.indicatorStyle = .white
             self.textView.scrollIndicatorInsets = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: 0.0)
+            self.textView.showsHorizontalScrollIndicator = false
             
             self.inputMenu = TextInputMenu(hasSpoilers: true, hasQuotes: true)
             
@@ -1587,27 +1594,28 @@ public final class TextFieldComponent: Component {
                 }
                 let placeholderSize = placeholder.update(
                     transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(placeholderValue)
-                    )),
+                    component: AnyComponent(
+                        Text(attributedString: placeholderValue)                        
+                    ),
                     environment: {},
                     containerSize: textFrame.size
                 )
-                let placeholderFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((textFrame.height - placeholderSize.height) * 0.5) - 1.0), size: placeholderSize)
+                let placeholderFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((textFrame.height - placeholderSize.height) * 0.5) - 1.0 + component.placeholderVerticalOffset), size: placeholderSize)
                 if let placeholderView = placeholder.view {
                     if placeholderView.superview == nil {
                         placeholderView.isUserInteractionEnabled = false
-                        placeholderView.layer.anchorPoint = CGPoint()
                         self.textView.insertSubview(placeholderView, at: 0)
                     }
-                    placeholderTransition.setPosition(view: placeholderView, position: placeholderFrame.origin)
+                    placeholderTransition.setPosition(view: placeholderView, position: placeholderFrame.center)
                     placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                     
                     placeholderView.isHidden = self.textView.textStorage.length != 0
                 }
-            } else if let placeholder = self.placeholder {
-                self.placeholder = nil
-                placeholder.view?.removeFromSuperview()
+            } else {
+                if let placeholder = self.placeholder {
+                    self.placeholder = nil
+                    placeholder.view?.removeFromSuperview()
+                }
             }
             
             self.updateEmojiSuggestion(transition: .immediate)

@@ -37,6 +37,7 @@ public final class CounterControllerTitleView: UIView {
     
     private var primaryTextColor: UIColor?
     private var secondaryTextColor: UIColor?
+    private let verticalOffset: CGFloat
 
     private var nextLayoutTransition: ContainedViewLayoutTransition?
     
@@ -65,7 +66,7 @@ public final class CounterControllerTitleView: UIView {
         let secondaryTextColor = self.secondaryTextColor ?? self.theme.rootController.navigationBar.secondaryTextColor
         self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.semibold(17.0), textColor: primaryTextColor)
 
-        let subtitleText = NSAttributedString(string: self.title.counter ?? "", font: Font.with(size: 13.0, traits: .monospacedNumbers), textColor: secondaryTextColor)
+        let subtitleText = NSAttributedString(string: self.title.counter ?? "", font: Font.with(size: 12.0, traits: .monospacedNumbers), textColor: secondaryTextColor)
         if let previousSubtitleText = self.subtitleNode.attributedText, previousSubtitleText.string.isEmpty != subtitleText.string.isEmpty && subtitleText.string.isEmpty {
             if let disappearingSubtitleNode = self.disappearingSubtitleNode {
                 self.disappearingSubtitleNode = nil
@@ -94,8 +95,9 @@ public final class CounterControllerTitleView: UIView {
         self.setNeedsLayout()
     }
     
-    public init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme, verticalOffset: CGFloat = 0.0) {
         self.theme = theme
+        self.verticalOffset = verticalOffset
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -126,7 +128,7 @@ public final class CounterControllerTitleView: UIView {
         super.layoutSubviews()
         
         let size = self.bounds.size
-        let spacing: CGFloat = 0.0
+        let spacing: CGFloat = 1.0
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width), height: size.height))
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: max(1.0, size.width), height: size.height))
@@ -146,11 +148,11 @@ public final class CounterControllerTitleView: UIView {
             self.nextLayoutTransition = nil
         }
         
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + self.verticalOffset), size: titleSize)
         self.titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
         transition.updatePosition(node: self.titleNode, position: titleFrame.center)
         
-        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + spacing), size: subtitleSize)
+        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + spacing + self.verticalOffset), size: subtitleSize)
         self.subtitleNode.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
         transition.updatePosition(node: self.subtitleNode, position: subtitleFrame.center)
         transition.updateTransformScale(node: self.subtitleNode, scale: self.title.counter != nil ? 1.0 : 0.001)

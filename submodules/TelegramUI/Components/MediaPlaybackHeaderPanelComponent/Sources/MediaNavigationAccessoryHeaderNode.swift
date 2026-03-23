@@ -115,8 +115,8 @@ private class MediaHeaderItemNode: ASDisplayNode {
         
         let minimizedTitleOffset: CGFloat = subtitleString == nil ? 6.0 : 0.0
         
-        let minimizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.size.width) / 2.0), y: 4.0 + minimizedTitleOffset), size: titleLayout.size)
-        let minimizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleLayout.size.width) / 2.0), y: 20.0), size: subtitleLayout.size)
+        let minimizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.size.width) / 2.0), y: 5.0 + minimizedTitleOffset), size: titleLayout.size)
+        let minimizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleLayout.size.width) / 2.0), y: 21.0), size: subtitleLayout.size)
         
         transition.updateFrame(node: self.titleNode, frame: minimizedTitleFrame)
         transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame)

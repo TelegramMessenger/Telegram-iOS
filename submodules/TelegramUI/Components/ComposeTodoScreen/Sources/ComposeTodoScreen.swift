@@ -30,6 +30,7 @@ import ListComposePollOptionComponent
 import Markdown
 import PresentationDataUtils
 import GlassBarButtonComponent
+import EdgeEffect
 
 final class ComposeTodoScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -71,6 +72,9 @@ final class ComposeTodoScreenComponent: Component {
     
     final class View: UIView, UIScrollViewDelegate {
         private let scrollView: UIScrollView
+        
+        private var topEdgeEffectView: EdgeEffectView
+        private var bottomEdgeEffectView: EdgeEffectView
         
         private let todoTextSection = ComponentView<Empty>()
         
@@ -132,6 +136,9 @@ final class ComposeTodoScreenComponent: Component {
             self.scrollView.contentInsetAdjustmentBehavior = .never
             self.scrollView.alwaysBounceVertical = true
             
+            self.topEdgeEffectView = EdgeEffectView()
+            self.bottomEdgeEffectView = EdgeEffectView()
+            
             self.todoItemsSectionContainer = ListSectionContentView(frame: CGRect())
             self.todoItemsSectionContainer.automaticallyLayoutExternalContentBackgroundView = false
             
@@ -139,6 +146,9 @@ final class ComposeTodoScreenComponent: Component {
             
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
+            
+            self.addSubview(self.topEdgeEffectView)
+            self.addSubview(self.bottomEdgeEffectView)
             
             let reorderRecognizer = ReorderGestureRecognizer(
                 shouldBegin: { [weak self] point in
@@ -1654,6 +1664,15 @@ final class ComposeTodoScreenComponent: Component {
                 self.todoItems[i].resetText = nil
             }
             
+            let edgeEffectHeight: CGFloat = 88.0
+            let topEdgeEffectFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.topEdgeEffectView, frame: topEdgeEffectFrame)
+            self.topEdgeEffectView.update(content: theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: transition)
+            
+            let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - edgeEffectHeight - environment.additionalInsets.bottom), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.bottomEdgeEffectView, frame: bottomEdgeEffectFrame)
+            self.bottomEdgeEffectView.update(content: theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectFrame.height, transition: transition)
+            
             return availableSize
         }
     }
@@ -1753,7 +1772,7 @@ public class ComposeTodoScreen: ViewControllerComponentContainer, AttachmentCont
             peer: peer,
             initialData: initialData,
             completion: completion
-        ), navigationBarAppearance: .default, theme: .default)
+        ), navigationBarAppearance: .transparent, theme: .default)
         
         self._hasGlassStyle = true
         

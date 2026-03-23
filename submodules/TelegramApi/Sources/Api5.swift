@@ -1570,12 +1570,13 @@ public extension Api {
             public var unreadCount: Int32
             public var unreadMentionsCount: Int32
             public var unreadReactionsCount: Int32
+            public var unreadPollVotesCount: Int32
             public var notifySettings: Api.PeerNotifySettings
             public var pts: Int32?
             public var draft: Api.DraftMessage?
             public var folderId: Int32?
             public var ttlPeriod: Int32?
-            public init(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?, folderId: Int32?, ttlPeriod: Int32?) {
+            public init(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, unreadPollVotesCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?, folderId: Int32?, ttlPeriod: Int32?) {
                 self.flags = flags
                 self.peer = peer
                 self.topMessage = topMessage
@@ -1584,6 +1585,7 @@ public extension Api {
                 self.unreadCount = unreadCount
                 self.unreadMentionsCount = unreadMentionsCount
                 self.unreadReactionsCount = unreadReactionsCount
+                self.unreadPollVotesCount = unreadPollVotesCount
                 self.notifySettings = notifySettings
                 self.pts = pts
                 self.draft = draft
@@ -1591,7 +1593,7 @@ public extension Api {
                 self.ttlPeriod = ttlPeriod
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("dialog", [("flags", self.flags as Any), ("peer", self.peer as Any), ("topMessage", self.topMessage as Any), ("readInboxMaxId", self.readInboxMaxId as Any), ("readOutboxMaxId", self.readOutboxMaxId as Any), ("unreadCount", self.unreadCount as Any), ("unreadMentionsCount", self.unreadMentionsCount as Any), ("unreadReactionsCount", self.unreadReactionsCount as Any), ("notifySettings", self.notifySettings as Any), ("pts", self.pts as Any), ("draft", self.draft as Any), ("folderId", self.folderId as Any), ("ttlPeriod", self.ttlPeriod as Any)])
+                return ("dialog", [("flags", self.flags as Any), ("peer", self.peer as Any), ("topMessage", self.topMessage as Any), ("readInboxMaxId", self.readInboxMaxId as Any), ("readOutboxMaxId", self.readOutboxMaxId as Any), ("unreadCount", self.unreadCount as Any), ("unreadMentionsCount", self.unreadMentionsCount as Any), ("unreadReactionsCount", self.unreadReactionsCount as Any), ("unreadPollVotesCount", self.unreadPollVotesCount as Any), ("notifySettings", self.notifySettings as Any), ("pts", self.pts as Any), ("draft", self.draft as Any), ("folderId", self.folderId as Any), ("ttlPeriod", self.ttlPeriod as Any)])
             }
         }
         public class Cons_dialogFolder: TypeConstructorDescription {
@@ -1624,7 +1626,7 @@ public extension Api {
             switch self {
             case .dialog(let _data):
                 if boxed {
-                    buffer.appendInt32(-712374074)
+                    buffer.appendInt32(-58066957)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.peer.serialize(buffer, true)
@@ -1634,6 +1636,7 @@ public extension Api {
                 serializeInt32(_data.unreadCount, buffer: buffer, boxed: false)
                 serializeInt32(_data.unreadMentionsCount, buffer: buffer, boxed: false)
                 serializeInt32(_data.unreadReactionsCount, buffer: buffer, boxed: false)
+                serializeInt32(_data.unreadPollVotesCount, buffer: buffer, boxed: false)
                 _data.notifySettings.serialize(buffer, true)
                 if Int(_data.flags) & Int(1 << 0) != 0 {
                     serializeInt32(_data.pts!, buffer: buffer, boxed: false)
@@ -1667,7 +1670,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .dialog(let _data):
-                return ("dialog", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("topMessage", _data.topMessage as Any), ("readInboxMaxId", _data.readInboxMaxId as Any), ("readOutboxMaxId", _data.readOutboxMaxId as Any), ("unreadCount", _data.unreadCount as Any), ("unreadMentionsCount", _data.unreadMentionsCount as Any), ("unreadReactionsCount", _data.unreadReactionsCount as Any), ("notifySettings", _data.notifySettings as Any), ("pts", _data.pts as Any), ("draft", _data.draft as Any), ("folderId", _data.folderId as Any), ("ttlPeriod", _data.ttlPeriod as Any)])
+                return ("dialog", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("topMessage", _data.topMessage as Any), ("readInboxMaxId", _data.readInboxMaxId as Any), ("readOutboxMaxId", _data.readOutboxMaxId as Any), ("unreadCount", _data.unreadCount as Any), ("unreadMentionsCount", _data.unreadMentionsCount as Any), ("unreadReactionsCount", _data.unreadReactionsCount as Any), ("unreadPollVotesCount", _data.unreadPollVotesCount as Any), ("notifySettings", _data.notifySettings as Any), ("pts", _data.pts as Any), ("draft", _data.draft as Any), ("folderId", _data.folderId as Any), ("ttlPeriod", _data.ttlPeriod as Any)])
             case .dialogFolder(let _data):
                 return ("dialogFolder", [("flags", _data.flags as Any), ("folder", _data.folder as Any), ("peer", _data.peer as Any), ("topMessage", _data.topMessage as Any), ("unreadMutedPeersCount", _data.unreadMutedPeersCount as Any), ("unreadUnmutedPeersCount", _data.unreadUnmutedPeersCount as Any), ("unreadMutedMessagesCount", _data.unreadMutedMessagesCount as Any), ("unreadUnmutedMessagesCount", _data.unreadUnmutedMessagesCount as Any)])
             }
@@ -1692,27 +1695,29 @@ public extension Api {
             _7 = reader.readInt32()
             var _8: Int32?
             _8 = reader.readInt32()
-            var _9: Api.PeerNotifySettings?
+            var _9: Int32?
+            _9 = reader.readInt32()
+            var _10: Api.PeerNotifySettings?
             if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
+                _10 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
-            var _10: Int32?
+            var _11: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {
-                _10 = reader.readInt32()
+                _11 = reader.readInt32()
             }
-            var _11: Api.DraftMessage?
+            var _12: Api.DraftMessage?
             if Int(_1!) & Int(1 << 1) != 0 {
                 if let signature = reader.readInt32() {
-                    _11 = Api.parse(reader, signature: signature) as? Api.DraftMessage
+                    _12 = Api.parse(reader, signature: signature) as? Api.DraftMessage
                 }
             }
-            var _12: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {
-                _12 = reader.readInt32()
-            }
             var _13: Int32?
-            if Int(_1!) & Int(1 << 5) != 0 {
+            if Int(_1!) & Int(1 << 4) != 0 {
                 _13 = reader.readInt32()
+            }
+            var _14: Int32?
+            if Int(_1!) & Int(1 << 5) != 0 {
+                _14 = reader.readInt32()
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -1723,12 +1728,13 @@ public extension Api {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 0) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 1) == 0) || _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 4) == 0) || _12 != nil
-            let _c13 = (Int(_1!) & Int(1 << 5) == 0) || _13 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
-                return Api.Dialog.dialog(Cons_dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, unreadReactionsCount: _8!, notifySettings: _9!, pts: _10, draft: _11, folderId: _12, ttlPeriod: _13))
+            let _c10 = _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 0) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 1) == 0) || _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 4) == 0) || _13 != nil
+            let _c14 = (Int(_1!) & Int(1 << 5) == 0) || _14 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
+                return Api.Dialog.dialog(Cons_dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, unreadReactionsCount: _8!, unreadPollVotesCount: _9!, notifySettings: _10!, pts: _11, draft: _12, folderId: _13, ttlPeriod: _14))
             }
             else {
                 return nil

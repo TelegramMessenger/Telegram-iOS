@@ -53,6 +53,7 @@ swift_library(
         "//submodules/TelegramUI/Components/SearchInputPanelComponent",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/CounterControllerTitleView",
     ],
     visibility = [
         "//visibility:public",

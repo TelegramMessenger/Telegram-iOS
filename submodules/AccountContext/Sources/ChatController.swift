@@ -263,7 +263,7 @@ public enum ChatControllerInteractionLongTapAction {
 
 public enum ChatHistoryMessageSelection: Equatable {
     case none
-    case selectable(selected: Bool)
+    case selectable(selected: Bool, num: Int?)
     
     public static func ==(lhs: ChatHistoryMessageSelection, rhs: ChatHistoryMessageSelection) -> Bool {
         switch lhs {
@@ -273,8 +273,8 @@ public enum ChatHistoryMessageSelection: Equatable {
                 } else {
                     return false
                 }
-            case let .selectable(selected):
-                if case .selectable(selected) = rhs {
+            case let .selectable(selected, num):
+                if case .selectable(selected, num) = rhs {
                     return true
                 } else {
                     return false
