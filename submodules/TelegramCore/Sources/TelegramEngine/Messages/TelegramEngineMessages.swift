@@ -1778,6 +1778,26 @@ public extension TelegramEngine {
         public func composeAIMessage(text: TextWithEntities, mode: TelegramComposeAIMessageMode) -> Signal<TelegramAIComposeMessageResult, TelegramAIComposeMessageError> {
             return _internal_composeAIMessage(account: self.account, text: text, mode: mode)
         }
+        
+        public func requestMiniAppButton(peerId: EnginePeer.Id, requestId: String) -> Signal<ReplyMarkupButton?, NoError> {
+            let account = self.account
+            return self.account.postbox.transaction { transaction -> Api.InputUser? in
+                return transaction.getPeer(peerId).flatMap(apiInputUser)
+            }
+            |> mapToSignal { inputUser -> Signal<ReplyMarkupButton?, NoError> in
+                guard let inputUser else {
+                    return .single(nil)
+                }
+                return account.network.request(Api.functions.bots.getRequestedWebViewButton(bot: inputUser, webappReqId: requestId))
+                |> map { result -> ReplyMarkupButton in
+                    return ReplyMarkupButton(apiButton: result)
+                }
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<ReplyMarkupButton?, NoError> in
+                    return .single(nil)
+                }
+            }
+        }
     }
 }
 

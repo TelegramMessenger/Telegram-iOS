@@ -22,6 +22,8 @@ import ListActionItemComponent
 import ToastComponent
 import TelegramNotices
 import Markdown
+import TelegramUIPreferences
+import ChatSendMessageActionUI
 
 final class TextProcessingContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -40,6 +42,7 @@ final class TextProcessingContentComponent: Component {
     let mode: TextProcessingScreen.Mode
     let styles: [TelegramComposeAIMessageMode.Style]
     let inputText: TextWithEntities
+    let initialEditState: TextProcessingScreen.EditState?
     let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: (() -> Void)?
     let translateChat: ((String) -> Void)?
@@ -51,6 +54,7 @@ final class TextProcessingContentComponent: Component {
         mode: TextProcessingScreen.Mode,
         styles: [TelegramComposeAIMessageMode.Style],
         inputText: TextWithEntities,
+        initialEditState: TextProcessingScreen.EditState?,
         shouldDisplayStyleNotice: Bool,
         copyCurrentResult: (() -> Void)?,
         translateChat: ((String) -> Void)?,
@@ -61,6 +65,7 @@ final class TextProcessingContentComponent: Component {
         self.context = context
         self.mode = mode
         self.inputText = inputText
+        self.initialEditState = initialEditState
         self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
@@ -94,7 +99,7 @@ final class TextProcessingContentComponent: Component {
         
         private var currentContent: (mode: Mode, view: ComponentView<Empty>)?
         
-        private var currentMode: Mode = .translate
+        private var currentMode: Mode = .stylize
         
         override init(frame: CGRect) {
             self.currentContentBackground = UIImageView()
@@ -105,7 +110,6 @@ final class TextProcessingContentComponent: Component {
             
             self.addSubview(self.currentContentBackground)
             self.addSubview(self.currentContentContainer)
-            
             
             self.translateState.resultUpdated = { [weak self] _ in
                 self?.externalStatesUpdated()
@@ -163,6 +167,30 @@ final class TextProcessingContentComponent: Component {
             component.externalState.nonPremiumFloodTriggered = true
             #endif*/
         }
+        
+        private func saveState() {
+            guard let component = self.component else {
+                return
+            }
+            if case let .edit(saveRestoreStateId, _, _, _) = component.mode, let saveRestoreStateId {
+                let mappedMode: Int32
+                switch self.currentMode {
+                case .translate:
+                    mappedMode = 0
+                case .stylize:
+                    mappedMode = 1
+                case .fix:
+                    mappedMode = 2
+                }
+                
+                let state = TextProcessingScreen.EditState(
+                    selectedMode: mappedMode
+                )
+                let _ = component.context.engine.preferences.update(id: ApplicationSpecificPreferencesKeys.textProcessingEditingState(peerId: saveRestoreStateId), { _ in
+                    return EnginePreferencesEntry(state)
+                })
+            }
+        }
 
         func update(component: TextProcessingContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
@@ -202,6 +230,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .translate {
                             self.currentMode = .translate
+                            self.saveState()
                             self.externalStatesUpdated()
                         }
                         if !self.isUpdating {
@@ -223,6 +252,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .stylize {
                             self.currentMode = .stylize
+                            self.saveState()
                             let _ = ApplicationSpecificNotice.incrementAITextProcessingStyleSelection(accountManager: component.context.sharedContext.accountManager).startStandalone()
                             self.externalStatesUpdated()
                         }
@@ -245,6 +275,7 @@ final class TextProcessingContentComponent: Component {
                         }
                         if self.currentMode != .fix {
                             self.currentMode = .fix
+                            self.saveState()
                             self.externalStatesUpdated()
                         }
                         if !self.isUpdating {
@@ -498,6 +529,7 @@ private final class TextProcessingSheetComponent: Component {
     let ignoredTranslationLanguages: [String]
     let styles: [TelegramComposeAIMessageMode.Style]
     let inputText: TextWithEntities
+    let initialEditState: TextProcessingScreen.EditState?
     let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: ((TextWithEntities) -> Void)?
     let translateChat: ((String) -> Void)?
@@ -508,6 +540,7 @@ private final class TextProcessingSheetComponent: Component {
         ignoredTranslationLanguages: [String],
         styles: [TelegramComposeAIMessageMode.Style],
         inputText: TextWithEntities,
+        initialEditState: TextProcessingScreen.EditState?,
         shouldDisplayStyleNotice: Bool,
         copyCurrentResult: ((TextWithEntities) -> Void)?,
         translateChat: ((String) -> Void)?
@@ -517,6 +550,7 @@ private final class TextProcessingSheetComponent: Component {
         self.ignoredTranslationLanguages = ignoredTranslationLanguages
         self.styles = styles
         self.inputText = inputText
+        self.initialEditState = initialEditState
         self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
@@ -561,6 +595,122 @@ private final class TextProcessingSheetComponent: Component {
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
+        
+        private func displayLongPressSendMenu(sourceSendButton: UIView) {
+            Task { @MainActor [weak self, weak sourceSendButton] in
+                guard let self, let sourceSendButton, let component = self.component, case let .edit(_, _, _, sendContextActions) = component.mode, let sendContextActions else {
+                    return
+                }
+                guard let controller = self.environment?.controller() else {
+                    return
+                }
+                let peerId = sendContextActions.peerId
+                let previousSupportedOrientations = controller.supportedOrientations
+                
+                let availableMessageEffects = await (component.context.availableMessageEffects |> take(1)).get()
+                let hasPremium = await (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId))
+                |> map { peer -> Bool in
+                    guard case let .user(user) = peer else {
+                        return false
+                    }
+                    return user.isPremium
+                }).get()
+                
+                let peerStatus = await (component.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Presence(id: peerId)
+                )).get()
+                guard let peer = await (component.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )).get() else {
+                    return
+                }
+                
+                let initialData = await ChatSendMessageContextScreen.initialData(context: component.context, currentMessageEffectId: nil).get()
+                
+                var sendWhenOnlineAvailable = false
+                if let peerStatus, case let .present(until) = peerStatus.status {
+                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                    if currentTime > until {
+                        sendWhenOnlineAvailable = true
+                    }
+                }
+                if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 777000 {
+                    sendWhenOnlineAvailable = false
+                }
+                
+                let messageActionsController = makeChatSendMessageActionSheetController(
+                    initialData: initialData,
+                    context: component.context,
+                    updatedPresentationData: nil,
+                    peerId: peerId,
+                    params: .sendMessage(SendMessageActionSheetControllerParams.SendMessage(
+                        isScheduledMessages: false,
+                        mediaPreview: nil,
+                        mediaCaptionIsAbove: nil,
+                        messageEffect: (nil, { [weak self] updatedEffect in
+                            guard let self else {
+                                return
+                            }
+                            let _ = self
+                            let _ = updatedEffect
+                        }),
+                        attachment: false,
+                        canSendWhenOnline: sendWhenOnlineAvailable,
+                        forwardMessageIds: [],
+                        canMakePaidContent: false,
+                        currentPrice: nil,
+                        hasTimers: false,
+                        sendPaidMessageStars: nil,
+                        isMonoforum: peer._asPeer().isMonoForum
+                    )),
+                    hasEntityKeyboard: false,
+                    gesture: nil,
+                    sourceSendButton: sourceSendButton,
+                    textInputView: UITextView(),
+                    emojiViewProvider: nil,
+                    completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.supportedOrientations = previousSupportedOrientations
+                    },
+                    sendMessage: { [weak self] mode, parameters in
+                        guard let self, let result = self.contentExternalState.result else {
+                            return
+                        }
+                        sendContextActions.send(result, mode, parameters)
+                        let controller = self.environment?.controller
+                        self.animateOut.invoke(Action { _ in
+                            if let controller = controller?() {
+                                controller.dismiss(completion: nil)
+                            }
+                        })
+                    },
+                    schedule: { [weak self] params in
+                        guard let self, let result = self.contentExternalState.result else {
+                            return
+                        }
+                        sendContextActions.schedule(result, params)
+                        let controller = self.environment?.controller
+                        self.animateOut.invoke(Action { _ in
+                            if let controller = controller?() {
+                                controller.dismiss(completion: nil)
+                            }
+                        })
+                    }, editPrice: { _ in
+                    }, openPremiumPaywall: { [weak self] c in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.push(c)
+                    },
+                    reactionItems: nil,
+                    availableMessageEffects: availableMessageEffects,
+                    isPremium: hasPremium
+                )
+                controller.present(messageActionsController, in: .window(.root))
+            }
+        }
 
         func update(component: TextProcessingSheetComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.component = component
@@ -587,6 +737,7 @@ private final class TextProcessingSheetComponent: Component {
 
             let performMainAction: () -> Void
             var performSendAction: ((TextWithEntities) -> Void)?
+            var hasLongPressActions = false
             let isMainActionEnabled: Bool
             //TODO:localize (for AI: don't remove this line)
             let actionButtonTitle: String
@@ -614,10 +765,11 @@ private final class TextProcessingSheetComponent: Component {
                 }
             } else {
                 switch component.mode {
-                case let .edit(completion, send):
+                case let .edit(_, completion, send, sendContextActions):
                     actionButtonTitle = "Apply"
                     performSendAction = send
                     isMainActionEnabled = !self.contentExternalState.isProcessing
+                    hasLongPressActions = sendContextActions != nil
                     performMainAction = { [weak self] in
                         guard let self else {
                             return
@@ -663,6 +815,7 @@ private final class TextProcessingSheetComponent: Component {
                         mode: component.mode,
                         styles: component.styles,
                         inputText: component.inputText,
+                        initialEditState: component.initialEditState,
                         shouldDisplayStyleNotice: component.shouldDisplayStyleNotice,
                         copyCurrentResult: component.copyCurrentResult != nil ? {
                             copyCurrentResultImpl()
@@ -737,7 +890,13 @@ private final class TextProcessingSheetComponent: Component {
                                         dismiss(true)
                                     }
                                 }
-                            }
+                            },
+                            longPressSendAction: (performSendAction != nil && hasLongPressActions) ? { [weak self] sourceView in
+                                guard let self else {
+                                    return
+                                }
+                                self.displayLongPressSendMenu(sourceSendButton: sourceView)
+                            } : nil
                         )
                     ),
                     backgroundColor: .color(theme.list.blocksBackgroundColor),
@@ -890,9 +1049,29 @@ private final class TextProcessingSheetComponent: Component {
 }
 
 public class TextProcessingScreen: ViewControllerComponentContainer {
+    public final class SendContextActions {
+        public let peerId: EnginePeer.Id
+        public let send: (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
+        public let schedule: (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void
+        
+        public init(peerId: EnginePeer.Id, send: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void, schedule: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void) {
+            self.peerId = peerId
+            self.send = send
+            self.schedule = schedule
+        }
+    }
+    
     public enum Mode {
-        case edit(completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?)
+        case edit(saveRestoreStateId: EnginePeer.Id?, completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?, sendContextActions: SendContextActions?)
         case translate(fromLanguage: String?)
+    }
+    
+    struct EditState: Codable {
+        var selectedMode: Int32
+        
+        init(selectedMode: Int32) {
+            self.selectedMode = selectedMode
+        }
     }
     
     private let context: AccountContext
@@ -908,8 +1087,14 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         self.context = context
         
         let styles = await context.engine.messages.composeAIMessageStyles().get()
-        
         let shouldDisplayStyleNotice = await ApplicationSpecificNotice.getAITextProcessingStyleSelection(accountManager: context.sharedContext.accountManager).get() < 3
+        
+        var initialEditState: EditState?
+        if case let .edit(saveRestoreStateId, _, _, _) = mode, let saveRestoreStateId {
+            initialEditState = await context.engine.data.get(
+                TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.textProcessingEditingState(peerId: saveRestoreStateId))
+            ).get()?.get(EditState.self)
+        }
 
         super.init(
             context: context,
@@ -919,6 +1104,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
                 ignoredTranslationLanguages: ignoredTranslationLanguages,
                 styles: styles,
                 inputText: inputText,
+                initialEditState: initialEditState,
                 shouldDisplayStyleNotice: shouldDisplayStyleNotice,
                 copyCurrentResult: copyResult,
                 translateChat: translateChat
@@ -1075,19 +1261,22 @@ private final class ActionButtonsComponent: Component {
     let actionButtonShowsIncreaseLimit: Bool
     let action: (() -> Void)?
     let sendAction: (() -> Void)?
+    let longPressSendAction: ((UIView) -> Void)?
     
     init(
         theme: PresentationTheme,
         actionTitle: String,
         actionButtonShowsIncreaseLimit: Bool,
         action: (() -> Void)?,
-        sendAction: (() -> Void)?
+        sendAction: (() -> Void)?,
+        longPressSendAction: ((UIView) -> Void)?
     ) {
         self.theme = theme
         self.actionTitle = actionTitle
         self.actionButtonShowsIncreaseLimit = actionButtonShowsIncreaseLimit
         self.action = action
         self.sendAction = sendAction
+        self.longPressSendAction = longPressSendAction
     }
     
     static func ==(lhs: ActionButtonsComponent, rhs: ActionButtonsComponent) -> Bool {
@@ -1106,18 +1295,24 @@ private final class ActionButtonsComponent: Component {
         if (lhs.sendAction == nil) != (rhs.sendAction == nil) {
             return false
         }
+        if (lhs.longPressSendAction == nil) != (rhs.longPressSendAction == nil) {
+            return false
+        }
         return true
     }
     
     final class View: UIView {
         private let actionButton = ComponentView<Empty>()
         private let sendButton = ComponentView<Empty>()
-        
+        private let extractedContainerView = ContextExtractedContentContainingView()
+
         private var component: ActionButtonsComponent?
         private weak var state: EmptyComponentState?
 
         override init(frame: CGRect) {
             super.init(frame: frame)
+
+            self.addSubview(self.extractedContainerView)
         }
 
         required init?(coder: NSCoder) {
@@ -1205,6 +1400,12 @@ private final class ActionButtonsComponent: Component {
                             return
                         }
                         component.sendAction?()
+                    },
+                    longPressAction: component.longPressSendAction == nil ? nil : { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        component.longPressSendAction?(self.extractedContainerView)
                     }
                 )),
                 environment: {},
@@ -1213,13 +1414,16 @@ private final class ActionButtonsComponent: Component {
             let sendButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sendButtonSize.width, y: 0.0), size: sendButtonSize)
             if let sendButtonView = self.sendButton.view {
                 if sendButtonView.superview == nil {
-                    self.addSubview(sendButtonView)
+                    self.extractedContainerView.contentView.addSubview(sendButtonView)
                 }
-                transition.setPosition(view: sendButtonView, position: sendButtonFrame.center)
-                transition.setBounds(view: sendButtonView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
-                transition.setAlpha(view: sendButtonView, alpha: component.sendAction != nil ? 1.0 : 0.0)
-                transition.setScale(view: sendButtonView, scale: component.sendAction != nil ? 1.0 : 0.001)
+                sendButtonView.frame = CGRect(origin: CGPoint(), size: sendButtonFrame.size)
             }
+            transition.setPosition(view: self.extractedContainerView, position: sendButtonFrame.center)
+            transition.setBounds(view: self.extractedContainerView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
+            transition.setPosition(view: self.extractedContainerView.contentView, position: CGPoint(x: sendButtonFrame.width * 0.5, y: sendButtonFrame.height * 0.5))
+            transition.setBounds(view: self.extractedContainerView.contentView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
+            transition.setAlpha(view: self.extractedContainerView, alpha: component.sendAction != nil ? 1.0 : 0.0)
+            transition.setScale(view: self.extractedContainerView, scale: component.sendAction != nil ? 1.0 : 0.001)
 
             return CGSize(width: availableSize.width, height: actionButtonSize.height)
         }

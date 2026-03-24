@@ -1944,7 +1944,10 @@ func openResolvedUrlImpl(
                     context: context,
                     parentBot: parentBot,
                     initialUsername: username,
-                    initialTitle: title
+                    initialTitle: title,
+                    openAutomatically: true,
+                    completion: { _ in
+                    }
                 ) else {
                     return
                 }

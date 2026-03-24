@@ -34,7 +34,8 @@ final class SendButton: HighlightTrackingButton {
     
     private var previousIsAnimatedIn: Bool?
     private var sourceCustomContentView: UIView?
-    
+    private weak var extractedContainerView: ContextExtractedContentContainingView?
+
     init(kind: Kind) {
         self.kind = kind
         
@@ -64,12 +65,58 @@ final class SendButton: HighlightTrackingButton {
         context: AccountContext,
         presentationData: PresentationData,
         backgroundNode: WallpaperBackgroundNode?,
-        sourceSendButton: ASDisplayNode,
+        sourceSendButton: UIView,
         isAnimatedIn: Bool,
         isLoadingEffectAnimation: Bool,
         size: CGSize,
         transition: ComponentTransition
     ) {
+        if let extractedContainer = sourceSendButton as? ContextExtractedContentContainingView {
+            self.containerView.isHidden = true
+            self.sourceCustomContentView?.isHidden = true
+
+            let contentView = extractedContainer.contentView
+
+            if self.extractedContainerView !== extractedContainer {
+                self.extractedContainerView = extractedContainer
+                self.previousIsAnimatedIn = nil
+            }
+
+            if self.previousIsAnimatedIn != isAnimatedIn {
+                self.previousIsAnimatedIn = isAnimatedIn
+
+                if isAnimatedIn {
+                    extractedContainer.willUpdateIsExtractedToContextPreview?(true, .animated(duration: 0.3, curve: .spring))
+                    extractedContainer.isExtractedToContextPreview = true
+                    extractedContainer.isExtractedToContextPreviewUpdated?(true)
+
+                    extractedContainer.layer.removeAnimation(forKey: "extractedContentReturn")
+                    
+                    self.addSubview(contentView)
+                } else {
+                    extractedContainer.willUpdateIsExtractedToContextPreview?(false, .animated(duration: 0.3, curve: .spring))
+                    extractedContainer.isExtractedToContextPreview = false
+                    extractedContainer.isExtractedToContextPreviewUpdated?(false)
+
+                    transition.attachAnimation(view: self, id: "extractedContentReturn", completion: { [weak extractedContainer] _ in
+                        guard let extractedContainer else {
+                            return
+                        }
+                        extractedContainer.addSubview(extractedContainer.contentView)
+                    })
+                }
+            }
+
+            if contentView.superview === self {
+                transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: size))
+            }
+
+            return
+        }
+
+        self.containerView.isHidden = false
+        self.extractedContainerView = nil
+
         let innerSize: CGSize
         if size.height == 40.0 {
             innerSize = CGSize(width: size.width - 3.0 * 2.0, height: size.height - 3.0 * 2.0)
@@ -93,7 +140,7 @@ final class SendButton: HighlightTrackingButton {
                 self.sourceCustomContentView = nil
             }
             
-            if let sourceSendButton = sourceSendButton as? ChatSendMessageActionSheetControllerSourceSendButtonNode {
+            if let sourceSendButton = sourceSendButton.asyncdisplaykit_node as? ChatSendMessageActionSheetControllerSourceSendButtonNode {
                 if let sourceCustomContentView = sourceSendButton.makeCustomContents() {
                     self.sourceCustomContentView = sourceCustomContentView
                     sourceCustomContentView.alpha = sourceCustomContentViewAlpha
