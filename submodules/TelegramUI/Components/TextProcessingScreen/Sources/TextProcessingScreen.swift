@@ -84,6 +84,7 @@ final class TextProcessingContentComponent: Component {
 
     final class View: UIView {
         private var component: TextProcessingContentComponent?
+        private var environment: ViewControllerComponentContainer.Environment?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
         
@@ -99,7 +100,7 @@ final class TextProcessingContentComponent: Component {
         
         private var currentContent: (mode: Mode, view: ComponentView<Empty>)?
         
-        private var currentMode: Mode = .stylize
+        private var currentMode: Mode = .translate
         
         override init(frame: CGRect) {
             self.currentContentBackground = UIImageView()
@@ -204,9 +205,16 @@ final class TextProcessingContentComponent: Component {
             
             if self.component == nil {
                 self.stylizeState.displayStyleTooltip = component.shouldDisplayStyleNotice
+                switch component.mode {
+                case .edit:
+                    self.currentMode = .stylize
+                case .translate:
+                    self.currentMode = .translate
+                }
             }
             
             self.component = component
+            self.environment = environment
             self.state = state
             
             let sideInset: CGFloat = 16.0
@@ -345,7 +353,13 @@ final class TextProcessingContentComponent: Component {
                     inputText: component.inputText,
                     mode: .translate,
                     copyAction: component.copyCurrentResult,
-                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu
+                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
+                    present: { [weak self] c, a in
+                        self?.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    rootViewForTextSelection: { [weak self] in
+                        return self?.environment?.controller()?.view
+                    }
                 ))
             case .stylize:
                 contentComponent = AnyComponent(TextProcessingTranslateContentComponent(
@@ -357,7 +371,13 @@ final class TextProcessingContentComponent: Component {
                     inputText: component.inputText,
                     mode: .stylize,
                     copyAction: component.copyCurrentResult,
-                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu
+                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
+                    present: { [weak self] c, a in
+                        self?.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    rootViewForTextSelection: { [weak self] in
+                        return self?.environment?.controller()?.view
+                    }
                 ))
             case .fix:
                 contentComponent = AnyComponent(TextProcessingTranslateContentComponent(
@@ -369,7 +389,13 @@ final class TextProcessingContentComponent: Component {
                     inputText: component.inputText,
                     mode: .fix,
                     copyAction: component.copyCurrentResult,
-                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu
+                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
+                    present: { [weak self] c, a in
+                        self?.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    rootViewForTextSelection: { [weak self] in
+                        return self?.environment?.controller()?.view
+                    }
                 ))
             }
             
@@ -1049,22 +1075,9 @@ private final class TextProcessingSheetComponent: Component {
 }
 
 public class TextProcessingScreen: ViewControllerComponentContainer {
-    public final class SendContextActions {
-        public let peerId: EnginePeer.Id
-        public let send: (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
-        public let schedule: (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void
-        
-        public init(peerId: EnginePeer.Id, send: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void, schedule: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void) {
-            self.peerId = peerId
-            self.send = send
-            self.schedule = schedule
-        }
-    }
+    public typealias SendContextActions = TextProcessingScreenSendContextActions
     
-    public enum Mode {
-        case edit(saveRestoreStateId: EnginePeer.Id?, completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?, sendContextActions: SendContextActions?)
-        case translate(fromLanguage: String?)
-    }
+    public typealias Mode = TextProcessingScreenMode
     
     struct EditState: Codable {
         var selectedMode: Int32

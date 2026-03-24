@@ -17,6 +17,11 @@ public final class ListMultilineTextFieldItemComponent: Component {
         case legacy
     }
     
+    public final class Tag {
+        public init() {
+        }
+    }
+    
     public final class ExternalState {
         public fileprivate(set) var hasText: Bool = false
         public fileprivate(set) var text: NSAttributedString = NSAttributedString()

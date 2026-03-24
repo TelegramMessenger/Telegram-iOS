@@ -1065,6 +1065,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
     var sendMessagePressed: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void = { _, _ in }
+    var invokeAICompose: () -> Void = {}
     var requestLayout: () -> Void = {}
     var present: (ViewController) -> Void = { _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
@@ -2227,10 +2228,16 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     strongSelf.present(c)
                 }
             }, makeEntityInputView: self.makeEntityInputView)
+            textInputPanelNode.isAIEnabled = true
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
             textInputPanelNode.sendMessage = { [weak self] mode, messageEffect in
                 if let strongSelf = self {
                     strongSelf.sendMessagePressed(mode, messageEffect)
+                }
+            }
+            textInputPanelNode.invokeAICompose = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.invokeAICompose()
                 }
             }
             textInputPanelNode.focusUpdated = { [weak self] focus in

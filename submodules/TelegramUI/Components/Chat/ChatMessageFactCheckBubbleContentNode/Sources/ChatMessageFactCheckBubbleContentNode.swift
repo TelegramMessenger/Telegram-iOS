@@ -156,12 +156,12 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 let selectionColor: UIColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
                 let knobColor: UIColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
                 
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor, isDark: item.presentationData.theme.theme.overallDarkAppearance), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor, isDark: item.presentationData.theme.theme.overallDarkAppearance), strings: item.presentationData.strings, textNodeOrView: .node(self.textNode), updateIsActive: { [weak self] value in
                     self?.updateIsTextSelectionActive?(value)
                 }, present: { [weak self] c, a in
                     self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
-                }, rootNode: { [weak rootNode] in
-                    return rootNode
+                }, rootView: { [weak rootNode] in
+                    return rootNode?.view
                 }, performAction: { [weak self] text, action in
                     guard let strongSelf = self, let item = strongSelf.item else {
                         return

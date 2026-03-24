@@ -247,6 +247,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private let counterTextNode: ImmediateTextNode
     
     private var aiButton: (button: HighlightTrackingButton, icon: UIImageView)?
+    private var heightDependentAiButtonAlpha: CGFloat = 0.0
     
     public let menuButton: HighlightTrackingButtonNode
     private let menuButtonBackgroundView: GlassBackgroundView
@@ -3558,9 +3559,17 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 transition.updateFrame(view: aiButton.button, frame: aiButtonFrame)
                 transition.updateFrame(view: aiButton.icon, frame: image.size.centered(in: aiButtonFrame))
             }
-            let aiButtonAlpha: CGFloat = actualTextFieldFrame.height >= 70.0 ? 1.0 : 0.0
-            transition.updateAlpha(layer: aiButton.button.layer, alpha: aiButtonAlpha)
-            transition.updateAlpha(layer: aiButton.icon.layer, alpha: aiButtonAlpha)
+            var aiButtonAlpha: CGFloat = actualTextFieldFrame.height >= 70.0 ? 1.0 : 0.0
+            self.heightDependentAiButtonAlpha = aiButtonAlpha
+            var inputHasText = false
+            if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, !attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                inputHasText = true
+            }
+            if !inputHasText {
+                aiButtonAlpha = 0.0
+            }
+            ComponentTransition(transition).setAlpha(view: aiButton.button, alpha: aiButtonAlpha)
+            ComponentTransition(transition).setAlpha(view: aiButton.icon, alpha: aiButtonAlpha)
         } else if let aiButton = self.aiButton {
             self.aiButton = nil
             let aiButtonView = aiButton.button
@@ -3571,6 +3580,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             transition.updateAlpha(layer: aiButton.icon.layer, alpha: 0.0, completion: { [weak aiButtonIconView] _ in
                 aiButtonIconView?.removeFromSuperview()
             })
+            self.heightDependentAiButtonAlpha = 0.0
         }
         
         let containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: contentHeight + 64.0))
@@ -4383,6 +4393,16 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
                 self.textPlaceholderNode.isHidden = inputHasText
                 self.slowmodePlaceholderNode?.isHidden = true
             }
+        }
+        
+        if let aiButton = self.aiButton {
+            let transition: ContainedViewLayoutTransition = .immediate
+            var aiButtonAlpha: CGFloat = self.heightDependentAiButtonAlpha
+            if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                aiButtonAlpha = 0.0
+            }
+            ComponentTransition(transition).setAlpha(view: aiButton.button, alpha: aiButtonAlpha)
+            ComponentTransition(transition).setAlpha(view: aiButton.icon, alpha: aiButtonAlpha)
         }
         
         self.updateTextHeight(animated: animated)

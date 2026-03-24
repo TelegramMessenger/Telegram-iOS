@@ -69,6 +69,8 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
             |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
                 if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
                     return .single(.purchaseAvailable)
+                } else if error.errorDescription == "USERNAME_OCCUPIED" {
+                    return .single(.taken)
                 } else {
                     return .single(.invalid)
                 }
@@ -87,6 +89,8 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                 |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
                     if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
                         return .single(.purchaseAvailable)
+                    } else if error.errorDescription == "USERNAME_OCCUPIED" {
+                        return .single(.taken)
                     } else {
                         return .single(.invalid)
                     }
@@ -104,6 +108,8 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                 |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
                     if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
                         return .single(.purchaseAvailable)
+                    } else if error.errorDescription == "USERNAME_OCCUPIED" {
+                        return .single(.taken)
                     } else {
                         return .single(.invalid)
                     }
@@ -124,6 +130,8 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
             |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
                 if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
                     return .single(.purchaseAvailable)
+                } else if error.errorDescription == "USERNAME_OCCUPIED" {
+                    return .single(.taken)
                 } else {
                     return .single(.invalid)
                 }

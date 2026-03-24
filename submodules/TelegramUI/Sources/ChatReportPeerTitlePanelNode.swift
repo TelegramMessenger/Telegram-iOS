@@ -506,6 +506,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                             })
                             
                             view.setImage(image?.withRenderingMode(.alwaysOriginal), for: [])
+                            view.setImage(generateTintedImage(image: image, color: interfaceState.theme.rootController.navigationBar.accentTextColor.withAlphaComponent(0.7))?.withRenderingMode(.alwaysOriginal), for: [.highlighted])
                         }
                     }
                 }

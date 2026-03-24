@@ -4463,7 +4463,9 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             let effectiveInputText: NSAttributedString
+            var isEdit = false
             if effectivePresentationInterfaceState.interfaceState.editMessage != nil {
+                isEdit = true
                 effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.effectiveInputState.inputText)
             } else {
                 effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
@@ -4516,7 +4518,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         })
                         self.sendCurrentMessage()
                     },
-                    sendContextActions: self.chatLocation.peerId.flatMap { peerId in return TextProcessingScreen.SendContextActions(
+                    sendContextActions: isEdit ? nil : self.chatLocation.peerId.flatMap { peerId in return TextProcessingScreen.SendContextActions(
                             peerId: peerId,
                             send: { [weak self] text, mode, parameters in
                                 guard let self, let controller = self.controller else {

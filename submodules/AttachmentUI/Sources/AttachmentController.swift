@@ -748,6 +748,57 @@ public class AttachmentController: ViewController, MinimizableController {
                     }
                 }
             }
+            self.panel.invokeAICompose = { [weak self] in
+                Task { @MainActor in
+                    guard let self, let controller = self.controller, let mediaPickerContext = self.mediaPickerContext else {
+                        return
+                    }
+                    
+                    guard let caption = await mediaPickerContext.caption.get() else {
+                        return
+                    }
+                    if caption.length == 0 {
+                        return
+                    }
+                    
+                    let sharedDataEntries = await controller.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings]).get()
+                    let translationSettings: TranslationSettings
+                    if let value = sharedDataEntries.entries[ApplicationSpecificSharedDataKeys.translationSettings], let parsedValue = value.get(TranslationSettings.self) {
+                        translationSettings = parsedValue
+                    } else {
+                        translationSettings = .defaultSettings
+                    }
+                    
+                    let textProcessingScreen = await controller.context.sharedContext.makeTextProcessingScreen(
+                        context: controller.context,
+                        mode: .edit(
+                            saveRestoreStateId: nil,
+                            completion: { [weak self] text in
+                                //TODO:localize
+                                guard let self, let mediaPickerContext = self.mediaPickerContext else {
+                                    return
+                                }
+                                self.panel.updateCaption(NSAttributedString(string: text.text))
+                                mediaPickerContext.setCaption(NSAttributedString(string: text.text))
+                            },
+                            send: { [weak self] text in
+                                //TODO:localize
+                                guard let self, let mediaPickerContext = self.mediaPickerContext else {
+                                    return
+                                }
+                                mediaPickerContext.setCaption(NSAttributedString(string: text.text))
+                                mediaPickerContext.send(mode: .generic, attachmentMode: .media, parameters: nil)
+                            },
+                            sendContextActions: nil
+                        ),
+                        ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
+                        inputText: TextWithEntities(text: caption.string, entities: []),
+                        copyResult: nil,
+                        translateChat: nil
+                    )
+                    self.controller?.push(textProcessingScreen)
+                }
+            }
             
             self.panel.onMainButtonPressed = { [weak self] in
                 if let strongSelf = self {

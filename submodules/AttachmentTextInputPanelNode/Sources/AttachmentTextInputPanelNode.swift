@@ -274,6 +274,10 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     private var transparentTextInputBackgroundImage: UIImage?
     private let actionButtons: AttachmentTextInputActionButtonsNode
     private let counterTextNode: ImmediateTextNode
+
+    private var aiButton: (button: HighlightTrackingButton, icon: UIImageView)?
+    private var heightDependentAiButtonAlpha: CGFloat = 0.0
+    public var isAIEnabled: Bool = false
     
     public var opaqueActionButtons: ASDisplayNode {
         return self.actionButtons
@@ -284,6 +288,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     
     public var sendMessage: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void = { _, _ in }
+    public var invokeAICompose: (() -> Void)?
     public var updateHeight: (Bool) -> Void = { _ in }
 
     private var updatingInputState = false
@@ -722,10 +727,16 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         guard self.isUserInteractionEnabled else {
             return nil
         }
+        if let aiButton = self.aiButton, aiButton.button.alpha > 0.0 {
+            let aiButtonPoint = self.view.convert(point, to: aiButton.button)
+            if aiButton.button.bounds.contains(aiButtonPoint) {
+                return aiButton.button
+            }
+        }
         if !self.inputModeView.isHidden, let result = self.inputModeView.hitTest(self.view.convert(point, to: self.inputModeView), with: event) {
             return result
         }
-        
+
         return super.hitTest(point, with: event)
     }
     
@@ -1039,7 +1050,62 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         
         transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset - textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
         transition.updateFrame(layer: self.textInputBackgroundImageNode.layer, frame: CGRect(x: 0.0, y: 0.0, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset - textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
-        
+
+        if self.isAIEnabled {
+            let aiButton: (button: HighlightTrackingButton, icon: UIImageView)
+            if let current = self.aiButton {
+                aiButton = current
+            } else {
+                aiButton = (HighlightTrackingButton(), UIImageView())
+                self.aiButton = aiButton
+                aiButton.button.highligthedChanged = { [weak self] highlighted in
+                    guard let self, let aiButton = self.aiButton else {
+                        return
+                    }
+                    if highlighted {
+                        aiButton.icon.alpha = 0.6
+                    } else {
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+                        transition.updateAlpha(layer: aiButton.icon.layer, alpha: 1.0)
+                    }
+                }
+                aiButton.button.addTarget(self, action: #selector(self.aiButtonPressed), for: .touchUpInside)
+                aiButton.button.addSubview(aiButton.icon)
+                aiButton.icon.image = UIImage(bundleImageName: "Chat/Input/Text/InputAIIcon")?.withRenderingMode(.alwaysTemplate)
+                self.textInputBackgroundNode.view.addSubview(aiButton.icon)
+                self.textInputBackgroundNode.view.addSubview(aiButton.button)
+            }
+
+            if let presentationInterfaceState = self.presentationInterfaceState {
+                aiButton.icon.tintColor = presentationInterfaceState.theme.chat.inputPanel.inputControlColor
+            }
+            if let image = aiButton.icon.image {
+                let aiButtonSize = CGSize(width: 40.0, height: 40.0)
+                let aiButtonFrame = CGRect(origin: CGPoint(x: baseWidth - rightInset - aiButtonSize.width - 12.0, y: -1.0), size: aiButtonSize)
+                transition.updateFrame(view: aiButton.button, frame: aiButtonFrame)
+                transition.updateFrame(view: aiButton.icon, frame: image.size.centered(in: aiButtonFrame))
+            }
+
+            var aiButtonAlpha: CGFloat = textInputHeight >= 70.0 ? 1.0 : 0.0
+            self.heightDependentAiButtonAlpha = aiButtonAlpha
+            if !inputHasText {
+                aiButtonAlpha = 0.0
+            }
+            ComponentTransition(transition).setAlpha(view: aiButton.button, alpha: aiButtonAlpha)
+            ComponentTransition(transition).setAlpha(view: aiButton.icon, alpha: aiButtonAlpha)
+        } else if let aiButton = self.aiButton {
+            self.aiButton = nil
+            let aiButtonView = aiButton.button
+            let aiButtonIconView = aiButton.icon
+            transition.updateAlpha(layer: aiButton.button.layer, alpha: 0.0, completion: { [weak aiButtonView] _ in
+                aiButtonView?.removeFromSuperview()
+            })
+            transition.updateAlpha(layer: aiButton.icon.layer, alpha: 0.0, completion: { [weak aiButtonIconView] _ in
+                aiButtonIconView?.removeFromSuperview()
+            })
+            self.heightDependentAiButtonAlpha = 0.0
+        }
+
         var textInputViewRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {
             textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState, glass: self.glass)
@@ -1114,11 +1180,22 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             self.updateTextNodeText(animated: true)
             
             self.updateCounterTextNode(transition: .immediate)
-            
+
+            if let aiButton = self.aiButton {
+                var aiButtonAlpha: CGFloat = self.heightDependentAiButtonAlpha
+                if let attributedText = textInputNode.attributedText, attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    aiButtonAlpha = 0.0
+                } else if textInputNode.attributedText == nil {
+                    aiButtonAlpha = 0.0
+                }
+                ComponentTransition(.immediate).setAlpha(view: aiButton.button, alpha: aiButtonAlpha)
+                ComponentTransition(.immediate).setAlpha(view: aiButton.icon, alpha: aiButtonAlpha)
+            }
+
             self.skipUpdate = false
         }
     }
-    
+
     @objc public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         self.chatInputTextNodeDidUpdateText()
     }
@@ -1908,6 +1985,10 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     public func chatInputTextNodeBackspaceWhileEmpty() {
     }
     
+    @objc private func aiButtonPressed() {
+        self.invokeAICompose?()
+    }
+
     @objc func sendButtonPressed() {
         let inputTextMaxLength: Int32?
         if let maxCaptionLength = self.maxCaptionLength {

@@ -3,12 +3,22 @@ import UIKit
 import AsyncDisplayKit
 
 public final class ContextMenuControllerPresentationArguments {
-    public let sourceNodeAndRect: () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?
+    public let sourceViewAndRect: () -> (UIView, CGRect, UIView, CGRect)?
     public let bounce: Bool
     
-    public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?, bounce: Bool = true) {
-        self.sourceNodeAndRect = sourceNodeAndRect
+    public init(sourceViewAndRect: @escaping () -> (UIView, CGRect, UIView, CGRect)?, bounce: Bool = true) {
+        self.sourceViewAndRect = sourceViewAndRect
         self.bounce = bounce
+    }
+    
+    public convenience init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?, bounce: Bool = true) {
+        self.init(sourceViewAndRect: {
+            if let (view1, rect1, view2, rect2) = sourceNodeAndRect() {
+                return (view1.view, rect1, view2.view, rect2)
+            } else {
+                return nil
+            }
+        }, bounce: bounce)
     }
 }
 

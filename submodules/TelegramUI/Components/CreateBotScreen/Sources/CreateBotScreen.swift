@@ -26,6 +26,7 @@ final class CreateBotContentComponent: Component {
     final class ExternalState {
         var name: String = ""
         var username: String = ""
+        var usernameIsChecked: Bool = false
         
         init() {
         }
@@ -54,6 +55,13 @@ final class CreateBotContentComponent: Component {
     static func ==(lhs: CreateBotContentComponent, rhs: CreateBotContentComponent) -> Bool {
         return true
     }
+    
+    private enum UsernameCheckingStatus {
+        case checking
+        case valid
+        case invalid
+        case taken
+    }
 
     final class View: UIView {
         private var component: CreateBotContentComponent?
@@ -67,7 +75,19 @@ final class CreateBotContentComponent: Component {
         private let usernameSection = ComponentView<Empty>()
         
         private let usernameInputState = ListMultilineTextFieldItemComponent.ExternalState()
+        private let usernameInputTag = ListMultilineTextFieldItemComponent.Tag()
         private let nameInputState = ListMultilineTextFieldItemComponent.ExternalState()
+        private let nameInputTag = ListMultilineTextFieldItemComponent.Tag()
+        
+        private var usernameCheckingStatus: (username: String, status: UsernameCheckingStatus)? {
+            didSet {
+                guard let component = self.component else {
+                    return
+                }
+                component.externalState.usernameIsChecked = self.usernameCheckingStatus?.status == .valid
+            }
+        }
+        private var usernameCheckingDisposable: Disposable?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -77,6 +97,11 @@ final class CreateBotContentComponent: Component {
                     return
                 }
                 component.externalState.username = self.usernameInputState.text.string
+                
+                self.inputUsernameUpdated()
+                if !self.isUpdating {
+                    self.state?.updated(transition: .immediate)
+                }
             }
             self.nameInputState.updated = { [weak self] in
                 guard let self, let component = self.component else {
@@ -88,6 +113,47 @@ final class CreateBotContentComponent: Component {
         
         required init?(coder: NSCoder) {
             preconditionFailure()
+        }
+        
+        deinit {
+            self.usernameCheckingDisposable?.dispose()
+        }
+        
+        private func inputUsernameUpdated() {
+            guard let component = self.component else {
+                return
+            }
+            let username = self.usernameInputState.text.string.lowercased() + "bot"
+            if let usernameCheckingStatus = self.usernameCheckingStatus, usernameCheckingStatus.username == username {
+                return
+            }
+            self.usernameCheckingDisposable?.dispose()
+            self.usernameCheckingDisposable = nil
+            
+            guard case .success = CreateBotSheetComponent.View.validatedUsername(inputUsername: username) else {
+                self.usernameCheckingStatus = (username, .invalid)
+                return
+            }
+            
+            self.usernameCheckingStatus = (username, .checking)
+            self.usernameCheckingDisposable = (component.context.engine.peers.addressNameAvailability(domain: .bot(component.parentPeer.id), name: username) |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                switch result {
+                case .available:
+                    self.usernameCheckingStatus = (username, .valid)
+                case .invalid:
+                    self.usernameCheckingStatus = (username, .invalid)
+                case .purchaseAvailable:
+                    self.usernameCheckingStatus = (username, .invalid)
+                case .taken:
+                    self.usernameCheckingStatus = (username, .taken)
+                }
+                if !self.isUpdating {
+                    self.state?.updated(transition: .immediate)
+                }
+            })
         }
 
         func update(component: CreateBotContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
@@ -210,10 +276,24 @@ final class CreateBotContentComponent: Component {
                             autocapitalizationType: .words,
                             autocorrectionType: .no,
                             characterLimit: 64,
-                            rightAccessory: ListMultilineTextFieldItemComponent.RightAccessory(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(EditLabelComponent(theme: environment.theme, strings: environment.strings))), insets: UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 0.0)),
+                            rightAccessory: ListMultilineTextFieldItemComponent.RightAccessory(component: AnyComponentWithIdentity(
+                                id: 0,
+                                component: AnyComponent(EditLabelComponent(
+                                    theme: environment.theme,
+                                    strings: environment.strings,
+                                    action: { [weak self] in
+                                        guard let self, let itemView = self.nameSection.findTaggedView(tag: self.nameInputTag) as? ListMultilineTextFieldItemComponent.View else {
+                                            return
+                                        }
+                                        itemView.activateInput()
+                                    }
+                                ))),
+                                insets: UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 0.0)
+                            ),
                             emptyLineHandling: .notAllowed,
                             updated: { _ in },
-                            textUpdateTransition: .immediate
+                            textUpdateTransition: .immediate,
+                            tag: self.nameInputTag
                         )))
                     ]
                 )),
@@ -231,12 +311,56 @@ final class CreateBotContentComponent: Component {
             contentHeight += nameSectionSize.height + 22.0
             
             var initialUsername = ""
+            var botSuffix = "bot"
             if let value = component.initialUsername {
-                if value.hasSuffix("bot") {
+                if value.lowercased().hasSuffix("bot") {
+                    botSuffix = String(value[value.index(value.endIndex, offsetBy: -3)...])
                     initialUsername = String(value[value.startIndex ..< value.index(value.endIndex, offsetBy: -3)])
                 } else {
                     initialUsername = value
                 }
+            }
+            
+            let usernameFooterString: NSAttributedString
+            switch CreateBotSheetComponent.View.validatedUsername(inputUsername: "\(self.usernameInputState.text.string)" + botSuffix) {
+            case let .success(value):
+                switch self.usernameCheckingStatus?.status ?? .valid {
+                case .checking:
+                    usernameFooterString = NSAttributedString(
+                        string: "Checking...",
+                        font: Font.regular(13.0),
+                        textColor: environment.theme.list.freeTextColor
+                    )
+                case .invalid:
+                    let errorText = "You can only use **a-z**, **0-9** and underscores."
+                    usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
+                        return ("URL", contents)
+                    }))
+                case .taken:
+                    let errorText = "This username is already taken."
+                    usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
+                        return ("URL", contents)
+                    }))
+                case .valid:
+                    usernameFooterString = NSAttributedString(
+                        string: "Link: t.me/\(value)",
+                        font: Font.regular(13.0),
+                        textColor: environment.theme.list.freeTextColor
+                    )
+                }
+            case let .failure(error):
+                let errorText: String
+                switch error {
+                case .insufficientLength:
+                    errorText = "A username must have at least 5 characters."
+                case .startsWithNumber:
+                    errorText = "A username can't start with a number"
+                case .unsupportedCharacters:
+                    errorText = "You can only use **a-z**, **0-9** and underscores."
+                }
+                usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
+                    return ("URL", contents)
+                }))
             }
             
             let usernameSectionSize = self.usernameSection.update(
@@ -252,7 +376,10 @@ final class CreateBotContentComponent: Component {
                         )),
                         maximumNumberOfLines: 0
                     )),
-                    footer: nil,
+                    footer: AnyComponent(MultilineTextComponent(
+                        text: .plain(usernameFooterString),
+                        maximumNumberOfLines: 0
+                    )),
                     items: [
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
                             externalState: usernameInputState,
@@ -268,11 +395,25 @@ final class CreateBotContentComponent: Component {
                             keyboardType: .asciiCapable,
                             characterLimit: 32,
                             prefix: NSAttributedString(string: "@", font: Font.regular(17.0), textColor: environment.theme.list.itemPrimaryTextColor),
-                            suffix: NSAttributedString(string: "bot", font: Font.regular(17.0), textColor: environment.theme.list.itemSecondaryTextColor),
-                            rightAccessory: ListMultilineTextFieldItemComponent.RightAccessory(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(EditLabelComponent(theme: environment.theme, strings: environment.strings))), insets: UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 0.0)),
+                            suffix: NSAttributedString(string: botSuffix, font: Font.regular(17.0), textColor: environment.theme.list.itemSecondaryTextColor),
+                            rightAccessory: ListMultilineTextFieldItemComponent.RightAccessory(component: AnyComponentWithIdentity(
+                                id: 0,
+                                component: AnyComponent(EditLabelComponent(
+                                    theme: environment.theme,
+                                    strings: environment.strings,
+                                    action: { [weak self] in
+                                        guard let self, let itemView = self.usernameSection.findTaggedView(tag: self.usernameInputTag) as? ListMultilineTextFieldItemComponent.View else {
+                                            return
+                                        }
+                                        itemView.activateInput()
+                                    }
+                                ))),
+                                insets: UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 0.0)
+                            ),
                             emptyLineHandling: .notAllowed,
                             updated: { _ in },
-                            textUpdateTransition: .immediate
+                            textUpdateTransition: .immediate,
+                            tag: self.usernameInputTag,
                         )))
                     ]
                 )),
@@ -294,6 +435,7 @@ final class CreateBotContentComponent: Component {
             
             component.externalState.name = self.nameInputState.text.string
             component.externalState.username = self.usernameInputState.text.string
+            component.externalState.usernameIsChecked = self.usernameCheckingStatus?.status == .valid
 
             return CGSize(width: availableSize.width, height: contentHeight)
         }
@@ -316,7 +458,7 @@ private final class CreateBotSheetComponent: Component {
     let initialUsername: String?
     let initialTitle: String?
     let openAutomatically: Bool
-    let completion: (EnginePeer.Id) -> Void
+    let completion: (EnginePeer.Id?) -> Void
 
     init(
         context: AccountContext,
@@ -324,7 +466,7 @@ private final class CreateBotSheetComponent: Component {
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
-        completion: @escaping (EnginePeer.Id) -> Void
+        completion: @escaping (EnginePeer.Id?) -> Void
     ) {
         self.context = context
         self.parentPeer = parentPeer
@@ -349,6 +491,7 @@ private final class CreateBotSheetComponent: Component {
         
         private var isCreating: Bool = false
         private var actionDisposable: Disposable?
+        private var isCompleted: Bool = false
 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -362,28 +505,94 @@ private final class CreateBotSheetComponent: Component {
             self.actionDisposable?.dispose()
         }
         
-        private func validatedParams() -> (name: String, username: String)? {
-            if self.contentExternalState.name.isEmpty {
-                return nil
+        func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component else {
+                return true
             }
-            if self.contentExternalState.username.isEmpty {
-                return nil
+            if self.isCreating {
+                return false
             }
+            
+            //TODO:localize
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let _ = presentationData
+            let alertController = textAlertController(
+                context: component.context,
+                title: "Unsaved Changes",
+                text: "You have not finished creating a bot.",
+                actions: [
+                    TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                    }),
+                    TextAlertAction(type: .destructiveAction, title: "Discard", action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        if !self.isCompleted {
+                            self.isCompleted = true
+                            component.completion(nil)
+                        }
+                        let controller = self.environment?.controller
+                        self.animateOut.invoke(Action { _ in
+                            if let controller = controller?() {
+                                controller.dismiss(completion: nil)
+                            }
+                        })
+                    })
+                ]
+            )
+            self.environment?.controller()?.present(alertController, in: .window(.root))
+            
+            return false
+        }
+        
+        enum UsernameValidationError: Error {
+            case insufficientLength
+            case unsupportedCharacters
+            case startsWithNumber
+        }
+        
+        static func validatedUsername(inputUsername: String) -> Result<String, UsernameValidationError> {
             var isUsernameValid = true
             var usernameCharacters = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
             usernameCharacters.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
             usernameCharacters.insert(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
             usernameCharacters.insert("_")
-            for c in self.contentExternalState.username.unicodeScalars {
+            for c in inputUsername.unicodeScalars {
                 if !usernameCharacters.contains(c) {
                     isUsernameValid = false
                     break
                 }
             }
             if !isUsernameValid {
+                return .failure(.unsupportedCharacters)
+            }
+            if let first = inputUsername.unicodeScalars.first {
+                if CharacterSet.decimalDigits.contains(first) {
+                    return .failure(.startsWithNumber)
+                }
+            }
+            if inputUsername.count < 5 {
+                return .failure(.insufficientLength)
+            }
+            return .success(inputUsername)
+        }
+        
+        static func validatedParams(inputName: String, inputUsername: String) -> (name: String, username: String)? {
+            if inputName.isEmpty {
                 return nil
             }
-            return (self.contentExternalState.name, self.contentExternalState.username)
+            guard case let .success(username) = validatedUsername(inputUsername: inputUsername) else {
+                return nil
+            }
+            return (inputName, username)
+        }
+        
+        private func validatedParams() -> (name: String, username: String)? {
+            if !self.contentExternalState.usernameIsChecked {
+                return nil
+            }
+            return CreateBotSheetComponent.View.validatedParams(inputName: contentExternalState.name, inputUsername: self.contentExternalState.username)
         }
         
         private func performCreateBot() {
@@ -413,6 +622,7 @@ private final class CreateBotSheetComponent: Component {
                     return
                 }
                 let context = component.context
+                self.isCompleted = true
                 self.animateOut.invoke(Action { [weak controller, weak navigationController] _ in
                     if let controller, let navigationController {
                         controller.dismiss(completion: { [weak navigationController] in
@@ -466,8 +676,15 @@ private final class CreateBotSheetComponent: Component {
             let theme = environmentValue.theme
 
             let dismiss: (Bool) -> Void = { [weak self] animated in
+                guard let self, let component = self.component else {
+                    return
+                }
+                if !self.isCompleted {
+                    self.isCompleted = true
+                    component.completion(nil)
+                }
                 if animated {
-                    self?.animateOut.invoke(Action { _ in
+                    self.animateOut.invoke(Action { _ in
                         if let controller = controller() {
                             controller.dismiss(completion: nil)
                         }
@@ -544,7 +761,17 @@ private final class CreateBotSheetComponent: Component {
                         isCentered: environmentValue.metrics.widthClass == .regular,
                         screenSize: availableSize,
                         regularMetricsSize: nil,
-                        dismiss: { animated in
+                        dismiss: { [weak self] animated in
+                            guard let self else {
+                                return
+                            }
+                            if animated {
+                                if !self.attemptNavigation(complete: {
+                                    dismiss(animated)
+                                }) {
+                                    return
+                                }
+                            }
                             dismiss(animated)
                         }
                     )
@@ -581,7 +808,7 @@ public class CreateBotScreen: ViewControllerComponentContainer {
         initialUsername: String?,
         initialTitle: String?,
         openAutomatically: Bool,
-        completion: @escaping (EnginePeer.Id) -> Void
+        completion: @escaping (EnginePeer.Id?) -> Void
     ) async {
         self.context = context
         
@@ -609,6 +836,14 @@ public class CreateBotScreen: ViewControllerComponentContainer {
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal
         self.blocksBackgroundWhenInOverlay = true
+        
+        self.attemptNavigation = { [weak self] complete in
+            guard let self, let componentView = self.node.hostView.componentView as? CreateBotSheetComponent.View else {
+                return true
+            }
+            
+            return componentView.attemptNavigation(complete: complete)
+        }
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -777,13 +1012,16 @@ private final class ActionButtonsComponent: Component {
 private final class EditLabelComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let action: () -> Void
     
     init(
         theme: PresentationTheme,
-        strings: PresentationStrings
+        strings: PresentationStrings,
+        action: @escaping () -> Void
     ) {
         self.theme = theme
         self.strings = strings
+        self.action = action
     }
     
     static func ==(lhs: EditLabelComponent, rhs: EditLabelComponent) -> Bool {
@@ -805,10 +1043,21 @@ private final class EditLabelComponent: Component {
 
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTapGesture(_:))))
         }
 
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func onTapGesture(_ recognizer: UITapGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            if case .ended = recognizer.state {
+                component.action()
+            }
         }
         
         func update(component: EditLabelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -846,6 +1095,7 @@ private final class EditLabelComponent: Component {
             )
             if let backgroundView = self.background.view {
                 if backgroundView.superview == nil {
+                    backgroundView.isUserInteractionEnabled = false
                     self.addSubview(backgroundView)
                 }
                 transition.setFrame(view: backgroundView, frame: backgroundFrame)
@@ -853,6 +1103,7 @@ private final class EditLabelComponent: Component {
             
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
                     self.addSubview(titleView)
                 }
                 transition.setPosition(view: titleView, position: titleFrame.center)

@@ -13,10 +13,14 @@ import TextFormat
 import PlainButtonComponent
 import CheckComponent
 import ShimmerEffect
+import TextSelectionNode
+import Pasteboard
+import Speak
 
 final class TextProcessingTextAreaComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let titlePrefix: String
     let title: String
     let titleAction: ((UIView) -> Void)?
@@ -26,10 +30,13 @@ final class TextProcessingTextAreaComponent: Component {
     let text: TextWithEntities?
     let loadingStateMeasuringText: String?
     let textCorrectionRanges: [Range<Int>]
+    let present: (ViewController, Any?) -> Void
+    let rootViewForTextSelection: () -> UIView?
 
     init(
         context: AccountContext,
         theme: PresentationTheme,
+        strings: PresentationStrings,
         titlePrefix: String,
         title: String,
         titleAction: ((UIView) -> Void)?,
@@ -38,10 +45,13 @@ final class TextProcessingTextAreaComponent: Component {
         emojify: (value: Bool, toggle: () -> Void)?,
         text: TextWithEntities?,
         loadingStateMeasuringText: String?,
-        textCorrectionRanges: [Range<Int>]
+        textCorrectionRanges: [Range<Int>],
+        present: @escaping (ViewController, Any?) -> Void,
+        rootViewForTextSelection: @escaping () -> UIView?
     ) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         self.titlePrefix = titlePrefix
         self.isExpanded = isExpanded
         self.copyAction = copyAction
@@ -51,6 +61,8 @@ final class TextProcessingTextAreaComponent: Component {
         self.text = text
         self.loadingStateMeasuringText = loadingStateMeasuringText
         self.textCorrectionRanges = textCorrectionRanges
+        self.present = present
+        self.rootViewForTextSelection = rootViewForTextSelection
     }
 
     static func ==(lhs: TextProcessingTextAreaComponent, rhs: TextProcessingTextAreaComponent) -> Bool {
@@ -58,6 +70,9 @@ final class TextProcessingTextAreaComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.titlePrefix != rhs.titlePrefix {
@@ -115,15 +130,29 @@ final class TextProcessingTextAreaComponent: Component {
         private let measureLoadingText = ComponentView<Empty>()
         private var shimmerEffectNode: ShimmerEffectNode?
         
+        private var textSelectionNode: TextSelectionNode?
+        private let textSelectionContainer: UIView
+        private let textSelectionKnobContainer: UIView
+        private let textSelectionKnobSurface: UIView
+        
+        private var currentSpeechHolder: SpeechSynthesizerHolder?
+        
         override init(frame: CGRect) {
             self.textContainer = UIView()
             self.textContainer.clipsToBounds = true
+            
+            self.textSelectionContainer = UIView()
+            self.textSelectionContainer.isUserInteractionEnabled = false
+            self.textSelectionKnobContainer = UIView()
+            self.textSelectionKnobSurface = UIView()
+            self.textSelectionKnobContainer.addSubview(self.textSelectionKnobSurface)
             
             self.titleButton = HighlightTrackingButton()
             
             super.init(frame: frame)
             
             self.addSubview(self.textContainer)
+            self.addSubview(self.textSelectionContainer)
             self.addSubview(self.titleButton)
             
             self.titleButton.highligthedChanged = { [weak self] highighed in
@@ -459,6 +488,96 @@ final class TextProcessingTextAreaComponent: Component {
                 }
             }
             
+            if component.text != nil, component.isExpanded?.value ?? true, let textView = self.text.view as? MultilineTextWithEntitiesComponent.View {
+                let textSelectionNode: TextSelectionNode
+                if let current = self.textSelectionNode {
+                    textSelectionNode = current
+                } else {
+                    textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: component.theme.list.itemAccentColor.withMultipliedAlpha(0.5), knob: component.theme.list.itemAccentColor, isDark: component.theme.overallDarkAppearance), strings: component.strings, textNodeOrView: .node(textView.textNode), updateIsActive: { [weak self] value in
+                        guard let self else {
+                            return
+                        }
+                        let _ = self
+                    }, present: { [weak self] c, a in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.present(c, a)
+                    }, rootView: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return nil
+                        }
+                        return component.rootViewForTextSelection()
+                    }, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        switch action {
+                        case .copy:
+                            storeAttributedTextInPasteboard(text)
+                        case .share:
+                            let shareController = component.context.sharedContext.makeShareController(context: component.context, subject: .text(text.string), forceExternal: true, shareStory: nil, enqueued: nil, actionCompleted: nil)
+                            component.present(shareController, nil)
+                        case .lookup:
+                            let controller = UIReferenceLibraryViewController(term: text.string)
+                            if let window = self.window {
+                                controller.popoverPresentationController?.sourceView = window
+                                controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                                window.rootViewController?.present(controller, animated: true)
+                            }
+                        case .speak:
+                            if let speechHolder = speakText(context: component.context, text: text.string) {
+                                speechHolder.completion = { [weak self, weak speechHolder] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.currentSpeechHolder === speechHolder {
+                                        self.currentSpeechHolder = nil
+                                    }
+                                }
+                                self.currentSpeechHolder = speechHolder
+                            }
+                        case .translate:
+                            break
+                        case .quote:
+                            break
+                        }
+                    })
+                    
+                    textSelectionNode.enableLookup = true
+                    textSelectionNode.enableTranslate = false
+                    textSelectionNode.menuSkipCoordnateConversion = false
+                    textSelectionNode.canBeginSelection = { _ in
+                        return true
+                    }
+                    self.textSelectionNode = textSelectionNode
+                    
+                    self.textSelectionContainer.insertSubview(self.textSelectionKnobContainer, at: 0)
+                    self.textContainer.insertSubview(textSelectionNode.highlightAreaNode.view, belowSubview: textView)
+                    self.textContainer.insertSubview(textSelectionNode.view, aboveSubview: textView)
+                }
+                
+                textSelectionNode.frame = textView.frame
+                textSelectionNode.highlightAreaNode.frame = textView.frame
+                self.textSelectionKnobSurface.frame = textView.frame
+            } else {
+                for subview in Array(self.textSelectionContainer.subviews) {
+                    subview.removeFromSuperview()
+                }
+                if self.textSelectionKnobContainer.superview != nil {
+                    self.textSelectionKnobContainer.removeFromSuperview()
+                }
+                if let textSelectionNode = self.textSelectionNode {
+                    self.textSelectionNode = nil
+                    textSelectionNode.view.removeFromSuperview()
+                    
+                    if textSelectionNode.highlightAreaNode.view.superview != nil {
+                        textSelectionNode.highlightAreaNode.view.removeFromSuperview()
+                    }
+                }
+            }
+            
             if component.text == nil {
                 let shimmerEffectNode: ShimmerEffectNode
                 if let current = self.shimmerEffectNode {
@@ -568,6 +687,7 @@ final class TextProcessingTextAreaComponent: Component {
             }
             
             transition.setFrame(view: self.textContainer, frame: textContainerFrame)
+            transition.setFrame(view: self.textSelectionContainer, frame: textContainerFrame)
             contentHeight += textContainerFrame.height
 
             contentHeight += bottomInset

@@ -190,7 +190,7 @@ public final class MultilineTextWithEntitiesComponent: Component {
     
     public final class View: UIView {
         var spoilerTextNode: ImmediateTextNodeWithEntities?
-        let textNode: ImmediateTextNodeWithEntities
+        public let textNode: ImmediateTextNodeWithEntities
         
         public override init(frame: CGRect) {
             self.textNode = ImmediateTextNodeWithEntities()

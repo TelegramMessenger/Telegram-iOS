@@ -459,18 +459,18 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         )
         self.textNode.visibility = true
         
-        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: defaultDarkPresentationTheme.list.itemAccentColor.withMultipliedAlpha(0.5), knob: defaultDarkPresentationTheme.list.itemAccentColor, isDark: true), strings: presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: defaultDarkPresentationTheme.list.itemAccentColor.withMultipliedAlpha(0.5), knob: defaultDarkPresentationTheme.list.itemAccentColor, isDark: true), strings: presentationData.strings, textNodeOrView: .node(self.textNode), updateIsActive: { [weak self] value in
             guard let self else {
                 return
             }
             let _ = self
         }, present: { c, a in
             present(c, a)
-        }, rootNode: { [weak self] in
+        }, rootView: { [weak self] in
             guard let self else {
                 return nil
             }
-            return self.controllerInteraction?.controller()?.displayNode
+            return self.controllerInteraction?.controller()?.displayNode.view
         }, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
             guard let self else {
                 return

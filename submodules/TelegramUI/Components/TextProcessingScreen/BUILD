@@ -41,6 +41,9 @@ swift_library(
         "//submodules/Markdown",
         "//submodules/TelegramUIPreferences",
         "//submodules/ChatSendMessageActionUI",
+        "//submodules/TextSelectionNode",
+        "//submodules/Pasteboard",
+        "//submodules/Speak",
     ],
     visibility = [
         "//visibility:public",

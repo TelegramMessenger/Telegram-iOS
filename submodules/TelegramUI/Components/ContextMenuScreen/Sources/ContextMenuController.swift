@@ -85,13 +85,13 @@ public final class ContextMenuControllerImpl: ViewController, KeyShortcutRespond
         } else {
             self.layout = layout
             
-            if let presentationArguments = self.presentationArguments as? ContextMenuControllerPresentationArguments, let (sourceNode, sourceRect, containerNode, containerRect) = presentationArguments.sourceNodeAndRect() {
+            if let presentationArguments = self.presentationArguments as? ContextMenuControllerPresentationArguments, let (sourceView, sourceRect, containerView, containerRect) = presentationArguments.sourceViewAndRect() {
                 if self.skipCoordnateConversion {
                     self.contextMenuNode.sourceRect = sourceRect
                     self.contextMenuNode.containerRect = containerRect
                 } else {
-                    self.contextMenuNode.sourceRect = sourceNode.view.convert(sourceRect, to: nil)
-                    self.contextMenuNode.containerRect = containerNode.view.convert(containerRect, to: nil)
+                    self.contextMenuNode.sourceRect = sourceView.convert(sourceRect, to: nil)
+                    self.contextMenuNode.containerRect = containerView.convert(containerRect, to: nil)
                 }
             } else {
                 self.contextMenuNode.sourceRect = nil
