@@ -896,7 +896,7 @@ final class StoryContentCaptionComponent: Component {
                     self.textSelectionKnobContainer.addSubview(textSelectionKnobSurface)
                 }
                 
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: component.theme.list.itemAccentColor, isDark: true), strings: component.strings, textNode: textNode, updateIsActive: { [weak self] value in
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: component.theme.list.itemAccentColor, isDark: true), strings: component.strings, textNodeOrView: .node(textNode), updateIsActive: { [weak self] value in
                     guard let self else {
                         return
                     }
@@ -912,8 +912,8 @@ final class StoryContentCaptionComponent: Component {
                         return
                     }
                     component.controller()?.presentInGlobalOverlay(c, with: a)
-                }, rootNode: { [weak controller] in
-                    return controller?.displayNode
+                }, rootView: { [weak controller] in
+                    return controller?.displayNode.view
                 }, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
                     guard let self, let component = self.component else {
                         return

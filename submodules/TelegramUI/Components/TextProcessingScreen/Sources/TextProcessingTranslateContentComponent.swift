@@ -83,6 +83,8 @@ final class TextProcessingTranslateContentComponent: Component {
     let mode: Mode
     let copyAction: (() -> Void)?
     let displayLanguageSelectionMenu: (UIView, String, TelegramComposeAIMessageMode.StyleId, Bool,  @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void) -> Void
+    let present: (ViewController, Any?) -> Void
+    let rootViewForTextSelection: () -> UIView?
 
     init(
         context: AccountContext,
@@ -93,7 +95,9 @@ final class TextProcessingTranslateContentComponent: Component {
         inputText: TextWithEntities,
         mode: Mode,
         copyAction: (() -> Void)?,
-        displayLanguageSelectionMenu: @escaping (UIView, String, TelegramComposeAIMessageMode.StyleId, Bool, @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void) -> Void
+        displayLanguageSelectionMenu: @escaping (UIView, String, TelegramComposeAIMessageMode.StyleId, Bool, @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void) -> Void,
+        present: @escaping (ViewController, Any?) -> Void,
+        rootViewForTextSelection: @escaping () -> UIView?
     ) {
         self.context = context
         self.theme = theme
@@ -104,6 +108,8 @@ final class TextProcessingTranslateContentComponent: Component {
         self.mode = mode
         self.copyAction = copyAction
         self.displayLanguageSelectionMenu = displayLanguageSelectionMenu
+        self.present = present
+        self.rootViewForTextSelection = rootViewForTextSelection
     }
 
     static func ==(lhs: TextProcessingTranslateContentComponent, rhs: TextProcessingTranslateContentComponent) -> Bool {
@@ -354,6 +360,7 @@ final class TextProcessingTranslateContentComponent: Component {
                     component: AnyComponent(TextProcessingTextAreaComponent(
                         context: component.context,
                         theme: component.theme,
+                        strings: component.strings,
                         titlePrefix: fromPrefix,
                         title: localizedLanguageName(strings: component.strings, language: component.externalState.sourceLanguage ?? ""),
                         titleAction: nil,
@@ -373,7 +380,9 @@ final class TextProcessingTranslateContentComponent: Component {
                         emojify: nil,
                         text: component.inputText,
                         loadingStateMeasuringText: nil,
-                        textCorrectionRanges: []
+                        textCorrectionRanges: [],
+                        present: component.present,
+                        rootViewForTextSelection: component.rootViewForTextSelection
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
@@ -396,6 +405,7 @@ final class TextProcessingTranslateContentComponent: Component {
                 component: AnyComponent(TextProcessingTextAreaComponent(
                     context: component.context,
                     theme: component.theme,
+                    strings: component.strings,
                     titlePrefix: toPrefix,
                     title: toTitle,
                     titleAction: component.mode == .translate ? { [weak self] sourceView in
@@ -441,7 +451,9 @@ final class TextProcessingTranslateContentComponent: Component {
                     ) : nil,
                     text: component.externalState.result?.text,
                     loadingStateMeasuringText: component.inputText.text,
-                    textCorrectionRanges: component.mode == .fix ? (component.externalState.result?.textCorrectionRanges ?? []) : []
+                    textCorrectionRanges: component.mode == .fix ? (component.externalState.result?.textCorrectionRanges ?? []) : [],
+                    present: component.present,
+                    rootViewForTextSelection: component.rootViewForTextSelection
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)

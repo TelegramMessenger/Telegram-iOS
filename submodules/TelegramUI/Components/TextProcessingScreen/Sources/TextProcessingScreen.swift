@@ -84,6 +84,7 @@ final class TextProcessingContentComponent: Component {
 
     final class View: UIView {
         private var component: TextProcessingContentComponent?
+        private var environment: ViewControllerComponentContainer.Environment?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
         
@@ -213,6 +214,7 @@ final class TextProcessingContentComponent: Component {
             }
             
             self.component = component
+            self.environment = environment
             self.state = state
             
             let sideInset: CGFloat = 16.0
@@ -351,7 +353,13 @@ final class TextProcessingContentComponent: Component {
                     inputText: component.inputText,
                     mode: .translate,
                     copyAction: component.copyCurrentResult,
-                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu
+                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
+                    present: { [weak self] c, a in
+                        self?.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    rootViewForTextSelection: { [weak self] in
+                        return self?.environment?.controller()?.view
+                    }
                 ))
             case .stylize:
                 contentComponent = AnyComponent(TextProcessingTranslateContentComponent(
@@ -363,7 +371,13 @@ final class TextProcessingContentComponent: Component {
                     inputText: component.inputText,
                     mode: .stylize,
                     copyAction: component.copyCurrentResult,
-                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu
+                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
+                    present: { [weak self] c, a in
+                        self?.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    rootViewForTextSelection: { [weak self] in
+                        return self?.environment?.controller()?.view
+                    }
                 ))
             case .fix:
                 contentComponent = AnyComponent(TextProcessingTranslateContentComponent(
@@ -375,7 +389,13 @@ final class TextProcessingContentComponent: Component {
                     inputText: component.inputText,
                     mode: .fix,
                     copyAction: component.copyCurrentResult,
-                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu
+                    displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
+                    present: { [weak self] c, a in
+                        self?.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    rootViewForTextSelection: { [weak self] in
+                        return self?.environment?.controller()?.view
+                    }
                 ))
             }
             

@@ -402,7 +402,7 @@ final class CreateBotContentComponent: Component {
                                     theme: environment.theme,
                                     strings: environment.strings,
                                     action: { [weak self] in
-                                        guard let self, let itemView = self.nameSection.findTaggedView(tag: self.usernameInputTag) as? ListMultilineTextFieldItemComponent.View else {
+                                        guard let self, let itemView = self.usernameSection.findTaggedView(tag: self.usernameInputTag) as? ListMultilineTextFieldItemComponent.View else {
                                             return
                                         }
                                         itemView.activateInput()

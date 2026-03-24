@@ -466,7 +466,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 topOffsetFraction = 1.0
             }
             
-            #if DEBUG
+            #if DEBUG && false
             if "".isEmpty {
                 topOffsetFraction = 1.0
             }
