@@ -99,7 +99,7 @@ final class TextProcessingContentComponent: Component {
         
         private var currentContent: (mode: Mode, view: ComponentView<Empty>)?
         
-        private var currentMode: Mode = .stylize
+        private var currentMode: Mode = .translate
         
         override init(frame: CGRect) {
             self.currentContentBackground = UIImageView()
@@ -204,6 +204,12 @@ final class TextProcessingContentComponent: Component {
             
             if self.component == nil {
                 self.stylizeState.displayStyleTooltip = component.shouldDisplayStyleNotice
+                switch component.mode {
+                case .edit:
+                    self.currentMode = .stylize
+                case .translate:
+                    self.currentMode = .translate
+                }
             }
             
             self.component = component

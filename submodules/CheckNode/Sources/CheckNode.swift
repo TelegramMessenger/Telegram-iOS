@@ -319,6 +319,7 @@ public class CheckLayer: CALayer {
         super.init()
         
         self.isOpaque = false
+        self.rasterizationScale = UIScreenScale
     }
     
     public override init(layer: Any) {

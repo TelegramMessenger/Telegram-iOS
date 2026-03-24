@@ -2350,8 +2350,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     }
                                 }
                             )
-                            if let createBotScreen {
-                                controller.push(createBotScreen)
+                            if let createBotScreen, let navigationController = controller.getNavigationController() {
+                                navigationController.pushViewController(createBotScreen)
                             }
                         }
                     default:
