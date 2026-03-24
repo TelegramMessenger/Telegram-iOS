@@ -1075,22 +1075,9 @@ private final class TextProcessingSheetComponent: Component {
 }
 
 public class TextProcessingScreen: ViewControllerComponentContainer {
-    public final class SendContextActions {
-        public let peerId: EnginePeer.Id
-        public let send: (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
-        public let schedule: (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void
-        
-        public init(peerId: EnginePeer.Id, send: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void, schedule: @escaping (TextWithEntities, ChatSendMessageActionSheetController.SendParameters?) -> Void) {
-            self.peerId = peerId
-            self.send = send
-            self.schedule = schedule
-        }
-    }
+    public typealias SendContextActions = TextProcessingScreenSendContextActions
     
-    public enum Mode {
-        case edit(saveRestoreStateId: EnginePeer.Id?, completion: (TextWithEntities) -> Void, send: ((TextWithEntities) -> Void)?, sendContextActions: SendContextActions?)
-        case translate(fromLanguage: String?)
-    }
+    public typealias Mode = TextProcessingScreenMode
     
     struct EditState: Codable {
         var selectedMode: Int32

@@ -4398,7 +4398,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         if let aiButton = self.aiButton {
             let transition: ContainedViewLayoutTransition = .immediate
             var aiButtonAlpha: CGFloat = self.heightDependentAiButtonAlpha
-            if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, !attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 aiButtonAlpha = 0.0
             }
             ComponentTransition(transition).setAlpha(view: aiButton.button, alpha: aiButtonAlpha)

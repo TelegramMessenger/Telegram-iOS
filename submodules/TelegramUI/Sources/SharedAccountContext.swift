@@ -100,6 +100,7 @@ import ChatParticipantRightsScreen
 import PeerCopyProtectionInfoScreen
 import ChatRankInfoScreen
 import RankChatPreviewItem
+import TextProcessingScreen
 import CreateBotScreen
 
 private final class AccountUserInterfaceInUseContext {
@@ -4363,6 +4364,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             rankRole: rankRole
         )
         return RankChatPreviewItem(context: context, systemStyle: .glass, theme: theme, componentTheme: theme, strings: strings, sectionId: sectionId, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, messageItems: [messageItem])
+    }
+    
+    public func makeTextProcessingScreen(
+        context: AccountContext,
+        mode: TextProcessingScreenMode,
+        ignoredTranslationLanguages: [String],
+        inputText: TextWithEntities,
+        copyResult: ((TextWithEntities) -> Void)?,
+        translateChat: ((String) -> Void)?
+    ) async -> ViewController {
+        return await TextProcessingScreen(
+            context: context,
+            mode: mode,
+            ignoredTranslationLanguages: ignoredTranslationLanguages,
+            inputText: inputText,
+            copyResult: copyResult,
+            translateChat: translateChat
+        )
     }
     
     public func makeCreateBotScreen(
