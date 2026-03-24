@@ -879,8 +879,15 @@ final class ComposePollScreenComponent: Component {
                 subject: pollAttachmentSubject,
                 availableButtons: availableButtons,
                 inputMediaNodeData: self.inputMediaNodeDataPromise.get() |> map(Optional.init),
-                present: { [weak self] c in
-                    (self?.environment?.controller() as? ComposePollScreen)?.parentController()?.push(c)
+                present: { [weak self] c, push in
+                    guard let parentController = (self?.environment?.controller() as? ComposePollScreen)?.parentController() else {
+                        return
+                    }
+                    if push {
+                        parentController.push(c)
+                    } else {
+                        parentController.present(c, in: .window(.root))
+                    }
                 },
                 completion: { [weak self] media in
                 guard let self else {

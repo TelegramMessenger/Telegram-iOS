@@ -615,6 +615,13 @@ final class ContextSourceContainer: ASDisplayNode {
         self.presentationData = presentationData
         self.validLayout = layout
         
+        var layout = layout
+        if self.sources.count > 1 {
+            var intrinsicInsets = layout.intrinsicInsets
+            intrinsicInsets.bottom += 30.0
+            layout = layout.withUpdatedIntrinsicInsets(intrinsicInsets)
+        }
+        
         var childLayout = layout
         
         if let activeSource = self.activeSource {

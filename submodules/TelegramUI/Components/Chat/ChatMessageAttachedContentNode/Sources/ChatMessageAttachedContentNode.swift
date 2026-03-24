@@ -105,7 +105,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     
     private var inlineMediaValue: InlineMedia?
     
-    //private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
     private var linkHighlightingNode: LinkHighlightingNode?
     
     private var context: AccountContext?
@@ -1558,7 +1557,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         if displayLine {
                             var pattern: MessageInlineBlockBackgroundView.Pattern?
-                            if let backgroundEmojiId = author?.backgroundEmojiId {
+                            if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                                
+                            } else if let backgroundEmojiId = author?.backgroundEmojiId {
                                 pattern = MessageInlineBlockBackgroundView.Pattern(
                                     context: context,
                                     fileId: backgroundEmojiId,
