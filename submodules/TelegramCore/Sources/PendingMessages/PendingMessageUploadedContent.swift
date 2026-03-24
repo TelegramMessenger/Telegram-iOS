@@ -774,7 +774,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                             |> mapError { _ -> PendingMessageUploadError in }
                             |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                 if let inputPeer = inputPeer {
-                                    if autoclearMessageAttribute != nil || photoVideo != nil {
+                                    if autoclearMessageAttribute != nil || (photoVideo != nil && !isGrouped) {
                                         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds, video: video)), text), reuploadInfo: nil, cacheReferenceKey: nil)))
                                     }
                                     return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(.init(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds, video: video))))
@@ -793,8 +793,11 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                                 if hasSpoiler {
                                                     flags |= 1 << 1
                                                 }
+                                                if let _ = video {
+                                                    flags |= 1 << 2
+                                                }
                                                 
-                                                let result: PendingMessageUploadedContentResult = .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(.init(flags: flags, id: .inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference))), ttlSeconds: ttlSeconds, video: nil)), text), reuploadInfo: nil, cacheReferenceKey: nil))
+                                                let result: PendingMessageUploadedContentResult = .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaPhoto(.init(flags: flags, id: .inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference))), ttlSeconds: ttlSeconds, video: video)), text), reuploadInfo: nil, cacheReferenceKey: nil))
                                                 if let _ = ttlSeconds {
                                                     return .single(result)
                                                 } else {

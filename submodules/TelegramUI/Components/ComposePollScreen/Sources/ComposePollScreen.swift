@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import PresentationDataUtils
 import TelegramStringFormatting
 import ComponentFlow
 import ComponentDisplayAdapters
@@ -33,6 +34,7 @@ import ChatScheduleTimeController
 import ContextUI
 import StickerPeekUI
 import EdgeEffect
+import LocationUI
 
 public final class ComposedPoll {
     public struct Text {
@@ -457,6 +459,30 @@ final class ComposePollScreenComponent: Component {
             case isUploading
         }
         
+        var hasAnyData: Bool {
+            if self.pollTextInputState.hasText {
+                return true
+            }
+            if self.pollDescriptionInputState.hasText {
+                return true
+            }
+            if self.pollDescriptionMedia != nil {
+                return true
+            }
+            for pollOption in self.pollOptions {
+                if pollOption.textInputState.text.length > 0 {
+                    return true
+                }
+            }
+            if self.quizAnswerTextInputState.hasText {
+                return true
+            }
+            if self.quizAnswerMedia != nil {
+                return true
+            }
+            return false
+        }
+        
         func validatedInput() -> ValidatedInput? {
             if self.pollTextInputState.text.length == 0 {
                 return nil
@@ -613,7 +639,7 @@ final class ComposePollScreenComponent: Component {
         }
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-            self.endEditing(true)
+            self.deactivateInput()
         }
         
         func isPanGestureEnabled() -> Bool {
@@ -645,10 +671,12 @@ final class ComposePollScreenComponent: Component {
             let needsInputActivation: Bool = !"".isEmpty
             
             var height: CGFloat = 0.0
-            if case .emoji = self.currentInputMode, let inputData = self.inputMediaNodeData {
+            if case .emoji = self.currentInputMode, var inputData = self.inputMediaNodeData {
                 if let updatedTag = self.collectTextInputStates().first(where: { $1.isEditing })?.view.currentTag {
                     self.inputMediaNodeTargetTag = updatedTag
                 }
+                
+                inputData.stickers = nil
                 
                 let inputMediaNode: ChatEntityKeyboardInputNode
                 var inputMediaNodeTransition = transition
@@ -661,10 +689,15 @@ final class ComposePollScreenComponent: Component {
                     inputMediaNode = ChatEntityKeyboardInputNode(
                         context: component.context,
                         currentInputData: inputData,
-                        updatedInputData: self.inputMediaNodeDataPromise.get(),
+                        updatedInputData: self.inputMediaNodeDataPromise.get()
+                        |> map { inputData in
+                            var inputData = inputData
+                            inputData.stickers = nil
+                            return inputData
+                        },
                         defaultToEmojiTab: true,
                         opaqueTopPanelBackground: false,
-                        useOpaqueTheme: true,
+                        useOpaqueTheme: false, //true,
                         interaction: self.inputMediaInteraction,
                         chatPeerId: nil,
                         stateContext: self.inputMediaNodeStateContext
@@ -708,7 +741,7 @@ final class ComposePollScreenComponent: Component {
                     businessIntro: nil
                 )
                 
-                self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor
+                //self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor
                 
                 let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight < 100.0 ? inputHeight - bottomContainerInset : inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
                 let inputNodeHeight = heightAndOverflow.0
@@ -849,7 +882,7 @@ final class ComposePollScreenComponent: Component {
                 return
             }
             
-            self.endEditing(true)
+            self.deactivateInput()
             
             guard replace || !self.openAttachMediaContextMenu(subject: subject) else {
                 return
@@ -1061,9 +1094,26 @@ final class ComposePollScreenComponent: Component {
                     })))
                     
                     let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value(0)), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [media.media.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-                    let gallery = component.context.sharedContext.makeGalleryController(context: component.context, source: .standaloneMessage(message, nil), streamSingleVideo: true, isPreview: true)
                     
-                    let source: ContextContentSource = .controller(ComposePollContextControllerContentSource(controller: gallery, sourceView: nil, sourceRect: .zero))
+                    let source: ContextContentSource
+                    
+                    if let _ = media.media.media as? TelegramMediaMap {
+                        let controller = LocationViewController(
+                            context: component.context,
+                            subject: EngineMessage(message),
+                            isPreview: true,
+                            params: LocationViewParams(
+                                sendLiveLocation: { _ in },
+                                stopLiveLocation: { _ in },
+                                openUrl: { _ in },
+                                openPeer: { _ in }
+                            )
+                        )
+                        source = .controller(ComposePollContextControllerContentSource(controller: controller, sourceView: nil, sourceRect: .zero))
+                    } else {
+                        let gallery = component.context.sharedContext.makeGalleryController(context: component.context, source: .standaloneMessage(message, nil), streamSingleVideo: true, isPreview: true)
+                        source = .controller(ComposePollContextControllerContentSource(controller: gallery, sourceView: nil, sourceRect: .zero))
+                    }
                     
                     let contextController = makeContextController(
                         presentationData: presentationData,
@@ -1166,6 +1216,15 @@ final class ComposePollScreenComponent: Component {
             (self.environment?.controller() as? ComposePollScreen)?.parentController()?.push(controller)
         }
         
+        func deactivateInput() {
+            self.currentInputMode = .keyboard
+            if hasFirstResponder(self) {
+                self.endEditing(true)
+            } else {
+                self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged(isFocused: false))))
+            }
+        }
+        
         func update(component: ComposePollScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -1221,7 +1280,7 @@ final class ComposePollScreenComponent: Component {
                         hasStickers: true,
                         hasGifs: false,
                         hideBackground: true,
-                        maskEdge: .fade,
+                        maskEdge: .clip,
                         sendGif: nil
                     )
                 )
@@ -1433,7 +1492,7 @@ final class ComposePollScreenComponent: Component {
                 strings: environment.strings,
                 resetText: nil,
                 assumeIsEditing: self.inputMediaNodeTargetTag === self.pollDescriptionFieldTag,
-                characterLimit: 1024, //TODO
+                characterLimit: 1024,
                 attachment: pollDescriptionAttachment,
                 emptyLineHandling: .allowed,
                 returnKeyType: .default,
@@ -1564,7 +1623,7 @@ final class ComposePollScreenComponent: Component {
                         }
                         if let index = self.pollOptions.firstIndex(where: { $0.id == optionId }) {
                             if index == self.pollOptions.count - 1 {
-                                self.endEditing(true)
+                                self.deactivateInput()
                             } else {
                                 if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[index + 1].id] {
                                     if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
@@ -1865,6 +1924,9 @@ final class ComposePollScreenComponent: Component {
                             return
                         }
                         self.isAnonymous = !self.isAnonymous
+                        if self.isAnonymous {
+                            self.canAddOptions = false
+                        }
                         self.state?.updated(transition: .spring(duration: 0.4))
                     })),
                     action: nil
@@ -2271,7 +2333,7 @@ final class ComposePollScreenComponent: Component {
                                 guard let self else {
                                     return
                                 }
-                                self.endEditing(true)
+                                self.deactivateInput()
                             },
                             backspaceKeyAction: nil,
                             selection: nil,
@@ -2614,7 +2676,7 @@ final class ComposePollScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: barButtonSize
+                containerSize: CGSize(width: 120.0, height: barButtonSize.height)
             )
             let doneButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - 16.0 - doneButtonSize.width, y: 16.0), size: doneButtonSize)
             if let doneButtonView = self.doneButton.view {
@@ -2865,11 +2927,32 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     }
     
     public func requestDismiss(completion: @escaping () -> Void) {
-        completion()
+        guard let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
+            return
+        }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        if componentView.hasAnyData {
+            //TODO:localize
+            let text = "Discard poll?"
+            let controller = textAlertController(context: self.context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Attachment_CancelSelectionAlertYes, action: {
+                completion()
+            })])
+            self.present(controller, in: .window(.root))
+        } else {
+            completion()
+        }
     }
     
     public func shouldDismissImmediately() -> Bool {
-        return true
+        guard let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
+            return true
+        }
+        if componentView.hasAnyData {
+            return false
+        } else {
+            return true
+        }
     }
 }
 
@@ -2917,4 +3000,16 @@ private final class ComposePollContextControllerContentSource: ContextController
             controller.viewDidAppear(false)
         }
     }
+}
+
+private func hasFirstResponder(_ view: UIView) -> Bool {
+    if view.isFirstResponder {
+        return true
+    }
+    for subview in view.subviews {
+        if hasFirstResponder(subview) {
+            return true
+        }
+    }
+    return false
 }

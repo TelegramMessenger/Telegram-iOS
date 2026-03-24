@@ -605,8 +605,10 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0
                     strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { finished in
                         if finished && strongSelf.highlightedBackgroundNode.supernode != strongSelf {
+                            let highlightOffset: CGFloat = strongSelf.currentResult != nil ? 7.0 : 0.0
+                            
                             strongSelf.highlightedBackgroundNode.layer.compositingFilter = nil
-                            strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: strongSelf.highlightedBackgroundNode.frame.size)
+                            strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel + highlightOffset), size: strongSelf.highlightedBackgroundNode.frame.size)
                             strongSelf.insertSubnode(strongSelf.highlightedBackgroundNode, at: 0)
                         }
                     })
@@ -1250,7 +1252,8 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
 
                     node.buttonNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: width - 2.0, height: contentHeight))
                     if node.highlightedBackgroundNode.supernode == node {
-                        node.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: contentHeight + UIScreenPixel))
+                        let highlightOffset: CGFloat = node.currentResult != nil ? 7.0 : 0.0
+                        node.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel + highlightOffset), size: CGSize(width: width, height: contentHeight + UIScreenPixel - highlightOffset))
                     }
                     node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
                     node.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentLayoutHeight - UIScreenPixel), size: CGSize(width: width - leftInset - 10.0, height: UIScreenPixel))
@@ -1358,6 +1361,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     private final class StateBridge: ComponentState {
     }
     
+    private let measureTextNode = ImmediateTextNode()
     private let textField = ComponentView<Empty>()
     private let textFieldState = StateBridge()
     private let leftAccessoryButton: HighlightableButtonNode
@@ -1399,7 +1403,6 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     var modeSelectorPressed: (() -> Void)?
     var requestSave: (() -> Void)?
     
-    static let characterLimit = 100
     private static let leftInset: CGFloat = 50.0
     private static let rightInset: CGFloat = 10.0
     private static let verticalInset: CGFloat = 15.0
@@ -1461,58 +1464,52 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     private var textFieldView: TextFieldComponent.View? {
         return self.textField.view as? TextFieldComponent.View
     }
-        
-    private func makeTextFieldComponent() -> TextFieldComponent? {
-        guard let context = self.currentContext, let theme = self.currentTheme, let strings = self.currentStrings, let currentTextColor = self.currentTextColor, let currentPlaceholderColor = self.currentPlaceholderColor, let currentTintColor = self.currentTintColor, let font = self.currentFont else {
-            return nil
-        }
-        
-        return TextFieldComponent(
-            context: context,
-            theme: theme,
-            strings: strings,
-            externalState: self._textFieldExternalState,
-            fontSize: font.pointSize,
-            textColor: currentTextColor,
-            accentColor: currentTintColor,
-            insets: UIEdgeInsets(top: ChatMessagePollAddOptionNode.verticalInset, left: 8.0, bottom: ChatMessagePollAddOptionNode.verticalInset, right: 8.0),
-            hideKeyboard: self.currentFocusedTextInputIsMedia,
-            customInputView: nil,
-            placeholder: NSAttributedString(string: strings.CreatePoll_AddOption, font: font, textColor: currentPlaceholderColor),
-            placeholderVerticalOffset: 1.0 + UIScreenPixel,
-            resetText: nil,
-            isOneLineWhenUnfocused: false,
-            characterLimit: ChatMessagePollAddOptionNode.characterLimit,
-            enableInlineAnimations: true,
-            emptyLineHandling: .notAllowed,
-            formatMenuAvailability: .none,
-            returnKeyType: .done,
-            lockedFormatAction: {
-            },
-            present: { _ in
-            },
-            paste: { _ in
-            },
-            returnKeyAction: { [weak self] in
-                self?.requestSave?()
-            },
-            backspaceKeyAction: {
-                
-            }
-        )
-    }
-    
+
     private func updateTextFieldLayout(size: CGSize, forceUpdate: Bool) {
-        guard let component = self.makeTextFieldComponent() else {
+        guard let context = self.currentContext, let theme = self.currentTheme, let strings = self.currentStrings, let currentTextColor = self.currentTextColor, let currentPlaceholderColor = self.currentPlaceholderColor, let currentTintColor = self.currentTintColor, let font = self.currentFont else {
             return
         }
-        
+
         let textFieldSize = self.textField.update(
             transition: .immediate,
-            component: AnyComponent(component),
+            component: AnyComponent(
+                TextFieldComponent(
+                    context: context,
+                    theme: theme,
+                    strings: strings,
+                    externalState: self._textFieldExternalState,
+                    fontSize: font.pointSize,
+                    textColor: currentTextColor,
+                    accentColor: currentTintColor,
+                    insets: UIEdgeInsets(top: ChatMessagePollAddOptionNode.verticalInset, left: 8.0, bottom: ChatMessagePollAddOptionNode.verticalInset, right: 8.0),
+                    hideKeyboard: self.currentFocusedTextInputIsMedia,
+                    customInputView: nil,
+                    placeholder: NSAttributedString(string: strings.CreatePoll_AddOption, font: font, textColor: currentPlaceholderColor),
+                    placeholderVerticalOffset: 1.0 + UIScreenPixel,
+                    resetText: nil,
+                    isOneLineWhenUnfocused: false,
+                    characterLimit: 100,
+                    enableInlineAnimations: true,
+                    emptyLineHandling: .notAllowed,
+                    formatMenuAvailability: .none,
+                    returnKeyType: .done,
+                    lockedFormatAction: {
+                    },
+                    present: { _ in
+                    },
+                    paste: { _ in
+                    },
+                    returnKeyAction: { [weak self] in
+                        self?.requestSave?()
+                    },
+                    backspaceKeyAction: {
+                        
+                    }
+                )
+            ),
             environment: {},
             forceUpdate: forceUpdate,
-            containerSize: CGSize(width: self.currentTextWidth + 16.0, height: 1000.0)
+            containerSize: CGSize(width: self.currentTextWidth + 16.0 + 16.0, height: 1000.0)
         )
         
         if let textFieldView = self.textField.view {
@@ -1529,7 +1526,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
         }
         
         let updatedText = self._textFieldExternalState.text
-        let updatedMetrics = ChatMessagePollAddOptionNode.layoutMetrics(constrainedWidth: self.currentSize.width, text: updatedText, attachment: self.currentAttachment, font: font)
+        let updatedMetrics = ChatMessagePollAddOptionNode.layoutMetrics(measureTextNode: self.measureTextNode, constrainedWidth: self.currentSize.width, text: updatedText, font: font)
 
         let previousText = self.currentTextValue
         let previousIsEditing = self.currentIsEditing
@@ -1559,20 +1556,21 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
         self.updateAttachmentLayout(size: self.currentSize, tintColor: secondaryTextColor)
     }
     
-    private static func layoutMetrics(constrainedWidth: CGFloat, text: NSAttributedString, attachment: Attachment?, font: UIFont) -> (textWidth: CGFloat, contentHeight: CGFloat) {
-        let constrainedWidth = min(268.0, constrainedWidth)
-        let hasTrailingAccessory = attachment?.media != nil || !text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let textWidth = max(1.0, constrainedWidth - ChatMessagePollAddOptionNode.leftInset - ChatMessagePollAddOptionNode.rightInset - (hasTrailingAccessory ? ChatMessagePollAddOptionNode.attachmentInset : 0.0))
+    private static func layoutMetrics(measureTextNode: ImmediateTextNode?, constrainedWidth: CGFloat, text: NSAttributedString, font: UIFont) -> (textWidth: CGFloat, contentHeight: CGFloat) {
+        let textWidth = max(1.0, constrainedWidth - ChatMessagePollAddOptionNode.leftInset - ChatMessagePollAddOptionNode.rightInset - ChatMessagePollAddOptionNode.attachmentInset)
 
+        let measureTextNode = measureTextNode ?? ImmediateTextNode()
+        
         var measureText = text.string
         if measureText.hasSuffix("\n") || measureText.isEmpty {
             measureText += "|"
         }
-        let measureTextNode = ImmediateTextNode()
+        
         measureTextNode.maximumNumberOfLines = 0
+        measureTextNode.insets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
         measureTextNode.attributedText = NSAttributedString(string: measureText, font: font, textColor: .black)
         let measureSize = measureTextNode.updateLayout(CGSize(width: textWidth, height: .greatestFiniteMagnitude))
-
+                
         return (
             textWidth: textWidth,
             contentHeight: max(ChatMessagePollAddOptionNode.minHeight, measureSize.height + ChatMessagePollAddOptionNode.verticalInset * 2.0)
@@ -1580,6 +1578,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     }
     
     static func asyncLayout(_ maybeNode: ChatMessagePollAddOptionNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ incoming: Bool, _ focusedTextInputIsMedia: Bool, _ text: NSAttributedString, _ attachment: Attachment?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollAddOptionNode))) {
+        let currentMeasureTextNode = maybeNode?.measureTextNode
         return { context, presentationData, strings, incoming, focusedTextInputIsMedia, text, attachment, constrainedWidth in
             let font = presentationData.messageFont
             let textColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
@@ -1587,10 +1586,10 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
             let placeholderColor = (incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor).withMultipliedAlpha(0.7)
             let tintColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar
             
-            let constrainedWidth = min(268.0, constrainedWidth)
-            let metrics = ChatMessagePollAddOptionNode.layoutMetrics(constrainedWidth: constrainedWidth, text: text, attachment: attachment, font: font)
-            
+            let constrainedWidth = min(260.0, constrainedWidth)
+                        
             return (constrainedWidth, { width in
+                let metrics = ChatMessagePollAddOptionNode.layoutMetrics(measureTextNode: currentMeasureTextNode, constrainedWidth: width, text: text, font: font)
                 let size = CGSize(width: width, height: metrics.contentHeight)
                 return (size, { _, _ in
                     let node = maybeNode ?? ChatMessagePollAddOptionNode()
@@ -1630,7 +1629,11 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
     }
     
     @objc private func leftAccessoryPressed() {
-        self.modeSelectorPressed?()
+        if let _ = self.modeSelector?.view {
+            self.modeSelectorPressed?()
+        } else {
+            self.textFieldView?.activateInput()
+        }
     }
     
     @objc private func imageButtonPressed() {
@@ -1651,7 +1654,7 @@ private final class ChatMessagePollAddOptionNode: ASDisplayNode {
         self.addIconNode.frame = CGRect(origin: CGPoint(x: floor((ChatMessagePollAddOptionNode.leftInset - addIconSize.width) * 0.5) - 2.0, y: floor((size.height - addIconSize.height) * 0.5)), size: addIconSize)
         
         let displaySelector = self.currentIsEditing
-        self.addIconNode.isHidden = displaySelector
+        self.addIconNode.alpha = displaySelector ? 0.0 : 1.0
         
         if displaySelector {
             var playAnimation = false
@@ -2770,7 +2773,11 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         pollOptionsFinalizeLayouts.append((optionResult != nil, result.1))
                     }
 
-                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll
+                    var maxPollOptions: Int = 20
+                    if let data = item.context.currentAppConfiguration.with({ $0 }).data, let value = data["poll_answers_max"] as? Double {
+                        maxPollOptions = Int(value)
+                    }
+                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll && orderedPollOptions.count < maxPollOptions
                     if displayAddOption {
                         let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, item.controllerInteraction.focusedTextInputIsMedia, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, addOptionResult.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
@@ -3120,7 +3127,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                         timerNode.alpha = 0.0
                                     }
                                 }
-                                timerNode.update(size: resultSize, color: messageTheme.secondaryTextColor, deadlineTimeout: endDate, resultsHidden: poll.hideResultsUntilClose)
+                                timerNode.update(size: resultSize, color: messageTheme.secondaryTextColor, deadlineTimeout: endDate, resultsHidden: poll.hideResultsUntilClose, strings: item.presentationData.strings)
                                 timerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: verticalOffset + 31.0), size: CGSize(width: resultSize.width, height: 20.0))
                                 statusOffset += 6.0
                             } else if let timerNode = strongSelf.deadlineTimerNode {
@@ -3379,7 +3386,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             self.buttonSubmitActiveTextNode.isHidden = true
         }
 
-        let canDisplayNewOption = poll.openAnswers && !isClosed && !hasVoted && poll.pollId.namespace == Namespaces.Media.CloudPoll
+        let canDisplayNewOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll
         let canSubmitNewOption = !self.currentNewOptionText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !(self.currentNewOptionMedia?.requiresUpload ?? false)
         if canDisplayNewOption && canSubmitNewOption {
             self.votersNode.isHidden = true
@@ -3652,17 +3659,22 @@ private struct ArbitraryRandomNumberGenerator : RandomNumberGenerator {
     func next() -> UInt64 { return UInt64(drand48() * Double(UInt64.max)) }
 }
 
-private func stringForRemainingTime(_ duration: Int32) -> String {
+private func stringForRemainingTime(_ duration: Int32, strings: PresentationStrings, results: Bool) -> String {
+    let days = duration / (3600 * 24)
     let hours = duration / 3600
     let minutes = duration / 60 % 60
     let seconds = duration % 60
-    let durationString: String
-    if hours > 0 {
-        durationString = String(format: "%d:%02d:%02d", hours, minutes, seconds)
+    if days > 0 {
+        return results ? strings.MessagePoll_ResultsInDays(days) : strings.MessagePoll_EndsInDays(days)
     } else {
-        durationString = String(format: "%02d:%02d", minutes, seconds)
+        let durationString: String
+        if hours > 0 {
+            durationString = String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            durationString = String(format: "%02d:%02d", minutes, seconds)
+        }
+        return results ? strings.MessagePoll_ResultsIn(durationString).string : strings.MessagePoll_EndsIn(durationString).string
     }
-    return durationString
 }
 
 
@@ -3670,7 +3682,7 @@ private class DeadlineTimerNode: ASDisplayNode {
     private let textNode: ImmediateTextNode
     
     private var timer: SwiftSignalKit.Timer?
-    private var params: (size: CGSize, color: UIColor, deadlineTimeout: Int32, resultsHidden: Bool)?
+    private var params: (size: CGSize, color: UIColor, deadlineTimeout: Int32, resultsHidden: Bool, strings: PresentationStrings)?
     
     override init() {
         self.textNode = ImmediateTextNode()
@@ -3685,12 +3697,9 @@ private class DeadlineTimerNode: ASDisplayNode {
         self.timer?.invalidate()
     }
     
-    func update(size: CGSize, color: UIColor, deadlineTimeout: Int32, resultsHidden: Bool) {
-        self.params = (size, color, deadlineTimeout, resultsHidden)
-        
-        //TODO:localize
-        let prefix: String = resultsHidden ? "results in" : "ends in"
-        
+    func update(size: CGSize, color: UIColor, deadlineTimeout: Int32, resultsHidden: Bool, strings: PresentationStrings) {
+        self.params = (size, color, deadlineTimeout, resultsHidden, strings)
+                
         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         let duration = max(0, deadlineTimeout - currentTime)
         
@@ -3700,7 +3709,7 @@ private class DeadlineTimerNode: ASDisplayNode {
                     guard let self, let params = self.params else {
                         return
                     }
-                    self.update(size: params.size, color: params.color, deadlineTimeout: params.deadlineTimeout, resultsHidden: params.resultsHidden)
+                    self.update(size: params.size, color: params.color, deadlineTimeout: params.deadlineTimeout, resultsHidden: params.resultsHidden, strings: params.strings)
                 }, queue: Queue.mainQueue())
                 self.timer?.start()
             }
@@ -3713,7 +3722,7 @@ private class DeadlineTimerNode: ASDisplayNode {
         if duration == 0 {
             text = ""
         } else {
-            text = prefix + " " + stringForRemainingTime(duration)
+            text = stringForRemainingTime(duration, strings: strings, results: resultsHidden)
         }
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.with(size: 11.0, traits: .monospacedNumbers), textColor: color)
         let textSize = self.textNode.updateLayout(size)

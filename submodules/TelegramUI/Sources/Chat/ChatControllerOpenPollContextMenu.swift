@@ -133,7 +133,16 @@ extension ChatControllerImpl {
                         guard let self, let link else {
                             return
                         }
-                        UIPasteboard.general.string = link + "?option=\(pollOptionIndex)"
+                        let encodeBase64URL: (Data) -> String = { data in
+                            var string = data.base64EncodedString()
+                            string = string
+                                .replacingOccurrences(of: "+", with: "-")
+                                .replacingOccurrences(of: "/", with: "_")
+                            string = string.replacingOccurrences(of: "=", with: "")
+                            return string
+                        }
+                        let optionId = encodeBase64URL(pollOption.opaqueIdentifier)
+                        UIPasteboard.general.string = link + "?option=\(optionId)"
                         
                         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                         
@@ -156,15 +165,17 @@ extension ChatControllerImpl {
             }
             
             if let addedByPeer, let date = pollOption.date {
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self]  _, f in
-                    f(.default)
-
-                    guard let self else {
-                        return
-                    }
-                    let _ = self.context.engine.messages.deletePollOption(messageId: message.id, opaqueIdentifier: pollOption.opaqueIdentifier).start()
-                })))
+                if poll.isCreator || addedByPeer.id == self.context.account.peerId {
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self]  _, f in
+                        f(.default)
+                        
+                        guard let self else {
+                            return
+                        }
+                        let _ = self.context.engine.messages.deletePollOption(messageId: message.id, opaqueIdentifier: pollOption.opaqueIdentifier).start()
+                    })))
+                }
                 
                 items.append(.separator)
                 

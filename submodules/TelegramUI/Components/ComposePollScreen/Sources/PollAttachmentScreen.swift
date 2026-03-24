@@ -28,7 +28,7 @@ public func presentPollAttachmentScreen(
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
     subject: PollAttachmentSubject,
     availableButtons: [AttachmentButtonType],
-    inputMediaNodeData: Signal<ChatEntityKeyboardInputNode.InputData?, NoError> = .single(nil),
+    inputMediaNodeData: Signal<ChatEntityKeyboardInputNode.InputData?, NoError>? = nil,
     present: @escaping (ViewController, Bool) -> Void,
     completion: @escaping (AnyMediaReference) -> Void
 ) {
@@ -44,6 +44,27 @@ public func presentPollAttachmentScreen(
             return nil
         }
     )
+    let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData?>(nil)
+    if let inputMediaNodeData {
+        inputMediaNodeDataPromise.set(inputMediaNodeData)
+    } else if availableButtons.contains(.sticker) || availableButtons.contains(.emoji) {
+        inputMediaNodeDataPromise.set(.single(nil) |> then(
+            ChatEntityKeyboardInputNode.inputData(
+                context: context,
+                chatPeerId: nil,
+                areCustomEmojiEnabled: true,
+                hasTrending: false,
+                hasSearch: true,
+                hasStickers: true,
+                hasGifs: false,
+                hideBackground: true,
+                maskEdge: .fade,
+                sendGif: nil
+            )
+            |> map(Optional.init)
+        ))
+    }
+    
     attachmentController.requestController = { [weak attachmentController] type, controllerCompletion in
         let mediaPickerPollSubject: MediaPickerScreenImpl.Subject.AssetsMode.PollMode
         let filePickerPollSubject: AttachmentFileControllerSource.PollMode
@@ -178,7 +199,8 @@ public func presentPollAttachmentScreen(
             controllerCompletion(controller, controller.mediaPickerContext)
             return true
         case .sticker:
-            let _ = (inputMediaNodeData
+            let _ = (inputMediaNodeDataPromise.get()
+            |> filter { $0 != nil }
             |> take(1)
             |> deliverOnMainQueue).start(next: { content in
                 guard let content = content?.stickers else {
@@ -196,7 +218,8 @@ public func presentPollAttachmentScreen(
             })
             return true
         case .emoji:
-            let _ = (inputMediaNodeData
+            let _ = (inputMediaNodeDataPromise.get()
+            |> filter { $0 != nil }
             |> take(1)
             |> deliverOnMainQueue).start(next: { content in
                 guard let content = content?.emoji else {

@@ -976,9 +976,9 @@
             if (adjustments.paintingData.hasAnimation) {
                 grouping = false;
             }
-            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
-                grouping = false;
-            }
+//            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
+//                grouping = false;
+//            }
         }
     }
     
@@ -1544,9 +1544,9 @@
             if (adjustments.paintingData.hasAnimation) {
                 grouping = false;
             }
-            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
-                grouping = false;
-            }
+//            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
+//                grouping = false;
+//            }
         }
     }
     

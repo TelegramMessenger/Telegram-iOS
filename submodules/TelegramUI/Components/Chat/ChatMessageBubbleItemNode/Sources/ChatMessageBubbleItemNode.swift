@@ -132,6 +132,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     var addedPriceInfo = false
     var addedPollMedia = false
+    var addedQuizAnswer = false
     
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
@@ -287,6 +288,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             } else if let poll = media as? TelegramMediaPoll {
                 if item.controllerInteraction.currentPollMessageWithTooltip == item.message.id, let _ = poll.results.solution {
                     result.append((message, ChatMessageQuizAnswerBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                    addedQuizAnswer = true
                 }
                 
                 if let attachedMedia = poll.attachedMedia {
@@ -343,7 +345,14 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     }
                     
                     if isMediaInverted {
-                        result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: addedPriceInfo || addedPollMedia ? 1 : 0)
+                        var targetIndex = 0
+                        if addedPriceInfo || addedPollMedia {
+                            targetIndex += 1
+                        }
+                        if addedQuizAnswer {
+                            targetIndex += 1
+                        }
+                        result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: targetIndex)
                     } else {
                         result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)))
                         needReactions = false

@@ -644,7 +644,17 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                                     guard let self else {
                                         return
                                     }
-                                    self.date = value
+                                    var date = value
+                                    if let minDate = self.minDate, date < minDate {
+                                        let timeZone = TimeZone(secondsFromGMT: 0)!
+                                        var calendar = Calendar(identifier: .gregorian)
+                                        calendar.timeZone = timeZone
+                                        if let nextDayDate = calendar.date(byAdding: .day, value: 1, to: date) {
+                                            date = nextDayDate
+                                        }
+                                    }
+                                    self.date = date
+                                    self.datePicker?.date = date
                                     self.state?.updated()
                                 }
                             )),

@@ -15988,7 +15988,14 @@ Error: %8$@";
 "Chat.PolOptionAddedTimestamp.TodayAt" = "Added by %1$@ today at %2$@";
 "Chat.PolOptionAddedTimestamp.YesterdayAt" = "Added by %1$@ yesterday at %2$@";
 
-
 "Chat.PolOptionAddedTimestampYou.Date" = "Added by you %1$@";
 "Chat.PolOptionAddedTimestampYou.TodayAt" = "Added by you today at %1$@";
 "Chat.PolOptionAddedTimestampYou.YesterdayAt" = "Added by you yesterday at %1$@";
+
+"MessagePoll.EndsIn" = "ends in %@";
+"MessagePoll.EndsInDays_1" = "ends in %@ day";
+"MessagePoll.EndsInDays_any" = "ends in %@ days";
+
+"MessagePoll.ResultsIn" = "results in %@";
+"MessagePoll.ResultsInDays_1" = "results in %@ day";
+"MessagePoll.ResultsInDays_any" = "results in %@ days";

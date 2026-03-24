@@ -74,6 +74,7 @@ public final class LocationMapHeaderNode: ASDisplayNode {
     public init(
         presentationData: PresentationData,
         glass: Bool,
+        isPreview: Bool = false,
         toggleMapModeSelection: @escaping () -> Void,
         updateMapMode: @escaping (LocationMapMode) -> Void,
         goToUserLocation: @escaping () -> Void,
@@ -157,21 +158,23 @@ public final class LocationMapHeaderNode: ASDisplayNode {
         
         self.addSubnode(self.mapNode)
                 
-        if glass {
-            if let placesBackgroundView = self.placesBackgroundView {
-                self.placesBackgroundNode.view.addSubview(placesBackgroundView)
+        if !isPreview {
+            if glass {
+                if let placesBackgroundView = self.placesBackgroundView {
+                    self.placesBackgroundNode.view.addSubview(placesBackgroundView)
+                }
+            } else {
+                if let optionsBackgroundView = self.optionsBackgroundView {
+                    self.optionsSeparatorNode.isHidden = true
+                    self.view.addSubview(optionsBackgroundView)
+                }
+                self.addSubnode(self.optionsBackgroundNode)
+                self.optionsBackgroundNode.addSubnode(self.optionsSeparatorNode)
+                self.optionsBackgroundNode.addSubnode(self.optionsSecondSeparatorNode)
+                self.optionsBackgroundNode.addSubnode(self.infoButtonNode)
+                self.optionsBackgroundNode.addSubnode(self.locationButtonNode)
+                self.optionsBackgroundNode.addSubnode(self.notificationButtonNode)
             }
-        } else {
-            if let optionsBackgroundView = self.optionsBackgroundView {
-                self.optionsSeparatorNode.isHidden = true
-                self.view.addSubview(optionsBackgroundView)
-            }
-            self.addSubnode(self.optionsBackgroundNode)
-            self.optionsBackgroundNode.addSubnode(self.optionsSeparatorNode)
-            self.optionsBackgroundNode.addSubnode(self.optionsSecondSeparatorNode)
-            self.optionsBackgroundNode.addSubnode(self.infoButtonNode)
-            self.optionsBackgroundNode.addSubnode(self.locationButtonNode)
-            self.optionsBackgroundNode.addSubnode(self.notificationButtonNode)
         }
             
         self.addSubnode(self.placesBackgroundNode)
