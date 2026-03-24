@@ -116,7 +116,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
         if let poll = media as? TelegramMediaPoll, let attachedMedia = poll.attachedMedia {
             if attachedMedia is TelegramMediaImage {
                 galleryMedia = attachedMedia
-            } else if let file = attachedMedia as? TelegramMediaFile, file.isVideo {
+            } else if let file = attachedMedia as? TelegramMediaFile, file.isVideo || file.isMusic {
                 galleryMedia = attachedMedia
             } else if attachedMedia is TelegramMediaMap {
                 galleryMedia = attachedMedia

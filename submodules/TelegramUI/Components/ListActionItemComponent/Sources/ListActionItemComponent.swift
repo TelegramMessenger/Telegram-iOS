@@ -774,7 +774,7 @@ public final class ListActionItemComponent: Component {
             
             if case let .toggle(toggle) = component.accessory {
                 switch toggle.style {
-                case .regular:
+                case .regular, .lock:
                     let switchNode: SwitchNode
                     var switchTransition = transition
                     var updateSwitchTheme = themeUpdated
@@ -827,7 +827,7 @@ public final class ListActionItemComponent: Component {
                     }
                     let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: switchY), size: switchSize)
                     switchTransition.setFrame(view: switchNode.view, frame: switchFrame)
-                case .icons, .lock:
+                case .icons:
                     let switchNode: IconSwitchNode
                     var switchTransition = transition
                     var updateSwitchTheme = themeUpdated

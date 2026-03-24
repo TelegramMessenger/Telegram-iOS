@@ -495,6 +495,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private(set) var currentSelection: ChatMessagePollOptionSelection?
     var pressed: (() -> Void)?
     var selectionUpdated: (() -> Void)?
+    var resultPressed: (() -> Void)?
     var longTapped: (() -> Void)?
     var context: AccountContext?
     var message: Message?
@@ -728,7 +729,12 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             return
         }
         
-        guard self.forceSelected == nil && self.currentResult == nil else {
+        guard self.forceSelected == nil else {
+            return
+        }
+        
+        if let _ = self.currentResult {
+            self.resultPressed?()
             return
         }
 
@@ -1018,7 +1024,15 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         }
                         let radioSize: CGFloat = 22.0
                         radioNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 15.0), size: CGSize(width: radioSize, height: radioSize))
-                        radioNode.update(isRectangle: poll.kind.multipleAnswers, staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton, animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress, fillColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar, foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground, isSelectable: isSelectable || forceSelected != nil, isAnimating: inProgress)
+                        radioNode.update(
+                            isRectangle: poll.kind.multipleAnswers,
+                            staticColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioButton : presentationData.theme.theme.chat.message.outgoing.polls.radioButton,
+                            animatedColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.radioProgress : presentationData.theme.theme.chat.message.outgoing.polls.radioProgress,
+                            fillColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.bar : presentationData.theme.theme.chat.message.outgoing.polls.bar,
+                            foregroundColor: incoming ? presentationData.theme.theme.chat.message.incoming.polls.barIconForeground : presentationData.theme.theme.chat.message.outgoing.polls.barIconForeground,
+                            isSelectable: isSelectable || forceSelected != nil,
+                            isAnimating: inProgress
+                        )
                         
                         if let forceSelected {
                             radioNode.updateIsChecked(forceSelected, animated: false)
@@ -2214,7 +2228,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             updatedPresentationData: item.controllerInteraction.updatedPresentationData,
             subject: .option,
             availableButtons: [.gallery, .sticker, .location],
-            present: { [weak item] controller in
+            present: { [weak item] controller, _ in
                 item?.controllerInteraction.navigationController()?.pushViewController(controller)
             },
             completion: { [weak self] media in
@@ -2877,11 +2891,18 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 if optionNode.supernode !== strongSelf {
                                     strongSelf.addSubnode(optionNode)
                                     let option = optionNode.option
+                                    
                                     optionNode.pressed = { [weak self] in
                                         guard let self, let item = self.item, let option else {
                                             return
                                         }
                                         item.controllerInteraction.requestSelectMessagePollOptions(item.message.id, [option.opaqueIdentifier])
+                                    }
+                                    optionNode.resultPressed = { [weak self] in
+                                        guard let self, let item = self.item, let option else {
+                                            return
+                                        }
+                                        item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
                                     }
                                     optionNode.selectionUpdated = { [weak self] in
                                         guard let self else {
@@ -3195,15 +3216,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.updateSelection()
                             strongSelf.updatePollTooltipMessageState(animated: false)
 
-                            var buttonWidth: CGFloat = 0.0
-                            if !strongSelf.buttonSaveTextNode.isHidden {
-                                buttonWidth = strongSelf.buttonSaveTextNode.frame.width
-                            } else if !strongSelf.buttonViewResultsTextNode.isHidden {
-                                buttonWidth = strongSelf.buttonViewResultsTextNode.frame.width
-                            } else if !strongSelf.buttonSubmitActiveTextNode.isHidden || !strongSelf.buttonSubmitInactiveTextNode.isHidden {
-                                buttonWidth = max(strongSelf.buttonSubmitActiveTextNode.frame.width, strongSelf.buttonSubmitInactiveTextNode.frame.width)
-                            }
-                            buttonWidth = floor(buttonWidth * 1.1)
+                            let buttonWidth: CGFloat = floor(max(strongSelf.buttonSaveTextNode.frame.width, max(strongSelf.buttonViewResultsTextNode.frame.width, strongSelf.buttonSubmitActiveTextNode.frame.width)) * 1.1)
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonWidth) / 2.0), y: verticalOffset), size: CGSize(width: buttonWidth, height: 44.0))
                             
                             strongSelf.updateIsTranslating(isTranslating)

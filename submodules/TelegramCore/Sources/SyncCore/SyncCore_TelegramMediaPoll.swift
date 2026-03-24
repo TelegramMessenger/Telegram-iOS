@@ -238,6 +238,11 @@ public final class TelegramMediaPoll: Media, Equatable {
                 peerIds.append(contentsOf: voter.recentVoters)
             }
         }
+        for option in options {
+            if let addedBy = option.addedBy {
+                peerIds.append(addedBy)
+            }
+        }
         return peerIds
     }
 

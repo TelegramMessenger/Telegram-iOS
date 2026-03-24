@@ -1065,15 +1065,15 @@ public final class ListComposePollOptionComponent: Component {
                     if let dimensions = file.dimensions {
                         imageSize = dimensions.cgSize.aspectFilled(imageNodeSize)
                     }
-                    if file.mimeType.hasPrefix("image/") {
-                        if updateMedia {
-                            imageNode.setSignal(instantPageImageFile(account: component.context.account, userLocation: .other, fileReference: fileReference, fetched: true))
-                        }
-                    } else if file.isVideo {
+                    if file.isVideo {
                         if updateMedia {
                             imageNode.setSignal(chatMessageVideo(postbox: component.context.account.postbox, userLocation: .other, videoReference: fileReference))
                         }
                         isVideo = true
+                    } else if file.mimeType.hasPrefix("image/") || !file.previewRepresentations.isEmpty {
+                        if updateMedia {
+                            imageNode.setSignal(chatMessageImageFile(account: component.context.account, userLocation: .other, fileReference: fileReference, thumbnail: true))
+                        }
                     } else {
                         let fileName: String = file.fileName ?? "File"
                         var fileExtension: String?
