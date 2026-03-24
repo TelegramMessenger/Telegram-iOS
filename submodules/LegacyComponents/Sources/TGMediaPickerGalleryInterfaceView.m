@@ -411,6 +411,8 @@
             
             id<TGModernGalleryEditableItem> galleryEditableItem = (id<TGModernGalleryEditableItem>)strongSelf->_currentItem;
             [strongSelf->_editingContext setLivePhotoMode:(TGMediaLivePhotoMode)mode forItem:galleryEditableItem.editableMediaItem];
+            
+            [strongSelf->_selectionContext setItem:(id<TGMediaSelectableItem>)galleryEditableItem.editableMediaItem selected:true animated:true sender:nil];
         };
         
         _captionMixin.stickersContext = stickersContext;

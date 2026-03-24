@@ -78,6 +78,7 @@ public final class LocationViewController: ViewController {
     private var presentationDataDisposable: Disposable?
     private var showAll: Bool
     private let isStoryLocation: Bool
+    private let isPreview: Bool
     
     private let locationManager = LocationManager()
     
@@ -87,20 +88,30 @@ public final class LocationViewController: ViewController {
     
     public var dismissed: () -> Void = {}
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, isStoryLocation: Bool = false, params: LocationViewParams) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, isStoryLocation: Bool = false, isPreview: Bool = false, params: LocationViewParams) {
         self.context = context
         self.subject = subject
         self.showAll = params.showAll
         self.isStoryLocation = isStoryLocation
+        self.isPreview = isPreview
         
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                      
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(.clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
+        let navigationBarPresentationData: NavigationBarPresentationData?
+        if !isPreview {
+            navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(.clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings))
+        } else {
+            navigationBarPresentationData = nil
+        }
+        
+        super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.navigationPresentation = .modal
         
-        self.title = self.presentationData.strings.Map_LocationTitle
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
+        if !self.isPreview {
+            self.title = self.presentationData.strings.Map_LocationTitle
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
         
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -504,7 +515,7 @@ public final class LocationViewController: ViewController {
             return
         }
         
-        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager, isStoryLocation: self.isStoryLocation)
+        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager, isStoryLocation: self.isStoryLocation, isPreview: self.isPreview)
         self.displayNodeDidLoad()
         
         self.controllerNode.onAnnotationsReady = { [weak self] in
@@ -518,6 +529,9 @@ public final class LocationViewController: ViewController {
     }
     
     private func updateRightBarButton() {
+        guard !self.isPreview else {
+            return
+        }
         switch self.rightBarButtonAction {
             case .none:
                 self.navigationItem.rightBarButtonItem = nil

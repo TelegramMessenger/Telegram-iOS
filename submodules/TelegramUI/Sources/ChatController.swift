@@ -3692,39 +3692,50 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.selectPollOptionFeedback?.success()
                     case .quiz:
                         if let voters = resultPoll.results.voters {
+                            var selectedCount = 0
+                            var correctCount = 0
+                            var selectedCorrectCount = 0
+                            
                             for voter in voters {
                                 if voter.selected {
-                                    if voter.isCorrect {
+                                    selectedCount += 1
+                                }
+                                if voter.isCorrect {
+                                    correctCount += 1
+                                    if voter.selected {
+                                        selectedCorrectCount += 1
+                                    }
+                                }
+                            }
+                            
+                            if correctCount == selectedCount && correctCount == selectedCorrectCount {
+                                if strongSelf.selectPollOptionFeedback == nil {
+                                    strongSelf.selectPollOptionFeedback = HapticFeedback()
+                                }
+                                strongSelf.selectPollOptionFeedback?.success()
+                                
+                                strongSelf.chatDisplayNode.playConfettiAnimation()
+                            } else {
+                                var found = false
+                                strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                                    if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
+                                        found = true
                                         if strongSelf.selectPollOptionFeedback == nil {
                                             strongSelf.selectPollOptionFeedback = HapticFeedback()
                                         }
-                                        strongSelf.selectPollOptionFeedback?.success()
+                                        strongSelf.selectPollOptionFeedback?.error()
                                         
-                                        strongSelf.chatDisplayNode.playConfettiAnimation()
-                                    } else {
-                                        var found = false
-                                        strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
-                                            if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
-                                                found = true
-                                                if strongSelf.selectPollOptionFeedback == nil {
-                                                    strongSelf.selectPollOptionFeedback = HapticFeedback()
-                                                }
-                                                strongSelf.selectPollOptionFeedback?.error()
-                                                
-                                                itemNode.animateQuizInvalidOptionSelected()
-                                                
-                                                if let solution = resultPoll.results.solution {
-                                                    for contentNode in itemNode.contentNodes {
-                                                        if let contentNode = contentNode as? ChatMessagePollBubbleContentNode {
-                                                            let sourceNode = contentNode.solutionTipSourceNode
-                                                            strongSelf.displayPollSolution(solution: solution, sourceNode: sourceNode, isAutomatic: true)
-                                                        }
-                                                    }
+                                        itemNode.animateQuizInvalidOptionSelected()
+                                        
+                                        if let solution = resultPoll.results.solution {
+                                            for contentNode in itemNode.contentNodes {
+                                                if let contentNode = contentNode as? ChatMessagePollBubbleContentNode {
+                                                    let sourceNode = contentNode.solutionTipSourceNode
+                                                    strongSelf.displayPollSolution(solution: solution, sourceNode: sourceNode, isAutomatic: true)
                                                 }
                                             }
                                         }
                                     }
-                                    break
                                 }
                             }
                         }

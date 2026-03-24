@@ -1416,7 +1416,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: 200.0, height: 40.0)
+                    containerSize: CGSize(width: 230.0, height: 40.0)
                 )
                 combinedTitleHeight += subtitleSize.height + titleSpacing
                 
