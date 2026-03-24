@@ -599,6 +599,7 @@ public func makeAttachmentFileControllerImpl(
                 updatedState.savedMusicExpanded = true
                 return updatedState
             }
+            expandImpl?()
         },
         expandRecentMusic: {
             updateState { state in
@@ -610,7 +611,13 @@ public func makeAttachmentFileControllerImpl(
         send: { message in
             if message.id.namespace == Namespaces.Message.Local {
                 if let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile {
-                    send([.standalone(media: file)], false, nil, nil)
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer, let peerReference = PeerReference(peer._asPeer()) else {
+                            return
+                        }
+                        send([.savedMusic(peer: peerReference, media: file)], false, nil, nil)
+                    })
                     dismissImpl?()
                 }
             } else {
@@ -919,6 +926,8 @@ public func makeAttachmentFileControllerImpl(
                 arguments.send(message)
             }, dismissInput: {
                 dismissInputImpl?()
+            }, didPreviewAudio: {
+                didPreviewAudio = true
             })
         }
 
@@ -936,13 +945,54 @@ public func makeAttachmentFileControllerImpl(
     controller.mulitpleCompletion = { sendMode, _, _, caption in
         let _ = stateValue.with({ state in
             if let selectedMessageIds = state.selectedMessageIds {
-                var mediaReferences: [AnyMediaReference] = []
+                var remoteMessageIds: [MessageId] = []
                 for id in selectedMessageIds {
-                    if let message = state.messageMap[id]?._asMessage(), let file = message.media.first(where: { $0 is TelegramMediaFile}) as? TelegramMediaFile {
-                        mediaReferences.append(.standalone(media: file))
+                    if let message = state.messageMap[id]?._asMessage() {
+                        if message.id.namespace == Namespaces.Message.Cloud {
+                            remoteMessageIds.append(message.id)
+                        }
                     }
                 }
-                send(mediaReferences, sendMode == .silently, nil, caption)
+                let _ = combineLatest(queue: Queue.mainQueue(),
+                    context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+                    context.engine.messages.getMessagesLoadIfNecessary(remoteMessageIds, strategy: .cloud(skipLocal: true))
+                    |> `catch` { _ in
+                        return .single(.result([]))
+                    }
+                    |> mapToSignal { result -> Signal<[Message], NoError> in
+                    guard case let .result(result) = result else {
+                        return .complete()
+                    }
+                    return .single(result)
+                }
+                ).start(next: { peer, remoteMessages in
+                    guard let peer, let peerReference = PeerReference(peer._asPeer()) else {
+                        return
+                    }
+                    var messageMap: [MessageId: Message] = [:]
+                    for message in remoteMessages {
+                        messageMap[message.id] = message
+                    }
+                    
+                    var mediaReferences: [AnyMediaReference] = []
+                    
+                    for id in selectedMessageIds {
+                        if var message = state.messageMap[id]?._asMessage() {
+                            if message.id.namespace == Namespaces.Message.Cloud, let remoteMessage = messageMap[message.id] {
+                                message = remoteMessage
+                            }
+                            if let file = message.media.first(where: { $0 is TelegramMediaFile}) as? TelegramMediaFile {
+                                if message.id.namespace == Namespaces.Message.Cloud {
+                                    mediaReferences.append(.message(message: MessageReference(message), media: file))
+                                } else {
+                                    mediaReferences.append(.savedMusic(peer: peerReference, media: file))
+                                }
+                            }
+                        }
+                    }
+                    
+                    send(mediaReferences, sendMode == .silently, nil, caption)
+                })
                 dismissImpl?()
             }
         })

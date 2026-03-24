@@ -258,7 +258,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                 if queryItem.name == "url" {
                                     url = value
                                 } else if queryItem.name == "text" {
-                                    text = value
+                                    text = value.replacingOccurrences(of: "+", with: " ")
                                 } else if queryItem.name == "to" && peerName != "share" {
                                     to = value
                                 }
@@ -601,7 +601,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                     for queryItem in components.queryItems ?? [] {
                         if let value = queryItem.value {
                             if queryItem.name == "name" {
-                                title = value
+                                title = value.replacingOccurrences(of: "+", with: " ")
                             }
                         }
                     }

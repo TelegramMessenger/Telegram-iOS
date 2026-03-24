@@ -32,12 +32,13 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
     let cancel: () -> Void
     let send: (Message) -> Void
     let dismissInput: () -> Void
+    let didPreviewAudio: () -> Void
     
     private var updateActivity: ((Bool) -> Void)?
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, mode: AttachmentFileControllerMode, presentationData: PresentationData, focus: @escaping () -> Void, cancel: @escaping () -> Void, send: @escaping (Message) -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, mode: AttachmentFileControllerMode, presentationData: PresentationData, focus: @escaping () -> Void, cancel: @escaping () -> Void, send: @escaping (Message) -> Void, dismissInput: @escaping () -> Void, didPreviewAudio: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.presentationData = presentationData
@@ -45,6 +46,7 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
         self.cancel = cancel
         self.send = send
         self.dismissInput = dismissInput
+        self.didPreviewAudio = didPreviewAudio
         self.activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
                 return .single(value) |> delay(0.2, queue: Queue.mainQueue())
@@ -89,7 +91,7 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
     func node(current: ItemListControllerSearchNode?, titleContentNode: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> ItemListControllerSearchNode {
         return AttachmentFileSearchItemNode(context: self.context, mode: self.mode, presentationData: self.presentationData, focus: self.focus, send: self.send, cancel: self.cancel, updateActivity: { [weak self] value in
             self?.activity.set(value)
-        }, dismissInput: self.dismissInput)
+        }, dismissInput: self.dismissInput, didPreviewAudio: self.didPreviewAudio)
     }
 }
 
@@ -106,7 +108,7 @@ private final class AttachmentFileSearchItemNode: ItemListControllerSearchNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(context: AccountContext, mode: AttachmentFileControllerMode, presentationData: PresentationData, focus: @escaping () -> Void, send: @escaping (Message) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, mode: AttachmentFileControllerMode, presentationData: PresentationData, focus: @escaping () -> Void, send: @escaping (Message) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, dismissInput: @escaping () -> Void, didPreviewAudio: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.presentationData = presentationData
@@ -115,7 +117,7 @@ private final class AttachmentFileSearchItemNode: ItemListControllerSearchNode {
                 
         self.containerNode = AttachmentFileSearchContainerNode(context: context, mode: mode, presentationData: presentationData, send: { message in
             send(message)
-        }, updateActivity: updateActivity)
+        }, updateActivity: updateActivity, didPreviewAudio: didPreviewAudio)
 
         super.init()
         
@@ -413,7 +415,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         return _hasDim
     }
         
-    public init(context: AccountContext, mode: AttachmentFileControllerMode, presentationData: PresentationData, send: @escaping (Message) -> Void, updateActivity: @escaping (Bool) -> Void) {
+    public init(context: AccountContext, mode: AttachmentFileControllerMode, presentationData: PresentationData, send: @escaping (Message) -> Void, updateActivity: @escaping (Bool) -> Void, didPreviewAudio: @escaping () -> Void) {
         self.context = context
         self.send = send
         
@@ -476,7 +478,6 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         self.addSubnode(self.emptyResultsTitleNode)
         self.addSubnode(self.emptyResultsTextNode)
         
-    
         let interaction = AttachmentFileSearchContainerInteraction(
             context: context,
             send: { [weak self] message in
@@ -484,6 +485,8 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 self?.listNode.clearHighlightAnimated(true)
             },
             toggleMediaPlayback: { message in
+                didPreviewAudio()
+                
                 let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil, hidePanel: true)
                 context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
             },

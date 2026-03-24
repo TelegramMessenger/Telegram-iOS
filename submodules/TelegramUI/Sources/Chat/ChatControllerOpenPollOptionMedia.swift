@@ -147,23 +147,23 @@ extension ChatControllerImpl {
                     }
                 },
                 transitionNode: { [weak self] messageId, media, adjustRect in
-                    guard let self else {
-                        return nil
+                    var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+                    if let self {
+                        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ChatMessageItemView {
+                                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: adjustRect) {
+                                    selectedNode = result
+                                }
+                            }
+                        }
                     }
-                    let _ = self
-                    return nil
-                    //return self.transitionNode(messageId: messageId, media: media, adjustRect: adjustRect)
+                    return selectedNode
                 },
                 addToTransitionSurface: { [weak self] view in
                     guard let self else {
                         return
                     }
-                    let _ = self
-//                    if let superview = self.itemNode?.view.superview?.superview?.superview {
-//                        superview.addSubview(view)
-//                    } else {
-//                        self.view.addSubview(view)
-//                    }
+                    self.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: self.chatDisplayNode.historyNode.view)
                 },
                 openUrl: { [weak self] url in
                     guard let self else {
@@ -203,24 +203,7 @@ extension ChatControllerImpl {
                     }
                     self.controllerInteraction?.sendEmoji(text, attribute, false)
                 },
-                setupTemporaryHiddenMedia: { [weak self] signal, _, galleryMedia in
-                    guard let self else {
-                        return
-                    }
-                    let _ = self
-//                    self.temporaryHiddenMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { [weak self] entry in
-//                        guard let self, let item = self.item else {
-//                            return
-//                        }
-//                        var hiddenMedia = item.controllerInteraction.hiddenMedia
-//                        if entry != nil {
-//                            hiddenMedia[item.message.id] = [galleryMedia]
-//                        } else {
-//                            hiddenMedia.removeValue(forKey: item.message.id)
-//                        }
-//                        item.controllerInteraction.hiddenMedia = hiddenMedia
-//                        self.itemNode?.updateHiddenMedia()
-//                    }))
+                setupTemporaryHiddenMedia: { _, _, _ in
                 },
                 chatAvatarHiddenMedia: { _, _ in
                 },

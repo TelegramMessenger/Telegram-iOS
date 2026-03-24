@@ -1382,7 +1382,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                         )),
                         hasEntityKeyboard: hasEntityKeyboard,
                         gesture: gesture,
-                        sourceSendButton: node,
+                        sourceSendButton: node.view,
                         textInputView: textInputNode.textView,
                         emojiViewProvider: textInputPanelNode.emojiViewProvider,
                         completion: {

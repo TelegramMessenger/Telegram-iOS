@@ -42,6 +42,9 @@ private func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
         } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content, let f = content.file {
             file = f
             break
+        } else if let media = media as? TelegramMediaPoll, let f = media.attachedMedia as? TelegramMediaFile {
+            file = f
+            break
         }
     }
     return file

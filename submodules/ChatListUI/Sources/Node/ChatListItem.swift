@@ -2686,6 +2686,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 return false
                             }
                         }
+                        if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                            entities = []
+                        }
                         
                         if message.id.peerId.isTelegramNotifications || message.id.peerId.isVerificationCodes {
                             let regex: NSRegularExpression?

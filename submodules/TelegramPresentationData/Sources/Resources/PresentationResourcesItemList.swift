@@ -135,7 +135,7 @@ public struct PresentationResourcesItemList {
         return theme.image(PresentationResourceKey.itemListReorderIndicatorIcon.rawValue, { theme in
             return generateImage(CGSize(width: 17.0, height: 14.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.list.itemBlocksSeparatorColor.cgColor)
+                context.setFillColor(theme.list.itemPlaceholderTextColor.cgColor)
 
                 let lineHeight = 1.0 + UIScreenPixel
                 context.addPath(CGPath(roundedRect: CGRect(x: 0.0, y: UIScreenPixel, width: 17.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))
@@ -150,7 +150,7 @@ public struct PresentationResourcesItemList {
         return theme.image(PresentationResourceKey.itemListAddIndicatorIcon.rawValue, { theme in
             return generateImage(CGSize(width: 17.0, height: 15.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.list.itemBlocksSeparatorColor.cgColor)
+                context.setFillColor(theme.list.itemPlaceholderTextColor.cgColor)
 
                 let lineHeight = 1.0 + UIScreenPixel
                 context.addPath(CGPath(roundedRect: CGRect(x: 1.0, y: 7.0, width: 15.0, height: lineHeight), cornerWidth: lineHeight / 2.0, cornerHeight: lineHeight / 2.0, transform: nil))

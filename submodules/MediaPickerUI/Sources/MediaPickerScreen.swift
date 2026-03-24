@@ -180,7 +180,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             case cover
             case createSticker
             case createAvatar
-            case poll(PollMode)
+            case poll(mode: PollMode, asFile: Bool)
         }
         
         case assets(PHAssetCollection?, AssetsMode)
@@ -2049,7 +2049,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.titleView.title = presentationData.strings.MediaPicker_AddImage
                 case .cover:
                     self.titleView.title = presentationData.strings.MediaPicker_ChooseCover
-                case let .poll(pollMode):
+                case let .poll(pollMode, _):
                     self.titleView.title = presentationData.strings.MediaPicker_Recents
                     //TODO:localize
                     switch pollMode {
@@ -2088,6 +2088,9 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
+        if case .glass = style {
+            self._hasGlassStyle = true
+        }
         self.statusBar.statusBarStyle = .Ignore
         
         selectionContext.attemptSelectingItem = { [weak self] item in

@@ -148,6 +148,8 @@ func presentLegacyMediaPickerGallery(
     paintStickersContext.livePhotoButton = {
         if case .secretChat = peer {
             return nil
+        } else if peer == nil {
+            return nil
         }
         let livePhotoButton = LivePhotoButton()
         livePhotoButton.present = present

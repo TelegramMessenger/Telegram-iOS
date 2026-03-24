@@ -56,6 +56,11 @@ public final class ListMessageItemInteraction {
     })
 }
 
+public enum ListMessageItemSelectionSide {
+    case left
+    case right
+}
+
 public final class ListMessageItem: ListViewItem, ItemListItem {
     let presentationData: ChatPresentationData
     let systemStyle: ItemListSystemStyle
@@ -65,6 +70,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
     let message: Message?
     let translateToLanguage: String?
     public let selection: ChatHistoryMessageSelection
+    public let selectionSide: ListMessageItemSelectionSide
     let hintIsLink: Bool
     let isGlobalSearchResult: Bool
     let isDownloadList: Bool
@@ -91,6 +97,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
         message: Message?,
         translateToLanguage: String? = nil,
         selection: ChatHistoryMessageSelection,
+        selectionSide: ListMessageItemSelectionSide = .right,
         displayHeader: Bool,
         customHeader: ListViewItemHeader? = nil,
         hintIsLink: Bool = false,
@@ -120,6 +127,7 @@ public final class ListMessageItem: ListViewItem, ItemListItem {
             self.header = nil
         }
         self.selection = selection
+        self.selectionSide = selectionSide
         self.hintIsLink = hintIsLink
         self.isGlobalSearchResult = isGlobalSearchResult
         self.isDownloadList = isDownloadList

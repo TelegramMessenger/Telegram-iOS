@@ -315,17 +315,23 @@ private final class CreateBotSheetComponent: Component {
     let parentPeer: EnginePeer
     let initialUsername: String?
     let initialTitle: String?
+    let openAutomatically: Bool
+    let completion: (EnginePeer.Id) -> Void
 
     init(
         context: AccountContext,
         parentPeer: EnginePeer,
         initialUsername: String?,
-        initialTitle: String?
+        initialTitle: String?,
+        openAutomatically: Bool,
+        completion: @escaping (EnginePeer.Id) -> Void
     ) {
         self.context = context
         self.parentPeer = parentPeer
         self.initialUsername = initialUsername
         self.initialTitle = initialTitle
+        self.openAutomatically = openAutomatically
+        self.completion = completion
     }
 
     static func ==(lhs: CreateBotSheetComponent, rhs: CreateBotSheetComponent) -> Bool {
@@ -410,14 +416,14 @@ private final class CreateBotSheetComponent: Component {
                 self.animateOut.invoke(Action { [weak controller, weak navigationController] _ in
                     if let controller, let navigationController {
                         controller.dismiss(completion: { [weak navigationController] in
-                            guard let navigationController else {
-                                return
+                            if component.openAutomatically, let navigationController {
+                                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                    navigationController: navigationController,
+                                    context: context,
+                                    chatLocation: .peer(botPeer)
+                                ))
                             }
-                            component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
-                                navigationController: navigationController,
-                                context: context,
-                                chatLocation: .peer(botPeer)
-                            ))
+                            component.completion(botPeer.id)
                         })
                     }
                 })
@@ -573,7 +579,9 @@ public class CreateBotScreen: ViewControllerComponentContainer {
         context: AccountContext,
         parentBot: EnginePeer.Id,
         initialUsername: String?,
-        initialTitle: String?
+        initialTitle: String?,
+        openAutomatically: Bool,
+        completion: @escaping (EnginePeer.Id) -> Void
     ) async {
         self.context = context
         
@@ -589,7 +597,9 @@ public class CreateBotScreen: ViewControllerComponentContainer {
                 context: context,
                 parentPeer: parentPeer,
                 initialUsername: initialUsername,
-                initialTitle: initialTitle
+                initialTitle: initialTitle,
+                openAutomatically: openAutomatically,
+                completion: completion
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
