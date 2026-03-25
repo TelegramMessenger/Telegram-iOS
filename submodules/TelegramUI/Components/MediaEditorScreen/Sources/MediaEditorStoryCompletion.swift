@@ -16,12 +16,8 @@ extension MediaEditorScreenImpl {
         }
         
         self.didComplete = true
-        
+
         self.updateMediaEditorEntities()
-        
-        mediaEditor.stop()
-        mediaEditor.invalidate()
-        self.node.entitiesView.invalidate()
         
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
@@ -463,6 +459,9 @@ extension MediaEditorScreenImpl {
                                 guard let self else {
                                     return
                                 }
+                                self.node.mediaEditor?.stop()
+                                self.node.mediaEditor?.invalidate()
+                                self.node.entitiesView.invalidate()
                                 Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                                 self.completion([MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: values, duration: duration, dimensions: values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
                                     self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
@@ -472,6 +471,8 @@ extension MediaEditorScreenImpl {
                                         }
                                     })
                                 })
+                            }, { [weak self] in
+                                self?.didComplete = false
                             })
                         }
                     })
@@ -505,6 +506,9 @@ extension MediaEditorScreenImpl {
                         guard let self else {
                             return
                         }
+                        self.node.mediaEditor?.stop()
+                        self.node.mediaEditor?.invalidate()
+                        self.node.entitiesView.invalidate()
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion([MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
@@ -517,6 +521,8 @@ extension MediaEditorScreenImpl {
                         if case let .draft(draft, id) = actualSubject, id == nil {
                             removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
                         }
+                    }, { [weak self] in
+                        self?.didComplete = false
                     })
                 }
             })

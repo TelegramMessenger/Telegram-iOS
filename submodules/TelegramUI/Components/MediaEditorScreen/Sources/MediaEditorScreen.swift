@@ -6764,7 +6764,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     var didComplete = false
     
     public var cancelled: (Bool) -> Void = { _ in }
-    public var willComplete: (UIImage?, Bool, @escaping () -> Void) -> Void
+    public var willComplete: (UIImage?, Bool, @escaping () -> Void, @escaping () -> Void) -> Void
     public var completion: ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
@@ -6798,7 +6798,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         initialLink: (url: String, name: String?)? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
-        willComplete: @escaping (UIImage?, Bool, @escaping () -> Void) -> Void = { _, _, commit in commit() },
+        willComplete: @escaping (UIImage?, Bool, @escaping () -> Void, @escaping () -> Void) -> Void = { _, _, commit, _ in commit() },
         completion: @escaping ([MediaEditorScreenImpl.Result], @escaping (@escaping () -> Void) -> Void) -> Void
     ) {
         self.context = context
