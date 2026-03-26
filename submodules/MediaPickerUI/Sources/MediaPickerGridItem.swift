@@ -603,7 +603,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                 }
                 duration = stringForDuration(Int32(asset.duration))
             } else {
-                if asset.mediaSubtypes.contains(.photoLive) {
+                if asset.mediaSubtypes.contains(.photoLive) && interaction.displayLivePhotoIcon {
                     typeIcon = UIImage(bundleImageName: "Chat/Message/LivePhoto")
                 }
             }

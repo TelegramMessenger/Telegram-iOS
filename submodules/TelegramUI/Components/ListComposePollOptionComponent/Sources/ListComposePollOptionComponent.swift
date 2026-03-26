@@ -1103,9 +1103,13 @@ public final class ListComposePollOptionComponent: Component {
                 
                 let cornerRadius: CGFloat = 10.0
                 let makeLayout = imageNode.asyncLayout()
-                let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: cornerRadius), imageSize: imageSize, boundingSize: imageNodeSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))
-                apply()
-            
+                Queue.concurrentDefaultQueue().async {
+                    let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: cornerRadius), imageSize: imageSize, boundingSize: imageNodeSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))
+                    Queue.mainQueue().async {
+                        apply()
+                    }
+                }
+                
                 if self.imageButton.superview == nil {
                     self.imageButton.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
                     self.addSubview(self.imageButton)

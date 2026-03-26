@@ -754,6 +754,14 @@
                 hasLivePhotoButton = true;
             }
         }
+    } else if ([item isKindOfClass:[TGMediaPickerGalleryPhotoItem class]]) {
+        TGMediaPickerGalleryPhotoItem *photoGalleryItem = (TGMediaPickerGalleryPhotoItem *)item;
+        if ([photoGalleryItem.asset isKindOfClass:[TGMediaAsset class]]) {
+            TGMediaAsset *asset = (TGMediaAsset *)photoGalleryItem.asset;
+            if (asset.subtypes & TGMediaAssetSubtypePhotoLive) {
+                hasLivePhotoButton = true;
+            }
+        }
     }
     [_muteButton setImage:muteIcon forState:UIControlStateNormal];
     [_muteButton setImage:muteActiveIcon forState:UIControlStateSelected];
