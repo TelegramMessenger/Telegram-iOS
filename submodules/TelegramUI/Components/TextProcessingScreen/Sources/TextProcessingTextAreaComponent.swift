@@ -8,7 +8,6 @@ import AccountContext
 import MultilineTextComponent
 import BundleIconComponent
 import TelegramCore
-import MultilineTextWithEntitiesComponent
 import TextFormat
 import PlainButtonComponent
 import CheckComponent
@@ -16,6 +15,7 @@ import ShimmerEffect
 import TextSelectionNode
 import Pasteboard
 import Speak
+import InteractiveTextComponent
 
 final class TextProcessingTextAreaComponent: Component {
     let context: AccountContext
@@ -116,7 +116,7 @@ final class TextProcessingTextAreaComponent: Component {
         private var emojify: ComponentView<Empty>?
         private let titleButton: HighlightTrackingButton
         
-        private let textState = MultilineTextWithEntitiesComponent.External()
+        private let textState = InteractiveTextComponent.External()
         private let textContainer: UIView
         private let text = ComponentView<Empty>()
         private var expandShadow: UIImageView?
@@ -126,7 +126,7 @@ final class TextProcessingTextAreaComponent: Component {
         
         private var previousText: TextWithEntities?
         private var previousTextLineCount: Int?
-        private let measureLoadingTextState = MultilineTextWithEntitiesComponent.External()
+        private let measureLoadingTextState = InteractiveTextComponent.External()
         private let measureLoadingText = ComponentView<Empty>()
         private var shimmerEffectNode: ShimmerEffectNode?
         
@@ -134,6 +134,10 @@ final class TextProcessingTextAreaComponent: Component {
         private let textSelectionContainer: UIView
         private let textSelectionKnobContainer: UIView
         private let textSelectionKnobSurface: UIView
+        
+        private var expandedBlockIds: Set<Int> = Set()
+        private var appliedExpandedBlockIds: Set<Int>?
+        private var displayContentsUnderSpoilers: (value: Bool, location: CGPoint?) = (false, nil)
         
         private var currentSpeechHolder: SpeechSynthesizerHolder?
         
@@ -180,6 +184,25 @@ final class TextProcessingTextAreaComponent: Component {
                 return
             }
             component.titleAction?(titleView)
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            if result == self.textSelectionNode?.view && !self.displayContentsUnderSpoilers.value {
+                if let textView = self.text.view as? InteractiveTextComponent.View {
+                    let textPoint = self.convert(point, to: textView.textNode.view)
+                    if let attributes = textView.textNode.attributesAtPoint(textPoint, orNearest: false)?.1 {
+                        if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                            if let value = textView.textNode.view.hitTest(textPoint, with: event) {
+                                return value
+                            }
+                        }
+                    }
+                }
+            }
+            return result
         }
 
         func update(component: TextProcessingTextAreaComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -362,27 +385,80 @@ final class TextProcessingTextAreaComponent: Component {
                     ], range: NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound))
                 }
             }
+            
+            let textOrigin = CGPoint(x: sideInset, y: contentHeight)
+            
+            var spoilerExpandPoint: CGPoint?
+            if let location = self.displayContentsUnderSpoilers.location {
+                self.displayContentsUnderSpoilers.location = nil
+                
+                spoilerExpandPoint = CGPoint(x: location.x - textOrigin.x, y: location.y - textOrigin.y)
+            }
+            
             let textSize = self.text.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                transition: transition,
+                component: AnyComponent(InteractiveTextComponent(
                     external: self.textState,
-                    context: component.context,
-                    animationCache: component.context.animationCache,
-                    animationRenderer: component.context.animationRenderer,
-                    placeholderColor: component.theme.list.mediaPlaceholderColor,
-                    text: .plain(textValue),
+                    attributedString: textValue,
+                    backgroundColor: nil,
+                    minimumNumberOfLines: 1,
                     maximumNumberOfLines: 0,
+                    truncationType: .end,
+                    alignment: .left,
+                    verticalAlignment: .top,
                     lineSpacing: 0.12,
                     cutout: nil,
                     insets: UIEdgeInsets(),
-                    spoilerColor: component.theme.list.itemPrimaryTextColor,
-                    enableLooping: true,
-                    displaysAsynchronously: false,
+                    lineColor: nil,
+                    textShadowColor: nil,
+                    textShadowBlur: nil,
+                    textStroke: nil,
+                    displayContentsUnderSpoilers: self.displayContentsUnderSpoilers.value,
+                    customTruncationToken: nil,
+                    expandedBlocks: Set(),
+                    context: component.context,
+                    cache: component.context.animationCache,
+                    renderer: component.context.animationRenderer,
+                    placeholderColor: component.theme.list.mediaPlaceholderColor,
+                    attemptSynchronous: true,
+                    textColor: component.theme.list.itemPrimaryTextColor,
+                    spoilerEffectColor: component.theme.list.itemPrimaryTextColor,
+                    spoilerTextColor: component.theme.list.itemPrimaryTextColor,
+                    areContentAnimationsEnabled: true,
+                    spoilerExpandPoint: spoilerExpandPoint,
+                    canHandleTapAtPoint: { _ in
+                        return true
+                    },
+                    requestToggleBlockCollapsed: { [weak self] blockId in
+                        guard let self else {
+                            return
+                        }
+                        if self.expandedBlockIds.contains(blockId) {
+                            self.expandedBlockIds.remove(blockId)
+                        } else {
+                            self.expandedBlockIds.insert(blockId)
+                        }
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    },
+                    requestDisplayContentsUnderSpoilers: { [weak self] location in
+                        guard let self, let textView = self.text.view as? InteractiveTextComponent.View else {
+                            return
+                        }
+                        
+                        cancelParentGestures(view: self)
+                        
+                        var mappedLocation: CGPoint?
+                        if let location {
+                            mappedLocation = textView.textNode.layer.convert(location, to: self.layer)
+                        }
+                        self.displayContentsUnderSpoilers = (true, mappedLocation)
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
-            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: textSize)
+            let textFrame = CGRect(origin: textOrigin, size: textSize)
             if let textView = self.text.view {
                 if textView.superview == nil {
                     textView.layer.anchorPoint = CGPoint()
@@ -400,7 +476,7 @@ final class TextProcessingTextAreaComponent: Component {
             var textContainerFrame = textFrame
             if let isExpanded = component.isExpanded, let textLayout = self.textState.layout, textLayout.numberOfLines > 1 {
                 if !isExpanded.value, let firstLineRect = textLayout.linesRects().first {
-                    textContainerFrame.size.height = firstLineRect.maxY - 14.0
+                    textContainerFrame.size.height = ceil(firstLineRect.maxY)
                 }
                 
                 let expandButton: ComponentView<Empty>
@@ -482,13 +558,13 @@ final class TextProcessingTextAreaComponent: Component {
                 }
                 
                 if component.copyAction != nil, let textLayout = self.textState.layout {
-                    if textLayout.trailingLineWidth >= availableSize.width - sideInset - 32.0 {
+                    if textLayout.trailingLineWidth >= availableSize.width - sideInset - 32.0 || textLayout.trailingLineIsRTL {
                         textContainerFrame.size.height += 28.0
                     }
                 }
             }
             
-            if component.text != nil, component.isExpanded?.value ?? true, let textView = self.text.view as? MultilineTextWithEntitiesComponent.View {
+            if component.text != nil, component.isExpanded?.value ?? true, let textView = self.text.view as? InteractiveTextComponent.View {
                 let textSelectionNode: TextSelectionNode
                 if let current = self.textSelectionNode {
                     textSelectionNode = current
@@ -611,20 +687,35 @@ final class TextProcessingTextAreaComponent: Component {
                 
                 let measureLoadingTextSize = self.measureLoadingText.update(
                     transition: .immediate,
-                    component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    component: AnyComponent(InteractiveTextComponent(
                         external: self.measureLoadingTextState,
-                        context: component.context,
-                        animationCache: component.context.animationCache,
-                        animationRenderer: component.context.animationRenderer,
-                        placeholderColor: component.theme.list.mediaPlaceholderColor,
-                        text: .plain(NSAttributedString(string: fakeLines, font: Font.regular(fontSize), textColor: .black)),
+                        attributedString: NSAttributedString(string: fakeLines, font: Font.regular(fontSize), textColor: .black),
+                        backgroundColor: nil,
+                        minimumNumberOfLines: 1,
                         maximumNumberOfLines: 0,
+                        truncationType: .end,
+                        alignment: .left,
+                        verticalAlignment: .top,
                         lineSpacing: 0.12,
                         cutout: nil,
                         insets: UIEdgeInsets(),
-                        spoilerColor: component.theme.list.itemPrimaryTextColor,
-                        enableLooping: true,
-                        displaysAsynchronously: false,
+                        lineColor: nil,
+                        textShadowColor: nil,
+                        textShadowBlur: nil,
+                        textStroke: nil,
+                        displayContentsUnderSpoilers: true,
+                        customTruncationToken: nil,
+                        expandedBlocks: Set(),
+                        context: component.context,
+                        cache: component.context.animationCache,
+                        renderer: component.context.animationRenderer,
+                        placeholderColor: component.theme.list.mediaPlaceholderColor,
+                        attemptSynchronous: true,
+                        textColor: component.theme.list.itemPrimaryTextColor,
+                        spoilerEffectColor: component.theme.list.itemPrimaryTextColor,
+                        spoilerTextColor: component.theme.list.itemPrimaryTextColor,
+                        areContentAnimationsEnabled: true,
+                        spoilerExpandPoint: nil
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
