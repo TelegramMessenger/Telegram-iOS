@@ -45,3 +45,22 @@ open class SparseContainerView: UIView {
         }
     }
 }
+
+open class TransparentHitView: UIView {
+    public var onTap: (() -> Void)?
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let event {
+            var eventIsPresses = false
+            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+                eventIsPresses = event.type == .presses
+            }
+            if event.type == .touches || eventIsPresses {
+                self.onTap?()
+                return nil
+            }
+        }
+        
+        return super.hitTest(point, with: event)
+    }
+}

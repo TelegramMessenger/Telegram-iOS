@@ -368,3 +368,257 @@ public final class InteractiveTextNodeWithEntities {
         }
     }
 }
+
+public final class InteractiveTextComponent: Component {
+    public final class External {
+        public fileprivate(set) var layout: InteractiveTextNodeLayout?
+        
+        public init() {
+        }
+    }
+    
+    public let external: External?
+    public let attributedString: NSAttributedString?
+    public let backgroundColor: UIColor?
+    public let minimumNumberOfLines: Int
+    public let maximumNumberOfLines: Int
+    public let truncationType: CTLineTruncationType
+    public let alignment: NSTextAlignment
+    public let verticalAlignment: TextVerticalAlignment
+    public let lineSpacing: CGFloat
+    public let cutout: TextNodeCutout?
+    public let insets: UIEdgeInsets
+    public let lineColor: UIColor?
+    public let textShadowColor: UIColor?
+    public let textShadowBlur: CGFloat?
+    public let textStroke: (UIColor, CGFloat)?
+    public let displayContentsUnderSpoilers: Bool
+    public let customTruncationToken: ((UIFont, Bool) -> NSAttributedString?)?
+    public let expandedBlocks: Set<Int>
+    public let context: AccountContext
+    public let cache: AnimationCache
+    public let renderer: MultiAnimationRenderer
+    public let placeholderColor: UIColor
+    public let attemptSynchronous: Bool
+    public let textColor: UIColor
+    public let spoilerEffectColor: UIColor
+    public let spoilerTextColor: UIColor
+    public let areContentAnimationsEnabled: Bool
+    public let spoilerExpandPoint: CGPoint?
+    public let crossfadeContents: ((UIView) -> Void)?
+    public let canHandleTapAtPoint: ((CGPoint) -> Bool)?
+    public let requestToggleBlockCollapsed: ((Int) -> Void)?
+    public let requestDisplayContentsUnderSpoilers: ((CGPoint?) -> Void)?
+    
+    public init(
+        external: External? = nil,
+        attributedString: NSAttributedString?,
+        backgroundColor: UIColor?,
+        minimumNumberOfLines: Int,
+        maximumNumberOfLines: Int,
+        truncationType: CTLineTruncationType,
+        alignment: NSTextAlignment,
+        verticalAlignment: TextVerticalAlignment,
+        lineSpacing: CGFloat,
+        cutout: TextNodeCutout?,
+        insets: UIEdgeInsets,
+        lineColor: UIColor?,
+        textShadowColor: UIColor?,
+        textShadowBlur: CGFloat?,
+        textStroke: (UIColor, CGFloat)?,
+        displayContentsUnderSpoilers: Bool,
+        customTruncationToken: ((UIFont, Bool) -> NSAttributedString?)?,
+        expandedBlocks: Set<Int>,
+        context: AccountContext,
+        cache: AnimationCache,
+        renderer: MultiAnimationRenderer,
+        placeholderColor: UIColor,
+        attemptSynchronous: Bool,
+        textColor: UIColor,
+        spoilerEffectColor: UIColor,
+        spoilerTextColor: UIColor,
+        areContentAnimationsEnabled: Bool,
+        spoilerExpandPoint: CGPoint?,
+        crossfadeContents: ((UIView) -> Void)? = nil,
+        canHandleTapAtPoint: ((CGPoint) -> Bool)? = nil,
+        requestToggleBlockCollapsed: ((Int) -> Void)? = nil,
+        requestDisplayContentsUnderSpoilers: ((CGPoint?) -> Void)? = nil
+    ) {
+        self.external = external
+        self.attributedString = attributedString
+        self.backgroundColor = backgroundColor
+        self.minimumNumberOfLines = minimumNumberOfLines
+        self.maximumNumberOfLines = maximumNumberOfLines
+        self.truncationType = truncationType
+        self.alignment = alignment
+        self.verticalAlignment = verticalAlignment
+        self.lineSpacing = lineSpacing
+        self.cutout = cutout
+        self.insets = insets
+        self.lineColor = lineColor
+        self.textShadowColor = textShadowColor
+        self.textShadowBlur = textShadowBlur
+        self.textStroke = textStroke
+        self.displayContentsUnderSpoilers = displayContentsUnderSpoilers
+        self.customTruncationToken = customTruncationToken
+        self.expandedBlocks = expandedBlocks
+        self.context = context
+        self.cache = cache
+        self.renderer = renderer
+        self.placeholderColor = placeholderColor
+        self.attemptSynchronous = attemptSynchronous
+        self.textColor = textColor
+        self.spoilerTextColor = spoilerTextColor
+        self.areContentAnimationsEnabled = areContentAnimationsEnabled
+        self.spoilerExpandPoint = spoilerExpandPoint
+        self.crossfadeContents = crossfadeContents
+        self.spoilerEffectColor = spoilerEffectColor
+        self.canHandleTapAtPoint = canHandleTapAtPoint
+        self.requestToggleBlockCollapsed = requestToggleBlockCollapsed
+        self.requestDisplayContentsUnderSpoilers = requestDisplayContentsUnderSpoilers
+    }
+    
+    public static func ==(lhs: InteractiveTextComponent, rhs: InteractiveTextComponent) -> Bool {
+        if lhs.external !== rhs.external {
+            return false
+        }
+        if lhs.attributedString != rhs.attributedString {
+            return false
+        }
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.minimumNumberOfLines != rhs.minimumNumberOfLines {
+            return false
+        }
+        if lhs.maximumNumberOfLines != rhs.maximumNumberOfLines {
+            return false
+        }
+        if lhs.truncationType != rhs.truncationType {
+            return false
+        }
+        if lhs.alignment != rhs.alignment {
+            return false
+        }
+        if lhs.verticalAlignment != rhs.verticalAlignment {
+            return false
+        }
+        if lhs.lineSpacing != rhs.lineSpacing {
+            return false
+        }
+        if lhs.cutout != rhs.cutout {
+            return false
+        }
+        if lhs.insets != rhs.insets {
+            return false
+        }
+        if lhs.lineColor != rhs.lineColor {
+            return false
+        }
+        if lhs.textShadowColor != rhs.textShadowColor {
+            return false
+        }
+        if lhs.textShadowBlur != rhs.textShadowBlur {
+            return false
+        }
+        if lhs.textStroke?.0 != rhs.textStroke?.0 || lhs.textStroke?.1 != rhs.textStroke?.1 {
+            return false
+        }
+        if lhs.displayContentsUnderSpoilers != rhs.displayContentsUnderSpoilers {
+            return false
+        }
+        if (lhs.customTruncationToken == nil) != (rhs.customTruncationToken == nil) {
+            return false
+        }
+        if lhs.expandedBlocks != rhs.expandedBlocks {
+            return false
+        }
+        if lhs.spoilerExpandPoint != rhs.spoilerExpandPoint {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: UIView {
+        private let textNodeWithEntities: InteractiveTextNodeWithEntities
+        
+        public var textNode: TextNodeProtocol {
+            return self.textNodeWithEntities.textNode
+        }
+
+        override public init(frame: CGRect) {
+            self.textNodeWithEntities = InteractiveTextNodeWithEntities()
+            
+            super.init(frame: frame)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        func update(component: InteractiveTextComponent, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let makeLayout = InteractiveTextNodeWithEntities.asyncLayout(self.textNodeWithEntities)
+            let (layout, apply) = makeLayout(InteractiveTextNodeLayoutArguments(attributedString: component.attributedString, backgroundColor: component.backgroundColor, minimumNumberOfLines: component.minimumNumberOfLines, maximumNumberOfLines: component.maximumNumberOfLines, truncationType: component.truncationType, constrainedSize: availableSize, alignment: component.alignment, verticalAlignment: component.verticalAlignment, lineSpacing: component.lineSpacing, cutout: component.cutout, insets: component.insets, lineColor: component.lineColor, textShadowColor: component.textShadowColor, textShadowBlur: component.textShadowBlur, textStroke: component.textStroke, displayContentsUnderSpoilers: component.displayContentsUnderSpoilers, customTruncationToken: component.customTruncationToken, expandedBlocks: component.expandedBlocks))
+            let textFrame = CGRect(origin: CGPoint(), size: layout.size)
+            
+            var spoilerExpandRect: CGRect?
+            if let mappedLocation = component.spoilerExpandPoint {
+                let getDistance: (CGPoint, CGPoint) -> CGFloat = { a, b in
+                    let v = CGPoint(x: a.x - b.x, y: a.y - b.y)
+                    return sqrt(v.x * v.x + v.y * v.y)
+                }
+                
+                var maxDistance: CGFloat = getDistance(mappedLocation, CGPoint(x: 0.0, y: 0.0))
+                maxDistance = max(maxDistance, getDistance(mappedLocation, CGPoint(x: textFrame.width, y: 0.0)))
+                maxDistance = max(maxDistance, getDistance(mappedLocation, CGPoint(x: textFrame.width, y: textFrame.height)))
+                maxDistance = max(maxDistance, getDistance(mappedLocation, CGPoint(x: 0.0, y: textFrame.height)))
+                
+                let mappedSize = CGSize(width: maxDistance * 2.0, height: maxDistance * 2.0)
+                spoilerExpandRect = mappedSize.centered(around: mappedLocation)
+            }
+
+            let applyArguments = InteractiveTextNode.ApplyArguments(
+                animation: transition.animation.isImmediate ? .None : .System(duration: 0.4, transition: .init(duration: 0.4, curve: .spring, interactive: false)),
+                spoilerTextColor: component.spoilerTextColor,
+                spoilerEffectColor: component.spoilerEffectColor,
+                areContentAnimationsEnabled: component.areContentAnimationsEnabled,
+                spoilerExpandRect: spoilerExpandRect,
+                crossfadeContents: component.crossfadeContents
+            )
+
+            let resultNode = apply(InteractiveTextNodeWithEntities.Arguments(
+                context: component.context,
+                cache: component.cache,
+                renderer: component.renderer,
+                placeholderColor: component.placeholderColor,
+                attemptSynchronous: component.attemptSynchronous,
+                textColor: component.textColor,
+                spoilerEffectColor: component.spoilerEffectColor,
+                applyArguments: applyArguments
+            ))
+
+            if self.textNodeWithEntities.textNode.view.superview == nil {
+                self.addSubview(self.textNodeWithEntities.textNode.view)
+            }
+
+            resultNode.visibilityRect = CGRect(origin: CGPoint(), size: layout.size)
+            resultNode.textNode.view.frame = textFrame
+            
+            resultNode.textNode.canHandleTapAtPoint = component.canHandleTapAtPoint
+            resultNode.textNode.requestToggleBlockCollapsed = component.requestToggleBlockCollapsed
+            resultNode.textNode.requestDisplayContentsUnderSpoilers = component.requestDisplayContentsUnderSpoilers
+            
+            component.external?.layout = resultNode.textNode.cachedLayout
+
+            return layout.size
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}

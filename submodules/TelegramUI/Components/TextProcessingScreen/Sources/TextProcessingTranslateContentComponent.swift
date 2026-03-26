@@ -229,16 +229,6 @@ final class TextProcessingTranslateContentComponent: Component {
                 }
             }
         }
-        
-        @objc private func onTooltipTapGesture(_ recognizer: UITapGestureRecognizer) {
-            guard let component = self.component else {
-                return
-            }
-            if case .ended = recognizer.state {
-                component.externalState.displayStyleTooltip = false
-                self.state?.updated(transition: .easeInOut(duration: 0.2))
-            }
-        }
 
         func update(component: TextProcessingTranslateContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
@@ -488,8 +478,15 @@ final class TextProcessingTranslateContentComponent: Component {
                 } else {
                     tooltipTransition = tooltipTransition.withAnimation(.none)
                     tooltip = ComponentView()
-                    dimView = UIView()
-                    dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTooltipTapGesture(_:))))
+                    let dimViewValue = TransparentHitView()
+                    dimViewValue.onTap = { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.externalState.displayStyleTooltip = false
+                        self.state?.updated(transition: .easeInOut(duration: 0.2))
+                    }
+                    dimView = dimViewValue
                     self.styleTooltip = (dimView, tooltip)
                 }
                 let tooltipSize = tooltip.update(

@@ -37,6 +37,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramUI/Components/TooltipComponent",
         "//submodules/TelegramUI/Components/ToastComponent",
+        "//submodules/TelegramUI/Components/InteractiveTextComponent",
         "//submodules/TelegramNotices",
         "//submodules/Markdown",
         "//submodules/TelegramUIPreferences",
