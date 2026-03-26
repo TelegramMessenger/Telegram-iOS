@@ -137,31 +137,13 @@ final class TextProcessingStyleSelectionComponent: Component {
                 styleData.append((item.id, item.emoji, localizedStyleName(strings: component.strings, styleId: item.id)))
             }
             
+            let maxItemWidth: CGFloat = 80.0
+            let itemPadding: CGFloat = 0.0
             let minSlotWidth: CGFloat = 50.0
-            let slotWidth: CGFloat
-            if CGFloat(styleData.count) * minSlotWidth <= availableSize.width {
-                slotWidth = floor(availableSize.width / CGFloat(styleData.count))
-            } else {
-                var resolved: CGFloat = minSlotWidth
-                var targetVisible: CGFloat = min(7.5, floor((availableSize.width + 16.0) / 60.0) + 0.5)
-                while targetVisible >= 1.5 {
-                    let candidateWidth = floor((availableSize.width + 16.0) / targetVisible)
-                    if candidateWidth >= minSlotWidth {
-                        resolved = candidateWidth
-                        break
-                    }
-                    targetVisible -= 1.0
-                }
-                slotWidth = resolved
-            }
-            let contentWidth = slotWidth * CGFloat(styleData.count)
-            let itemSize = CGSize(width: slotWidth, height: availableSize.height)
+            let maxSlotWidth: CGFloat = 80.0
 
-            self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
-            self.scrollView.contentSize = CGSize(width: contentWidth, height: availableSize.height)
-            self.scrollView.alwaysBounceHorizontal = contentWidth > availableSize.width
-
-            var selectedItemFrame: CGRect?
+            // First pass: measure all items to find intrinsic sizes
+            var itemSizes: [TelegramComposeAIMessageMode.StyleId: CGSize] = [:]
             for i in 0 ..< styleData.count {
                 let style = styleData[i]
                 let itemView: ComponentView<Empty>
@@ -173,8 +155,7 @@ final class TextProcessingStyleSelectionComponent: Component {
                     itemView = ComponentView()
                     self.itemViews[style.id] = itemView
                 }
-                let itemFrame = CGRect(origin: CGPoint(x: CGFloat(i) * slotWidth, y: 0.0), size: itemSize)
-                let _ = itemView.update(
+                let measuredSize = itemView.update(
                     transition: itemTransition,
                     component: AnyComponent(ItemComponent(
                         theme: component.theme,
@@ -182,16 +163,58 @@ final class TextProcessingStyleSelectionComponent: Component {
                         title: style.title
                     )),
                     environment: {},
-                    containerSize: itemSize
+                    containerSize: CGSize(width: maxItemWidth, height: availableSize.height)
                 )
+                itemSizes[style.id] = measuredSize
+            }
+
+            // Compute uniform slot width from largest item
+            var largestItemWidth: CGFloat = 0.0
+            for (_, size) in itemSizes {
+                largestItemWidth = max(largestItemWidth, size.width)
+            }
+            let contentBasedWidth = min(maxSlotWidth, max(minSlotWidth, largestItemWidth + itemPadding))
+            let slotWidth: CGFloat
+            if CGFloat(styleData.count) * contentBasedWidth <= availableSize.width {
+                slotWidth = floor(availableSize.width / CGFloat(styleData.count))
+            } else {
+                var resolved: CGFloat = contentBasedWidth
+                var targetVisible: CGFloat = min(7.5, floor((availableSize.width + 16.0) / (contentBasedWidth + 10.0)) + 0.5)
+                while targetVisible >= 1.5 {
+                    let candidateWidth = floor((availableSize.width + 16.0) / targetVisible)
+                    if candidateWidth >= contentBasedWidth {
+                        resolved = candidateWidth
+                        break
+                    }
+                    targetVisible -= 1.0
+                }
+                slotWidth = resolved
+            }
+            let contentWidth = slotWidth * CGFloat(styleData.count)
+
+            self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
+            self.scrollView.contentSize = CGSize(width: contentWidth, height: availableSize.height)
+            self.scrollView.alwaysBounceHorizontal = contentWidth > availableSize.width
+
+            // Second pass: position items centered in their slots
+            var selectedItemFrame: CGRect?
+            for i in 0 ..< styleData.count {
+                let style = styleData[i]
+                guard let itemView = self.itemViews[style.id],
+                      let naturalSize = itemSizes[style.id] else {
+                    continue
+                }
+                let slotOriginX = CGFloat(i) * slotWidth
+                let itemX = slotOriginX + floor((slotWidth - naturalSize.width) * 0.5)
+                let itemFrame = CGRect(origin: CGPoint(x: itemX, y: 0.0), size: naturalSize)
                 if let itemComponentView = itemView.view {
                     if itemComponentView.superview == nil {
                         self.scrollView.addSubview(itemComponentView)
                     }
-                    itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
+                    transition.setFrame(view: itemComponentView, frame: itemFrame)
                 }
                 if style.id == component.selectedStyle {
-                    selectedItemFrame = CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.minY - 5.0), size: CGSize(width: itemFrame.width, height: itemFrame.height + 5.0 + 3.0))
+                    selectedItemFrame = CGRect(origin: CGPoint(x: slotOriginX, y: -5.0), size: CGSize(width: slotWidth, height: availableSize.height + 5.0 + 3.0))
                 }
             }
 
@@ -310,14 +333,6 @@ private final class ItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: -1.0), size: iconSize)
-            if let imageIconView = imageIcon.view {
-                if imageIconView.superview == nil {
-                    self.addSubview(imageIconView)
-                }
-                iconTransition.setFrame(view: imageIconView, frame: iconFrame)
-            }
-
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -326,7 +341,18 @@ private final class ItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - 5.0 - titleSize.height), size: titleSize)
+
+            let contentWidth = max(iconSize.width, titleSize.width)
+
+            let iconFrame = CGRect(origin: CGPoint(x: floor((contentWidth - iconSize.width) * 0.5), y: -1.0), size: iconSize)
+            if let imageIconView = imageIcon.view {
+                if imageIconView.superview == nil {
+                    self.addSubview(imageIconView)
+                }
+                iconTransition.setFrame(view: imageIconView, frame: iconFrame)
+            }
+
+            let titleFrame = CGRect(origin: CGPoint(x: floor((contentWidth - titleSize.width) * 0.5), y: availableSize.height - 5.0 - titleSize.height), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
@@ -334,7 +360,7 @@ private final class ItemComponent: Component {
                 titleView.frame = titleFrame
             }
 
-            return availableSize
+            return CGSize(width: contentWidth, height: availableSize.height)
         }
     }
     

@@ -462,7 +462,7 @@ func _internal_composeAIMessageStyles(account: Account) -> Signal<[TelegramCompo
                 }
             }
         }
-        #if DEBUG
+        #if DEBUG && false
         for item in Array(result) {
             result.append(TelegramComposeAIMessageMode.Style(name: item.name + "_", emoji: item.emoji))
         }

@@ -1698,6 +1698,14 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 guard let strongSelf = self, let itemView = item.view as? ItemView else {
                     return
                 }
+                var isList = false
+                switch strongSelf.contentType {
+                case .files, .music, .voiceAndVideoMessages:
+                    isList = true
+                default:
+                    break
+                }
+                let listSideInset = isList ? (sideInset + 16.0) : sideInset
                 if let item = itemView.item {
                     itemView.bind(
                         item: item,
@@ -1707,7 +1715,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                         interaction: strongSelf.itemGridBinding.listItemInteraction,
                         isSelected: strongSelf.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
                         size: CGSize(width: size.width, height: itemView.bounds.height),
-                        insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset)
+                        insets: UIEdgeInsets(top: topInset, left: listSideInset, bottom: bottomInset, right: listSideInset)
                     )
                 }
             }
@@ -2137,6 +2145,14 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 guard let itemView = item.view as? ItemView, let (size, topInset, sideInset, bottomInset, _, _, _, _, _, _) = self.currentParams else {
                     return
                 }
+                var isList = false
+                switch self.contentType {
+                case .files, .music, .voiceAndVideoMessages:
+                    isList = true
+                default:
+                    break
+                }
+                let listSideInset = isList ? (sideInset + 16.0) : sideInset
                 if let item = itemView.item {
                     itemView.bind(
                         item: item,
@@ -2146,7 +2162,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                         interaction: self.itemGridBinding.listItemInteraction,
                         isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
                         size: CGSize(width: size.width, height: itemView.bounds.height),
-                        insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset)
+                        insets: UIEdgeInsets(top: topInset, left: listSideInset, bottom: bottomInset, right: listSideInset)
                     )
                 }
             }

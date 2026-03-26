@@ -2354,6 +2354,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 navigationController.pushViewController(createBotScreen)
                             }
                         }
+                    case let .channel(channel):
+                        if channel.isCreator {
+                            
+                        }
                     default:
                         break
                     }

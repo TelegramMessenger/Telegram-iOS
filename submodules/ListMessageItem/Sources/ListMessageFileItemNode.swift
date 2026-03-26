@@ -1240,6 +1240,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         if strongSelf.maskNode.supernode != nil {
                             strongSelf.maskNode.removeFromSupernode()
                         }
+                        if !mergedBottom {
+                            strongSelf.separatorNode.isHidden = true
+                        } else {
+                            strongSelf.separatorNode.isHidden = false
+                        }
                     case .blocks:
                         if strongSelf.maskNode.supernode == nil {
                             strongSelf.addSubnode(strongSelf.maskNode)

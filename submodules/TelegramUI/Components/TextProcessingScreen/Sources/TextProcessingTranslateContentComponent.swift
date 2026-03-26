@@ -63,7 +63,7 @@ final class TextProcessingTranslateContentComponent: Component {
         
         fileprivate(set) var nonPremiumFloodTriggered: Bool = false {
             didSet {
-                if self.isProcessing != oldValue {
+                if self.nonPremiumFloodTriggered != oldValue {
                     self.nonPremiumFloodTriggeredUpdated?(self.nonPremiumFloodTriggered)
                 }
             }
