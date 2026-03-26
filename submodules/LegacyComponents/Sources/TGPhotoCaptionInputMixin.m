@@ -338,7 +338,13 @@
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
     
-    CGRect livePhotoButtonFrame = CGRectMake(edgeInsets.left + 16.0, edgeInsets.top + 80.0 + 32.0 - _keyboardHeight, 160.0, 18.0);
+    CGFloat livePhotoY = 0.0;
+    if (frame.size.width > frame.size.height && !TGIsPad()) {
+        livePhotoY = 48.0;
+    } else {
+        livePhotoY = edgeInsets.top + 145.0 - _keyboardHeight;
+    }
+    CGRect livePhotoButtonFrame = CGRectMake(_safeAreaInset.left + edgeInsets.left + 16.0, livePhotoY, 160.0, 18.0);
     _livePhotoButtonView.frame = livePhotoButtonFrame;
     
     CGRect panelFrame = CGRectMake(edgeInsets.left, panelY, frame.size.width, panelHeight);

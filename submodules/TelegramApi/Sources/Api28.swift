@@ -1690,15 +1690,17 @@ public extension Api {
             public var pollId: Int64
             public var peer: Api.Peer
             public var options: [Buffer]
+            public var positions: [Int32]
             public var qts: Int32
-            public init(pollId: Int64, peer: Api.Peer, options: [Buffer], qts: Int32) {
+            public init(pollId: Int64, peer: Api.Peer, options: [Buffer], positions: [Int32], qts: Int32) {
                 self.pollId = pollId
                 self.peer = peer
                 self.options = options
+                self.positions = positions
                 self.qts = qts
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("updateMessagePollVote", [("pollId", self.pollId as Any), ("peer", self.peer as Any), ("options", self.options as Any), ("qts", self.qts as Any)])
+                return ("updateMessagePollVote", [("pollId", self.pollId as Any), ("peer", self.peer as Any), ("options", self.options as Any), ("positions", self.positions as Any), ("qts", self.qts as Any)])
             }
         }
         public class Cons_updateMessageReactions: TypeConstructorDescription {
@@ -3440,7 +3442,7 @@ public extension Api {
                 break
             case .updateMessagePollVote(let _data):
                 if boxed {
-                    buffer.appendInt32(619974263)
+                    buffer.appendInt32(1989799956)
                 }
                 serializeInt64(_data.pollId, buffer: buffer, boxed: false)
                 _data.peer.serialize(buffer, true)
@@ -3448,6 +3450,11 @@ public extension Api {
                 buffer.appendInt32(Int32(_data.options.count))
                 for item in _data.options {
                     serializeBytes(item, buffer: buffer, boxed: false)
+                }
+                buffer.appendInt32(481674261)
+                buffer.appendInt32(Int32(_data.positions.count))
+                for item in _data.positions {
+                    serializeInt32(item, buffer: buffer, boxed: false)
                 }
                 serializeInt32(_data.qts, buffer: buffer, boxed: false)
                 break
@@ -4245,7 +4252,7 @@ public extension Api {
             case .updateMessagePoll(let _data):
                 return ("updateMessagePoll", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("msgId", _data.msgId as Any), ("topMsgId", _data.topMsgId as Any), ("pollId", _data.pollId as Any), ("poll", _data.poll as Any), ("results", _data.results as Any)])
             case .updateMessagePollVote(let _data):
-                return ("updateMessagePollVote", [("pollId", _data.pollId as Any), ("peer", _data.peer as Any), ("options", _data.options as Any), ("qts", _data.qts as Any)])
+                return ("updateMessagePollVote", [("pollId", _data.pollId as Any), ("peer", _data.peer as Any), ("options", _data.options as Any), ("positions", _data.positions as Any), ("qts", _data.qts as Any)])
             case .updateMessageReactions(let _data):
                 return ("updateMessageReactions", [("flags", _data.flags as Any), ("peer", _data.peer as Any), ("msgId", _data.msgId as Any), ("topMsgId", _data.topMsgId as Any), ("savedPeerId", _data.savedPeerId as Any), ("reactions", _data.reactions as Any)])
             case .updateMonoForumNoPaidException(let _data):
@@ -6022,14 +6029,19 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
             }
-            var _4: Int32?
-            _4 = reader.readInt32()
+            var _4: [Int32]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _5: Int32?
+            _5 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateMessagePollVote(Cons_updateMessagePollVote(pollId: _1!, peer: _2!, options: _3!, qts: _4!))
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updateMessagePollVote(Cons_updateMessagePollVote(pollId: _1!, peer: _2!, options: _3!, positions: _4!, qts: _5!))
             }
             else {
                 return nil

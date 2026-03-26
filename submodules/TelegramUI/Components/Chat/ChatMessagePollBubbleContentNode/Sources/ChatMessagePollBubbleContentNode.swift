@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Crc32
 import Display
 import TelegramCore
 import Postbox
@@ -3654,11 +3655,6 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     }
 }
 
-private struct ArbitraryRandomNumberGenerator : RandomNumberGenerator {
-    init(seed: Int) { srand48(seed) }
-    func next() -> UInt64 { return UInt64(drand48() * Double(UInt64.max)) }
-}
-
 private func stringForRemainingTime(_ duration: Int32, strings: PresentationStrings, results: Bool) -> String {
     let days = duration / (3600 * 24)
     let hours = duration / 3600
@@ -3739,26 +3735,31 @@ private func resolvedOptionOrder(for item: ChatMessageBubbleContentItem) -> [(In
         return defaultOrderedOptions
     }
 
-    let currentOpaqueIdentifiers = poll.options.map(\.opaqueIdentifier)
-    let messageSeed = UInt64(bitPattern: Int64(item.message.stableId))
-    let peerSeed = UInt64(bitPattern: item.context.account.peerId.toInt64())
-    let seed = Int(truncatingIfNeeded: (messageSeed &* 6364136223846793005) ^ peerSeed)
+    let userId = item.context.account.peerId.id._internalGetInt64Value()
+    let pollId = poll.pollId.id
 
-    var resolvedOpaqueIdentifiers = currentOpaqueIdentifiers
-    var randomNumberGenerator = ArbitraryRandomNumberGenerator(seed: seed)
-    resolvedOpaqueIdentifiers.shuffle(using: &randomNumberGenerator)
+    return defaultOrderedOptions
+        .map { index, option in
+            var hashValue = Data()
+            hashValue.append(contentsOf: String(userId).utf8)
+            hashValue.append(option.opaqueIdentifier)
+            hashValue.append(contentsOf: String(pollId).utf8)
 
-    let indicesByOpaqueIdentifier = Dictionary(uniqueKeysWithValues: poll.options.enumerated().map { ($0.element.opaqueIdentifier, $0.offset) })
-    let orderedOptions = resolvedOpaqueIdentifiers.compactMap { opaqueIdentifier -> (Int, TelegramMediaPollOption)? in
-        guard let index = indicesByOpaqueIdentifier[opaqueIdentifier] else {
-            return nil
+            let sortValue: UInt32 = hashValue.withUnsafeBytes { bytes in
+                guard let baseAddress = bytes.baseAddress else {
+                    return 0
+                }
+                return Crc32(baseAddress, Int32(bytes.count))
+            }
+
+            return (index, option, sortValue)
         }
-        return (index, poll.options[index])
-    }
-
-    if orderedOptions.count == poll.options.count {
-        return orderedOptions
-    } else {
-        return defaultOrderedOptions
-    }
+        .sorted(by: { lhs, rhs in
+            if lhs.2 != rhs.2 {
+                return lhs.2 < rhs.2
+            } else {
+                return lhs.0 < rhs.0
+            }
+        })
+        .map { ($0.0, $0.1) }
 }

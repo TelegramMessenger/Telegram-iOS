@@ -306,6 +306,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case copyProtectionRequest(hasExpired: Bool, previousValue: Bool, newValue: Bool)
     case managedBotCreated(botId: PeerId)
     case pollOptionAppended(TelegramMediaPollOption)
+    case pollOptionDeleted(TelegramMediaPollOption)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -487,6 +488,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .managedBotCreated(botId: PeerId(decoder.decodeInt64ForKey("botId", orElse: 0)))
         case 63:
             self = .pollOptionAppended(decoder.decodeObjectForKey("option", decoder: { TelegramMediaPollOption(decoder: $0) }) as! TelegramMediaPollOption)
+        case 64:
+            self = .pollOptionDeleted(decoder.decodeObjectForKey("option", decoder: { TelegramMediaPollOption(decoder: $0) }) as! TelegramMediaPollOption)
         default:
             self = .unknown
         }
@@ -995,6 +998,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt64(botId.toInt64(), forKey: "botId")
         case let .pollOptionAppended(option):
             encoder.encodeInt32(63, forKey: "_rawValue")
+            encoder.encodeObject(option, forKey: "option")
+        case let .pollOptionDeleted(option):
+            encoder.encodeInt32(64, forKey: "_rawValue")
             encoder.encodeObject(option, forKey: "option")
         }
     }

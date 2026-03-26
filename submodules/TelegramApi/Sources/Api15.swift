@@ -2080,6 +2080,15 @@ public extension Api {
                 return ("messageActionPollAppendAnswer", [("answer", self.answer as Any)])
             }
         }
+        public class Cons_messageActionPollDeleteAnswer: TypeConstructorDescription {
+            public var answer: Api.PollAnswer
+            public init(answer: Api.PollAnswer) {
+                self.answer = answer
+            }
+            public func descriptionFields() -> (String, [(String, Any)]) {
+                return ("messageActionPollDeleteAnswer", [("answer", self.answer as Any)])
+            }
+        }
         public class Cons_messageActionPrizeStars: TypeConstructorDescription {
             public var flags: Int32
             public var stars: Int64
@@ -2429,6 +2438,7 @@ public extension Api {
         case messageActionPhoneCall(Cons_messageActionPhoneCall)
         case messageActionPinMessage
         case messageActionPollAppendAnswer(Cons_messageActionPollAppendAnswer)
+        case messageActionPollDeleteAnswer(Cons_messageActionPollDeleteAnswer)
         case messageActionPrizeStars(Cons_messageActionPrizeStars)
         case messageActionRequestedPeer(Cons_messageActionRequestedPeer)
         case messageActionRequestedPeerSentMe(Cons_messageActionRequestedPeerSentMe)
@@ -2838,6 +2848,12 @@ public extension Api {
                 }
                 _data.answer.serialize(buffer, true)
                 break
+            case .messageActionPollDeleteAnswer(let _data):
+                if boxed {
+                    buffer.appendInt32(966161628)
+                }
+                _data.answer.serialize(buffer, true)
+                break
             case .messageActionPrizeStars(let _data):
                 if boxed {
                     buffer.appendInt32(-1341372510)
@@ -3208,6 +3224,8 @@ public extension Api {
                 return ("messageActionPinMessage", [])
             case .messageActionPollAppendAnswer(let _data):
                 return ("messageActionPollAppendAnswer", [("answer", _data.answer as Any)])
+            case .messageActionPollDeleteAnswer(let _data):
+                return ("messageActionPollDeleteAnswer", [("answer", _data.answer as Any)])
             case .messageActionPrizeStars(let _data):
                 return ("messageActionPrizeStars", [("flags", _data.flags as Any), ("stars", _data.stars as Any), ("transactionId", _data.transactionId as Any), ("boostPeer", _data.boostPeer as Any), ("giveawayMsgId", _data.giveawayMsgId as Any)])
             case .messageActionRequestedPeer(let _data):
@@ -3968,6 +3986,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.MessageAction.messageActionPollAppendAnswer(Cons_messageActionPollAppendAnswer(answer: _1!))
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionPollDeleteAnswer(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.PollAnswer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.PollAnswer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionPollDeleteAnswer(Cons_messageActionPollDeleteAnswer(answer: _1!))
             }
             else {
                 return nil

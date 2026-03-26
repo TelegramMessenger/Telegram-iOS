@@ -44,6 +44,7 @@ public enum PremiumIntroSource {
     case messageEffects
     case todo
     case copyProtection
+    case aiTools
     case auth(String)
     case premiumGift(TelegramMediaFile)
 }
@@ -85,6 +86,7 @@ public enum PremiumDemoSubject {
     case messageEffects
     case todo
     case copyProtection
+    case aiTools
     
     case businessLocation
     case businessHours

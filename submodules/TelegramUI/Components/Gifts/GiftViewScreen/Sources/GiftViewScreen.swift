@@ -3239,7 +3239,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 var hasDescriptionButton = false
                 if let uniqueGift {
                     titleString = uniqueGift.title + " **#\(formatCollectibleNumber(uniqueGift.number, dateTimeFormat: environment.dateTimeFormat))**"
-                    descriptionText = "\(strings.Gift_Unique_Collectible) #\(formatCollectibleNumber(uniqueGift.number, dateTimeFormat: environment.dateTimeFormat))"
+                    descriptionText = "\(strings.Gift_Unique_Collectible)"
                     for attribute in uniqueGift.attributes {
                         if case let .model(name, _, _, _) = attribute {
                             descriptionText = name
@@ -3520,7 +3520,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     }
                     
                     var descriptionSize = CGSize()
-                    if state.justUpgraded {
+                    if !"".isEmpty, state.justUpgraded {
                         var items: [AnyComponentWithIdentity<Empty>] = [
                             AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: "\(strings.Gift_Unique_Collectible) #", font: textFont, color: .white, tintColor: textColor)))
                         ]

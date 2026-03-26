@@ -976,9 +976,11 @@
             if (adjustments.paintingData.hasAnimation) {
                 grouping = false;
             }
-//            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
-//                grouping = false;
-//            }
+            
+            TGMediaLivePhotoMode livePhotoMode = [editingContext livePhotoModeForItem:asset];
+            if (livePhotoMode == TGMediaLivePhotoModeLoop || livePhotoMode == TGMediaLivePhotoModeBounce) {
+                grouping = false;
+            }
         }
     }
     
@@ -1544,9 +1546,10 @@
             if (adjustments.paintingData.hasAnimation) {
                 grouping = false;
             }
-//            if ([editingContext livePhotoModeForItem:asset] != TGMediaLivePhotoModeOff) {
-//                grouping = false;
-//            }
+            TGMediaLivePhotoMode livePhotoMode = [editingContext livePhotoModeForItem:asset];
+            if (livePhotoMode == TGMediaLivePhotoModeLoop || livePhotoMode == TGMediaLivePhotoModeBounce) {
+                grouping = false;
+            }
         }
     }
     
@@ -1771,21 +1774,6 @@
 - (UIBarButtonItem *)rightBarButtonItem
 {
     return nil;
-//    if (_intent == TGMediaAssetsControllerSendFileIntent)
-//        return nil;
-//    if (self.requestSearchController == nil) {
-//        return nil;
-//    }
-//
-//    if (iosMajorVersion() < 7)
-//    {
-//        TGModernBarButton *searchButton = [[TGModernBarButton alloc] initWithImage:TGComponentsImageNamed(@"NavigationSearchIcon.png")];
-//        searchButton.portraitAdjustment = CGPointMake(-7, -5);
-//        [searchButton addTarget:self action:@selector(searchButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-//        return [[UIBarButtonItem alloc] initWithCustomView:searchButton];
-//    }
-//
-//    return [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSearch target:self action:@selector(searchButtonPressed)];
 }
 
 - (void)cancelButtonPressed

@@ -15982,6 +15982,9 @@ Error: %8$@";
 "Notification.PollAddedOption" = "%1$@ added the option \"%2$@\" to the poll";
 "Notification.PollAddedOptionYou" = "You added the option \"%1$@\" to the poll";
 
+"Notification.PollDeletedOption" = "%1$@ deleted the option \"%2$@\" from the poll";
+"Notification.PollDeletedOptionYou" = "You deleted the option \"%1$@\" to the poll";
+
 "Notification.ManagedBotCreated" = "%@ bot created";
 
 "Chat.PolOptionAddedTimestamp.Date" = "Added by %1$@ %2$@";
@@ -15999,3 +16002,6 @@ Error: %8$@";
 "MessagePoll.ResultsIn" = "results in %@";
 "MessagePoll.ResultsInDays_1" = "results in %@ day";
 "MessagePoll.ResultsInDays_any" = "results in %@ days";
+
+"Premium.AiTools" = "AI Tools";
+"Premium.AiToolsInfo" = "Transform your messages and entire chats in your preferred style and language.";

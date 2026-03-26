@@ -1822,19 +1822,6 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
                 attributedString = addAttributesToStringWithRanges(strings.Notification_ManagedBotCreated(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
             case let .pollOptionAppended(option):
-                var optionTitle = "DELETED"
-                for attribute in message.attributes {
-                    if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {
-                        for media in message.media {
-                            if let todo = media as? TelegramMediaTodo {
-                                optionTitle = todo.text
-                            }
-                        }
-                    }
-                }
-                if optionTitle.count > 20 {
-                    optionTitle = optionTitle.prefix(20) + "…"
-                }
                 let optionEntities = option.entities.filter { entity in
                     switch entity.type {
                     case .Spoiler, .CustomEmoji:
@@ -1865,6 +1852,44 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         optionText = optionText.prefix(20) + "…"
                     }
                     let resultString = strings.Notification_PollAddedOption(peerName, optionText)
+                    let stringWithRanges = resultString._tuple
+                    let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: attributes))
+                    if let optionRange = serviceMessageArgumentRange(index: 1, value: optionText, in: stringWithRanges) {
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                    }
+                    attributedString = resultAttributedString
+                }
+            case let .pollOptionDeleted(option):
+                let optionEntities = option.entities.filter { entity in
+                    switch entity.type {
+                    case .Spoiler, .CustomEmoji:
+                        return true
+                    default:
+                        return false
+                    }
+                }
+                if message.author?.id == accountPeerId {
+                    var optionText = option.text
+                    if optionText.count > 20 {
+                        optionText = optionText.prefix(20) + "…"
+                    }
+                    let resultString = strings.Notification_PollDeletedOptionYou(optionText)
+                    let stringWithRanges = resultString._tuple
+                    let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes]))
+                    if let optionRange = serviceMessageArgumentRange(index: 0, value: optionText, in: stringWithRanges) {
+                        addServiceMessageTextEntities(optionEntities, to: resultAttributedString, text: optionText, range: optionRange, associatedMedia: message.associatedMedia)
+                    }
+                    attributedString = resultAttributedString
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    
+                    var optionText = option.text
+                    if optionText.count > 20 {
+                        optionText = optionText.prefix(20) + "…"
+                    }
+                    let resultString = strings.Notification_PollDeletedOption(peerName, optionText)
                     let stringWithRanges = resultString._tuple
                     let resultAttributedString = NSMutableAttributedString(attributedString: addAttributesToStringWithRanges(stringWithRanges, body: bodyAttributes, argumentAttributes: attributes))
                     if let optionRange = serviceMessageArgumentRange(index: 1, value: optionText, in: stringWithRanges) {

@@ -367,6 +367,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .managedBotCreated(botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(messageActionManagedBotCreatedData.botId))))
     case let .messageActionPollAppendAnswer(messageActionPollAppendAnswerData):
         return TelegramMediaAction(action: .pollOptionAppended(TelegramMediaPollOption(apiOption: messageActionPollAppendAnswerData.answer)))
+    case let .messageActionPollDeleteAnswer(messageActionPollDeleteAnswerData):
+        return TelegramMediaAction(action: .pollOptionDeleted(TelegramMediaPollOption(apiOption: messageActionPollDeleteAnswerData.answer)))
     }
 }
 
