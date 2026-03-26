@@ -1129,6 +1129,26 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.aiTools] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.aiTools,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["ai_compose"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_AiTools,
+                                text: strings.Premium_AiToolsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 let index: Int = 0
                 var items: [DemoPagerComponent.Item] = []
                 if let item = availableItems.first(where: { $0.value.content.id == component.subject as AnyHashable }) {
@@ -1221,6 +1241,8 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_TodoInfo
             case .copyProtection:
                 text = strings.Premium_CopyProtectionInfo
+            case .aiTools:
+                text = "Transform your messages and entire chats in your preferred style and language."
             default:
                 text = ""
             }
@@ -1308,6 +1330,8 @@ private final class DemoSheetContent: CombinedComponent {
                         case .todo:
                             buttonText = strings.Premium_PaidMessages_Proceed
                         case .copyProtection:
+                            buttonText = strings.Premium_PaidMessages_Proceed
+                        case .aiTools:
                             buttonText = strings.Premium_PaidMessages_Proceed
                         default:
                             buttonText = strings.Common_OK
@@ -1498,6 +1522,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case messageEffects
         case todo
         case copyProtection
+        case aiTools
         
         case businessLocation
         case businessHours
@@ -1560,6 +1585,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .todo
             case .copyProtection:
                 return .copyProtection
+            case .aiTools:
+                return .aiTools
             case .businessLocation:
                 return .businessLocation
             case .businessHours:

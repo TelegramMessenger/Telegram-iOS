@@ -2970,6 +2970,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .todo
         case .copyProtection:
             mappedSource = .copyProtection
+        case .aiTools:
+            mappedSource = .aiTools
         case let .auth(price):
             mappedSource = .auth(price)
         case let .premiumGift(file):
@@ -3052,6 +3054,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .todo
         case .copyProtection:
             mappedSubject = .copyProtection
+        case .aiTools:
+            mappedSubject = .aiTools
         case .business:
             mappedSubject = .business
             buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton

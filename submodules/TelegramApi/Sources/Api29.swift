@@ -579,7 +579,8 @@ public extension Api {
             public var region: String?
             public var matchCodes: [String]?
             public var userIdHint: Int64?
-            public init(flags: Int32, bot: Api.User, domain: String, browser: String?, platform: String?, ip: String?, region: String?, matchCodes: [String]?, userIdHint: Int64?) {
+            public var verifiedAppName: String?
+            public init(flags: Int32, bot: Api.User, domain: String, browser: String?, platform: String?, ip: String?, region: String?, matchCodes: [String]?, userIdHint: Int64?, verifiedAppName: String?) {
                 self.flags = flags
                 self.bot = bot
                 self.domain = domain
@@ -589,9 +590,10 @@ public extension Api {
                 self.region = region
                 self.matchCodes = matchCodes
                 self.userIdHint = userIdHint
+                self.verifiedAppName = verifiedAppName
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("urlAuthResultRequest", [("flags", self.flags as Any), ("bot", self.bot as Any), ("domain", self.domain as Any), ("browser", self.browser as Any), ("platform", self.platform as Any), ("ip", self.ip as Any), ("region", self.region as Any), ("matchCodes", self.matchCodes as Any), ("userIdHint", self.userIdHint as Any)])
+                return ("urlAuthResultRequest", [("flags", self.flags as Any), ("bot", self.bot as Any), ("domain", self.domain as Any), ("browser", self.browser as Any), ("platform", self.platform as Any), ("ip", self.ip as Any), ("region", self.region as Any), ("matchCodes", self.matchCodes as Any), ("userIdHint", self.userIdHint as Any), ("verifiedAppName", self.verifiedAppName as Any)])
             }
         }
         case urlAuthResultAccepted(Cons_urlAuthResultAccepted)
@@ -616,7 +618,7 @@ public extension Api {
                 break
             case .urlAuthResultRequest(let _data):
                 if boxed {
-                    buffer.appendInt32(-117904610)
+                    buffer.appendInt32(1020666860)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 _data.bot.serialize(buffer, true)
@@ -643,6 +645,9 @@ public extension Api {
                 if Int(_data.flags) & Int(1 << 4) != 0 {
                     serializeInt64(_data.userIdHint!, buffer: buffer, boxed: false)
                 }
+                if Int(_data.flags) & Int(1 << 7) != 0 {
+                    serializeString(_data.verifiedAppName!, buffer: buffer, boxed: false)
+                }
                 break
             }
         }
@@ -654,7 +659,7 @@ public extension Api {
             case .urlAuthResultDefault:
                 return ("urlAuthResultDefault", [])
             case .urlAuthResultRequest(let _data):
-                return ("urlAuthResultRequest", [("flags", _data.flags as Any), ("bot", _data.bot as Any), ("domain", _data.domain as Any), ("browser", _data.browser as Any), ("platform", _data.platform as Any), ("ip", _data.ip as Any), ("region", _data.region as Any), ("matchCodes", _data.matchCodes as Any), ("userIdHint", _data.userIdHint as Any)])
+                return ("urlAuthResultRequest", [("flags", _data.flags as Any), ("bot", _data.bot as Any), ("domain", _data.domain as Any), ("browser", _data.browser as Any), ("platform", _data.platform as Any), ("ip", _data.ip as Any), ("region", _data.region as Any), ("matchCodes", _data.matchCodes as Any), ("userIdHint", _data.userIdHint as Any), ("verifiedAppName", _data.verifiedAppName as Any)])
             }
         }
 
@@ -712,6 +717,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 4) != 0 {
                 _9 = reader.readInt64()
             }
+            var _10: String?
+            if Int(_1!) & Int(1 << 7) != 0 {
+                _10 = parseString(reader)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -721,8 +730,9 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.UrlAuthResult.urlAuthResultRequest(Cons_urlAuthResultRequest(flags: _1!, bot: _2!, domain: _3!, browser: _4, platform: _5, ip: _6, region: _7, matchCodes: _8, userIdHint: _9))
+            let _c10 = (Int(_1!) & Int(1 << 7) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.UrlAuthResult.urlAuthResultRequest(Cons_urlAuthResultRequest(flags: _1!, bot: _2!, domain: _3!, browser: _4, platform: _5, ip: _6, region: _7, matchCodes: _8, userIdHint: _9, verifiedAppName: _10))
             }
             else {
                 return nil

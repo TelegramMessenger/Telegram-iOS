@@ -1141,10 +1141,11 @@ public extension Api {
             public var unreadCount: Int32
             public var unreadMentionsCount: Int32
             public var unreadReactionsCount: Int32
+            public var unreadPollVotesCount: Int32
             public var fromId: Api.Peer
             public var notifySettings: Api.PeerNotifySettings
             public var draft: Api.DraftMessage?
-            public init(flags: Int32, id: Int32, date: Int32, peer: Api.Peer, title: String, iconColor: Int32, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, fromId: Api.Peer, notifySettings: Api.PeerNotifySettings, draft: Api.DraftMessage?) {
+            public init(flags: Int32, id: Int32, date: Int32, peer: Api.Peer, title: String, iconColor: Int32, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, unreadPollVotesCount: Int32, fromId: Api.Peer, notifySettings: Api.PeerNotifySettings, draft: Api.DraftMessage?) {
                 self.flags = flags
                 self.id = id
                 self.date = date
@@ -1158,12 +1159,13 @@ public extension Api {
                 self.unreadCount = unreadCount
                 self.unreadMentionsCount = unreadMentionsCount
                 self.unreadReactionsCount = unreadReactionsCount
+                self.unreadPollVotesCount = unreadPollVotesCount
                 self.fromId = fromId
                 self.notifySettings = notifySettings
                 self.draft = draft
             }
             public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("forumTopic", [("flags", self.flags as Any), ("id", self.id as Any), ("date", self.date as Any), ("peer", self.peer as Any), ("title", self.title as Any), ("iconColor", self.iconColor as Any), ("iconEmojiId", self.iconEmojiId as Any), ("topMessage", self.topMessage as Any), ("readInboxMaxId", self.readInboxMaxId as Any), ("readOutboxMaxId", self.readOutboxMaxId as Any), ("unreadCount", self.unreadCount as Any), ("unreadMentionsCount", self.unreadMentionsCount as Any), ("unreadReactionsCount", self.unreadReactionsCount as Any), ("fromId", self.fromId as Any), ("notifySettings", self.notifySettings as Any), ("draft", self.draft as Any)])
+                return ("forumTopic", [("flags", self.flags as Any), ("id", self.id as Any), ("date", self.date as Any), ("peer", self.peer as Any), ("title", self.title as Any), ("iconColor", self.iconColor as Any), ("iconEmojiId", self.iconEmojiId as Any), ("topMessage", self.topMessage as Any), ("readInboxMaxId", self.readInboxMaxId as Any), ("readOutboxMaxId", self.readOutboxMaxId as Any), ("unreadCount", self.unreadCount as Any), ("unreadMentionsCount", self.unreadMentionsCount as Any), ("unreadReactionsCount", self.unreadReactionsCount as Any), ("unreadPollVotesCount", self.unreadPollVotesCount as Any), ("fromId", self.fromId as Any), ("notifySettings", self.notifySettings as Any), ("draft", self.draft as Any)])
             }
         }
         public class Cons_forumTopicDeleted: TypeConstructorDescription {
@@ -1182,7 +1184,7 @@ public extension Api {
             switch self {
             case .forumTopic(let _data):
                 if boxed {
-                    buffer.appendInt32(-838922550)
+                    buffer.appendInt32(-52766699)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt32(_data.id, buffer: buffer, boxed: false)
@@ -1199,6 +1201,7 @@ public extension Api {
                 serializeInt32(_data.unreadCount, buffer: buffer, boxed: false)
                 serializeInt32(_data.unreadMentionsCount, buffer: buffer, boxed: false)
                 serializeInt32(_data.unreadReactionsCount, buffer: buffer, boxed: false)
+                serializeInt32(_data.unreadPollVotesCount, buffer: buffer, boxed: false)
                 _data.fromId.serialize(buffer, true)
                 _data.notifySettings.serialize(buffer, true)
                 if Int(_data.flags) & Int(1 << 4) != 0 {
@@ -1217,7 +1220,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, Any)]) {
             switch self {
             case .forumTopic(let _data):
-                return ("forumTopic", [("flags", _data.flags as Any), ("id", _data.id as Any), ("date", _data.date as Any), ("peer", _data.peer as Any), ("title", _data.title as Any), ("iconColor", _data.iconColor as Any), ("iconEmojiId", _data.iconEmojiId as Any), ("topMessage", _data.topMessage as Any), ("readInboxMaxId", _data.readInboxMaxId as Any), ("readOutboxMaxId", _data.readOutboxMaxId as Any), ("unreadCount", _data.unreadCount as Any), ("unreadMentionsCount", _data.unreadMentionsCount as Any), ("unreadReactionsCount", _data.unreadReactionsCount as Any), ("fromId", _data.fromId as Any), ("notifySettings", _data.notifySettings as Any), ("draft", _data.draft as Any)])
+                return ("forumTopic", [("flags", _data.flags as Any), ("id", _data.id as Any), ("date", _data.date as Any), ("peer", _data.peer as Any), ("title", _data.title as Any), ("iconColor", _data.iconColor as Any), ("iconEmojiId", _data.iconEmojiId as Any), ("topMessage", _data.topMessage as Any), ("readInboxMaxId", _data.readInboxMaxId as Any), ("readOutboxMaxId", _data.readOutboxMaxId as Any), ("unreadCount", _data.unreadCount as Any), ("unreadMentionsCount", _data.unreadMentionsCount as Any), ("unreadReactionsCount", _data.unreadReactionsCount as Any), ("unreadPollVotesCount", _data.unreadPollVotesCount as Any), ("fromId", _data.fromId as Any), ("notifySettings", _data.notifySettings as Any), ("draft", _data.draft as Any)])
             case .forumTopicDeleted(let _data):
                 return ("forumTopicDeleted", [("id", _data.id as Any)])
             }
@@ -1254,18 +1257,20 @@ public extension Api {
             _12 = reader.readInt32()
             var _13: Int32?
             _13 = reader.readInt32()
-            var _14: Api.Peer?
+            var _14: Int32?
+            _14 = reader.readInt32()
+            var _15: Api.Peer?
             if let signature = reader.readInt32() {
-                _14 = Api.parse(reader, signature: signature) as? Api.Peer
+                _15 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _15: Api.PeerNotifySettings?
+            var _16: Api.PeerNotifySettings?
             if let signature = reader.readInt32() {
-                _15 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
+                _16 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
-            var _16: Api.DraftMessage?
+            var _17: Api.DraftMessage?
             if Int(_1!) & Int(1 << 4) != 0 {
                 if let signature = reader.readInt32() {
-                    _16 = Api.parse(reader, signature: signature) as? Api.DraftMessage
+                    _17 = Api.parse(reader, signature: signature) as? Api.DraftMessage
                 }
             }
             let _c1 = _1 != nil
@@ -1283,9 +1288,10 @@ public extension Api {
             let _c13 = _13 != nil
             let _c14 = _14 != nil
             let _c15 = _15 != nil
-            let _c16 = (Int(_1!) & Int(1 << 4) == 0) || _16 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 {
-                return Api.ForumTopic.forumTopic(Cons_forumTopic(flags: _1!, id: _2!, date: _3!, peer: _4!, title: _5!, iconColor: _6!, iconEmojiId: _7, topMessage: _8!, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, unreadMentionsCount: _12!, unreadReactionsCount: _13!, fromId: _14!, notifySettings: _15!, draft: _16))
+            let _c16 = _16 != nil
+            let _c17 = (Int(_1!) & Int(1 << 4) == 0) || _17 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
+                return Api.ForumTopic.forumTopic(Cons_forumTopic(flags: _1!, id: _2!, date: _3!, peer: _4!, title: _5!, iconColor: _6!, iconEmojiId: _7, topMessage: _8!, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, unreadMentionsCount: _12!, unreadReactionsCount: _13!, unreadPollVotesCount: _14!, fromId: _15!, notifySettings: _16!, draft: _17))
             }
             else {
                 return nil

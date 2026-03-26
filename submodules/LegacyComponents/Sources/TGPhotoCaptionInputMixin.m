@@ -338,7 +338,7 @@
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
     
-    CGRect livePhotoButtonFrame = CGRectMake(edgeInsets.left + 16.0, edgeInsets.top + 80.0 + 32.0 - _keyboardHeight, 160.0, 18.0);
+    CGRect livePhotoButtonFrame = CGRectMake(edgeInsets.left + 16.0, edgeInsets.top + 145.0 - _keyboardHeight, 160.0, 18.0);
     _livePhotoButtonView.frame = livePhotoButtonFrame;
     
     CGRect panelFrame = CGRectMake(edgeInsets.left, panelY, frame.size.width, panelHeight);

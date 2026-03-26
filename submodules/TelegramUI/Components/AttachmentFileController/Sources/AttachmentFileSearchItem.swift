@@ -631,7 +631,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                     var index: Int32 = 0
                     
                     if let savedMusic, !savedMusic.isEmpty {
-                        entries.append(.header(title: "SAVED MUSIC", section: section))
+                        entries.append(.header(title: "PROFILE MUSIC", section: section))
                         
                         var savedMusic = savedMusic
                         var hasShowMore = false
@@ -652,7 +652,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                     section += 1
                     
                     if !messages.isEmpty {
-                        entries.append(.header(title: "SHARED AUDIO", section: section))
+                        entries.append(.header(title: "YOUR CHATS", section: section))
                         var messages = messages
                         var hasShowMore = false
                         if messages.count > 4 && !expandedSections.contains(section) {
@@ -672,7 +672,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         index = 0
                         section += 1
                         
-                        entries.append(.header(title: "GLOBAL SEARCH", section: section))
+                        entries.append(.header(title: "PUBLIC CHATS", section: section))
                         for message in globalMusic {
                             entries.append(.file(index: index, message: message, section: section))
                             index += 1
