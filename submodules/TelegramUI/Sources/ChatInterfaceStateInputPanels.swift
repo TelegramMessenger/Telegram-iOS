@@ -464,7 +464,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 let panel = ChatTextInputPanelNode(context: context, presentationInterfaceState: chatPresentationInterfaceState, presentationContext: nil, presentController: { [weak interfaceInteraction] controller in
                     interfaceInteraction?.presentController(controller, nil)
                 })
-                panel.isAIEnabled = true
+                if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_disable_ai_chat"] as? Double, value == 1.0 {
+                } else {
+                    panel.isAIEnabled = true
+                }
                 panel.textInputAccessoryPanel = textInputAccessoryPanel
                 panel.textInputContextPanel = textInputContextPanel
                 panel.chatControllerInteraction = chatControllerInteraction

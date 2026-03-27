@@ -205,9 +205,6 @@ class MessageHistoryTagsSummaryTable: Table {
     
     private func set(_ key: MessageHistoryTagsSummaryKey, summary: MessageHistoryTagNamespaceSummary, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]) {
         if self.get(key) != summary {
-            if key.peerId.id._internalGetInt64Value() == 1658739021 && key.tag.rawValue == (1 << 15) {
-                assert(true)
-            }
             self.updatedKeys.insert(key)
             self.cachedSummaries[key] = CachedEntry(summary: summary)
             updatedSummaries[key] = summary

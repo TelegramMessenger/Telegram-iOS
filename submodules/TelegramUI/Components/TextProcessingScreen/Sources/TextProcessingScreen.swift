@@ -1111,6 +1111,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
 
     public init(
         context: AccountContext,
+        theme: PresentationTheme? = nil,
         mode: Mode,
         ignoredTranslationLanguages: [String],
         inputText: TextWithEntities,
@@ -1155,7 +1156,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
-            theme: .default
+            theme: theme.flatMap({ .custom($0) }) ?? .default
         )
 
         self.statusBar.statusBarStyle = .Ignore

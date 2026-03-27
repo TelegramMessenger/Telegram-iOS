@@ -2226,7 +2226,10 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                     strongSelf.present(c)
                 }
             }, makeEntityInputView: self.makeEntityInputView)
-            textInputPanelNode.isAIEnabled = true
+            if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_disable_ai_chat"] as? Double, value == 1.0 {
+            } else {
+                textInputPanelNode.isAIEnabled = true
+            }
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
             textInputPanelNode.sendMessage = { [weak self] mode, messageEffect in
                 if let strongSelf = self {

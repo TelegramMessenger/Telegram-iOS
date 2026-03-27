@@ -887,7 +887,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.textInputPanelNode = ChatTextInputPanelNode(context: context, presentationInterfaceState: chatPresentationInterfaceState, presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode), presentController: { [weak self] controller in
             self?.interfaceInteraction?.presentController(controller, nil)
         })
-        self.textInputPanelNode?.isAIEnabled = true
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_disable_ai_chat"] as? Double, value == 1.0 {
+        } else {
+            self.textInputPanelNode?.isAIEnabled = true
+        }
         self.textInputPanelNode?.textInputAccessoryPanel = textInputAccessoryPanel
         self.textInputPanelNode?.textInputContextPanel = textInputContextPanel
         self.textInputPanelNode?.storedInputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage

@@ -771,6 +771,7 @@ public class AttachmentController: ViewController, MinimizableController {
                     
                     let textProcessingScreen = await controller.context.sharedContext.makeTextProcessingScreen(
                         context: controller.context,
+                        theme: self.presentationData.theme,
                         mode: .edit(
                             saveRestoreStateId: nil,
                             completion: { [weak self] text in

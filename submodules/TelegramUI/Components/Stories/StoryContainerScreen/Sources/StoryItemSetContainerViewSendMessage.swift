@@ -2728,7 +2728,12 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             return nil
         }
         //TODO:self.presentationInterfaceState.customEmojiAvailable
-        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, isFile: false, hasTimer: true, customEmojiAvailable: true, present: { [weak view] c in
+        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, isFile: false, hasTimer: true, customEmojiAvailable: true, pushViewController: { [weak view] c in
+            guard let view else {
+                return
+            }
+            view.component?.controller()?.push(c)
+        }, present: { [weak view] c in
             guard let view else {
                 return
             }
