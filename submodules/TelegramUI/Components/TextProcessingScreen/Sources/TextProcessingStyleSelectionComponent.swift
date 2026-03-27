@@ -5,6 +5,8 @@ import TelegramPresentationData
 import ComponentFlow
 import MultilineTextComponent
 import TelegramCore
+import EmojiStatusComponent
+import AccountContext
 
 func localizedStyleName(strings: PresentationStrings, styleId: TelegramComposeAIMessageMode.StyleId) -> String {
     switch styleId {
@@ -20,19 +22,22 @@ func localizedStyleName(strings: PresentationStrings, styleId: TelegramComposeAI
 }
 
 final class TextProcessingStyleSelectionComponent: Component {
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let styles: [TelegramComposeAIMessageMode.Style]
+    let styles: [TextProcessingScreen.Style]
     let selectedStyle: TelegramComposeAIMessageMode.StyleId
     let updateStyle: (TelegramComposeAIMessageMode.StyleId) -> Void
 
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        styles: [TelegramComposeAIMessageMode.Style],
+        styles: [TextProcessingScreen.Style],
         selectedStyle: TelegramComposeAIMessageMode.StyleId,
         updateStyle: @escaping (TelegramComposeAIMessageMode.StyleId) -> Void
     ) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.styles = styles
@@ -132,11 +137,6 @@ final class TextProcessingStyleSelectionComponent: Component {
             self.component = component
             self.state = state
             
-            var styleData: [(id: TelegramComposeAIMessageMode.StyleId, icon: String, title: String)] = []
-            for item in component.styles {
-                styleData.append((item.id, item.emoji, localizedStyleName(strings: component.strings, styleId: item.id)))
-            }
-            
             let maxItemWidth: CGFloat = 80.0
             let itemPadding: CGFloat = 0.0
             let minSlotWidth: CGFloat = 50.0
@@ -144,8 +144,8 @@ final class TextProcessingStyleSelectionComponent: Component {
 
             // First pass: measure all items to find intrinsic sizes
             var itemSizes: [TelegramComposeAIMessageMode.StyleId: CGSize] = [:]
-            for i in 0 ..< styleData.count {
-                let style = styleData[i]
+            for i in 0 ..< component.styles.count {
+                let style = component.styles[i]
                 let itemView: ComponentView<Empty>
                 var itemTransition = transition
                 if let current = self.itemViews[style.id] {
@@ -158,9 +158,12 @@ final class TextProcessingStyleSelectionComponent: Component {
                 let measuredSize = itemView.update(
                     transition: itemTransition,
                     component: AnyComponent(ItemComponent(
+                        context: component.context,
                         theme: component.theme,
-                        icon: style.icon,
-                        title: style.title
+                        icon: style.emoji,
+                        iconFileId: style.emojiFileId,
+                        iconFile: style.emojiFile,
+                        title: localizedStyleName(strings: component.strings, styleId: .style(style.name))
                     )),
                     environment: {},
                     containerSize: CGSize(width: maxItemWidth, height: availableSize.height)
@@ -175,8 +178,8 @@ final class TextProcessingStyleSelectionComponent: Component {
             }
             let contentBasedWidth = min(maxSlotWidth, max(minSlotWidth, largestItemWidth + itemPadding))
             let slotWidth: CGFloat
-            if CGFloat(styleData.count) * contentBasedWidth <= availableSize.width {
-                slotWidth = floor(availableSize.width / CGFloat(styleData.count))
+            if CGFloat(component.styles.count) * contentBasedWidth <= availableSize.width {
+                slotWidth = floor(availableSize.width / CGFloat(component.styles.count))
             } else {
                 var resolved: CGFloat = contentBasedWidth
                 var targetVisible: CGFloat = min(7.5, floor((availableSize.width + 16.0) / (contentBasedWidth + 10.0)) + 0.5)
@@ -190,7 +193,7 @@ final class TextProcessingStyleSelectionComponent: Component {
                 }
                 slotWidth = resolved
             }
-            let contentWidth = slotWidth * CGFloat(styleData.count)
+            let contentWidth = slotWidth * CGFloat(component.styles.count)
 
             self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
             self.scrollView.contentSize = CGSize(width: contentWidth, height: availableSize.height)
@@ -198,8 +201,8 @@ final class TextProcessingStyleSelectionComponent: Component {
 
             // Second pass: position items centered in their slots
             var selectedItemFrame: CGRect?
-            for i in 0 ..< styleData.count {
-                let style = styleData[i]
+            for i in 0 ..< component.styles.count {
+                let style = component.styles[i]
                 guard let itemView = self.itemViews[style.id],
                       let naturalSize = itemSizes[style.id] else {
                     continue
@@ -220,7 +223,7 @@ final class TextProcessingStyleSelectionComponent: Component {
 
             var removedIds: [TelegramComposeAIMessageMode.StyleId] = []
             for (id, itemView) in self.itemViews {
-                if !styleData.contains(where: { $0.id == id }) {
+                if !component.styles.contains(where: { $0.id == id }) {
                     removedIds.append(id)
                     itemView.view?.removeFromSuperview()
                 }
@@ -267,17 +270,26 @@ final class TextProcessingStyleSelectionComponent: Component {
 }
 
 private final class ItemComponent: Component {
+    let context: AccountContext
     let theme: PresentationTheme
     let icon: String
+    let iconFileId: Int64?
+    let iconFile: TelegramMediaFile?
     let title: String
     
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         icon: String,
+        iconFileId: Int64?,
+        iconFile: TelegramMediaFile?,
         title: String
     ) {
+        self.context = context
         self.theme = theme
         self.icon = icon
+        self.iconFileId = iconFileId
+        self.iconFile = iconFile
         self.title = title
     }
     
@@ -286,6 +298,12 @@ private final class ItemComponent: Component {
             return false
         }
         if lhs.icon != rhs.icon {
+            return false
+        }
+        if lhs.iconFileId != rhs.iconFileId {
+            return false
+        }
+        if lhs.iconFile?.fileId != rhs.iconFile?.fileId {
             return false
         }
         if lhs.title != rhs.title {
@@ -310,10 +328,18 @@ private final class ItemComponent: Component {
         }
         
         func update(component: ItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let previousComponent = self.component
             self.component = component
             self.state = state
 
             let iconTintColor = component.theme.list.itemPrimaryTextColor
+            
+            if previousComponent?.iconFileId != component.iconFileId {
+                if let imageIcon = self.imageIcon {
+                    self.imageIcon = nil
+                    imageIcon.view?.removeFromSuperview()
+                }
+            }
 
             let imageIcon: ComponentView<Empty>
             var iconTransition = transition
@@ -324,19 +350,47 @@ private final class ItemComponent: Component {
                 imageIcon = ComponentView()
                 self.imageIcon = imageIcon
             }
+            
+            let iconComponent: AnyComponent<Empty>
+            if let iconFileId = component.iconFileId {
+                let iconSize = CGSize(width: 34.0, height: 34.0)
+                let content: EmojiStatusComponent.AnimationContent
+                if let file = component.iconFile {
+                    content = .file(file: file)
+                } else {
+                    content = .customEmoji(fileId: iconFileId)
+                }
+                iconComponent = AnyComponent(EmojiStatusComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    content: .animation(
+                        content: content,
+                        size: iconSize,
+                        placeholderColor: component.theme.list.mediaPlaceholderColor,
+                        themeColor: component.theme.list.itemAccentColor,
+                        loopMode: .count(0)
+                    ),
+                    size: iconSize,
+                    isVisibleForAnimations: true,
+                    action: nil
+                ))
+            } else {
+                iconComponent = AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: component.icon, font: Font.regular(25.0), textColor: .black))
+                ))
+            }
 
             let iconSize = imageIcon.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.icon, font: Font.regular(25.0), textColor: .black))
-                )),
+                component: iconComponent,
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(10.0), textColor: iconTintColor))
+                    text: .plain(NSAttributedString(string: component.title, font: Font.medium(10.0), textColor: iconTintColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
@@ -344,7 +398,7 @@ private final class ItemComponent: Component {
 
             let contentWidth = max(iconSize.width, titleSize.width)
 
-            let iconFrame = CGRect(origin: CGPoint(x: floor((contentWidth - iconSize.width) * 0.5), y: -1.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((contentWidth - iconSize.width) * 0.5), y: -3.0), size: iconSize)
             if let imageIconView = imageIcon.view {
                 if imageIconView.superview == nil {
                     self.addSubview(imageIconView)

@@ -301,7 +301,23 @@ public extension TelegramEngine {
                     return .single(result)
                 case let .result(messageId):
                     if messageId == nil {
-                        let _ = clearPeerUnseenReactionsInteractively(account: account, peerId: peerId, threadId: threadId).start()
+                        let _ = clearPeerUnseenReactionsAndPollVotesInteractively(account: account, peerId: peerId, threadId: threadId).start()
+                    }
+                    return .single(result)
+                }
+            }
+        }
+        
+        public func earliestUnseenPollVoteMessage(peerId: PeerId, threadId: Int64?) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+            let account = self.account
+            return _internal_earliestUnseenPollVoteMessage(account: self.account, peerId: peerId, threadId: threadId)
+            |> mapToSignal { result -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+                switch result {
+                case .loading:
+                    return .single(result)
+                case let .result(messageId):
+                    if messageId == nil {
+                        let _ = clearPeerUnseenReactionsAndPollVotesInteractively(account: account, peerId: peerId, threadId: threadId).start()
                     }
                     return .single(result)
                 }

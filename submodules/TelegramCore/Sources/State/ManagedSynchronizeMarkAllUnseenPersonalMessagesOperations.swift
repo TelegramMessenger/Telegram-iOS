@@ -333,15 +333,119 @@ private func synchronizeMarkAllUnseenReactions(transaction: Transaction, postbox
     }
 }
 
-func markUnseenReactionMessage(transaction: Transaction, id: MessageId, addSynchronizeAction: Bool) {
+func managedSynchronizeMarkAllUnseenPollVotesOperations(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+    return Signal { _ in
+        let tag: PeerOperationLogTag = OperationLogTags.SynchronizeMarkAllUnseenPollVotes
+        
+        let helper = Atomic<ManagedSynchronizeMarkAllUnseenPersonalMessagesOperationsHelper>(value: ManagedSynchronizeMarkAllUnseenPersonalMessagesOperationsHelper())
+        
+        let disposable = postbox.mergedOperationLogView(tag: tag, limit: 10).start(next: { view in
+            let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
+                return helper.update(view.entries)
+            }
+            
+            for disposable in disposeOperations {
+                disposable.dispose()
+            }
+            
+            for (entry, disposable) in beginOperations {
+                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, operationType: SynchronizeMarkAllUnseenReactionsOperation.self, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
+                    if let entry = entry {
+                        if let operation = entry.contents as? SynchronizeMarkAllUnseenReactionsOperation {
+                            return synchronizeMarkAllUnseenPollVotes(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, peerId: entry.peerId, operation: operation)
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+                    return .complete()
+                })
+                    |> then(postbox.transaction { transaction -> Void in
+                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                    })
+                
+                disposable.set(signal.start())
+            }
+        })
+        
+        return ActionDisposable {
+            let disposables = helper.with { helper -> [Disposable] in
+                return helper.reset()
+            }
+            for disposable in disposables {
+                disposable.dispose()
+            }
+            disposable.dispose()
+        }
+    }
+}
+
+private func synchronizeMarkAllUnseenPollVotes(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeMarkAllUnseenReactionsOperation) -> Signal<Void, NoError> {
+    guard let peer = transaction.getPeer(peerId) else {
+        return .complete()
+    }
+    guard let inputPeer = apiInputPeer(peer) else {
+        return .complete()
+    }
+    
+    var flags: Int32 = 0
+    var topMsgId: Int32?
+    var savedPeerId: Api.InputPeer?
+    if let threadId = operation.threadId {
+        if peer.isMonoForum {
+            if let subPeerId = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer) {
+                flags |= 1 << 1
+                savedPeerId = subPeerId
+            }
+        } else {
+            flags |= 1 << 0
+            topMsgId = Int32(clamping: threadId)
+        }
+    }
+    let _ = savedPeerId
+    
+    let signal = network.request(Api.functions.messages.readPollVotes(flags: flags, peer: inputPeer, topMsgId: topMsgId))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+        return .fail(true)
+    }
+    |> mapToSignal { result -> Signal<Void, Bool> in
+        if let result = result {
+            switch result {
+            case let .affectedHistory(affectedHistoryData):
+                let (pts, ptsCount, offset) = (affectedHistoryData.pts, affectedHistoryData.ptsCount, affectedHistoryData.offset)
+                stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                if offset == 0 {
+                    return .fail(true)
+                } else {
+                    return .complete()
+                }
+            }
+        } else {
+            return .fail(true)
+        }
+    }
+    return (signal |> restart)
+    |> `catch` { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
+}
+
+func markUnseenReactionOrPollVotesMessage(transaction: Transaction, id: MessageId, addSynchronizeAction: Bool) {
     if let message = transaction.getMessage(id) {
         var consume = false
         inner: for attribute in message.attributes {
-            if let attribute = attribute as? ReactionsMessageAttribute, !attribute.hasUnseen {
+            if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
                 consume = true
                 break inner
             }
         }
+        inner: for media in message.media {
+            if let poll = media as? TelegramMediaPoll, poll.results.hasUnseenVotes == true {
+                consume = true
+                break inner
+            }
+        }
+        
         if consume {
             transaction.updateMessage(id, update: { currentMessage in
                 var attributes = currentMessage.attributes
@@ -351,13 +455,21 @@ func markUnseenReactionMessage(transaction: Transaction, id: MessageId, addSynch
                         break loop
                     }
                 }
+                var media = currentMessage.media
+                loop: for j in 0 ..< media.count {
+                    if let poll = media[j] as? TelegramMediaPoll {
+                        media[j] = poll.withoutUnreadResults()
+                        break loop
+                    }
+                }
                 var tags = currentMessage.tags
                 tags.remove(.unseenReaction)
-                return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                tags.remove(.unseenPollVote)
+                return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: media))
             })
             
             if addSynchronizeAction {
-                transaction.setPendingMessageAction(type: .readReaction, id: id, action: ReadReactionAction())
+                transaction.setPendingMessageAction(type: .readReactionOrPollVote, id: id, action: ReadReactionAction())
             }
         }
     }

@@ -186,6 +186,56 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                     result.append(recursiveDescription(redact: redact, of: child.value))
                 }
                 result.append("]")
+            case .class:
+                if let value = value as? ConstructorParameterDescription {
+                    if let v = value.value {
+                        result.append(recursiveDescription(redact: redact, of: v))
+                    } else {
+                        result.append("nil")
+                    }
+                } else if let value = value as? TypeConstructorDescription {
+                    let (consName, fields) = value.descriptionFields()
+                    result.append(".")
+                    result.append(consName)
+                    
+                    let redactChildren: Set<String>?
+                    if redact {
+                        redactChildren = redactChildrenOfType[result]
+                    } else {
+                        redactChildren = nil
+                    }
+                    
+                    if !fields.isEmpty {
+                        result.append("(")
+                        var first = true
+                        for (fieldName, fieldValue) in fields {
+                            if first {
+                                first = false
+                            } else {
+                                result.append(", ")
+                            }
+                            var redactValue: Bool = false
+                            if let redactChildren = redactChildren, redactChildren.contains("*") {
+                                redactValue = true
+                            }
+                            
+                            result.append(fieldName)
+                            result.append(": ")
+                            if let redactChildren = redactChildren, redactChildren.contains(fieldName) {
+                                redactValue = true
+                            }
+                            
+                            if redactValue {
+                                result.append("[[redacted]]")
+                            } else {
+                                result.append(recursiveDescription(redact: redact, of: fieldValue))
+                            }
+                        }
+                        result.append(")")
+                    }
+                } else {
+                    result.append("\(value)")
+                }
             default:
                 result.append("\(value)")
         }

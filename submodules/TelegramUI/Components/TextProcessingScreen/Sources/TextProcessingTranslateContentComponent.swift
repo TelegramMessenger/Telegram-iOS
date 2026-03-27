@@ -22,7 +22,7 @@ func localizedLanguageName(strings: PresentationStrings, language: String) -> St
         translateTitle = string
     } else {
         let languageLocale = Locale(identifier: language)
-        let toLanguage = languageLocale.localizedString(forLanguageCode: toLang) ?? ""
+        let toLanguage = languageLocale.localizedString(forLanguageCode: toLang)?.capitalized ?? ""
         return toLanguage
     }
     return translateTitle
@@ -77,7 +77,7 @@ final class TextProcessingTranslateContentComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let styles: [TelegramComposeAIMessageMode.Style]
+    let styles: [TextProcessingScreen.Style]
     let inputText: TextWithEntities
     let externalState: ExternalState
     let mode: Mode
@@ -90,7 +90,7 @@ final class TextProcessingTranslateContentComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        styles: [TelegramComposeAIMessageMode.Style],
+        styles: [TextProcessingScreen.Style],
         externalState: ExternalState,
         inputText: TextWithEntities,
         mode: Mode,
@@ -310,6 +310,7 @@ final class TextProcessingTranslateContentComponent: Component {
                 let sourceTextSize = self.sourceText.update(
                     transition: transition,
                     component: AnyComponent(TextProcessingStyleSelectionComponent(
+                        context: component.context,
                         theme: component.theme,
                         strings: component.strings,
                         styles: component.styles,

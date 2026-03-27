@@ -31,6 +31,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     private let isChatRotated: Bool
     
     let reactionsButton: ChatHistoryNavigationButtonNode
+    let pollVotesButton: ChatHistoryNavigationButtonNode
     let mentionsButton: ChatHistoryNavigationButtonNode
     let downButton: ChatHistoryNavigationButtonNode
     let upButton: ChatHistoryNavigationButtonNode
@@ -48,6 +49,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     }
     
     var reactionsPressed: (() -> Void)?
+    var pollVotesPressed: (() -> Void)?
     var mentionsPressed: (() -> Void)?
     
     var directionButtonState: DirectionState = DirectionState(up: nil, down: nil) {
@@ -96,6 +98,20 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
     }
     
+    var pollVotesCount: Int32 = 0 {
+        didSet {
+            if self.pollVotesCount != 0 {
+                self.pollVotesButton.badge = compactNumericCountString(Int(self.pollVotesCount), decimalSeparator: self.dateTimeFormat.decimalSeparator)
+            } else {
+                self.pollVotesButton.badge = ""
+            }
+            
+            if (oldValue != 0) != (self.pollVotesCount != 0) {
+                let _ = self.updateLayout(transition: .animated(duration: 0.3, curve: .spring))
+            }
+        }
+    }
+    
     init(theme: PresentationTheme, preferClearGlass: Bool, dateTimeFormat: PresentationDateTimeFormat, backgroundNode: WallpaperBackgroundNode, isChatRotated: Bool) {
         self.isChatRotated = isChatRotated
         self.theme = theme
@@ -110,6 +126,10 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         self.reactionsButton.alpha = 0.0
         self.reactionsButton.isHidden = true
         
+        self.pollVotesButton = ChatHistoryNavigationButtonNode(theme: theme, preferClearGlass: preferClearGlass, backgroundNode: backgroundNode, type: .pollVotes)
+        self.pollVotesButton.alpha = 0.0
+        self.pollVotesButton.isHidden = true
+        
         self.downButton = ChatHistoryNavigationButtonNode(theme: theme, preferClearGlass: preferClearGlass, backgroundNode: backgroundNode, type: isChatRotated ? .down : .up)
         self.downButton.alpha = 0.0
         self.downButton.isHidden = true
@@ -121,12 +141,17 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.reactionsButton)
+        self.addSubnode(self.pollVotesButton)
         self.addSubnode(self.mentionsButton)
         self.addSubnode(self.downButton)
         self.addSubnode(self.upButton)
         
         self.reactionsButton.tapped = { [weak self] in
             self?.reactionsPressed?()
+        }
+        
+        self.pollVotesButton.tapped = { [weak self] in
+            self?.pollVotesPressed?()
         }
         
         self.mentionsButton.tapped = { [weak self] in
@@ -147,6 +172,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         self.dateTimeFormat = dateTimeFormat
         
         self.reactionsButton.updateTheme(theme: theme, preferClearGlass: preferClearGlass, backgroundNode: backgroundNode)
+        self.pollVotesButton.updateTheme(theme: theme, preferClearGlass: preferClearGlass, backgroundNode: backgroundNode)
         self.mentionsButton.updateTheme(theme: theme, preferClearGlass: preferClearGlass, backgroundNode: backgroundNode)
         self.downButton.updateTheme(theme: theme, preferClearGlass: preferClearGlass, backgroundNode: backgroundNode)
         self.upButton.updateTheme(theme: theme, preferClearGlass: preferClearGlass, backgroundNode: backgroundNode)
@@ -160,6 +186,11 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         reactionsFrame.origin.x += rect.minX
         reactionsFrame.origin.y += rect.minY
         self.reactionsButton.update(rect: reactionsFrame, within: containerSize, transition: transition)
+        
+        var pollVotesFrame = self.pollVotesButton.frame
+        pollVotesFrame.origin.x += rect.minX
+        pollVotesFrame.origin.y += rect.minY
+        self.pollVotesButton.update(rect: pollVotesFrame, within: containerSize, transition: transition)
         
         var mentionsFrame = self.mentionsButton.frame
         mentionsFrame.origin.x += rect.minX
@@ -183,6 +214,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         var upOffset: CGFloat = 0.0
         var mentionsOffset: CGFloat = 0.0
         var reactionsOffset: CGFloat = 0.0
+        var pollVotesOffset: CGFloat = 0.0
         
         if let down = self.directionButtonState.down {
             self.downButton.imageView.alpha = down.isEnabled ? 1.0 : 0.5
@@ -240,6 +272,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
         
         if self.reactionsCount != 0 {
+            pollVotesOffset += buttonSize.height + 12.0
             self.reactionsButton.isHidden = false
             transition.updateAlpha(node: self.reactionsButton, alpha: 1.0)
             transition.updateTransformScale(node: self.reactionsButton, scale: 1.0)
@@ -253,16 +286,32 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
             transition.updateTransformScale(node: self.reactionsButton, scale: 0.2)
         }
         
+        if self.pollVotesCount != 0 {
+            self.pollVotesButton.isHidden = false
+            transition.updateAlpha(node: self.pollVotesButton, alpha: 1.0)
+            transition.updateTransformScale(node: self.pollVotesButton, scale: 1.0)
+        } else {
+            transition.updateAlpha(node: self.pollVotesButton, alpha: 0.0, completion: { [weak self] completed in
+                guard let strongSelf = self, completed else {
+                    return
+                }
+                strongSelf.pollVotesButton.isHidden = true
+            })
+            transition.updateTransformScale(node: self.pollVotesButton, scale: 0.2)
+        }
+        
         if self.isChatRotated {
             transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height), size: buttonSize).center)
             transition.updatePosition(node: self.upButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - upOffset), size: buttonSize).center)
             transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset), size: buttonSize).center)
             transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset - reactionsOffset), size: buttonSize).center)
+            transition.updatePosition(node: self.pollVotesButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset - reactionsOffset - pollVotesOffset), size: buttonSize).center)
         } else {
             transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: buttonSize).center)
             transition.updatePosition(node: self.upButton, position: CGRect(origin: CGPoint(x: 0.0, y: upOffset), size: buttonSize).center)
             transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: mentionsOffset), size: buttonSize).center)
             transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: mentionsOffset + reactionsOffset), size: buttonSize).center)
+            transition.updatePosition(node: self.pollVotesButton, position: CGRect(origin: CGPoint(x: 0.0, y: mentionsOffset + reactionsOffset + pollVotesOffset), size: buttonSize).center)
         }
         
         if let (rect, containerSize) = self.absoluteRect {

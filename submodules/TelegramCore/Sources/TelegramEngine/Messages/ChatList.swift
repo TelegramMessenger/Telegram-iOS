@@ -155,6 +155,7 @@ public final class EngineChatList: Equatable {
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
         public let hasUnseenReactions: Bool
+        public let hasUnseenPollVotes: Bool
         public let forumTopicData: ForumTopicData?
         public let topForumTopicItems: [EngineChatList.ForumTopicData]
         public let hasFailed: Bool
@@ -177,6 +178,7 @@ public final class EngineChatList: Equatable {
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
             hasUnseenReactions: Bool,
+            hasUnseenPollVotes: Bool,
             forumTopicData: ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             hasFailed: Bool,
@@ -198,6 +200,7 @@ public final class EngineChatList: Equatable {
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions = hasUnseenReactions
+            self.hasUnseenPollVotes = hasUnseenPollVotes
             self.forumTopicData = forumTopicData
             self.topForumTopicItems = topForumTopicItems
             self.hasFailed = hasFailed
@@ -241,6 +244,9 @@ public final class EngineChatList: Equatable {
                 return false
             }
             if lhs.hasUnseenReactions != rhs.hasUnseenReactions {
+                return false
+            }
+            if lhs.hasUnseenPollVotes != rhs.hasUnseenPollVotes {
                 return false
             }
             if lhs.forumTopicData != rhs.forumTopicData {
@@ -526,9 +532,17 @@ extension EngineChatList.Item {
             var hasUnseenReactions = false
             if let info = tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
                 tag: .unseenReaction,
-                actionType: PendingMessageActionType.readReaction
+                actionType: PendingMessageActionType.readReactionOrPollVote
             )] {
-                hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
+                hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0
+            }
+            
+            var hasUnseenPollVotes = false
+            if let info = tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                tag: .unseenPollVote,
+                actionType: PendingMessageActionType.readReactionOrPollVote
+            )] {
+                hasUnseenPollVotes = (info.tagSummaryCount ?? 0) != 0
             }
             
             var forumTopicDataValue: EngineChatList.ForumTopicData?
@@ -569,6 +583,7 @@ extension EngineChatList.Item {
                 presence: presence.flatMap(EnginePeer.Presence.init),
                 hasUnseenMentions: hasUnseenMentions,
                 hasUnseenReactions: hasUnseenReactions,
+                hasUnseenPollVotes: hasUnseenPollVotes,
                 forumTopicData: forumTopicDataValue,
                 topForumTopicItems: topForumTopicItems,
                 hasFailed: hasFailed,

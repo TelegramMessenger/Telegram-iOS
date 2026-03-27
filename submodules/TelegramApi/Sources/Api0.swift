@@ -198,7 +198,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-531931925] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsMentions($0) }
     dict[-566281095] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsRecent($0) }
     dict[106343499] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsSearch($0) }
-    dict[-1817845901] = { return Api.ChannelTopic.parse_channelTopic($0) }
     dict[473084188] = { return Api.Chat.parse_channel($0) }
     dict[399807445] = { return Api.Chat.parse_channelForbidden($0) }
     dict[1103884886] = { return Api.Chat.parse_chat($0) }
@@ -799,7 +798,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-193510921] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[-1707742823] = { return Api.PeerStories.parse_peerStories($0) }
     dict[-404214254] = { return Api.PendingSuggestion.parse_pendingSuggestion($0) }
-    dict[431767677] = { return Api.PersonalChannel.parse_personalChannel($0) }
     dict[810769141] = { return Api.PhoneCall.parse_phoneCall($0) }
     dict[912311057] = { return Api.PhoneCall.parse_phoneCallAccepted($0) }
     dict[1355435489] = { return Api.PhoneCall.parse_phoneCallDiscarded($0) }
@@ -1368,8 +1366,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
     dict[-266911767] = { return Api.channels.ChannelParticipants.parse_channelParticipantsNotModified($0) }
-    dict[824755388] = { return Api.channels.Found.parse_found($0) }
-    dict[-694491059] = { return Api.channels.PersonalChannels.parse_personalChannels($0) }
     dict[-191450938] = { return Api.channels.SendAsPeers.parse_sendAsPeers($0) }
     dict[1044107055] = { return Api.channels.SponsoredMessageReportResult.parse_sponsoredMessageReportResultAdsHidden($0) }
     dict[-2073059774] = { return Api.channels.SponsoredMessageReportResult.parse_sponsoredMessageReportResultChooseOption($0) }
@@ -1772,8 +1768,6 @@ public extension Api {
             _1.serialize(buffer, boxed)
         case let _1 as Api.ChannelParticipantsFilter:
             _1.serialize(buffer, boxed)
-        case let _1 as Api.ChannelTopic:
-            _1.serialize(buffer, boxed)
         case let _1 as Api.Chat:
             _1.serialize(buffer, boxed)
         case let _1 as Api.ChatAdminRights:
@@ -2152,8 +2146,6 @@ public extension Api {
             _1.serialize(buffer, boxed)
         case let _1 as Api.PendingSuggestion:
             _1.serialize(buffer, boxed)
-        case let _1 as Api.PersonalChannel:
-            _1.serialize(buffer, boxed)
         case let _1 as Api.PhoneCall:
             _1.serialize(buffer, boxed)
         case let _1 as Api.PhoneCallDiscardReason:
@@ -2511,10 +2503,6 @@ public extension Api {
         case let _1 as Api.channels.ChannelParticipant:
             _1.serialize(buffer, boxed)
         case let _1 as Api.channels.ChannelParticipants:
-            _1.serialize(buffer, boxed)
-        case let _1 as Api.channels.Found:
-            _1.serialize(buffer, boxed)
-        case let _1 as Api.channels.PersonalChannels:
             _1.serialize(buffer, boxed)
         case let _1 as Api.channels.SendAsPeers:
             _1.serialize(buffer, boxed)

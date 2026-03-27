@@ -1565,12 +1565,73 @@ extension ChatControllerImpl {
                     guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
                         return
                     }
-                    let _ = clearPeerUnseenReactionsInteractively(account: strongSelf.context.account, peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
+                    let _ = clearPeerUnseenReactionsAndPollVotesInteractively(account: strongSelf.context.account, peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
                 }
             )))
             let items = ContextController.Items(content: .list(menuItems))
             
             let controller = makeContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.reactionsButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
+            
+            strongSelf.forEachController({ controller in
+                if let controller = controller as? TooltipScreen {
+                    controller.dismiss()
+                }
+                return true
+            })
+            strongSelf.window?.presentInGlobalOverlay(controller)
+        }
+        
+        self.chatDisplayNode.navigateButtons.pollVotesPressed = { [weak self] in
+            if let strongSelf = self, strongSelf.isNodeLoaded, let peerId = strongSelf.chatLocation.peerId {
+                let signal = strongSelf.context.engine.messages.earliestUnseenPollVoteMessage(peerId: peerId, threadId: strongSelf.chatLocation.threadId)
+                strongSelf.navigationActionDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { result in
+                    if let strongSelf = self {
+                        switch result {
+                            case let .result(messageId):
+                                if let messageId = messageId {
+                                    strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = true
+                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), scrollPosition: .center(.top), completion: {
+                                        strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = false
+                                    })
+                                }
+                            case .loading:
+                                break
+                        }
+                    }
+                }))
+            }
+        }
+        
+        self.chatDisplayNode.navigateButtons.pollVotesButton.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                gesture.cancel()
+                return
+            }
+            
+            strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+            
+            var menuItems: [ContextMenuItem] = []
+            //TODO:localize
+            menuItems.append(.action(ContextMenuActionItem(
+                id: nil,
+                text: "Read All Poll Votes",
+                textColor: .primary,
+                textLayout: .singleLine,
+                icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Read"), color: theme.contextMenu.primaryColor)
+                },
+                action: { _, f in
+                    f(.dismissWithoutContent)
+                    
+                    guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
+                        return
+                    }
+                    let _ = clearPeerUnseenReactionsAndPollVotesInteractively(account: strongSelf.context.account, peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
+                }
+            )))
+            let items = ContextController.Items(content: .list(menuItems))
+            
+            let controller = makeContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.pollVotesButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
             
             strongSelf.forEachController({ controller in
                 if let controller = controller as? TooltipScreen {
@@ -4866,27 +4927,31 @@ extension ChatControllerImpl {
                     })
                 
                     self.chatUnreadMentionCountDisposable?.dispose()
-                    self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesAndReactionCount(peerId: peerId, threadId: nil) |> deliverOnMainQueue).startStrict(next: { [weak self] mentionCount, reactionCount in
+                    self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesAndReactionCount(peerId: peerId, threadId: nil) |> deliverOnMainQueue).startStrict(next: { [weak self] mentionCount, reactionCount, pollVoteCount in
                         if let strongSelf = self {
                             if case .standard(.previewing) = strongSelf.presentationInterfaceState.mode {
                                 strongSelf.chatDisplayNode.navigateButtons.mentionCount = 0
                                 strongSelf.chatDisplayNode.navigateButtons.reactionsCount = 0
+                                strongSelf.chatDisplayNode.navigateButtons.pollVotesCount = 0
                             } else {
                                 strongSelf.chatDisplayNode.navigateButtons.mentionCount = mentionCount
                                 strongSelf.chatDisplayNode.navigateButtons.reactionsCount = reactionCount
+                                strongSelf.chatDisplayNode.navigateButtons.pollVotesCount = pollVoteCount
                             }
                         }
                     })
                 } else if let peerId = self.chatLocation.peerId, let threadId = self.chatLocation.threadId {
                     self.chatUnreadMentionCountDisposable?.dispose()
-                    self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesAndReactionCount(peerId: peerId, threadId: threadId) |> deliverOnMainQueue).startStrict(next: { [weak self] mentionCount, reactionCount in
+                    self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesAndReactionCount(peerId: peerId, threadId: threadId) |> deliverOnMainQueue).startStrict(next: { [weak self] mentionCount, reactionCount, pollVoteCount in
                         if let strongSelf = self {
                             if case .standard(.previewing) = strongSelf.presentationInterfaceState.mode {
                                 strongSelf.chatDisplayNode.navigateButtons.mentionCount = 0
                                 strongSelf.chatDisplayNode.navigateButtons.reactionsCount = 0
+                                strongSelf.chatDisplayNode.navigateButtons.pollVotesCount = 0
                             } else {
                                 strongSelf.chatDisplayNode.navigateButtons.mentionCount = mentionCount
                                 strongSelf.chatDisplayNode.navigateButtons.reactionsCount = reactionCount
+                                strongSelf.chatDisplayNode.navigateButtons.pollVotesCount = pollVoteCount
                             }
                         }
                     })

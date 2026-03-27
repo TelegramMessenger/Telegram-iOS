@@ -139,12 +139,14 @@ public struct TelegramMediaPollResults: Equatable, PostboxCoding {
     public let totalVoters: Int32?
     public let recentVoters: [PeerId]
     public let solution: TelegramMediaPollResults.Solution?
+    public let hasUnseenVotes: Bool?
 
-    public init(voters: [TelegramMediaPollOptionVoters]?, totalVoters: Int32?, recentVoters: [PeerId], solution: TelegramMediaPollResults.Solution?) {
+    public init(voters: [TelegramMediaPollOptionVoters]?, totalVoters: Int32?, recentVoters: [PeerId], solution: TelegramMediaPollResults.Solution?, hasUnseenVotes: Bool?) {
         self.voters = voters
         self.totalVoters = totalVoters
         self.recentVoters = recentVoters
         self.solution = solution
+        self.hasUnseenVotes = hasUnseenVotes
     }
 
     public init(decoder: PostboxDecoder) {
@@ -158,6 +160,7 @@ public struct TelegramMediaPollResults: Equatable, PostboxCoding {
         } else {
             self.solution = nil
         }
+        self.hasUnseenVotes = decoder.decodeOptionalBoolForKey("uns")
     }
 
     public func encode(_ encoder: PostboxEncoder) {
@@ -182,6 +185,11 @@ public struct TelegramMediaPollResults: Equatable, PostboxCoding {
             }
         } else {
             encoder.encodeNil(forKey: "sol")
+        }
+        if let hasUnseenVotes = self.hasUnseenVotes {
+            encoder.encodeBool(hasUnseenVotes, forKey: "uns")
+        } else {
+            encoder.encodeNil(forKey: "uns")
         }
     }
 }
@@ -299,7 +307,7 @@ public final class TelegramMediaPoll: Media, Equatable {
         self.textEntities = decoder.decodeObjectArrayWithDecoderForKey("te")
         self.options = decoder.decodeObjectArrayWithDecoderForKey("os")
         self.correctAnswers = decoder.decodeOptionalDataArrayForKey("ca")
-        self.results = decoder.decodeObjectForKey("rs", decoder: { TelegramMediaPollResults(decoder: $0) }) as? TelegramMediaPollResults ?? TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil)
+        self.results = decoder.decodeObjectForKey("rs", decoder: { TelegramMediaPollResults(decoder: $0) }) as? TelegramMediaPollResults ?? TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil, hasUnseenVotes: nil)
         self.isClosed = decoder.decodeInt32ForKey("ic", orElse: 0) != 0
         self.deadlineTimeout = decoder.decodeOptionalInt32ForKey("dt")
         self.deadlineDate = decoder.decodeOptionalInt32ForKey("dd")
@@ -438,15 +446,21 @@ public final class TelegramMediaPoll: Media, Equatable {
                 }
                 updatedResults = TelegramMediaPollResults(voters: updatedVoters.map({ voters in
                     return TelegramMediaPollOptionVoters(selected: selectedOpaqueIdentifiers.contains(voters.opaqueIdentifier), opaqueIdentifier: voters.opaqueIdentifier, count: voters.count, isCorrect: correctOpaqueIdentifiers.contains(voters.opaqueIdentifier), recentVoters: voters.recentVoters)
-                }), totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution)
+                }), totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution, hasUnseenVotes: results.hasUnseenVotes ?? self.results.hasUnseenVotes)
             } else if let updatedVoters = results.voters {
-                updatedResults = TelegramMediaPollResults(voters: updatedVoters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution)
+                updatedResults = TelegramMediaPollResults(voters: updatedVoters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution, hasUnseenVotes: results.hasUnseenVotes ?? self.results.hasUnseenVotes)
             } else {
-                updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution)
+                updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: results.totalVoters, recentVoters: results.recentVoters, solution: results.solution ?? self.results.solution, hasUnseenVotes: results.hasUnseenVotes ?? self.results.hasUnseenVotes)
             }
         } else {
             updatedResults = results
         }
         return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, textEntities: self.textEntities, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed, deadlineTimeout: self.deadlineTimeout, deadlineDate: self.deadlineDate, pollHash: self.pollHash, openAnswers: self.openAnswers, revotingDisabled: self.revotingDisabled, shuffleAnswers: self.shuffleAnswers, hideResultsUntilClose: self.hideResultsUntilClose, isCreator: self.isCreator, attachedMedia: self.attachedMedia)
     }
+    
+    public func withoutUnreadResults() -> TelegramMediaPoll {
+        let updatedResults = TelegramMediaPollResults(voters: self.results.voters, totalVoters: self.results.totalVoters, recentVoters: self.results.recentVoters, solution: self.results.solution, hasUnseenVotes: false)
+        return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, textEntities: self.textEntities, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed, deadlineTimeout: self.deadlineTimeout, deadlineDate: self.deadlineDate, pollHash: self.pollHash, openAnswers: self.openAnswers, revotingDisabled: self.revotingDisabled, shuffleAnswers: self.shuffleAnswers, hideResultsUntilClose: self.hideResultsUntilClose, isCreator: self.isCreator, attachedMedia: self.attachedMedia)
+    }
 }
+

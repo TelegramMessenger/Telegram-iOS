@@ -1684,13 +1684,16 @@ public final class AccountViewTracker {
         }
     }
     
-    public func updateMarkAllReactionsSeen(peerId: PeerId, threadId: Int64?) {
+    public func updateMarkAllReactionsAndPollVotesSeen(peerId: PeerId, threadId: Int64?) {
         self.queue.async {
             guard let account = self.account else {
                 return
             }
             let _ = (account.postbox.transaction { transaction -> Set<MessageId> in
-                let ids = Set(transaction.getMessageIndicesWithTag(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, tag: .unseenReaction).map({ $0.id }))
+                let reactionIds = Set(transaction.getMessageIndicesWithTag(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, tag: .unseenReaction).map({ $0.id }))
+                let pollVoteIds = Set(transaction.getMessageIndicesWithTag(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, tag: .unseenPollVote).map({ $0.id }))
+                
+                let ids = reactionIds.union(pollVoteIds)
                 
                 for id in ids {
                     transaction.updateMessage(id, update: { currentMessage in
@@ -1702,9 +1705,16 @@ public final class AccountViewTracker {
                                 break
                             }
                         }
+                        var media = currentMessage.media
+                        for i in 0 ..< media.count {
+                            if let poll = media[i] as? TelegramMediaPoll {
+                                media[i] = poll.withoutUnreadResults()
+                            }
+                        }
                         var tags = currentMessage.tags
                         tags.remove(.unseenReaction)
-                        return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                        tags.remove(.unseenPollVote)
+                        return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: media))
                     })
                 }
                 
@@ -1718,13 +1728,23 @@ public final class AccountViewTracker {
                     addSynchronizeMarkAllUnseenReactionsOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId, threadId: threadId)
                 }
                 
+                if let summary = transaction.getMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: .unseenPollVote, namespace: Namespaces.Message.Cloud, customTag: nil) {
+                    var maxId: Int32 = summary.range.maxId
+                    if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+                        maxId = index.id.id
+                    }
+                    
+                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: .unseenPollVote, namespace: Namespaces.Message.Cloud, customTag: nil, count: 0, maxId: maxId)
+                    addSynchronizeMarkAllUnseenPollVotesOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId, threadId: threadId)
+                }
+                
                 return ids
             }
             |> deliverOn(self.queue)).start()
         }
     }
     
-    public func updateMarkReactionsSeenForMessageIds(messageIds: Set<MessageId>) {
+    public func updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
             let addedMessageIds: [MessageId] = Array(messageIds)
             if !addedMessageIds.isEmpty {
@@ -1733,7 +1753,7 @@ public final class AccountViewTracker {
                         for id in addedMessageIds {
                             if let _ = transaction.getMessage(id) {
                                 transaction.updateMessage(id, update: { currentMessage in
-                                    if !currentMessage.tags.contains(.unseenReaction) {
+                                    if !currentMessage.tags.contains(.unseenReaction) && !currentMessage.tags.contains(.unseenPollVote) {
                                         return .skip
                                     }
                                     var attributes = currentMessage.attributes
@@ -1743,13 +1763,21 @@ public final class AccountViewTracker {
                                             break loop
                                         }
                                     }
+                                    var media = currentMessage.media
+                                    loop: for j in 0 ..< media.count {
+                                        if let poll = media[j] as? TelegramMediaPoll {
+                                            media[j] = poll.withoutUnreadResults()
+                                            break loop
+                                        }
+                                    }
                                     var tags = currentMessage.tags
                                     tags.remove(.unseenReaction)
-                                    return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                    tags.remove(.unseenPollVote)
+                                    return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: media))
                                 })
 
-                                if transaction.getPendingMessageAction(type: .readReaction, id: id) == nil {
-                                    transaction.setPendingMessageAction(type: .readReaction, id: id, action: ReadReactionAction())
+                                if transaction.getPendingMessageAction(type: .readReactionOrPollVote, id: id) == nil {
+                                    transaction.setPendingMessageAction(type: .readReactionOrPollVote, id: id, action: ReadReactionAction())
                                 }
                             }
                         }
@@ -2540,16 +2568,19 @@ public final class AccountViewTracker {
         }
     }
     
-    public func unseenPersonalMessagesAndReactionCount(peerId: PeerId, threadId: Int64?) -> Signal<(mentionCount: Int32, reactionCount: Int32), NoError> {
+    public func unseenPersonalMessagesAndReactionCount(peerId: PeerId, threadId: Int64?) -> Signal<(mentionCount: Int32, reactionCount: Int32, pollVoteCount: Int32), NoError> {
         if let account = self.account {
             let pendingMentionsKey: PostboxViewKey = .pendingMessageActionsSummary(type: .consumeUnseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
             let summaryMentionsKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenPersonalMessage, peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, customTag: nil)
             
-            let pendingReactionsKey: PostboxViewKey = .pendingMessageActionsSummary(type: .readReaction, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            let pendingReactionsKey: PostboxViewKey = .pendingMessageActionsSummary(type: .readReactionOrPollVote, peerId: peerId, namespace: Namespaces.Message.Cloud)
             let summaryReactionsKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenReaction, peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, customTag: nil)
             
-            return account.postbox.combinedView(keys: [pendingMentionsKey, summaryMentionsKey, pendingReactionsKey, summaryReactionsKey])
-            |> map { views -> (mentionCount: Int32, reactionCount: Int32) in
+            let pendingPollVotesKey: PostboxViewKey = .pendingMessageActionsSummary(type: .readReactionOrPollVote, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            let summaryPollVotesKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenPollVote, peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, customTag: nil)
+            
+            return account.postbox.combinedView(keys: [pendingMentionsKey, summaryMentionsKey, pendingReactionsKey, summaryReactionsKey, pendingPollVotesKey, summaryPollVotesKey])
+            |> map { views -> (mentionCount: Int32, reactionCount: Int32, pollVoteCount: Int32) in
                 var mentionCount: Int32 = 0
                 if let view = views.views[pendingMentionsKey] as? PendingMessageActionsSummaryView {
                     mentionCount -= view.count
@@ -2565,13 +2596,25 @@ public final class AccountViewTracker {
                         reactionCount += unseenCount
                     }
                 }
-                return (max(0, mentionCount), max(0, reactionCount))
+                var pollVoteCount: Int32 = 0
+                if let view = views.views[pendingPollVotesKey] as? PendingMessageActionsSummaryView {
+                    pollVoteCount -= view.count
+                }
+                if let view = views.views[summaryPollVotesKey] as? MessageHistoryTagSummaryView {
+                    if let unseenCount = view.count {
+                        pollVoteCount += unseenCount
+                    }
+                }
+                return (max(0, mentionCount), max(0, reactionCount), max(0, pollVoteCount))
             }
             |> distinctUntilChanged(isEqual: { lhs, rhs in
                 if lhs.mentionCount != rhs.mentionCount {
                     return false
                 }
                 if lhs.reactionCount != rhs.reactionCount {
+                    return false
+                }
+                if lhs.pollVoteCount != rhs.pollVoteCount {
                     return false
                 }
                 return true
@@ -2620,7 +2663,14 @@ public final class AccountViewTracker {
                         ),
                         ChatListEntryMessageTagSummaryKey(
                             tag: .unseenReaction,
-                            actionType: PendingMessageActionType.readReaction
+                            actionType: PendingMessageActionType.readReactionOrPollVote
+                        ): ChatListEntrySummaryComponents.Component(
+                            tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                            actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                        ),
+                        ChatListEntryMessageTagSummaryKey(
+                            tag: .unseenPollVote,
+                            actionType: PendingMessageActionType.readReactionOrPollVote
                         ): ChatListEntrySummaryComponents.Component(
                             tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
                             actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
@@ -2653,7 +2703,14 @@ public final class AccountViewTracker {
                         ),
                         ChatListEntryMessageTagSummaryKey(
                             tag: .unseenReaction,
-                            actionType: PendingMessageActionType.readReaction
+                            actionType: PendingMessageActionType.readReactionOrPollVote
+                        ): ChatListEntrySummaryComponents.Component(
+                            tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                            actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                        ),
+                        ChatListEntryMessageTagSummaryKey(
+                            tag: .unseenPollVote,
+                            actionType: PendingMessageActionType.readReactionOrPollVote
                         ): ChatListEntrySummaryComponents.Component(
                             tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
                             actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)

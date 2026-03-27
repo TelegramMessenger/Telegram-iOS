@@ -319,12 +319,12 @@ public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerI
     |> ignoreValues
 }
 
-public func clearPeerUnseenReactionsInteractively(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<Never, NoError> {
+public func clearPeerUnseenReactionsAndPollVotesInteractively(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return
         }
-        account.viewTracker.updateMarkAllReactionsSeen(peerId: peerId, threadId: threadId)
+        account.viewTracker.updateMarkAllReactionsAndPollVotesSeen(peerId: peerId, threadId: threadId)
     }
     |> ignoreValues
 }

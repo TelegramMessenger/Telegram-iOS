@@ -45,8 +45,8 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             return nil
         },
         existingMessageTags: MessageTags.all,
-        messageTagsWithSummary: [.unseenPersonalMessage, .pinned, .video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file, .unseenReaction],
-        messageTagsWithThreadSummary: [.unseenPersonalMessage, .unseenReaction],
+        messageTagsWithSummary: [.unseenPersonalMessage, .pinned, .video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file, .unseenReaction, .unseenPollVote],
+        messageTagsWithThreadSummary: [.unseenPersonalMessage, .unseenReaction, .unseenPollVote],
         existingGlobalMessageTags: GlobalMessageTags.all,
         peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat],
         peerSummaryCounterTags: { peer, isContact in

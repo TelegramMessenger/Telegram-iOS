@@ -183,24 +183,29 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
     }
 }
 
-func managedReadReactionActions(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+func managedReadReactionOrPollVoteActions(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
-        let actionsKey = PostboxViewKey.pendingMessageActions(type: .readReaction)
-        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: nil, threadId: nil, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud)
-        let disposable = postbox.combinedView(keys: [actionsKey, invalidateKey]).start(next: { view in
+        let actionsKey = PostboxViewKey.pendingMessageActions(type: .readReactionOrPollVote)
+        let invalidateReactionsKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: nil, threadId: nil, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud)
+        let invalidatePollVotesKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: nil, threadId: nil, tagMask: .unseenPollVote, namespace: Namespaces.Message.Cloud)
+        let disposable = postbox.combinedView(keys: [actionsKey, invalidateReactionsKey, invalidatePollVotesKey]).start(next: { view in
             var entries: [PendingMessageActionsEntry] = []
-            var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+            var invalidateReactionEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+            var invalidatePollVoteEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
             if let v = view.views[actionsKey] as? PendingMessageActionsView {
                 entries = v.entries
             }
-            if let v = view.views[invalidateKey] as? InvalidatedMessageHistoryTagSummariesView {
-                invalidateEntries = v.entries
+            if let v = view.views[invalidateReactionsKey] as? InvalidatedMessageHistoryTagSummariesView {
+                invalidateReactionEntries = v.entries
+            }
+            if let v = view.views[invalidatePollVotesKey] as? InvalidatedMessageHistoryTagSummariesView {
+                invalidatePollVoteEntries = v.entries
             }
             
             let (disposeOperations, beginOperations, beginValidateOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)], beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)]) in
-                return helper.update(entries: entries, invalidateEntries: invalidateEntries)
+                return helper.update(entries: entries, invalidateEntries: invalidateReactionEntries.union(invalidatePollVoteEntries))
             }
             
             for disposable in disposeOperations {
@@ -208,10 +213,10 @@ func managedReadReactionActions(postbox: Postbox, network: Network, stateManager
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenAction(postbox: postbox, type: .readReaction, actionType: ReadReactionAction.self, id: entry.id, { transaction, entry -> Signal<Void, NoError> in
+                let signal = withTakenAction(postbox: postbox, type: .readReactionOrPollVote, actionType: ReadReactionAction.self, id: entry.id, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let _ = entry.action as? ReadReactionAction {
-                            return synchronizeReadMessageReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
+                            return synchronizeReadMessageReactionsOrPollVotes(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
                         } else {
                             assertionFailure()
                         }
@@ -219,14 +224,14 @@ func managedReadReactionActions(postbox: Postbox, network: Network, stateManager
                     return .complete()
                 })
                 |> then(postbox.transaction { transaction -> Void in
-                    transaction.setPendingMessageAction(type: .readReaction, id: entry.id, action: nil)
+                    transaction.setPendingMessageAction(type: .readReactionOrPollVote, id: entry.id, action: nil)
                 })
                 
                 disposable.set(signal.start())
             }
             
             for (entry, disposable) in beginValidateOperations {
-                let signal = synchronizeUnseenReactionsTag(postbox: postbox, network: network, entry: entry)
+                let signal = synchronizeUnseenReactionsAndPollVotesTag(postbox: postbox, network: network, entry: entry)
                 |> then(postbox.transaction { transaction -> Void in
                     transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
                 })
@@ -315,7 +320,7 @@ private func synchronizeConsumeMessageContents(transaction: Transaction, postbox
     }
 }
 
-private func synchronizeReadMessageReactions(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Void, NoError> {
+private func synchronizeReadMessageReactionsOrPollVotes(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Void, NoError> {
     if id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup {
         return network.request(Api.functions.messages.readMessageContents(id: [id.id]))
         |> map(Optional.init)
@@ -331,7 +336,7 @@ private func synchronizeReadMessageReactions(transaction: Transaction, postbox: 
                 }
             }
             return postbox.transaction { transaction -> Void in
-                transaction.setPendingMessageAction(type: .readReaction, id: id, action: nil)
+                transaction.setPendingMessageAction(type: .readReactionOrPollVote, id: id, action: nil)
                 transaction.updateMessage(id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
@@ -344,9 +349,17 @@ private func synchronizeReadMessageReactions(transaction: Transaction, postbox: 
                             break loop
                         }
                     }
+                    var media = currentMessage.media
+                    loop: for j in 0 ..< media.count {
+                        if let poll = media[j] as? TelegramMediaPoll {
+                            media[j] = poll.withoutUnreadResults()
+                        }
+                    }
+                    
                     var updatedTags = currentMessage.tags
                     updatedTags.remove(.unseenReaction)
-                    return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    updatedTags.remove(.unseenPollVote)
+                    return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: media))
                 })
             }
         }
@@ -358,7 +371,7 @@ private func synchronizeReadMessageReactions(transaction: Transaction, postbox: 
             }
             |> mapToSignal { result -> Signal<Void, NoError> in
                 return postbox.transaction { transaction -> Void in
-                    transaction.setPendingMessageAction(type: .readReaction, id: id, action: nil)
+                    transaction.setPendingMessageAction(type: .readReactionOrPollVote, id: id, action: nil)
                     transaction.updateMessage(id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
@@ -371,9 +384,16 @@ private func synchronizeReadMessageReactions(transaction: Transaction, postbox: 
                                 break loop
                             }
                         }
+                        var media = currentMessage.media
+                        loop: for j in 0 ..< media.count {
+                            if let poll = media[j] as? TelegramMediaPoll {
+                                media[j] = poll.withoutUnreadResults()
+                            }
+                        }
                         var updatedTags = currentMessage.tags
                         updatedTags.remove(.unseenReaction)
-                        return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                        updatedTags.remove(.unseenPollVote)
+                        return .update(StoreMessage(id: currentMessage.id, customStableId: nil, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: media))
                     })
                 }
             }
@@ -429,7 +449,7 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
     } |> switchToLatest
 }
 
-private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
+private func synchronizeUnseenReactionsAndPollVotesTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
             return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(.init(peer: inputPeer))]))
@@ -445,11 +465,13 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
                                 if let dialog = dialogs.filter({ $0.peerId == entry.key.peerId }).first {
                                     let apiTopMessage: Int32
                                     let apiUnreadReactionsCount: Int32
+                                    let apiUnreadPollVoteCount: Int32
                                     switch dialog {
                                         case let .dialog(dialogData):
-                                            let (topMessage, unreadReactionsCount) = (dialogData.topMessage, dialogData.unreadReactionsCount)
+                                        let (topMessage, unreadReactionsCount, unreadPollVoteCount) = (dialogData.topMessage, dialogData.unreadReactionsCount, dialogData.unreadPollVotesCount)
                                             apiTopMessage = topMessage
                                             apiUnreadReactionsCount = unreadReactionsCount
+                                            apiUnreadPollVoteCount = unreadPollVoteCount
 
                                         case .dialogFolder:
                                             assertionFailure()
@@ -457,7 +479,12 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
                                     }
 
                                     return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: apiUnreadReactionsCount, maxId: apiTopMessage)
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: .unseenReaction, namespace: entry.key.namespace, customTag: nil, count: apiUnreadReactionsCount, maxId: apiTopMessage)
+                                        #if DEBUG
+                                        #else
+                                        //let _ = this_is_an_error
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: .unseenPollVote, namespace: entry.key.namespace, customTag: nil, count: apiUnreadPollVoteCount, maxId: apiTopMessage)
+                                        #endif
                                     }
                                 } else {
                                     return .complete()
