@@ -410,7 +410,7 @@ final class TextProcessingLanguageSelectionComponent: Component {
                     if component.ignoredTranslationLanguages.contains(item) {
                         return nil
                     }
-                    return Language(id: item, languageCode: item, name: localizedLanguageName(strings: component.strings, language: item))
+                    return Language(id: item, languageCode: item, name: localizedLanguageName(strings: component.strings, language: item, kind: .neutral))
                 }
                 var topIds: [String] = []
                 if !topIds.contains(component.selectedLanguageCode), let item = self.mainItems.first(where: { $0.languageCode == component.selectedLanguageCode }) {

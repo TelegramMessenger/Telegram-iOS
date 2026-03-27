@@ -251,8 +251,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
             let textString: NSAttributedString
             let textSpacing: CGFloat
             if let peer = item.peer, let managedByBot = item.managedByBot {
-                //TODO:localize
-                titleString = parseMarkdownIntoAttributedString("**\(peer.compactDisplayTitle)** is ready!", attributes: MarkdownAttributes(
+                titleString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_ManagedBot_CreatedTitle(peer.compactDisplayTitle).string, attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
                     bold: MarkdownAttributeSet(font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
                     link: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
@@ -260,7 +259,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                         return ("URL", url)
                     }
                 ))
-                let rawTextString = "Tap **Start** below to test your new chatbot. Its behavior is defined by **\(managedByBot.compactDisplayTitle)**."
+                let rawTextString = item.presentationData.strings.Chat_ManagedBot_CreatedText(managedByBot.compactDisplayTitle).string
                 textString = parseMarkdownIntoAttributedString(rawTextString, attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: messageFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),
                     bold: MarkdownAttributeSet(font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor),

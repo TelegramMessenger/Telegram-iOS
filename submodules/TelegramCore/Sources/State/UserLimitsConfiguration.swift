@@ -29,6 +29,7 @@ public struct UserLimitsConfiguration: Equatable {
     public var maxGiveawayPeriodSeconds: Int32
     public var maxChannelRecommendationsCount: Int32
     public var maxConferenceParticipantCount: Int32
+    public var maxBotsCreated: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -58,7 +59,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxGiveawayCountriesCount: 10,
             maxGiveawayPeriodSeconds: 86400 * 31,
             maxChannelRecommendationsCount: 10,
-            maxConferenceParticipantCount: 100
+            maxConferenceParticipantCount: 100,
+            maxBotsCreated: 20
         )
     }
 
@@ -89,7 +91,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxGiveawayCountriesCount: Int32,
         maxGiveawayPeriodSeconds: Int32,
         maxChannelRecommendationsCount: Int32,
-        maxConferenceParticipantCount: Int32
+        maxConferenceParticipantCount: Int32,
+        maxBotsCreated: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxPinnedSavedChatCount = maxPinnedSavedChatCount
@@ -118,6 +121,7 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxGiveawayPeriodSeconds = maxGiveawayPeriodSeconds
         self.maxChannelRecommendationsCount = maxChannelRecommendationsCount
         self.maxConferenceParticipantCount = maxConferenceParticipantCount
+        self.maxBotsCreated = maxBotsCreated
     }
 }
 
@@ -172,5 +176,6 @@ extension UserLimitsConfiguration {
         self.maxGiveawayPeriodSeconds = getGeneralValue("giveaway_period_max", orElse: defaultValue.maxGiveawayPeriodSeconds)
         self.maxChannelRecommendationsCount = getValue("recommended_channels_limit", orElse: defaultValue.maxChannelRecommendationsCount)
         self.maxConferenceParticipantCount = getGeneralValue("conference_call_size_limit", orElse: defaultValue.maxConferenceParticipantCount)
+        self.maxBotsCreated = getValue("bots_create_limit", orElse: defaultValue.maxBotsCreated)
     }
 }

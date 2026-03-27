@@ -19,6 +19,7 @@ import ChatSendMessageActionUI
 import MinimizedContainer
 import ComponentFlow
 import GlassBackgroundComponent
+import TextFormat
 
 public enum AttachmentButtonType: Equatable {
     case gallery
@@ -775,19 +776,17 @@ public class AttachmentController: ViewController, MinimizableController {
                         mode: .edit(
                             saveRestoreStateId: nil,
                             completion: { [weak self] text in
-                                //TODO:localize
                                 guard let self, let mediaPickerContext = self.mediaPickerContext else {
                                     return
                                 }
-                                self.panel.updateCaption(NSAttributedString(string: text.text))
-                                mediaPickerContext.setCaption(NSAttributedString(string: text.text))
+                                self.panel.updateCaption(chatInputStateStringWithAppliedEntities(text.text, entities: text.entities))
+                                mediaPickerContext.setCaption(chatInputStateStringWithAppliedEntities(text.text, entities: text.entities))
                             },
                             send: { [weak self] text in
-                                //TODO:localize
                                 guard let self, let mediaPickerContext = self.mediaPickerContext else {
                                     return
                                 }
-                                mediaPickerContext.setCaption(NSAttributedString(string: text.text))
+                                mediaPickerContext.setCaption(chatInputStateStringWithAppliedEntities(text.text, entities: text.entities))
                                 mediaPickerContext.send(mode: .generic, attachmentMode: .media, parameters: nil)
                             },
                             sendContextActions: nil

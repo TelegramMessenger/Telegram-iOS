@@ -57,8 +57,7 @@ private enum ChatReportPeerTitleButton: Equatable {
         case .restartTopic:
             return strings.Chat_PanelRestartTopic
         case .setPhoto:
-            //TODO:localize
-            return "Set Profile Photo"
+            return strings.Chat_PanelSetBotPhoto
         }
     }
 }

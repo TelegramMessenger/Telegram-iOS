@@ -13,7 +13,7 @@ func localizedStyleName(strings: PresentationStrings, styleId: TelegramComposeAI
     case .neutral:
         return strings.TextProcessingStyle_Neutral
     case let .style(name):
-        if let value = strings.primaryComponent.dict["TextProcessingStyle_\(name)"] {
+        if let value = strings.primaryComponent.dict["TextProcessingStyle.\(name)"] {
             return value
         } else {
             return name.capitalized

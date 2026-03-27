@@ -21,7 +21,7 @@ final class TextProcessingTextAreaComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let titlePrefix: String
+    let titleFormat: String
     let title: String
     let titleAction: ((UIView) -> Void)?
     let isExpanded: (value: Bool, toggle: () -> Void)?
@@ -37,7 +37,7 @@ final class TextProcessingTextAreaComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        titlePrefix: String,
+        titleFormat: String,
         title: String,
         titleAction: ((UIView) -> Void)?,
         isExpanded: (value: Bool, toggle: () -> Void)?,
@@ -52,7 +52,7 @@ final class TextProcessingTextAreaComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
-        self.titlePrefix = titlePrefix
+        self.titleFormat = titleFormat
         self.isExpanded = isExpanded
         self.copyAction = copyAction
         self.title = title
@@ -75,7 +75,7 @@ final class TextProcessingTextAreaComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
-        if lhs.titlePrefix != rhs.titlePrefix {
+        if lhs.titleFormat != rhs.titleFormat {
             return false
         }
         if lhs.title != rhs.title {
@@ -110,7 +110,6 @@ final class TextProcessingTextAreaComponent: Component {
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
         
-        private let titlePrefix = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private var titleArrow: ComponentView<Empty>?
         private var emojify: ComponentView<Empty>?
@@ -190,11 +189,18 @@ final class TextProcessingTextAreaComponent: Component {
             guard let result = super.hitTest(point, with: event) else {
                 return nil
             }
-            if result == self.textSelectionNode?.view && !self.displayContentsUnderSpoilers.value {
+            if result == self.textSelectionNode?.view {
                 if let textView = self.text.view as? InteractiveTextComponent.View {
                     let textPoint = self.convert(point, to: textView.textNode.view)
                     if let attributes = textView.textNode.attributesAtPoint(textPoint, orNearest: false)?.1 {
                         if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                            if !self.displayContentsUnderSpoilers.value {
+                                if let value = textView.textNode.view.hitTest(textPoint, with: event) {
+                                    return value
+                                }
+                            }
+                        }
+                        if attributes[NSAttributedString.Key(rawValue: "TelegramBlockQuote")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Blockquote")] != nil {
                             if let value = textView.textNode.view.hitTest(textPoint, with: event) {
                                 return value
                             }
@@ -225,40 +231,32 @@ final class TextProcessingTextAreaComponent: Component {
             var contentHeight: CGFloat = 0.0
             contentHeight += topInset
             
-            let titlePrefixSize = self.titlePrefix.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.titlePrefix, font: Font.semibold(13.0), textColor: component.theme.list.itemSecondaryTextColor))
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 10.0, height: 100.0)
-            )
+            let titleString = NSMutableAttributedString()
+            if let range = component.titleFormat.range(of: "{}") {
+                if range.lowerBound != component.titleFormat.startIndex {
+                    titleString.append(NSAttributedString(string: String(component.titleFormat[component.titleFormat.startIndex ..< range.lowerBound]), font: Font.semibold(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+                }
+                titleString.append(NSAttributedString(string: component.title, font: Font.semibold(13.0), textColor: component.theme.list.itemAccentColor))
+                if range.upperBound != component.titleFormat.endIndex {
+                    titleString.append(NSAttributedString(string: String(component.titleFormat[range.upperBound...]), font: Font.semibold(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+                }
+            } else {
+                titleString.append(NSAttributedString(string: component.titleFormat, font: Font.semibold(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(13.0), textColor: component.theme.list.itemAccentColor))
+                    text: .plain(titleString)
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 10.0, height: 100.0)
             )
             
-            let titlePrefixFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: titlePrefixSize)
-            var titleFrame = CGRect(origin: CGPoint(x: titlePrefixFrame.maxX, y: titlePrefixFrame.minY), size: titleSize)
-            if !component.titlePrefix.isEmpty {
-                titleFrame.origin.x += 3.0
-            }
+            let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: titleSize)
             
             transition.setFrame(view: self.titleButton, frame: titleFrame.insetBy(dx: -10.0, dy: -10.0))
             
-            if let titlePrefixView = self.titlePrefix.view {
-                if titlePrefixView.superview == nil {
-                    titlePrefixView.layer.anchorPoint = CGPoint()
-                    titlePrefixView.isUserInteractionEnabled = false
-                    self.addSubview(titlePrefixView)
-                }
-                titlePrefixView.bounds = CGRect(origin: CGPoint(), size: titlePrefixFrame.size)
-                transition.setPosition(view: titlePrefixView, position: titlePrefixFrame.origin)
-            }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint()
@@ -332,7 +330,7 @@ final class TextProcessingTextAreaComponent: Component {
                                 selected: emojifyValue.value
                             ))),
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: "Emojify", font: Font.semibold(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+                                text: .plain(NSAttributedString(string: component.strings.TextProcessing_Emojify, font: Font.semibold(13.0), textColor: component.theme.list.itemSecondaryTextColor))
                             )))
                         ], spacing: 7.0)),
                         effectAlignment: .center,
@@ -368,6 +366,7 @@ final class TextProcessingTextAreaComponent: Component {
                 entities: component.text?.entities ?? self.previousText?.entities ?? [],
                 baseColor: component.theme.list.itemPrimaryTextColor,
                 linkColor: component.theme.list.itemAccentColor,
+                baseQuoteTintColor: component.theme.list.itemAccentColor,
                 baseFont: Font.regular(fontSize),
                 linkFont: Font.regular(fontSize),
                 boldFont: Font.semibold(fontSize),
@@ -415,7 +414,7 @@ final class TextProcessingTextAreaComponent: Component {
                     textStroke: nil,
                     displayContentsUnderSpoilers: self.displayContentsUnderSpoilers.value,
                     customTruncationToken: nil,
-                    expandedBlocks: Set(),
+                    expandedBlocks: self.expandedBlockIds,
                     context: component.context,
                     cache: component.context.animationCache,
                     renderer: component.context.animationRenderer,
@@ -516,7 +515,7 @@ final class TextProcessingTextAreaComponent: Component {
                     transition: expandButtonTransition,
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: isExpanded.value ? "less" : "more", font: Font.regular(17.0), textColor: component.theme.list.itemAccentColor))
+                            text: .plain(NSAttributedString(string: isExpanded.value ? component.strings.TextProcessing_TextCollapse : component.strings.TextProcessing_TextExpand, font: Font.regular(17.0), textColor: component.theme.list.itemAccentColor))
                         )),
                         effectAlignment: .right,
                         action: {
@@ -558,7 +557,7 @@ final class TextProcessingTextAreaComponent: Component {
                 }
                 
                 if component.copyAction != nil, let textLayout = self.textState.layout {
-                    if textLayout.trailingLineWidth >= availableSize.width - sideInset - 32.0 || textLayout.trailingLineIsRTL {
+                    if textLayout.trailingLineWidth >= availableSize.width - sideInset - 32.0 || textLayout.trailingLineIsRTL || textLayout.trailingLineIsBlock {
                         textContainerFrame.size.height += 28.0
                     }
                 }
@@ -705,7 +704,7 @@ final class TextProcessingTextAreaComponent: Component {
                         textStroke: nil,
                         displayContentsUnderSpoilers: true,
                         customTruncationToken: nil,
-                        expandedBlocks: Set(),
+                        expandedBlocks: self.expandedBlockIds,
                         context: component.context,
                         cache: component.context.animationCache,
                         renderer: component.context.animationRenderer,

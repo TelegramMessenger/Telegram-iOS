@@ -516,8 +516,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         case "telegram_channel_direct":
                             actionTitle = item.presentationData.strings.Chat_ContactChannel
                         case "telegram_newbot":
-                            //TODO:localize
-                            actionTitle = "Create Bot"
+                            actionTitle = item.presentationData.strings.Chat_CreateBotLink
                         default:
                             break
                     }

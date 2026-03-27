@@ -2341,9 +2341,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             edgeEffectAlpha = self.chatPresentationInterfaceState.chatWallpaper.singleColor != nil ? 0.85 : 0.75
         }
         
-        
         var bottomBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
-        if self.historyNode.rotated {
+        if self.historyNode.rotated && !isOverlay {
             if let current = self.bottomBackgroundEdgeEffectNode {
                 bottomBackgroundEdgeEffectNode = current
             } else {
@@ -2353,6 +2352,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     value.isUserInteractionEnabled = false
                     self.historyNodeContainer.view.superview?.insertSubview(value.view, aboveSubview: self.messageTransitionNode.view)
                 }
+            }
+        } else {
+            if let bottomBackgroundEdgeEffectNode = self.bottomBackgroundEdgeEffectNode {
+                self.bottomBackgroundEdgeEffectNode = nil
+                bottomBackgroundEdgeEffectNode.view.removeFromSuperview()
             }
         }
         if let bottomBackgroundEdgeEffectNode {
@@ -2406,7 +2410,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let containerNode = self.containerNode {
-            let containerNodeFrame = CGRect(origin: CGPoint(x: wrappingInsets.left, y: wrappingInsets.top), size: CGSize(width: contentBounds.size.width, height: contentBounds.size.height - containerInsets.bottom - inputPanelsHeight - 8.0))
+            var containerNodeFrame = CGRect(origin: CGPoint(x: wrappingInsets.left, y: wrappingInsets.top), size: CGSize(width: contentBounds.size.width, height: contentBounds.size.height - containerInsets.bottom - inputPanelsHeight - 8.0))
+            if isOverlay {
+                containerNodeFrame.size.height -= 8.0
+            }
             transition.updateFrame(node: containerNode, frame: containerNodeFrame)
             
             if let containerBackgroundNode = self.containerBackgroundNode {
@@ -2544,7 +2551,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         })
         
         var topBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
-        if self.historyNode.rotated {
+        if self.historyNode.rotated && !isOverlay {
             if let current = self.topBackgroundEdgeEffectNode {
                 topBackgroundEdgeEffectNode = current
             } else {
@@ -2554,6 +2561,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     value.isUserInteractionEnabled = false
                     self.historyNodeContainer.view.superview?.insertSubview(value.view, aboveSubview: self.messageTransitionNode.view)
                 }
+            }
+        } else {
+            if let topBackgroundEdgeEffectNode = self.topBackgroundEdgeEffectNode {
+                self.topBackgroundEdgeEffectNode = nil
+                topBackgroundEdgeEffectNode.view.removeFromSuperview()
             }
         }
         if let topBackgroundEdgeEffectNode {

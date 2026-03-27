@@ -200,7 +200,7 @@ final class CreateBotContentComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Create Bot", font: Font.bold(24.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.CreateBot_Title, font: Font.bold(24.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.12
@@ -230,7 +230,7 @@ final class CreateBotContentComponent: Component {
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .markdown(text: "[\(component.parentPeer.debugDisplayTitle)]() wound like to create and manage a chatbot on your behalf.", attributes: markdownAttributes),
+                    text: .markdown(text: environment.strings.CreateBot_Text(component.parentPeer.debugDisplayTitle).string, attributes: markdownAttributes),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.12
@@ -256,7 +256,7 @@ final class CreateBotContentComponent: Component {
                     style: .glass,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "BOT NAME",
+                            string: environment.strings.CreateBot_SectionName,
                             font: Font.regular(13.0),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -272,7 +272,7 @@ final class CreateBotContentComponent: Component {
                             strings: environment.strings,
                             initialText: "",
                             resetText: isFirstTime ? ListMultilineTextFieldItemComponent.ResetText(value: component.initialTitle ?? "") : nil,
-                            placeholder: "Name",
+                            placeholder: environment.strings.CreateBot_NamePlaceholder,
                             autocapitalizationType: .words,
                             autocorrectionType: .no,
                             characterLimit: 64,
@@ -327,23 +327,23 @@ final class CreateBotContentComponent: Component {
                 switch self.usernameCheckingStatus?.status ?? .valid {
                 case .checking:
                     usernameFooterString = NSAttributedString(
-                        string: "Checking...",
+                        string: environment.strings.CreateBot_UsernameStatus_Checking,
                         font: Font.regular(13.0),
                         textColor: environment.theme.list.freeTextColor
                     )
                 case .invalid:
-                    let errorText = "You can only use **a-z**, **0-9** and underscores."
+                    let errorText = environment.strings.CreateBot_UsernameStatus_Invalid
                     usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
                         return ("URL", contents)
                     }))
                 case .taken:
-                    let errorText = "This username is already taken."
+                    let errorText = environment.strings.CreateBot_UsernameStatus_Taken
                     usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
                         return ("URL", contents)
                     }))
                 case .valid:
                     usernameFooterString = NSAttributedString(
-                        string: "Link: t.me/\(value)",
+                        string: environment.strings.CreateBot_UsernameStatus_Link(value).string,
                         font: Font.regular(13.0),
                         textColor: environment.theme.list.freeTextColor
                     )
@@ -352,11 +352,11 @@ final class CreateBotContentComponent: Component {
                 let errorText: String
                 switch error {
                 case .insufficientLength:
-                    errorText = "A username must have at least 5 characters."
+                    errorText = environment.strings.CreateBot_UsernameStatus_Short
                 case .startsWithNumber:
-                    errorText = "A username can't start with a number"
+                    errorText = environment.strings.CreateBot_UsernameStatus_Number
                 case .unsupportedCharacters:
-                    errorText = "You can only use **a-z**, **0-9** and underscores."
+                    errorText = environment.strings.CreateBot_UsernameStatus_Invalid
                 }
                 usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
                     return ("URL", contents)
@@ -370,7 +370,7 @@ final class CreateBotContentComponent: Component {
                     style: .glass,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "BOT USERNAME",
+                            string: environment.strings.CreateBot_SectionUsername,
                             font: Font.regular(13.0),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -513,17 +513,16 @@ private final class CreateBotSheetComponent: Component {
                 return false
             }
             
-            //TODO:localize
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let _ = presentationData
             let alertController = textAlertController(
                 context: component.context,
-                title: "Unsaved Changes",
-                text: "You have not finished creating a bot.",
+                title: presentationData.strings.CreateBot_UnsavedAlert_Title,
+                text: presentationData.strings.CreateBot_UnsavedAlert_Text,
                 actions: [
-                    TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                     }),
-                    TextAlertAction(type: .destructiveAction, title: "Discard", action: { [weak self] in
+                    TextAlertAction(type: .destructiveAction, title: presentationData.strings.CreateBot_UnsavedAlert_Discard, action: { [weak self] in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -638,33 +637,40 @@ private final class CreateBotSheetComponent: Component {
                     }
                 })
             }, error: { [weak self] error in
-                guard let self, let environment = self.environment, let component = self.component else {
-                    return
+                Task { @MainActor in
+                    guard let self, let environment = self.environment, let component = self.component else {
+                        return
+                    }
+                    
+                    self.isCreating = false
+                    self.state?.updated(transition: .immediate)
+                    
+                    let text: String
+                    switch error {
+                    case .generic:
+                        text = environment.strings.Login_UnknownError
+                    case .occupied:
+                        text = environment.strings.CreateBot_UsernameStatus_Taken
+                    case .limitExceeded:
+                        let isPremium = (await component.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
+                        ).get())?.isPremium ?? false
+                        let limits = await component.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: isPremium)
+                        ).get()
+                        text = environment.strings.CreateBot_UsernameStatus_LimitExceeded(Int32(limits.maxBotsCreated))
+                    }
+                    
+                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                    self.environment?.controller()?.push(textAlertController(
+                        context: component.context,
+                        title: nil,
+                        text: text,
+                        actions: [
+                            .init(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                        ]
+                    ))
                 }
-                
-                self.isCreating = false
-                self.state?.updated(transition: .immediate)
-                
-                let text: String
-                switch error {
-                case .generic:
-                    text = environment.strings.Login_UnknownError
-                case .occupied:
-                    text = "This username already exists."
-                case .limitExceeded:
-                    text = "Please try again later."
-                }
-                
-                //TODO:localize
-                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                self.environment?.controller()?.push(textAlertController(
-                    context: component.context,
-                    title: nil,
-                    text: text,
-                    actions: [
-                        .init(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
-                    ]
-                ))
             })
         }
 
@@ -961,7 +967,7 @@ private final class ActionButtonsComponent: Component {
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
                         component: AnyComponent(ButtonTextContentComponent(
-                            text: "Create", //TODO:localize
+                            text: component.strings.CreateBot_ActionButton,
                             badge: 0,
                             textColor: component.theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: component.theme.list.itemCheckColors.foregroundColor,
@@ -1070,11 +1076,10 @@ private final class EditLabelComponent: Component {
             let verticalInset: CGFloat = 4.0
             let rightInset: CGFloat = 16.0
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "edit", font: Font.regular(11.0), textColor: component.theme.list.itemAccentColor))
+                    text: .plain(NSAttributedString(string: component.strings.CreateBot_InputBadge, font: Font.regular(11.0), textColor: component.theme.list.itemAccentColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)

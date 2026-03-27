@@ -1263,8 +1263,7 @@ public final class ChatSideTopicsPanel: Component {
                     if forumManagedByUser {
                         titleText = component.strings.Chat_InlineTopicMenu_NewForumThreadTab
                     } else {
-                        //TODO:localize
-                        titleText = "All"
+                        titleText = component.strings.Chat_InlineTopicMenu_TabAll
                     }
                 } else {
                     titleText = component.strings.Chat_InlineTopicMenu_AllTab
@@ -1405,8 +1404,7 @@ public final class ChatSideTopicsPanel: Component {
                     if forumManagedByUser {
                         titleText = component.strings.Chat_InlineTopicMenu_NewForumThreadTab
                     } else {
-                        //TODO:localize
-                        titleText = "All"
+                        titleText = component.strings.Chat_InlineTopicMenu_TabAll
                     }
                 } else {
                     titleText = component.strings.Chat_InlineTopicMenu_AllTab

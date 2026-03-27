@@ -63,6 +63,7 @@ public enum EngineConfiguration {
         public let maxGiveawayPeriodSeconds: Int32
         public let maxChannelRecommendationsCount: Int32
         public let maxConferenceParticipantCount: Int32
+        public let maxBotsCreated: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -95,7 +96,8 @@ public enum EngineConfiguration {
             maxGiveawayCountriesCount: Int32,
             maxGiveawayPeriodSeconds: Int32,
             maxChannelRecommendationsCount: Int32,
-            maxConferenceParticipantCount: Int32
+            maxConferenceParticipantCount: Int32,
+            maxBotsCreated: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxPinnedSavedChatCount = maxPinnedSavedChatCount
@@ -124,6 +126,7 @@ public enum EngineConfiguration {
             self.maxGiveawayPeriodSeconds = maxGiveawayPeriodSeconds
             self.maxChannelRecommendationsCount = maxChannelRecommendationsCount
             self.maxConferenceParticipantCount = maxConferenceParticipantCount
+            self.maxBotsCreated = maxBotsCreated
         }
     }
 }
@@ -187,7 +190,8 @@ public extension EngineConfiguration.UserLimits {
             maxGiveawayCountriesCount: userLimitsConfiguration.maxGiveawayCountriesCount,
             maxGiveawayPeriodSeconds: userLimitsConfiguration.maxGiveawayPeriodSeconds,
             maxChannelRecommendationsCount: userLimitsConfiguration.maxChannelRecommendationsCount,
-            maxConferenceParticipantCount: userLimitsConfiguration.maxConferenceParticipantCount
+            maxConferenceParticipantCount: userLimitsConfiguration.maxConferenceParticipantCount,
+            maxBotsCreated: userLimitsConfiguration.maxBotsCreated
         )
     }
 }

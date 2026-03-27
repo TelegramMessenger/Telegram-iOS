@@ -528,6 +528,18 @@ public final class InteractiveTextNodeLayout: NSObject {
         }
     }
     
+    public var trailingLineIsBlock: Bool {
+        if let lastSegment = self.segments.last {
+            if let _ = lastSegment.blockQuote {
+                return true
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    
     public func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])? {
         if let attributedString = self.attributedString {
             let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
