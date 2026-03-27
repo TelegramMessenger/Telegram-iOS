@@ -44,6 +44,7 @@ public struct BotUserInfoFlags: OptionSet {
     public static let hasWebApp = BotUserInfoFlags(rawValue: (1 << 7))
     public static let hasForum = BotUserInfoFlags(rawValue: (1 << 8))
     public static let forumManagedByUser = BotUserInfoFlags(rawValue: (1 << 9))
+    public static let canManageBots = BotUserInfoFlags(rawValue: (1 << 10))
 }
 
 public struct BotUserInfo: PostboxCoding, Equatable {

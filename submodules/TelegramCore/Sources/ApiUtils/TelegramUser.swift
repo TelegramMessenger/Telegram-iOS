@@ -128,6 +128,9 @@ extension TelegramUser {
                 if (flags2 & (1 << 17)) != 0 {
                     botFlags.insert(.forumManagedByUser)
                 }
+                if (flags2 & (1 << 18)) != 0 {
+                    botFlags.insert(.canManageBots)
+                }
                 botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
             }
             
