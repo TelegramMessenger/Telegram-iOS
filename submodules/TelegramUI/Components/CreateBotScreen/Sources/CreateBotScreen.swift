@@ -651,6 +651,8 @@ private final class CreateBotSheetComponent: Component {
                     text = environment.strings.Login_UnknownError
                 case .occupied:
                     text = "This username already exists."
+                case .limitExceeded:
+                    text = "Please try again later."
                 }
                 
                 //TODO:localize
