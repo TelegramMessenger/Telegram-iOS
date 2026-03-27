@@ -7,8 +7,8 @@ public extension Api {
                 self.id = id
                 self.flags = flags
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("receivedNotifyMessage", [("id", self.id as Any), ("flags", self.flags as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("receivedNotifyMessage", [("id", ConstructorParameterDescription(self.id)), ("flags", ConstructorParameterDescription(self.flags))])
             }
         }
         case receivedNotifyMessage(Cons_receivedNotifyMessage)
@@ -25,10 +25,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .receivedNotifyMessage(let _data):
-                return ("receivedNotifyMessage", [("id", _data.id as Any), ("flags", _data.flags as Any)])
+                return ("receivedNotifyMessage", [("id", ConstructorParameterDescription(_data.id)), ("flags", ConstructorParameterDescription(_data.flags))])
             }
         }
 
@@ -57,8 +57,8 @@ public extension Api {
                 self.url = url
                 self.chatId = chatId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("recentMeUrlChat", [("url", self.url as Any), ("chatId", self.chatId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("recentMeUrlChat", [("url", ConstructorParameterDescription(self.url)), ("chatId", ConstructorParameterDescription(self.chatId))])
             }
         }
         public class Cons_recentMeUrlChatInvite: TypeConstructorDescription {
@@ -68,8 +68,8 @@ public extension Api {
                 self.url = url
                 self.chatInvite = chatInvite
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("recentMeUrlChatInvite", [("url", self.url as Any), ("chatInvite", self.chatInvite as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("recentMeUrlChatInvite", [("url", ConstructorParameterDescription(self.url)), ("chatInvite", ConstructorParameterDescription(self.chatInvite))])
             }
         }
         public class Cons_recentMeUrlStickerSet: TypeConstructorDescription {
@@ -79,8 +79,8 @@ public extension Api {
                 self.url = url
                 self.set = set
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("recentMeUrlStickerSet", [("url", self.url as Any), ("set", self.set as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("recentMeUrlStickerSet", [("url", ConstructorParameterDescription(self.url)), ("set", ConstructorParameterDescription(self.set))])
             }
         }
         public class Cons_recentMeUrlUnknown: TypeConstructorDescription {
@@ -88,8 +88,8 @@ public extension Api {
             public init(url: String) {
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("recentMeUrlUnknown", [("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("recentMeUrlUnknown", [("url", ConstructorParameterDescription(self.url))])
             }
         }
         public class Cons_recentMeUrlUser: TypeConstructorDescription {
@@ -99,8 +99,8 @@ public extension Api {
                 self.url = url
                 self.userId = userId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("recentMeUrlUser", [("url", self.url as Any), ("userId", self.userId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("recentMeUrlUser", [("url", ConstructorParameterDescription(self.url)), ("userId", ConstructorParameterDescription(self.userId))])
             }
         }
         case recentMeUrlChat(Cons_recentMeUrlChat)
@@ -148,18 +148,18 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .recentMeUrlChat(let _data):
-                return ("recentMeUrlChat", [("url", _data.url as Any), ("chatId", _data.chatId as Any)])
+                return ("recentMeUrlChat", [("url", ConstructorParameterDescription(_data.url)), ("chatId", ConstructorParameterDescription(_data.chatId))])
             case .recentMeUrlChatInvite(let _data):
-                return ("recentMeUrlChatInvite", [("url", _data.url as Any), ("chatInvite", _data.chatInvite as Any)])
+                return ("recentMeUrlChatInvite", [("url", ConstructorParameterDescription(_data.url)), ("chatInvite", ConstructorParameterDescription(_data.chatInvite))])
             case .recentMeUrlStickerSet(let _data):
-                return ("recentMeUrlStickerSet", [("url", _data.url as Any), ("set", _data.set as Any)])
+                return ("recentMeUrlStickerSet", [("url", ConstructorParameterDescription(_data.url)), ("set", ConstructorParameterDescription(_data.set))])
             case .recentMeUrlUnknown(let _data):
-                return ("recentMeUrlUnknown", [("url", _data.url as Any)])
+                return ("recentMeUrlUnknown", [("url", ConstructorParameterDescription(_data.url))])
             case .recentMeUrlUser(let _data):
-                return ("recentMeUrlUser", [("url", _data.url as Any), ("userId", _data.userId as Any)])
+                return ("recentMeUrlUser", [("url", ConstructorParameterDescription(_data.url)), ("userId", ConstructorParameterDescription(_data.userId))])
             }
         }
 
@@ -245,8 +245,8 @@ public extension Api {
                 self.flags = flags
                 self.maxId = maxId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("recentStory", [("flags", self.flags as Any), ("maxId", self.maxId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("recentStory", [("flags", ConstructorParameterDescription(self.flags)), ("maxId", ConstructorParameterDescription(self.maxId))])
             }
         }
         case recentStory(Cons_recentStory)
@@ -265,10 +265,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .recentStory(let _data):
-                return ("recentStory", [("flags", _data.flags as Any), ("maxId", _data.maxId as Any)])
+                return ("recentStory", [("flags", ConstructorParameterDescription(_data.flags)), ("maxId", ConstructorParameterDescription(_data.maxId))])
             }
         }
 
@@ -297,8 +297,8 @@ public extension Api {
             public init(rows: [Api.KeyboardButtonRow]) {
                 self.rows = rows
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("replyInlineMarkup", [("rows", self.rows as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("replyInlineMarkup", [("rows", ConstructorParameterDescription(self.rows))])
             }
         }
         public class Cons_replyKeyboardForceReply: TypeConstructorDescription {
@@ -308,8 +308,8 @@ public extension Api {
                 self.flags = flags
                 self.placeholder = placeholder
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("replyKeyboardForceReply", [("flags", self.flags as Any), ("placeholder", self.placeholder as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("replyKeyboardForceReply", [("flags", ConstructorParameterDescription(self.flags)), ("placeholder", ConstructorParameterDescription(self.placeholder))])
             }
         }
         public class Cons_replyKeyboardHide: TypeConstructorDescription {
@@ -317,8 +317,8 @@ public extension Api {
             public init(flags: Int32) {
                 self.flags = flags
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("replyKeyboardHide", [("flags", self.flags as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("replyKeyboardHide", [("flags", ConstructorParameterDescription(self.flags))])
             }
         }
         public class Cons_replyKeyboardMarkup: TypeConstructorDescription {
@@ -330,8 +330,8 @@ public extension Api {
                 self.rows = rows
                 self.placeholder = placeholder
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("replyKeyboardMarkup", [("flags", self.flags as Any), ("rows", self.rows as Any), ("placeholder", self.placeholder as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("replyKeyboardMarkup", [("flags", ConstructorParameterDescription(self.flags)), ("rows", ConstructorParameterDescription(self.rows)), ("placeholder", ConstructorParameterDescription(self.placeholder))])
             }
         }
         case replyInlineMarkup(Cons_replyInlineMarkup)
@@ -383,16 +383,16 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .replyInlineMarkup(let _data):
-                return ("replyInlineMarkup", [("rows", _data.rows as Any)])
+                return ("replyInlineMarkup", [("rows", ConstructorParameterDescription(_data.rows))])
             case .replyKeyboardForceReply(let _data):
-                return ("replyKeyboardForceReply", [("flags", _data.flags as Any), ("placeholder", _data.placeholder as Any)])
+                return ("replyKeyboardForceReply", [("flags", ConstructorParameterDescription(_data.flags)), ("placeholder", ConstructorParameterDescription(_data.placeholder))])
             case .replyKeyboardHide(let _data):
-                return ("replyKeyboardHide", [("flags", _data.flags as Any)])
+                return ("replyKeyboardHide", [("flags", ConstructorParameterDescription(_data.flags))])
             case .replyKeyboardMarkup(let _data):
-                return ("replyKeyboardMarkup", [("flags", _data.flags as Any), ("rows", _data.rows as Any), ("placeholder", _data.placeholder as Any)])
+                return ("replyKeyboardMarkup", [("flags", ConstructorParameterDescription(_data.flags)), ("rows", ConstructorParameterDescription(_data.rows)), ("placeholder", ConstructorParameterDescription(_data.placeholder))])
             }
         }
 
@@ -527,7 +527,7 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputReportReasonChildAbuse:
                 return ("inputReportReasonChildAbuse", [])
@@ -593,8 +593,8 @@ public extension Api {
                 self.flags = flags
                 self.option = option
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("reportResultAddComment", [("flags", self.flags as Any), ("option", self.option as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("reportResultAddComment", [("flags", ConstructorParameterDescription(self.flags)), ("option", ConstructorParameterDescription(self.option))])
             }
         }
         public class Cons_reportResultChooseOption: TypeConstructorDescription {
@@ -604,8 +604,8 @@ public extension Api {
                 self.title = title
                 self.options = options
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("reportResultChooseOption", [("title", self.title as Any), ("options", self.options as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("reportResultChooseOption", [("title", ConstructorParameterDescription(self.title)), ("options", ConstructorParameterDescription(self.options))])
             }
         }
         case reportResultAddComment(Cons_reportResultAddComment)
@@ -640,12 +640,12 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .reportResultAddComment(let _data):
-                return ("reportResultAddComment", [("flags", _data.flags as Any), ("option", _data.option as Any)])
+                return ("reportResultAddComment", [("flags", ConstructorParameterDescription(_data.flags)), ("option", ConstructorParameterDescription(_data.option))])
             case .reportResultChooseOption(let _data):
-                return ("reportResultChooseOption", [("title", _data.title as Any), ("options", _data.options as Any)])
+                return ("reportResultChooseOption", [("title", ConstructorParameterDescription(_data.title)), ("options", ConstructorParameterDescription(_data.options))])
             case .reportResultReported:
                 return ("reportResultReported", [])
             }
@@ -699,8 +699,8 @@ public extension Api {
                 self.userAdminRights = userAdminRights
                 self.botAdminRights = botAdminRights
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestPeerTypeBroadcast", [("flags", self.flags as Any), ("hasUsername", self.hasUsername as Any), ("userAdminRights", self.userAdminRights as Any), ("botAdminRights", self.botAdminRights as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestPeerTypeBroadcast", [("flags", ConstructorParameterDescription(self.flags)), ("hasUsername", ConstructorParameterDescription(self.hasUsername)), ("userAdminRights", ConstructorParameterDescription(self.userAdminRights)), ("botAdminRights", ConstructorParameterDescription(self.botAdminRights))])
             }
         }
         public class Cons_requestPeerTypeChat: TypeConstructorDescription {
@@ -716,8 +716,8 @@ public extension Api {
                 self.userAdminRights = userAdminRights
                 self.botAdminRights = botAdminRights
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestPeerTypeChat", [("flags", self.flags as Any), ("hasUsername", self.hasUsername as Any), ("forum", self.forum as Any), ("userAdminRights", self.userAdminRights as Any), ("botAdminRights", self.botAdminRights as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestPeerTypeChat", [("flags", ConstructorParameterDescription(self.flags)), ("hasUsername", ConstructorParameterDescription(self.hasUsername)), ("forum", ConstructorParameterDescription(self.forum)), ("userAdminRights", ConstructorParameterDescription(self.userAdminRights)), ("botAdminRights", ConstructorParameterDescription(self.botAdminRights))])
             }
         }
         public class Cons_requestPeerTypeCreateBot: TypeConstructorDescription {
@@ -729,8 +729,8 @@ public extension Api {
                 self.suggestedName = suggestedName
                 self.suggestedUsername = suggestedUsername
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestPeerTypeCreateBot", [("flags", self.flags as Any), ("suggestedName", self.suggestedName as Any), ("suggestedUsername", self.suggestedUsername as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestPeerTypeCreateBot", [("flags", ConstructorParameterDescription(self.flags)), ("suggestedName", ConstructorParameterDescription(self.suggestedName)), ("suggestedUsername", ConstructorParameterDescription(self.suggestedUsername))])
             }
         }
         public class Cons_requestPeerTypeUser: TypeConstructorDescription {
@@ -742,8 +742,8 @@ public extension Api {
                 self.bot = bot
                 self.premium = premium
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestPeerTypeUser", [("flags", self.flags as Any), ("bot", self.bot as Any), ("premium", self.premium as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestPeerTypeUser", [("flags", ConstructorParameterDescription(self.flags)), ("bot", ConstructorParameterDescription(self.bot)), ("premium", ConstructorParameterDescription(self.premium))])
             }
         }
         case requestPeerTypeBroadcast(Cons_requestPeerTypeBroadcast)
@@ -813,16 +813,16 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .requestPeerTypeBroadcast(let _data):
-                return ("requestPeerTypeBroadcast", [("flags", _data.flags as Any), ("hasUsername", _data.hasUsername as Any), ("userAdminRights", _data.userAdminRights as Any), ("botAdminRights", _data.botAdminRights as Any)])
+                return ("requestPeerTypeBroadcast", [("flags", ConstructorParameterDescription(_data.flags)), ("hasUsername", ConstructorParameterDescription(_data.hasUsername)), ("userAdminRights", ConstructorParameterDescription(_data.userAdminRights)), ("botAdminRights", ConstructorParameterDescription(_data.botAdminRights))])
             case .requestPeerTypeChat(let _data):
-                return ("requestPeerTypeChat", [("flags", _data.flags as Any), ("hasUsername", _data.hasUsername as Any), ("forum", _data.forum as Any), ("userAdminRights", _data.userAdminRights as Any), ("botAdminRights", _data.botAdminRights as Any)])
+                return ("requestPeerTypeChat", [("flags", ConstructorParameterDescription(_data.flags)), ("hasUsername", ConstructorParameterDescription(_data.hasUsername)), ("forum", ConstructorParameterDescription(_data.forum)), ("userAdminRights", ConstructorParameterDescription(_data.userAdminRights)), ("botAdminRights", ConstructorParameterDescription(_data.botAdminRights))])
             case .requestPeerTypeCreateBot(let _data):
-                return ("requestPeerTypeCreateBot", [("flags", _data.flags as Any), ("suggestedName", _data.suggestedName as Any), ("suggestedUsername", _data.suggestedUsername as Any)])
+                return ("requestPeerTypeCreateBot", [("flags", ConstructorParameterDescription(_data.flags)), ("suggestedName", ConstructorParameterDescription(_data.suggestedName)), ("suggestedUsername", ConstructorParameterDescription(_data.suggestedUsername))])
             case .requestPeerTypeUser(let _data):
-                return ("requestPeerTypeUser", [("flags", _data.flags as Any), ("bot", _data.bot as Any), ("premium", _data.premium as Any)])
+                return ("requestPeerTypeUser", [("flags", ConstructorParameterDescription(_data.flags)), ("bot", ConstructorParameterDescription(_data.bot)), ("premium", ConstructorParameterDescription(_data.premium))])
             }
         }
 
@@ -960,8 +960,8 @@ public extension Api {
                 self.username = username
                 self.photo = photo
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestedPeerChannel", [("flags", self.flags as Any), ("channelId", self.channelId as Any), ("title", self.title as Any), ("username", self.username as Any), ("photo", self.photo as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestedPeerChannel", [("flags", ConstructorParameterDescription(self.flags)), ("channelId", ConstructorParameterDescription(self.channelId)), ("title", ConstructorParameterDescription(self.title)), ("username", ConstructorParameterDescription(self.username)), ("photo", ConstructorParameterDescription(self.photo))])
             }
         }
         public class Cons_requestedPeerChat: TypeConstructorDescription {
@@ -975,8 +975,8 @@ public extension Api {
                 self.title = title
                 self.photo = photo
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestedPeerChat", [("flags", self.flags as Any), ("chatId", self.chatId as Any), ("title", self.title as Any), ("photo", self.photo as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestedPeerChat", [("flags", ConstructorParameterDescription(self.flags)), ("chatId", ConstructorParameterDescription(self.chatId)), ("title", ConstructorParameterDescription(self.title)), ("photo", ConstructorParameterDescription(self.photo))])
             }
         }
         public class Cons_requestedPeerUser: TypeConstructorDescription {
@@ -994,8 +994,8 @@ public extension Api {
                 self.username = username
                 self.photo = photo
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestedPeerUser", [("flags", self.flags as Any), ("userId", self.userId as Any), ("firstName", self.firstName as Any), ("lastName", self.lastName as Any), ("username", self.username as Any), ("photo", self.photo as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestedPeerUser", [("flags", ConstructorParameterDescription(self.flags)), ("userId", ConstructorParameterDescription(self.userId)), ("firstName", ConstructorParameterDescription(self.firstName)), ("lastName", ConstructorParameterDescription(self.lastName)), ("username", ConstructorParameterDescription(self.username)), ("photo", ConstructorParameterDescription(self.photo))])
             }
         }
         case requestedPeerChannel(Cons_requestedPeerChannel)
@@ -1055,14 +1055,14 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .requestedPeerChannel(let _data):
-                return ("requestedPeerChannel", [("flags", _data.flags as Any), ("channelId", _data.channelId as Any), ("title", _data.title as Any), ("username", _data.username as Any), ("photo", _data.photo as Any)])
+                return ("requestedPeerChannel", [("flags", ConstructorParameterDescription(_data.flags)), ("channelId", ConstructorParameterDescription(_data.channelId)), ("title", ConstructorParameterDescription(_data.title)), ("username", ConstructorParameterDescription(_data.username)), ("photo", ConstructorParameterDescription(_data.photo))])
             case .requestedPeerChat(let _data):
-                return ("requestedPeerChat", [("flags", _data.flags as Any), ("chatId", _data.chatId as Any), ("title", _data.title as Any), ("photo", _data.photo as Any)])
+                return ("requestedPeerChat", [("flags", ConstructorParameterDescription(_data.flags)), ("chatId", ConstructorParameterDescription(_data.chatId)), ("title", ConstructorParameterDescription(_data.title)), ("photo", ConstructorParameterDescription(_data.photo))])
             case .requestedPeerUser(let _data):
-                return ("requestedPeerUser", [("flags", _data.flags as Any), ("userId", _data.userId as Any), ("firstName", _data.firstName as Any), ("lastName", _data.lastName as Any), ("username", _data.username as Any), ("photo", _data.photo as Any)])
+                return ("requestedPeerUser", [("flags", ConstructorParameterDescription(_data.flags)), ("userId", ConstructorParameterDescription(_data.userId)), ("firstName", ConstructorParameterDescription(_data.firstName)), ("lastName", ConstructorParameterDescription(_data.lastName)), ("username", ConstructorParameterDescription(_data.username)), ("photo", ConstructorParameterDescription(_data.photo))])
             }
         }
 
@@ -1168,8 +1168,8 @@ public extension Api {
             public init(starsAmount: Int64) {
                 self.starsAmount = starsAmount
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requirementToContactPaidMessages", [("starsAmount", self.starsAmount as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requirementToContactPaidMessages", [("starsAmount", ConstructorParameterDescription(self.starsAmount))])
             }
         }
         case requirementToContactEmpty
@@ -1197,12 +1197,12 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .requirementToContactEmpty:
                 return ("requirementToContactEmpty", [])
             case .requirementToContactPaidMessages(let _data):
-                return ("requirementToContactPaidMessages", [("starsAmount", _data.starsAmount as Any)])
+                return ("requirementToContactPaidMessages", [("starsAmount", ConstructorParameterDescription(_data.starsAmount))])
             case .requirementToContactPremium:
                 return ("requirementToContactPremium", [])
             }

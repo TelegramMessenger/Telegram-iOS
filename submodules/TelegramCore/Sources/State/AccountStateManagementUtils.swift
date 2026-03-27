@@ -3231,7 +3231,7 @@ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, pe
         
         var storeMessages: [StoreMessage] = []
         var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
-        var mentionTagSummaries: [PeerId: (tag: MessageTags, summary: MessageHistoryTagNamespaceSummary)] = [:]
+        var mentionTagSummaries: [PeerId: [(tag: MessageTags, summary: MessageHistoryTagNamespaceSummary)]] = [:]
         var channelStates: [PeerId: AccountStateChannelState] = [:]
         var invalidateChannelStates: [PeerId: Int32] = [:]
         var channelSynchronizedUntilMessage: [PeerId: MessageId.Id] = [:]
@@ -3289,9 +3289,11 @@ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, pe
                         readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                         
                         if apiTopMessage != 0 {
-                            mentionTagSummaries[peerId] = (MessageTags.unseenPersonalMessage, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage)))
-                            mentionTagSummaries[peerId] = (MessageTags.unseenReaction, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadReactionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage)))
-                            mentionTagSummaries[peerId] = (MessageTags.unseenPollVote, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadPollVoteCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage)))
+                            mentionTagSummaries[peerId] = [
+                                (MessageTags.unseenPersonalMessage, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))),
+                                (MessageTags.unseenReaction, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadReactionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))),
+                                (MessageTags.unseenPollVote, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadPollVoteCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage)))
+                            ]
                         }
                         
                         if let apiChannelPts = apiChannelPts {
@@ -3356,8 +3358,10 @@ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, pe
             }
         }
         
-        for (peerId, tagSummary) in mentionTagSummaries {
-            updatedState.resetMessageTagSummary(peerId, tag: tagSummary.tag, namespace: Namespaces.Message.Cloud, count: tagSummary.summary.count, range: tagSummary.summary.range)
+        for (peerId, tagSummaries) in mentionTagSummaries {
+            for tagSummary in tagSummaries {
+                updatedState.resetMessageTagSummary(peerId, tag: tagSummary.tag, namespace: Namespaces.Message.Cloud, count: tagSummary.summary.count, range: tagSummary.summary.range)
+            }
         }
         
         for (peerId, channelState) in channelStates {

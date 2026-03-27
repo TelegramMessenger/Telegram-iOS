@@ -434,7 +434,7 @@ func markUnseenReactionOrPollVotesMessage(transaction: Transaction, id: MessageI
     if let message = transaction.getMessage(id) {
         var consume = false
         inner: for attribute in message.attributes {
-            if let attribute = attribute as? ReactionsMessageAttribute, !attribute.hasUnseen {
+            if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
                 consume = true
                 break inner
             }

@@ -257,7 +257,6 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         
         if self.mentionCount != 0 {
             reactionsOffset += buttonSize.height + 12.0
-            pollVotesOffset += buttonSize.height + 12.0
             
             self.mentionsButton.isHidden = false
             transition.updateAlpha(node: self.mentionsButton, alpha: 1.0)

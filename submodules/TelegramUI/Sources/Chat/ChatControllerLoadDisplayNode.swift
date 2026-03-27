@@ -1611,9 +1611,10 @@ extension ChatControllerImpl {
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
             var menuItems: [ContextMenuItem] = []
+            //TODO:localize
             menuItems.append(.action(ContextMenuActionItem(
                 id: nil,
-                text: strongSelf.presentationData.strings.Conversation_ReadAllReactions,
+                text: "Read All Poll Votes",
                 textColor: .primary,
                 textLayout: .singleLine,
                 icon: { theme in
@@ -1630,7 +1631,7 @@ extension ChatControllerImpl {
             )))
             let items = ContextController.Items(content: .list(menuItems))
             
-            let controller = makeContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.reactionsButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
+            let controller = makeContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.pollVotesButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
             
             strongSelf.forEachController({ controller in
                 if let controller = controller as? TooltipScreen {

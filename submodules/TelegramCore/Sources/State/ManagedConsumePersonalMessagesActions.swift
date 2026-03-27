@@ -500,50 +500,6 @@ private func synchronizeUnseenReactionsAndPollVotesTag(postbox: Postbox, network
     } |> switchToLatest
 }
 
-private func synchronizeUnseenPollVotesTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
-            return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(.init(peer: inputPeer))]))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { result -> Signal<Void, NoError> in
-                    if let result = result {
-                        switch result {
-                            case let .peerDialogs(peerDialogsData):
-                                let dialogs = peerDialogsData.dialogs
-                                if let dialog = dialogs.filter({ $0.peerId == entry.key.peerId }).first {
-                                    let apiTopMessage: Int32
-                                    let apiUnreadPollVoteCount: Int32
-                                    switch dialog {
-                                        case let .dialog(dialogData):
-                                            let (topMessage, unreadPollVoteCount) = (dialogData.topMessage, dialogData.unreadPollVotesCount)
-                                            apiTopMessage = topMessage
-                                            apiUnreadPollVoteCount = unreadPollVoteCount
-
-                                        case .dialogFolder:
-                                            assertionFailure()
-                                            return .complete()
-                                    }
-
-                                    return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: apiUnreadPollVoteCount, maxId: apiTopMessage)
-                                    }
-                                } else {
-                                    return .complete()
-                                }
-                        }
-                    } else {
-                        return .complete()
-                    }
-                }
-        } else {
-            return .complete()
-        }
-    } |> switchToLatest
-}
-
 func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64?) -> Signal<Void, NoError> {
     let accountPeerId = stateManager.accountPeerId
     

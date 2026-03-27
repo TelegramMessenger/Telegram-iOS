@@ -2922,6 +2922,10 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
                                 storiesRequiredValidation = true
                             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.story {
                                 storiesRequiredValidation = true
+                            } else if let poll = media as? TelegramMediaPoll {
+                                if poll.results.hasUnseenVotes == true {
+                                    hasUnseenReactionsOrPollVotes = true
+                                }
                             }
                         }
                         if contentRequiredValidation {
