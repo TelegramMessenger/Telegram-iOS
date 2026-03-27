@@ -1255,9 +1255,10 @@ final class ComposePollScreenComponent: Component {
                     if !self.isQuiz {
                         self.canAddOptions = true
                     }
+                } else {
+                    self.shuffleOptions = true
                 }
                 self.canRevote = true
-                self.shuffleOptions = true
                 
                 self.pollOptions.append(ComposePollScreenComponent.PollOption(
                     id: self.nextPollOptionId

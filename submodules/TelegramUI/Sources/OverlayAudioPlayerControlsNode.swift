@@ -38,17 +38,6 @@ private func generateBackground(theme: PresentationTheme) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10 + 8)
 }
 
-private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
-    return generateImage(CGSize(width: 38.0, height: 5.0), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 2.5)
-        context.setFillColor(theme.list.controlSecondaryColor.cgColor)
-        context.addPath(path.cgPath)
-        context.fillPath()
-    })
-}
 
 private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage? {
     let isLarge = "".isEmpty
@@ -151,8 +140,6 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     
     private let backgroundNode: ASImageNode
     
-    private let collapseNode: HighlightableButtonNode
-    
     private let albumArtNode: TransformImageNode
     private var largeAlbumArtNode: TransformImageNode?
     private let titleNode: TextNode
@@ -244,11 +231,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.image = generateBackground(theme: presentationData.theme)
-        
-        self.collapseNode = HighlightableButtonNode()
-        self.collapseNode.displaysAsynchronously = false
-        self.collapseNode.setImage(generateCollapseIcon(theme: presentationData.theme), for: [])
-        
+                
         self.albumArtNode = TransformImageNode()
         
         self.titleNode = TextNode()
@@ -312,9 +295,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.backgroundNode)
-        
-        //self.addSubnode(self.collapseNode)
-        
+                
         self.addSubnode(self.albumArtNode)
         //self.addSubnode(self.titleNode)
         self.addSubnode(self.descriptionNode)
@@ -564,7 +545,6 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
             self?.control?(.seek(value))
         }
         
-        self.collapseNode.addTarget(self, action: #selector(self.collapsePressed), forControlEvents: .touchUpInside)
         self.shareNode.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
         self.orderButton.addTarget(self, action: #selector(self.orderPressed), forControlEvents: .touchUpInside)
         self.loopingButton.addTarget(self, action: #selector(self.loopingPressed), forControlEvents: .touchUpInside)
@@ -705,7 +685,6 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.forwardButton.circleColor = presentationData.theme.list.controlSecondaryColor.withAlphaComponent(0.35)
         
         self.backgroundNode.image = generateBackground(theme: presentationData.theme)
-        self.collapseNode.setImage(generateCollapseIcon(theme: presentationData.theme), for: [])
         self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: presentationData.theme.list.itemPrimaryTextColor), for: [])
         self.scrubberNode.updateColors(backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemPrimaryTextColor)
         self.leftDurationLabel.textColor = presentationData.theme.list.itemSecondaryTextColor
@@ -872,9 +851,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         let panelHeight = OverlayAudioPlayerControlsNode.heightForLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, maxHeight: maxHeight, isExpanded: self.isExpanded, savedMusic: nil)
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight), size: CGSize(width: width, height: UIScreenPixel)))
-        
-        transition.updateFrame(node: self.collapseNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: width, height: 30.0)))
-        
+                
         let sideInset: CGFloat = 16.0
         let sideButtonsInset: CGFloat = sideInset + 60.0
         

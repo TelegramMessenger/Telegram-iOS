@@ -10,6 +10,7 @@ import ShareController
 import UndoUI
 import AttachmentFileController
 import LegacyMediaPickerUI
+import ICloudResources
 
 final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayerController {
     private let context: AccountContext
@@ -49,6 +50,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
+        self.automaticallyControlPresentationContextLayout = false
         
         self.ready.set(.never())
         
@@ -167,11 +169,59 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                         }
                         dismissImpl?()
                         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = legacyICloudFilePicker(theme: presentationData.theme, mode: .import, documentTypes: ["public.mp3", "public.mpeg-4-audio", "public.aac-audio", "org.xiph.flac"], completion: { urls in
-                            guard let url = urls.first else {
+                        let controller = legacyICloudFilePicker(theme: presentationData.theme, mode: .default, documentTypes: ["public.mp3", "public.mpeg-4-audio", "public.aac-audio", "org.xiph.flac"], completion: { [weak self] urls in
+                            guard let self, let url = urls.first else {
                                 return
                             }
-                            print(url)
+                            
+                            let _ = (iCloudFileDescription(url)
+                            |> deliverOnMainQueue).start(next: { [weak self] item in
+                                guard let self, let item else {
+                                    return
+                                }
+                                let fileId = Int64.random(in: Int64.min ... Int64.max)
+                                let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
+                                var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                                if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
+                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+                                }
+                                var attributes: [TelegramMediaFileAttribute] = []
+                                attributes.append(.FileName(fileName: item.fileName))
+                                if let audioMetadata = item.audioMetadata {
+                                    attributes.append(.Audio(isVoice: false, duration: audioMetadata.duration, title: audioMetadata.title, performer: audioMetadata.performer, waveform: nil))
+                                }
+                                
+                                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(item.fileSize), attributes: attributes, alternativeRepresentations: [])
+                                
+                                let _ = (standaloneUploadedFile(
+                                    postbox: self.context.account.postbox,
+                                    network: self.context.account.network,
+                                    peerId: self.context.account.peerId,
+                                    text: "",
+                                    source: .resource(.media(media: .standalone(media: file), resource: file.resource)),
+                                    thumbnailData: file.immediateThumbnailData,
+                                    mimeType: file.mimeType,
+                                    attributes: file.attributes,
+                                    hintFileIsLarge: false
+                                )
+                                |> deliverOnMainQueue).start(next: { [weak self] value in
+                                    guard let self else {
+                                        return
+                                    }
+                                    switch value {
+                                    case let .result(result):
+                                        switch result {
+                                        case let .media(resultMedia):
+                                            if let resultFile = resultMedia.media as? TelegramMediaFile {
+                                                self.context.account.postbox.mediaBox.moveResourceData(from: file.resource.id, to: resultFile.resource.id, synchronous: true)
+                                                self.controllerNode.addToSavedMusic(file: .standalone(media: file))
+                                            }
+                                        }
+                                    default:
+                                        break
+                                    }
+                                })
+                            })
                         })
                         self.present(controller, in: .window(.root))
                     },
