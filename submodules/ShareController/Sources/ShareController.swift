@@ -2527,7 +2527,14 @@ public final class ShareController: ViewController {
                     ),
                     ChatListEntryMessageTagSummaryKey(
                         tag: .unseenReaction,
-                        actionType: PendingMessageActionType.readReaction
+                        actionType: PendingMessageActionType.readReactionOrPollVote
+                    ): ChatListEntrySummaryComponents.Component(
+                        tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                        actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                    ),
+                    ChatListEntryMessageTagSummaryKey(
+                        tag: .unseenPollVote,
+                        actionType: PendingMessageActionType.readReactionOrPollVote
                     ): ChatListEntrySummaryComponents.Component(
                         tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
                         actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)

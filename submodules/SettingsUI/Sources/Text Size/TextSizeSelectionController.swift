@@ -307,6 +307,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
                     },
                     hasUnseenMentions: false,
                     hasUnseenReactions: false,
+                    hasUnseenPollVotes: false,
                     draftState: nil,
                     mediaDraftContentType: nil,
                     inputActivities: hasInputActivity ? [(author, .typingText)] : [],

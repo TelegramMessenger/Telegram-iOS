@@ -145,6 +145,7 @@ public enum ChatListItemContent {
         public var presence: EnginePeer.Presence?
         public var hasUnseenMentions: Bool
         public var hasUnseenReactions: Bool
+        public var hasUnseenPollVotes: Bool
         public var draftState: DraftState?
         public var mediaDraftContentType: EngineChatList.MediaDraftContentType?
         public var inputActivities: [(EnginePeer, PeerInputActivity)]?
@@ -170,6 +171,7 @@ public enum ChatListItemContent {
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
             hasUnseenReactions: Bool,
+            hasUnseenPollVotes: Bool,
             draftState: DraftState?,
             mediaDraftContentType: EngineChatList.MediaDraftContentType?,
             inputActivities: [(EnginePeer, PeerInputActivity)]?,
@@ -194,6 +196,7 @@ public enum ChatListItemContent {
             self.presence =  presence
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions =  hasUnseenReactions
+            self.hasUnseenPollVotes = hasUnseenPollVotes
             self.draftState = draftState
             self.mediaDraftContentType = mediaDraftContentType
             self.inputActivities = inputActivities
@@ -2192,6 +2195,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             let mediaDraftContentType: EngineChatList.MediaDraftContentType?
             let hasUnseenMentions: Bool
             let hasUnseenReactions: Bool
+            let hasUnseenPollVotes: Bool
             let inputActivities: [(EnginePeer, PeerInputActivity)]?
             let isPeerGroup: Bool
             let promoInfo: ChatListNodeEntryPromoInfo?
@@ -2217,6 +2221,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     mediaDraftContentType = nil
                     hasUnseenMentions = false
                     hasUnseenReactions = false
+                    hasUnseenPollVotes = false
                     inputActivities = nil
                     isPeerGroup = false
                     promoInfo = nil
@@ -2231,6 +2236,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let peerPresenceValue = peerData.presence
                     let hasUnseenMentionsValue = peerData.hasUnseenMentions
                     let hasUnseenReactionsValue = peerData.hasUnseenReactions
+                    let hasUnseenPollVotesValue = peerData.hasUnseenPollVotes
                     let draftStateValue = peerData.draftState
                     let inputActivitiesValue = peerData.inputActivities
                     let promoInfoValue = peerData.promoInfo
@@ -2264,6 +2270,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     threadInfo = threadInfoValue
                     hasUnseenMentions = hasUnseenMentionsValue
                     hasUnseenReactions = hasUnseenReactionsValue
+                    hasUnseenPollVotes = hasUnseenPollVotesValue
                     forumTopicData = forumTopicDataValue
                     topForumTopicItems = topForumTopicItemsValue
                 
@@ -2318,6 +2325,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     mediaDraftContentType = nil
                     hasUnseenMentions = false
                     hasUnseenReactions = false
+                    hasUnseenPollVotes = false
                     inputActivities = nil
                     isPeerGroup = true
                     groupHiddenByDefault = hiddenByDefault
@@ -3293,6 +3301,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactiveReactions(item.presentationData.theme, diameter: badgeDiameter)
                     } else {
                         currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundReactions(item.presentationData.theme, diameter: badgeDiameter)
+                    }
+                    mentionBadgeContent = .mention
+                } else if hasUnseenPollVotes {
+                    if isRemovedFromTotalUnreadCount {
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactivePollVotes(item.presentationData.theme, diameter: badgeDiameter)
+                    } else {
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundPollVotes(item.presentationData.theme, diameter: badgeDiameter)
                     }
                     mentionBadgeContent = .mention
                 } else if item.isPinned, promoInfo == nil, currentBadgeBackgroundImage == nil {

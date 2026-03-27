@@ -934,6 +934,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
                     },
                     hasUnseenMentions: false,
                     hasUnseenReactions: false,
+                    hasUnseenPollVotes: false,
                     draftState: nil,
                     mediaDraftContentType: nil,
                     inputActivities: hasInputActivity ? [(author, .typingText)] : [],

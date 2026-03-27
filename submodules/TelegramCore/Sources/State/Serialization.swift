@@ -186,11 +186,24 @@ private func recursiveDescription(redact: Bool, of value: Any) -> String {
                     result.append(recursiveDescription(redact: redact, of: child.value))
                 }
                 result.append("]")
+            case .class:
+                if let value = value as? FunctionParameterDescription {
+                    if let v = value.value {
+                        result.append(recursiveDescription(redact: redact, of: v))
+                    } else {
+                        result.append("nil")
+                    }
+                } else {
+                    result.append("\(value)")
+                }
             default:
                 result.append("\(value)")
         }
     } else {
         result.append("\(value)")
+    }
+    if result.contains("TelegramApi.Api.InputPeer.Cons_inputPeerUser") {
+        assert(true)
     }
     return result
 }

@@ -205,8 +205,8 @@ class MessageHistoryTagsSummaryTable: Table {
     
     private func set(_ key: MessageHistoryTagsSummaryKey, summary: MessageHistoryTagNamespaceSummary, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]) {
         if self.get(key) != summary {
-            if key.tag.rawValue == 2048 {
-                postboxLog("[MessageHistoryTagsSummaryTable] set \(key.tag.rawValue) for \(key.peerId) to \(summary.count)")
+            if key.peerId.id._internalGetInt64Value() == 1658739021 && key.tag.rawValue == (1 << 15) {
+                assert(true)
             }
             self.updatedKeys.insert(key)
             self.cachedSummaries[key] = CachedEntry(summary: summary)

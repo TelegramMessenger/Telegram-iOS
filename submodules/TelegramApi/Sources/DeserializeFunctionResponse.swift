@@ -1,10 +1,18 @@
 import Foundation
 
+public final class FunctionParameterDescription {
+    public let value: Optional<Any>
+    
+    init(_ value: Optional<Any>) {
+        self.value = value
+    }
+}
+
 public final class FunctionDescription {
     public let name: String
-    public let parameters: [(String, Any)]
+    public let parameters: [(String, FunctionParameterDescription)]
     
-    init(name: String, parameters: [(String, Any)]) {
+    init(name: String, parameters: [(String, FunctionParameterDescription)]) {
         self.name = name
         self.parameters = parameters
     }

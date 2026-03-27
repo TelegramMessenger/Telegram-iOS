@@ -755,56 +755,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChannelTopic: TypeConstructorDescription {
-        public class Cons_channelTopic: TypeConstructorDescription {
-            public var id: Int32
-            public var title: String
-            public init(id: Int32, title: String) {
-                self.id = id
-                self.title = title
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("channelTopic", [("id", self.id as Any), ("title", self.title as Any)])
-            }
-        }
-        case channelTopic(Cons_channelTopic)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .channelTopic(let _data):
-                if boxed {
-                    buffer.appendInt32(-1817845901)
-                }
-                serializeInt32(_data.id, buffer: buffer, boxed: false)
-                serializeString(_data.title, buffer: buffer, boxed: false)
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .channelTopic(let _data):
-                return ("channelTopic", [("id", _data.id as Any), ("title", _data.title as Any)])
-            }
-        }
-
-        public static func parse_channelTopic(_ reader: BufferReader) -> ChannelTopic? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelTopic.channelTopic(Cons_channelTopic(id: _1!, title: _2!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api {
     indirect enum Chat: TypeConstructorDescription {
         public class Cons_channel: TypeConstructorDescription {
             public var flags: Int32
