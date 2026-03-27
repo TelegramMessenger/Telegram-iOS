@@ -1163,7 +1163,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         theme: environment.theme,
                         title: itemTitle,
                         accessory: .toggle(ListActionItemComponent.Toggle(
-                            style: isEnabled ? .icons : .lock(isLocked: true),
+                            style: isEnabled ? .icons : .lock,
                             isOn: itemValue,
                             isInteractive: isEnabled,
                             action: isEnabled ? { [weak self] _ in

@@ -190,7 +190,14 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
                     ),
                     ChatListEntryMessageTagSummaryKey(
                         tag: .unseenReaction,
-                        actionType: PendingMessageActionType.readReaction
+                        actionType: PendingMessageActionType.readReactionOrPollVote
+                    ): ChatListEntrySummaryComponents.Component(
+                        tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                        actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                    ),
+                    ChatListEntryMessageTagSummaryKey(
+                        tag: .unseenPollVote,
+                        actionType: PendingMessageActionType.readReactionOrPollVote
                     ): ChatListEntrySummaryComponents.Component(
                         tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
                         actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
@@ -255,9 +262,17 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
                 var hasUnseenReactions = false
                 if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
                     tag: .unseenReaction,
-                    actionType: PendingMessageActionType.readReaction
+                    actionType: PendingMessageActionType.readReactionOrPollVote
                 )] {
-                    hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
+                    hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0
+                }
+                
+                var hasUnseenPollVotes = false
+                if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                    tag: .unseenPollVote,
+                    actionType: PendingMessageActionType.readReactionOrPollVote
+                )] {
+                    hasUnseenPollVotes = (info.tagSummaryCount ?? 0) != 0
                 }
                 
                 let pinnedIndex: EngineChatList.Item.PinnedIndex
@@ -295,6 +310,7 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
                     presence: nil,
                     hasUnseenMentions: hasUnseenMentions,
                     hasUnseenReactions: hasUnseenReactions,
+                    hasUnseenPollVotes: hasUnseenPollVotes,
                     forumTopicData: nil,
                     topForumTopicItems: [],
                     hasFailed: false,
@@ -385,6 +401,7 @@ public func chatListViewForLocation(chatListLocation: ChatListControllerLocation
                     presence: nil,
                     hasUnseenMentions: false,
                     hasUnseenReactions: false,
+                    hasUnseenPollVotes: false,
                     forumTopicData: nil,
                     topForumTopicItems: [],
                     hasFailed: false,

@@ -298,6 +298,7 @@ public final class MessageInputPanelComponent: Component {
     public let sendAsConfiguration: SendAsConfiguration?
     public let openSettings: (() -> Void)?
     public let call: AnyObject?
+    public let aiCompose: (() -> Void)?
     
     public init(
         externalState: ExternalState,
@@ -366,7 +367,8 @@ public final class MessageInputPanelComponent: Component {
         starStars: StarStats? = nil,
         sendAsConfiguration: SendAsConfiguration? = nil,
         openSettings: (() -> Void)? = nil,
-        call: AnyObject? = nil
+        call: AnyObject? = nil,
+        aiCompose: (() -> Void)? = nil
     ) {
         self.externalState = externalState
         self.context = context
@@ -435,6 +437,7 @@ public final class MessageInputPanelComponent: Component {
         self.sendAsConfiguration = sendAsConfiguration
         self.openSettings = openSettings
         self.call = call
+        self.aiCompose = aiCompose
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -579,6 +582,9 @@ public final class MessageInputPanelComponent: Component {
         if (lhs.call == nil) != (rhs.call == nil) {
             return false
         }
+        if (lhs.aiCompose == nil) != (rhs.aiCompose == nil) {
+            return false
+        }
         return true
     }
     
@@ -615,7 +621,8 @@ public final class MessageInputPanelComponent: Component {
         private let stickerButton = ComponentView<Empty>()
         private var paidMessageButton: ComponentView<Empty>?
         private let timeoutButton = ComponentView<Empty>()
-        
+        private var aiButton: ComponentView<Empty>?
+
         private var mediaRecordingVibrancyContainer: UIView
         private var mediaRecordingPanel: ComponentView<Empty>?
         private weak var dismissingMediaRecordingPanel: UIView?
@@ -1689,7 +1696,86 @@ public final class MessageInputPanelComponent: Component {
                     transition.setFrame(view: viewForOverlayContent, frame: textFieldFrame)
                 }
             }
-            
+
+            // AI Button
+            do {
+                let isTallPanel = textFieldSize.height >= 70.0
+                let textLength = self.textFieldExternalState.textLength
+                let hasText = !self.textFieldExternalState.text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let aiButtonMinTextLength: Int = 50
+                let _ = textLength
+                let _ = aiButtonMinTextLength
+
+                let showCorner = isTallPanel && hasText
+                let shouldShow = showCorner && component.aiCompose != nil
+
+                if shouldShow {
+                    let aiButton: ComponentView<Empty>
+                    var aiButtonTransition = transition
+                    if let current = self.aiButton {
+                        aiButton = current
+                    } else {
+                        aiButtonTransition = aiButtonTransition.withAnimation(.none)
+                        aiButton = ComponentView<Empty>()
+                        self.aiButton = aiButton
+                    }
+
+                    let tintColor: UIColor
+                    switch component.style {
+                    case .gift:
+                        tintColor = component.theme.chat.inputPanel.inputControlColor
+                    default:
+                        tintColor = UIColor(rgb: 0xffffff, alpha: 0.6)
+                    }
+
+                    let aiButtonSize = aiButton.update(
+                        transition: aiButtonTransition,
+                        component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(BundleIconComponent(
+                                name: "Chat/Input/Text/InputAIIcon",
+                                tintColor: tintColor
+                            )),
+                            effectAlignment: .center,
+                            action: { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.aiCompose?()
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 40.0, height: 40.0)
+                    )
+
+                    if let aiButtonView = aiButton.view {
+                        if aiButtonView.superview == nil {
+                            aiButtonView.alpha = 0.0
+                            self.textClippingView.addSubview(aiButtonView)
+                        }
+
+                        let aiButtonFrame: CGRect
+                        aiButtonFrame = CGRect(
+                            origin: CGPoint(
+                                x: textFieldSize.width - aiButtonSize.width - 9.0,
+                                y: 6.0
+                            ),
+                            size: aiButtonSize
+                        )
+
+                        aiButtonTransition.setPosition(view: aiButtonView, position: aiButtonFrame.center)
+                        aiButtonTransition.setBounds(view: aiButtonView, bounds: CGRect(origin: CGPoint(), size: aiButtonFrame.size))
+                        transition.setAlpha(view: aiButtonView, alpha: 1.0)
+                    }
+                } else if let aiButton = self.aiButton {
+                    self.aiButton = nil
+                    if let aiButtonView = aiButton.view {
+                        transition.setAlpha(view: aiButtonView, alpha: 0.0, completion: { [weak aiButtonView] _ in
+                            aiButtonView?.removeFromSuperview()
+                        })
+                    }
+                }
+            }
+
             if let disabledPlaceholderValue = component.disabledPlaceholder, !component.isChannel {
                 let disabledPlaceholder: ComponentView<Empty>
                 var disabledPlaceholderTransition = transition

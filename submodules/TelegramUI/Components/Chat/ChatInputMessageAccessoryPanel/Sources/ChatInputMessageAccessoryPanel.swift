@@ -601,8 +601,7 @@ public final class ChatInputMessageAccessoryPanel: Component {
                         let string = environment.strings.Chat_ReplyPanel_ReplyToTodoItem
                         titleText = [.text(NSAttributedString(string: string, font: Font.medium(14.0), textColor: environment.theme.chat.inputPanel.panelControlAccentColor))]
                     } else if case .pollOption = reply.innerSubject {
-                        //TODO:localize
-                        let string = "Reply to Poll Option"
+                        let string = environment.strings.Chat_ReplyPanel_ReplyToPollOption
                         titleText = [.text(NSAttributedString(string: string, font: Font.medium(14.0), textColor: environment.theme.chat.inputPanel.panelControlAccentColor))]
                     } else if let _ = reply.quote {
                         let string = environment.strings.Chat_ReplyPanel_ReplyToQuoteBy(authorName).string

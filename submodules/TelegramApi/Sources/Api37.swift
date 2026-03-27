@@ -5,8 +5,8 @@ public extension Api.payments {
             public init(url: String) {
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedInvoice", [("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("exportedInvoice", [("url", ConstructorParameterDescription(self.url))])
             }
         }
         case exportedInvoice(Cons_exportedInvoice)
@@ -22,10 +22,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .exportedInvoice(let _data):
-                return ("exportedInvoice", [("url", _data.url as Any)])
+                return ("exportedInvoice", [("url", ConstructorParameterDescription(_data.url))])
             }
         }
 
@@ -57,8 +57,8 @@ public extension Api.payments {
                 self.adminDisallowedChatId = adminDisallowedChatId
                 self.disallowedCountry = disallowedCountry
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("giveawayInfo", [("flags", self.flags as Any), ("startDate", self.startDate as Any), ("joinedTooEarlyDate", self.joinedTooEarlyDate as Any), ("adminDisallowedChatId", self.adminDisallowedChatId as Any), ("disallowedCountry", self.disallowedCountry as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("giveawayInfo", [("flags", ConstructorParameterDescription(self.flags)), ("startDate", ConstructorParameterDescription(self.startDate)), ("joinedTooEarlyDate", ConstructorParameterDescription(self.joinedTooEarlyDate)), ("adminDisallowedChatId", ConstructorParameterDescription(self.adminDisallowedChatId)), ("disallowedCountry", ConstructorParameterDescription(self.disallowedCountry))])
             }
         }
         public class Cons_giveawayInfoResults: TypeConstructorDescription {
@@ -78,8 +78,8 @@ public extension Api.payments {
                 self.winnersCount = winnersCount
                 self.activatedCount = activatedCount
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("giveawayInfoResults", [("flags", self.flags as Any), ("startDate", self.startDate as Any), ("giftCodeSlug", self.giftCodeSlug as Any), ("starsPrize", self.starsPrize as Any), ("finishDate", self.finishDate as Any), ("winnersCount", self.winnersCount as Any), ("activatedCount", self.activatedCount as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("giveawayInfoResults", [("flags", ConstructorParameterDescription(self.flags)), ("startDate", ConstructorParameterDescription(self.startDate)), ("giftCodeSlug", ConstructorParameterDescription(self.giftCodeSlug)), ("starsPrize", ConstructorParameterDescription(self.starsPrize)), ("finishDate", ConstructorParameterDescription(self.finishDate)), ("winnersCount", ConstructorParameterDescription(self.winnersCount)), ("activatedCount", ConstructorParameterDescription(self.activatedCount))])
             }
         }
         case giveawayInfo(Cons_giveawayInfo)
@@ -124,12 +124,12 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .giveawayInfo(let _data):
-                return ("giveawayInfo", [("flags", _data.flags as Any), ("startDate", _data.startDate as Any), ("joinedTooEarlyDate", _data.joinedTooEarlyDate as Any), ("adminDisallowedChatId", _data.adminDisallowedChatId as Any), ("disallowedCountry", _data.disallowedCountry as Any)])
+                return ("giveawayInfo", [("flags", ConstructorParameterDescription(_data.flags)), ("startDate", ConstructorParameterDescription(_data.startDate)), ("joinedTooEarlyDate", ConstructorParameterDescription(_data.joinedTooEarlyDate)), ("adminDisallowedChatId", ConstructorParameterDescription(_data.adminDisallowedChatId)), ("disallowedCountry", ConstructorParameterDescription(_data.disallowedCountry))])
             case .giveawayInfoResults(let _data):
-                return ("giveawayInfoResults", [("flags", _data.flags as Any), ("startDate", _data.startDate as Any), ("giftCodeSlug", _data.giftCodeSlug as Any), ("starsPrize", _data.starsPrize as Any), ("finishDate", _data.finishDate as Any), ("winnersCount", _data.winnersCount as Any), ("activatedCount", _data.activatedCount as Any)])
+                return ("giveawayInfoResults", [("flags", ConstructorParameterDescription(_data.flags)), ("startDate", ConstructorParameterDescription(_data.startDate)), ("giftCodeSlug", ConstructorParameterDescription(_data.giftCodeSlug)), ("starsPrize", ConstructorParameterDescription(_data.starsPrize)), ("finishDate", ConstructorParameterDescription(_data.finishDate)), ("winnersCount", ConstructorParameterDescription(_data.winnersCount)), ("activatedCount", ConstructorParameterDescription(_data.activatedCount))])
             }
         }
 
@@ -234,8 +234,8 @@ public extension Api.payments {
                 self.savedCredentials = savedCredentials
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("paymentForm", [("flags", self.flags as Any), ("formId", self.formId as Any), ("botId", self.botId as Any), ("title", self.title as Any), ("description", self.description as Any), ("photo", self.photo as Any), ("invoice", self.invoice as Any), ("providerId", self.providerId as Any), ("url", self.url as Any), ("nativeProvider", self.nativeProvider as Any), ("nativeParams", self.nativeParams as Any), ("additionalMethods", self.additionalMethods as Any), ("savedInfo", self.savedInfo as Any), ("savedCredentials", self.savedCredentials as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("paymentForm", [("flags", ConstructorParameterDescription(self.flags)), ("formId", ConstructorParameterDescription(self.formId)), ("botId", ConstructorParameterDescription(self.botId)), ("title", ConstructorParameterDescription(self.title)), ("description", ConstructorParameterDescription(self.description)), ("photo", ConstructorParameterDescription(self.photo)), ("invoice", ConstructorParameterDescription(self.invoice)), ("providerId", ConstructorParameterDescription(self.providerId)), ("url", ConstructorParameterDescription(self.url)), ("nativeProvider", ConstructorParameterDescription(self.nativeProvider)), ("nativeParams", ConstructorParameterDescription(self.nativeParams)), ("additionalMethods", ConstructorParameterDescription(self.additionalMethods)), ("savedInfo", ConstructorParameterDescription(self.savedInfo)), ("savedCredentials", ConstructorParameterDescription(self.savedCredentials)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         public class Cons_paymentFormStarGift: TypeConstructorDescription {
@@ -245,8 +245,8 @@ public extension Api.payments {
                 self.formId = formId
                 self.invoice = invoice
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("paymentFormStarGift", [("formId", self.formId as Any), ("invoice", self.invoice as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("paymentFormStarGift", [("formId", ConstructorParameterDescription(self.formId)), ("invoice", ConstructorParameterDescription(self.invoice))])
             }
         }
         public class Cons_paymentFormStars: TypeConstructorDescription {
@@ -268,8 +268,8 @@ public extension Api.payments {
                 self.invoice = invoice
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("paymentFormStars", [("flags", self.flags as Any), ("formId", self.formId as Any), ("botId", self.botId as Any), ("title", self.title as Any), ("description", self.description as Any), ("photo", self.photo as Any), ("invoice", self.invoice as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("paymentFormStars", [("flags", ConstructorParameterDescription(self.flags)), ("formId", ConstructorParameterDescription(self.formId)), ("botId", ConstructorParameterDescription(self.botId)), ("title", ConstructorParameterDescription(self.title)), ("description", ConstructorParameterDescription(self.description)), ("photo", ConstructorParameterDescription(self.photo)), ("invoice", ConstructorParameterDescription(self.invoice)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case paymentForm(Cons_paymentForm)
@@ -351,14 +351,14 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .paymentForm(let _data):
-                return ("paymentForm", [("flags", _data.flags as Any), ("formId", _data.formId as Any), ("botId", _data.botId as Any), ("title", _data.title as Any), ("description", _data.description as Any), ("photo", _data.photo as Any), ("invoice", _data.invoice as Any), ("providerId", _data.providerId as Any), ("url", _data.url as Any), ("nativeProvider", _data.nativeProvider as Any), ("nativeParams", _data.nativeParams as Any), ("additionalMethods", _data.additionalMethods as Any), ("savedInfo", _data.savedInfo as Any), ("savedCredentials", _data.savedCredentials as Any), ("users", _data.users as Any)])
+                return ("paymentForm", [("flags", ConstructorParameterDescription(_data.flags)), ("formId", ConstructorParameterDescription(_data.formId)), ("botId", ConstructorParameterDescription(_data.botId)), ("title", ConstructorParameterDescription(_data.title)), ("description", ConstructorParameterDescription(_data.description)), ("photo", ConstructorParameterDescription(_data.photo)), ("invoice", ConstructorParameterDescription(_data.invoice)), ("providerId", ConstructorParameterDescription(_data.providerId)), ("url", ConstructorParameterDescription(_data.url)), ("nativeProvider", ConstructorParameterDescription(_data.nativeProvider)), ("nativeParams", ConstructorParameterDescription(_data.nativeParams)), ("additionalMethods", ConstructorParameterDescription(_data.additionalMethods)), ("savedInfo", ConstructorParameterDescription(_data.savedInfo)), ("savedCredentials", ConstructorParameterDescription(_data.savedCredentials)), ("users", ConstructorParameterDescription(_data.users))])
             case .paymentFormStarGift(let _data):
-                return ("paymentFormStarGift", [("formId", _data.formId as Any), ("invoice", _data.invoice as Any)])
+                return ("paymentFormStarGift", [("formId", ConstructorParameterDescription(_data.formId)), ("invoice", ConstructorParameterDescription(_data.invoice))])
             case .paymentFormStars(let _data):
-                return ("paymentFormStars", [("flags", _data.flags as Any), ("formId", _data.formId as Any), ("botId", _data.botId as Any), ("title", _data.title as Any), ("description", _data.description as Any), ("photo", _data.photo as Any), ("invoice", _data.invoice as Any), ("users", _data.users as Any)])
+                return ("paymentFormStars", [("flags", ConstructorParameterDescription(_data.flags)), ("formId", ConstructorParameterDescription(_data.formId)), ("botId", ConstructorParameterDescription(_data.botId)), ("title", ConstructorParameterDescription(_data.title)), ("description", ConstructorParameterDescription(_data.description)), ("photo", ConstructorParameterDescription(_data.photo)), ("invoice", ConstructorParameterDescription(_data.invoice)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -534,8 +534,8 @@ public extension Api.payments {
                 self.credentialsTitle = credentialsTitle
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("paymentReceipt", [("flags", self.flags as Any), ("date", self.date as Any), ("botId", self.botId as Any), ("providerId", self.providerId as Any), ("title", self.title as Any), ("description", self.description as Any), ("photo", self.photo as Any), ("invoice", self.invoice as Any), ("info", self.info as Any), ("shipping", self.shipping as Any), ("tipAmount", self.tipAmount as Any), ("currency", self.currency as Any), ("totalAmount", self.totalAmount as Any), ("credentialsTitle", self.credentialsTitle as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("paymentReceipt", [("flags", ConstructorParameterDescription(self.flags)), ("date", ConstructorParameterDescription(self.date)), ("botId", ConstructorParameterDescription(self.botId)), ("providerId", ConstructorParameterDescription(self.providerId)), ("title", ConstructorParameterDescription(self.title)), ("description", ConstructorParameterDescription(self.description)), ("photo", ConstructorParameterDescription(self.photo)), ("invoice", ConstructorParameterDescription(self.invoice)), ("info", ConstructorParameterDescription(self.info)), ("shipping", ConstructorParameterDescription(self.shipping)), ("tipAmount", ConstructorParameterDescription(self.tipAmount)), ("currency", ConstructorParameterDescription(self.currency)), ("totalAmount", ConstructorParameterDescription(self.totalAmount)), ("credentialsTitle", ConstructorParameterDescription(self.credentialsTitle)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         public class Cons_paymentReceiptStars: TypeConstructorDescription {
@@ -563,8 +563,8 @@ public extension Api.payments {
                 self.transactionId = transactionId
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("paymentReceiptStars", [("flags", self.flags as Any), ("date", self.date as Any), ("botId", self.botId as Any), ("title", self.title as Any), ("description", self.description as Any), ("photo", self.photo as Any), ("invoice", self.invoice as Any), ("currency", self.currency as Any), ("totalAmount", self.totalAmount as Any), ("transactionId", self.transactionId as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("paymentReceiptStars", [("flags", ConstructorParameterDescription(self.flags)), ("date", ConstructorParameterDescription(self.date)), ("botId", ConstructorParameterDescription(self.botId)), ("title", ConstructorParameterDescription(self.title)), ("description", ConstructorParameterDescription(self.description)), ("photo", ConstructorParameterDescription(self.photo)), ("invoice", ConstructorParameterDescription(self.invoice)), ("currency", ConstructorParameterDescription(self.currency)), ("totalAmount", ConstructorParameterDescription(self.totalAmount)), ("transactionId", ConstructorParameterDescription(self.transactionId)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case paymentReceipt(Cons_paymentReceipt)
@@ -629,12 +629,12 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .paymentReceipt(let _data):
-                return ("paymentReceipt", [("flags", _data.flags as Any), ("date", _data.date as Any), ("botId", _data.botId as Any), ("providerId", _data.providerId as Any), ("title", _data.title as Any), ("description", _data.description as Any), ("photo", _data.photo as Any), ("invoice", _data.invoice as Any), ("info", _data.info as Any), ("shipping", _data.shipping as Any), ("tipAmount", _data.tipAmount as Any), ("currency", _data.currency as Any), ("totalAmount", _data.totalAmount as Any), ("credentialsTitle", _data.credentialsTitle as Any), ("users", _data.users as Any)])
+                return ("paymentReceipt", [("flags", ConstructorParameterDescription(_data.flags)), ("date", ConstructorParameterDescription(_data.date)), ("botId", ConstructorParameterDescription(_data.botId)), ("providerId", ConstructorParameterDescription(_data.providerId)), ("title", ConstructorParameterDescription(_data.title)), ("description", ConstructorParameterDescription(_data.description)), ("photo", ConstructorParameterDescription(_data.photo)), ("invoice", ConstructorParameterDescription(_data.invoice)), ("info", ConstructorParameterDescription(_data.info)), ("shipping", ConstructorParameterDescription(_data.shipping)), ("tipAmount", ConstructorParameterDescription(_data.tipAmount)), ("currency", ConstructorParameterDescription(_data.currency)), ("totalAmount", ConstructorParameterDescription(_data.totalAmount)), ("credentialsTitle", ConstructorParameterDescription(_data.credentialsTitle)), ("users", ConstructorParameterDescription(_data.users))])
             case .paymentReceiptStars(let _data):
-                return ("paymentReceiptStars", [("flags", _data.flags as Any), ("date", _data.date as Any), ("botId", _data.botId as Any), ("title", _data.title as Any), ("description", _data.description as Any), ("photo", _data.photo as Any), ("invoice", _data.invoice as Any), ("currency", _data.currency as Any), ("totalAmount", _data.totalAmount as Any), ("transactionId", _data.transactionId as Any), ("users", _data.users as Any)])
+                return ("paymentReceiptStars", [("flags", ConstructorParameterDescription(_data.flags)), ("date", ConstructorParameterDescription(_data.date)), ("botId", ConstructorParameterDescription(_data.botId)), ("title", ConstructorParameterDescription(_data.title)), ("description", ConstructorParameterDescription(_data.description)), ("photo", ConstructorParameterDescription(_data.photo)), ("invoice", ConstructorParameterDescription(_data.invoice)), ("currency", ConstructorParameterDescription(_data.currency)), ("totalAmount", ConstructorParameterDescription(_data.totalAmount)), ("transactionId", ConstructorParameterDescription(_data.transactionId)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -767,8 +767,8 @@ public extension Api.payments {
             public init(updates: Api.Updates) {
                 self.updates = updates
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("paymentResult", [("updates", self.updates as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("paymentResult", [("updates", ConstructorParameterDescription(self.updates))])
             }
         }
         public class Cons_paymentVerificationNeeded: TypeConstructorDescription {
@@ -776,8 +776,8 @@ public extension Api.payments {
             public init(url: String) {
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("paymentVerificationNeeded", [("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("paymentVerificationNeeded", [("url", ConstructorParameterDescription(self.url))])
             }
         }
         case paymentResult(Cons_paymentResult)
@@ -800,12 +800,12 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .paymentResult(let _data):
-                return ("paymentResult", [("updates", _data.updates as Any)])
+                return ("paymentResult", [("updates", ConstructorParameterDescription(_data.updates))])
             case .paymentVerificationNeeded(let _data):
-                return ("paymentVerificationNeeded", [("url", _data.url as Any)])
+                return ("paymentVerificationNeeded", [("url", ConstructorParameterDescription(_data.url))])
             }
         }
 
@@ -858,8 +858,8 @@ public extension Api.payments {
                 self.counters = counters
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("resaleStarGifts", [("flags", self.flags as Any), ("count", self.count as Any), ("gifts", self.gifts as Any), ("nextOffset", self.nextOffset as Any), ("attributes", self.attributes as Any), ("attributesHash", self.attributesHash as Any), ("chats", self.chats as Any), ("counters", self.counters as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("resaleStarGifts", [("flags", ConstructorParameterDescription(self.flags)), ("count", ConstructorParameterDescription(self.count)), ("gifts", ConstructorParameterDescription(self.gifts)), ("nextOffset", ConstructorParameterDescription(self.nextOffset)), ("attributes", ConstructorParameterDescription(self.attributes)), ("attributesHash", ConstructorParameterDescription(self.attributesHash)), ("chats", ConstructorParameterDescription(self.chats)), ("counters", ConstructorParameterDescription(self.counters)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case resaleStarGifts(Cons_resaleStarGifts)
@@ -911,10 +911,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .resaleStarGifts(let _data):
-                return ("resaleStarGifts", [("flags", _data.flags as Any), ("count", _data.count as Any), ("gifts", _data.gifts as Any), ("nextOffset", _data.nextOffset as Any), ("attributes", _data.attributes as Any), ("attributesHash", _data.attributesHash as Any), ("chats", _data.chats as Any), ("counters", _data.counters as Any), ("users", _data.users as Any)])
+                return ("resaleStarGifts", [("flags", ConstructorParameterDescription(_data.flags)), ("count", ConstructorParameterDescription(_data.count)), ("gifts", ConstructorParameterDescription(_data.gifts)), ("nextOffset", ConstructorParameterDescription(_data.nextOffset)), ("attributes", ConstructorParameterDescription(_data.attributes)), ("attributesHash", ConstructorParameterDescription(_data.attributesHash)), ("chats", ConstructorParameterDescription(_data.chats)), ("counters", ConstructorParameterDescription(_data.counters)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -982,8 +982,8 @@ public extension Api.payments {
                 self.flags = flags
                 self.savedInfo = savedInfo
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("savedInfo", [("flags", self.flags as Any), ("savedInfo", self.savedInfo as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("savedInfo", [("flags", ConstructorParameterDescription(self.flags)), ("savedInfo", ConstructorParameterDescription(self.savedInfo))])
             }
         }
         case savedInfo(Cons_savedInfo)
@@ -1002,10 +1002,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .savedInfo(let _data):
-                return ("savedInfo", [("flags", _data.flags as Any), ("savedInfo", _data.savedInfo as Any)])
+                return ("savedInfo", [("flags", ConstructorParameterDescription(_data.flags)), ("savedInfo", ConstructorParameterDescription(_data.savedInfo))])
             }
         }
 
@@ -1048,8 +1048,8 @@ public extension Api.payments {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("savedStarGifts", [("flags", self.flags as Any), ("count", self.count as Any), ("chatNotificationsEnabled", self.chatNotificationsEnabled as Any), ("gifts", self.gifts as Any), ("nextOffset", self.nextOffset as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("savedStarGifts", [("flags", ConstructorParameterDescription(self.flags)), ("count", ConstructorParameterDescription(self.count)), ("chatNotificationsEnabled", ConstructorParameterDescription(self.chatNotificationsEnabled)), ("gifts", ConstructorParameterDescription(self.gifts)), ("nextOffset", ConstructorParameterDescription(self.nextOffset)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case savedStarGifts(Cons_savedStarGifts)
@@ -1087,10 +1087,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .savedStarGifts(let _data):
-                return ("savedStarGifts", [("flags", _data.flags as Any), ("count", _data.count as Any), ("chatNotificationsEnabled", _data.chatNotificationsEnabled as Any), ("gifts", _data.gifts as Any), ("nextOffset", _data.nextOffset as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("savedStarGifts", [("flags", ConstructorParameterDescription(_data.flags)), ("count", ConstructorParameterDescription(_data.count)), ("chatNotificationsEnabled", ConstructorParameterDescription(_data.chatNotificationsEnabled)), ("gifts", ConstructorParameterDescription(_data.gifts)), ("nextOffset", ConstructorParameterDescription(_data.nextOffset)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1148,8 +1148,8 @@ public extension Api.payments {
                 self.users = users
                 self.chats = chats
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGiftActiveAuctions", [("auctions", self.auctions as Any), ("users", self.users as Any), ("chats", self.chats as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGiftActiveAuctions", [("auctions", ConstructorParameterDescription(self.auctions)), ("users", ConstructorParameterDescription(self.users)), ("chats", ConstructorParameterDescription(self.chats))])
             }
         }
         case starGiftActiveAuctions(Cons_starGiftActiveAuctions)
@@ -1185,10 +1185,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGiftActiveAuctions(let _data):
-                return ("starGiftActiveAuctions", [("auctions", _data.auctions as Any), ("users", _data.users as Any), ("chats", _data.chats as Any)])
+                return ("starGiftActiveAuctions", [("auctions", ConstructorParameterDescription(_data.auctions)), ("users", ConstructorParameterDescription(_data.users)), ("chats", ConstructorParameterDescription(_data.chats))])
             case .starGiftActiveAuctionsNotModified:
                 return ("starGiftActiveAuctionsNotModified", [])
             }
@@ -1233,8 +1233,8 @@ public extension Api.payments {
                 self.users = users
                 self.chats = chats
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGiftAuctionAcquiredGifts", [("gifts", self.gifts as Any), ("users", self.users as Any), ("chats", self.chats as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGiftAuctionAcquiredGifts", [("gifts", ConstructorParameterDescription(self.gifts)), ("users", ConstructorParameterDescription(self.users)), ("chats", ConstructorParameterDescription(self.chats))])
             }
         }
         case starGiftAuctionAcquiredGifts(Cons_starGiftAuctionAcquiredGifts)
@@ -1264,10 +1264,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGiftAuctionAcquiredGifts(let _data):
-                return ("starGiftAuctionAcquiredGifts", [("gifts", _data.gifts as Any), ("users", _data.users as Any), ("chats", _data.chats as Any)])
+                return ("starGiftAuctionAcquiredGifts", [("gifts", ConstructorParameterDescription(_data.gifts)), ("users", ConstructorParameterDescription(_data.users)), ("chats", ConstructorParameterDescription(_data.chats))])
             }
         }
 
@@ -1313,8 +1313,8 @@ public extension Api.payments {
                 self.users = users
                 self.chats = chats
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGiftAuctionState", [("gift", self.gift as Any), ("state", self.state as Any), ("userState", self.userState as Any), ("timeout", self.timeout as Any), ("users", self.users as Any), ("chats", self.chats as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGiftAuctionState", [("gift", ConstructorParameterDescription(self.gift)), ("state", ConstructorParameterDescription(self.state)), ("userState", ConstructorParameterDescription(self.userState)), ("timeout", ConstructorParameterDescription(self.timeout)), ("users", ConstructorParameterDescription(self.users)), ("chats", ConstructorParameterDescription(self.chats))])
             }
         }
         case starGiftAuctionState(Cons_starGiftAuctionState)
@@ -1343,10 +1343,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGiftAuctionState(let _data):
-                return ("starGiftAuctionState", [("gift", _data.gift as Any), ("state", _data.state as Any), ("userState", _data.userState as Any), ("timeout", _data.timeout as Any), ("users", _data.users as Any), ("chats", _data.chats as Any)])
+                return ("starGiftAuctionState", [("gift", ConstructorParameterDescription(_data.gift)), ("state", ConstructorParameterDescription(_data.state)), ("userState", ConstructorParameterDescription(_data.userState)), ("timeout", ConstructorParameterDescription(_data.timeout)), ("users", ConstructorParameterDescription(_data.users)), ("chats", ConstructorParameterDescription(_data.chats))])
             }
         }
 
@@ -1395,8 +1395,8 @@ public extension Api.payments {
             public init(collections: [Api.StarGiftCollection]) {
                 self.collections = collections
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGiftCollections", [("collections", self.collections as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGiftCollections", [("collections", ConstructorParameterDescription(self.collections))])
             }
         }
         case starGiftCollections(Cons_starGiftCollections)
@@ -1422,10 +1422,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGiftCollections(let _data):
-                return ("starGiftCollections", [("collections", _data.collections as Any)])
+                return ("starGiftCollections", [("collections", ConstructorParameterDescription(_data.collections))])
             case .starGiftCollectionsNotModified:
                 return ("starGiftCollectionsNotModified", [])
             }
@@ -1456,8 +1456,8 @@ public extension Api.payments {
             public init(attributes: [Api.StarGiftAttribute]) {
                 self.attributes = attributes
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGiftUpgradeAttributes", [("attributes", self.attributes as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGiftUpgradeAttributes", [("attributes", ConstructorParameterDescription(self.attributes))])
             }
         }
         case starGiftUpgradeAttributes(Cons_starGiftUpgradeAttributes)
@@ -1477,10 +1477,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGiftUpgradeAttributes(let _data):
-                return ("starGiftUpgradeAttributes", [("attributes", _data.attributes as Any)])
+                return ("starGiftUpgradeAttributes", [("attributes", ConstructorParameterDescription(_data.attributes))])
             }
         }
 
@@ -1510,8 +1510,8 @@ public extension Api.payments {
                 self.prices = prices
                 self.nextPrices = nextPrices
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGiftUpgradePreview", [("sampleAttributes", self.sampleAttributes as Any), ("prices", self.prices as Any), ("nextPrices", self.nextPrices as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGiftUpgradePreview", [("sampleAttributes", ConstructorParameterDescription(self.sampleAttributes)), ("prices", ConstructorParameterDescription(self.prices)), ("nextPrices", ConstructorParameterDescription(self.nextPrices))])
             }
         }
         case starGiftUpgradePreview(Cons_starGiftUpgradePreview)
@@ -1541,10 +1541,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGiftUpgradePreview(let _data):
-                return ("starGiftUpgradePreview", [("sampleAttributes", _data.sampleAttributes as Any), ("prices", _data.prices as Any), ("nextPrices", _data.nextPrices as Any)])
+                return ("starGiftUpgradePreview", [("sampleAttributes", ConstructorParameterDescription(_data.sampleAttributes)), ("prices", ConstructorParameterDescription(_data.prices)), ("nextPrices", ConstructorParameterDescription(_data.nextPrices))])
             }
         }
 
@@ -1580,8 +1580,8 @@ public extension Api.payments {
             public init(url: String) {
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGiftWithdrawalUrl", [("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGiftWithdrawalUrl", [("url", ConstructorParameterDescription(self.url))])
             }
         }
         case starGiftWithdrawalUrl(Cons_starGiftWithdrawalUrl)
@@ -1597,10 +1597,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGiftWithdrawalUrl(let _data):
-                return ("starGiftWithdrawalUrl", [("url", _data.url as Any)])
+                return ("starGiftWithdrawalUrl", [("url", ConstructorParameterDescription(_data.url))])
             }
         }
 
@@ -1630,8 +1630,8 @@ public extension Api.payments {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starGifts", [("hash", self.hash as Any), ("gifts", self.gifts as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starGifts", [("hash", ConstructorParameterDescription(self.hash)), ("gifts", ConstructorParameterDescription(self.gifts)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case starGifts(Cons_starGifts)
@@ -1668,10 +1668,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starGifts(let _data):
-                return ("starGifts", [("hash", _data.hash as Any), ("gifts", _data.gifts as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("starGifts", [("hash", ConstructorParameterDescription(_data.hash)), ("gifts", ConstructorParameterDescription(_data.gifts)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             case .starGiftsNotModified:
                 return ("starGiftsNotModified", [])
             }
@@ -1715,8 +1715,8 @@ public extension Api.payments {
             public init(url: String) {
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starsRevenueAdsAccountUrl", [("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starsRevenueAdsAccountUrl", [("url", ConstructorParameterDescription(self.url))])
             }
         }
         case starsRevenueAdsAccountUrl(Cons_starsRevenueAdsAccountUrl)
@@ -1732,10 +1732,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starsRevenueAdsAccountUrl(let _data):
-                return ("starsRevenueAdsAccountUrl", [("url", _data.url as Any)])
+                return ("starsRevenueAdsAccountUrl", [("url", ConstructorParameterDescription(_data.url))])
             }
         }
 
@@ -1767,8 +1767,8 @@ public extension Api.payments {
                 self.status = status
                 self.usdRate = usdRate
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starsRevenueStats", [("flags", self.flags as Any), ("topHoursGraph", self.topHoursGraph as Any), ("revenueGraph", self.revenueGraph as Any), ("status", self.status as Any), ("usdRate", self.usdRate as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starsRevenueStats", [("flags", ConstructorParameterDescription(self.flags)), ("topHoursGraph", ConstructorParameterDescription(self.topHoursGraph)), ("revenueGraph", ConstructorParameterDescription(self.revenueGraph)), ("status", ConstructorParameterDescription(self.status)), ("usdRate", ConstructorParameterDescription(self.usdRate))])
             }
         }
         case starsRevenueStats(Cons_starsRevenueStats)
@@ -1790,10 +1790,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starsRevenueStats(let _data):
-                return ("starsRevenueStats", [("flags", _data.flags as Any), ("topHoursGraph", _data.topHoursGraph as Any), ("revenueGraph", _data.revenueGraph as Any), ("status", _data.status as Any), ("usdRate", _data.usdRate as Any)])
+                return ("starsRevenueStats", [("flags", ConstructorParameterDescription(_data.flags)), ("topHoursGraph", ConstructorParameterDescription(_data.topHoursGraph)), ("revenueGraph", ConstructorParameterDescription(_data.revenueGraph)), ("status", ConstructorParameterDescription(_data.status)), ("usdRate", ConstructorParameterDescription(_data.usdRate))])
             }
         }
 
@@ -1837,8 +1837,8 @@ public extension Api.payments {
             public init(url: String) {
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starsRevenueWithdrawalUrl", [("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starsRevenueWithdrawalUrl", [("url", ConstructorParameterDescription(self.url))])
             }
         }
         case starsRevenueWithdrawalUrl(Cons_starsRevenueWithdrawalUrl)
@@ -1854,10 +1854,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starsRevenueWithdrawalUrl(let _data):
-                return ("starsRevenueWithdrawalUrl", [("url", _data.url as Any)])
+                return ("starsRevenueWithdrawalUrl", [("url", ConstructorParameterDescription(_data.url))])
             }
         }
 
@@ -1897,8 +1897,8 @@ public extension Api.payments {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("starsStatus", [("flags", self.flags as Any), ("balance", self.balance as Any), ("subscriptions", self.subscriptions as Any), ("subscriptionsNextOffset", self.subscriptionsNextOffset as Any), ("subscriptionsMissingBalance", self.subscriptionsMissingBalance as Any), ("history", self.history as Any), ("nextOffset", self.nextOffset as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("starsStatus", [("flags", ConstructorParameterDescription(self.flags)), ("balance", ConstructorParameterDescription(self.balance)), ("subscriptions", ConstructorParameterDescription(self.subscriptions)), ("subscriptionsNextOffset", ConstructorParameterDescription(self.subscriptionsNextOffset)), ("subscriptionsMissingBalance", ConstructorParameterDescription(self.subscriptionsMissingBalance)), ("history", ConstructorParameterDescription(self.history)), ("nextOffset", ConstructorParameterDescription(self.nextOffset)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case starsStatus(Cons_starsStatus)
@@ -1948,10 +1948,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .starsStatus(let _data):
-                return ("starsStatus", [("flags", _data.flags as Any), ("balance", _data.balance as Any), ("subscriptions", _data.subscriptions as Any), ("subscriptionsNextOffset", _data.subscriptionsNextOffset as Any), ("subscriptionsMissingBalance", _data.subscriptionsMissingBalance as Any), ("history", _data.history as Any), ("nextOffset", _data.nextOffset as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("starsStatus", [("flags", ConstructorParameterDescription(_data.flags)), ("balance", ConstructorParameterDescription(_data.balance)), ("subscriptions", ConstructorParameterDescription(_data.subscriptions)), ("subscriptionsNextOffset", ConstructorParameterDescription(_data.subscriptionsNextOffset)), ("subscriptionsMissingBalance", ConstructorParameterDescription(_data.subscriptionsMissingBalance)), ("history", ConstructorParameterDescription(_data.history)), ("nextOffset", ConstructorParameterDescription(_data.nextOffset)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -2027,8 +2027,8 @@ public extension Api.payments {
                 self.users = users
                 self.nextOffset = nextOffset
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("suggestedStarRefBots", [("flags", self.flags as Any), ("count", self.count as Any), ("suggestedBots", self.suggestedBots as Any), ("users", self.users as Any), ("nextOffset", self.nextOffset as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("suggestedStarRefBots", [("flags", ConstructorParameterDescription(self.flags)), ("count", ConstructorParameterDescription(self.count)), ("suggestedBots", ConstructorParameterDescription(self.suggestedBots)), ("users", ConstructorParameterDescription(self.users)), ("nextOffset", ConstructorParameterDescription(self.nextOffset))])
             }
         }
         case suggestedStarRefBots(Cons_suggestedStarRefBots)
@@ -2058,10 +2058,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .suggestedStarRefBots(let _data):
-                return ("suggestedStarRefBots", [("flags", _data.flags as Any), ("count", _data.count as Any), ("suggestedBots", _data.suggestedBots as Any), ("users", _data.users as Any), ("nextOffset", _data.nextOffset as Any)])
+                return ("suggestedStarRefBots", [("flags", ConstructorParameterDescription(_data.flags)), ("count", ConstructorParameterDescription(_data.count)), ("suggestedBots", ConstructorParameterDescription(_data.suggestedBots)), ("users", ConstructorParameterDescription(_data.users)), ("nextOffset", ConstructorParameterDescription(_data.nextOffset))])
             }
         }
 
@@ -2107,8 +2107,8 @@ public extension Api.payments {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("uniqueStarGift", [("gift", self.gift as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("uniqueStarGift", [("gift", ConstructorParameterDescription(self.gift)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case uniqueStarGift(Cons_uniqueStarGift)
@@ -2134,10 +2134,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .uniqueStarGift(let _data):
-                return ("uniqueStarGift", [("gift", _data.gift as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("uniqueStarGift", [("gift", ConstructorParameterDescription(_data.gift)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -2197,8 +2197,8 @@ public extension Api.payments {
                 self.fragmentListedCount = fragmentListedCount
                 self.fragmentListedUrl = fragmentListedUrl
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("uniqueStarGiftValueInfo", [("flags", self.flags as Any), ("currency", self.currency as Any), ("value", self.value as Any), ("initialSaleDate", self.initialSaleDate as Any), ("initialSaleStars", self.initialSaleStars as Any), ("initialSalePrice", self.initialSalePrice as Any), ("lastSaleDate", self.lastSaleDate as Any), ("lastSalePrice", self.lastSalePrice as Any), ("floorPrice", self.floorPrice as Any), ("averagePrice", self.averagePrice as Any), ("listedCount", self.listedCount as Any), ("fragmentListedCount", self.fragmentListedCount as Any), ("fragmentListedUrl", self.fragmentListedUrl as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("uniqueStarGiftValueInfo", [("flags", ConstructorParameterDescription(self.flags)), ("currency", ConstructorParameterDescription(self.currency)), ("value", ConstructorParameterDescription(self.value)), ("initialSaleDate", ConstructorParameterDescription(self.initialSaleDate)), ("initialSaleStars", ConstructorParameterDescription(self.initialSaleStars)), ("initialSalePrice", ConstructorParameterDescription(self.initialSalePrice)), ("lastSaleDate", ConstructorParameterDescription(self.lastSaleDate)), ("lastSalePrice", ConstructorParameterDescription(self.lastSalePrice)), ("floorPrice", ConstructorParameterDescription(self.floorPrice)), ("averagePrice", ConstructorParameterDescription(self.averagePrice)), ("listedCount", ConstructorParameterDescription(self.listedCount)), ("fragmentListedCount", ConstructorParameterDescription(self.fragmentListedCount)), ("fragmentListedUrl", ConstructorParameterDescription(self.fragmentListedUrl))])
             }
         }
         case uniqueStarGiftValueInfo(Cons_uniqueStarGiftValueInfo)
@@ -2240,10 +2240,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .uniqueStarGiftValueInfo(let _data):
-                return ("uniqueStarGiftValueInfo", [("flags", _data.flags as Any), ("currency", _data.currency as Any), ("value", _data.value as Any), ("initialSaleDate", _data.initialSaleDate as Any), ("initialSaleStars", _data.initialSaleStars as Any), ("initialSalePrice", _data.initialSalePrice as Any), ("lastSaleDate", _data.lastSaleDate as Any), ("lastSalePrice", _data.lastSalePrice as Any), ("floorPrice", _data.floorPrice as Any), ("averagePrice", _data.averagePrice as Any), ("listedCount", _data.listedCount as Any), ("fragmentListedCount", _data.fragmentListedCount as Any), ("fragmentListedUrl", _data.fragmentListedUrl as Any)])
+                return ("uniqueStarGiftValueInfo", [("flags", ConstructorParameterDescription(_data.flags)), ("currency", ConstructorParameterDescription(_data.currency)), ("value", ConstructorParameterDescription(_data.value)), ("initialSaleDate", ConstructorParameterDescription(_data.initialSaleDate)), ("initialSaleStars", ConstructorParameterDescription(_data.initialSaleStars)), ("initialSalePrice", ConstructorParameterDescription(_data.initialSalePrice)), ("lastSaleDate", ConstructorParameterDescription(_data.lastSaleDate)), ("lastSalePrice", ConstructorParameterDescription(_data.lastSalePrice)), ("floorPrice", ConstructorParameterDescription(_data.floorPrice)), ("averagePrice", ConstructorParameterDescription(_data.averagePrice)), ("listedCount", ConstructorParameterDescription(_data.listedCount)), ("fragmentListedCount", ConstructorParameterDescription(_data.fragmentListedCount)), ("fragmentListedUrl", ConstructorParameterDescription(_data.fragmentListedUrl))])
             }
         }
 
@@ -2321,8 +2321,8 @@ public extension Api.payments {
                 self.id = id
                 self.shippingOptions = shippingOptions
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("validatedRequestedInfo", [("flags", self.flags as Any), ("id", self.id as Any), ("shippingOptions", self.shippingOptions as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("validatedRequestedInfo", [("flags", ConstructorParameterDescription(self.flags)), ("id", ConstructorParameterDescription(self.id)), ("shippingOptions", ConstructorParameterDescription(self.shippingOptions))])
             }
         }
         case validatedRequestedInfo(Cons_validatedRequestedInfo)
@@ -2348,10 +2348,10 @@ public extension Api.payments {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .validatedRequestedInfo(let _data):
-                return ("validatedRequestedInfo", [("flags", _data.flags as Any), ("id", _data.id as Any), ("shippingOptions", _data.shippingOptions as Any)])
+                return ("validatedRequestedInfo", [("flags", ConstructorParameterDescription(_data.flags)), ("id", ConstructorParameterDescription(_data.id)), ("shippingOptions", ConstructorParameterDescription(_data.shippingOptions))])
             }
         }
 

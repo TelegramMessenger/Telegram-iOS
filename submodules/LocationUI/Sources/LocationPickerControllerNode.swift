@@ -1369,14 +1369,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             if let source = self.controller?.source {
                 switch source {
                 case let .poll(pollMode):
-                    //TODO:localize
                     switch pollMode {
                     case .description:
-                        subtitle = "Add location to the poll description"
+                        subtitle = self.presentationData.strings.Location_PollSubtitle_Description
                     case .quizAnswer:
-                        subtitle = "Add location to the quiz explanation"
+                        subtitle = self.presentationData.strings.Location_PollSubtitle_Explanation
                     case .option:
-                        subtitle = "Add location to this option"
+                        subtitle = self.presentationData.strings.Location_PollSubtitle_PollOption
                     }
                 default:
                     break

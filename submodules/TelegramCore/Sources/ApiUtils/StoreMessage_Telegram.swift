@@ -39,6 +39,8 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         tags.insert(.pinned)
     }
     
+    var hasUnseenPollVotes: Bool = false
+    
     for attachment in media {
         if let _ = attachment as? TelegramMediaImage {
             if !isSecret {
@@ -108,8 +110,11 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             }
         } else if let location = attachment as? TelegramMediaMap, location.liveBroadcastingTimeout != nil {
             tags.insert(.liveLocation)
-        } else if let _ = attachment as? TelegramMediaPoll {
+        } else if let poll = attachment as? TelegramMediaPoll {
             tags.insert(.polls)
+            if poll.results.hasUnseenVotes == true {
+                hasUnseenPollVotes = true
+            }
         }
     }
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {
@@ -123,6 +128,10 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                     break
             }
         }
+    }
+    
+    if hasUnseenPollVotes {
+        tags.insert(.unseenPollVote)
     }
     
     return (tags, globalTags)

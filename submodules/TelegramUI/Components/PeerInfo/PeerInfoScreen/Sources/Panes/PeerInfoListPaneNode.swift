@@ -175,8 +175,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
             case MessageTags.webPage:
                 return PeerInfoStatusData(text: presentationData.strings.SharedMedia_LinkCount(Int32(count)), isActivity: false, key: .links)
             case MessageTags.polls:
-                //TODO:localize
-                return PeerInfoStatusData(text: "\(count) poll", isActivity: false, key: .links)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_PollCount(Int32(count)), isActivity: false, key: .links)
             default:
                 return nil
             }

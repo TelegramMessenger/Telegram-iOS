@@ -9,8 +9,8 @@ public extension Api.bots {
                 self.about = about
                 self.description = description
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("botInfo", [("name", self.name as Any), ("about", self.about as Any), ("description", self.description as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("botInfo", [("name", ConstructorParameterDescription(self.name)), ("about", ConstructorParameterDescription(self.about)), ("description", ConstructorParameterDescription(self.description))])
             }
         }
         case botInfo(Cons_botInfo)
@@ -28,10 +28,10 @@ public extension Api.bots {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .botInfo(let _data):
-                return ("botInfo", [("name", _data.name as Any), ("about", _data.about as Any), ("description", _data.description as Any)])
+                return ("botInfo", [("name", ConstructorParameterDescription(_data.name)), ("about", ConstructorParameterDescription(_data.about)), ("description", ConstructorParameterDescription(_data.description))])
             }
         }
 
@@ -61,8 +61,8 @@ public extension Api.bots {
             public init(token: String) {
                 self.token = token
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedBotToken", [("token", self.token as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("exportedBotToken", [("token", ConstructorParameterDescription(self.token))])
             }
         }
         case exportedBotToken(Cons_exportedBotToken)
@@ -78,10 +78,10 @@ public extension Api.bots {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .exportedBotToken(let _data):
-                return ("exportedBotToken", [("token", _data.token as Any)])
+                return ("exportedBotToken", [("token", ConstructorParameterDescription(_data.token))])
             }
         }
 
@@ -109,8 +109,8 @@ public extension Api.bots {
                 self.nextOffset = nextOffset
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("popularAppBots", [("flags", self.flags as Any), ("nextOffset", self.nextOffset as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("popularAppBots", [("flags", ConstructorParameterDescription(self.flags)), ("nextOffset", ConstructorParameterDescription(self.nextOffset)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case popularAppBots(Cons_popularAppBots)
@@ -134,10 +134,10 @@ public extension Api.bots {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .popularAppBots(let _data):
-                return ("popularAppBots", [("flags", _data.flags as Any), ("nextOffset", _data.nextOffset as Any), ("users", _data.users as Any)])
+                return ("popularAppBots", [("flags", ConstructorParameterDescription(_data.flags)), ("nextOffset", ConstructorParameterDescription(_data.nextOffset)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -173,8 +173,8 @@ public extension Api.bots {
                 self.media = media
                 self.langCodes = langCodes
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("previewInfo", [("media", self.media as Any), ("langCodes", self.langCodes as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("previewInfo", [("media", ConstructorParameterDescription(self.media)), ("langCodes", ConstructorParameterDescription(self.langCodes))])
             }
         }
         case previewInfo(Cons_previewInfo)
@@ -199,10 +199,10 @@ public extension Api.bots {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .previewInfo(let _data):
-                return ("previewInfo", [("media", _data.media as Any), ("langCodes", _data.langCodes as Any)])
+                return ("previewInfo", [("media", ConstructorParameterDescription(_data.media)), ("langCodes", ConstructorParameterDescription(_data.langCodes))])
             }
         }
 
@@ -233,8 +233,8 @@ public extension Api.bots {
             public init(webappReqId: String) {
                 self.webappReqId = webappReqId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("requestedButton", [("webappReqId", self.webappReqId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("requestedButton", [("webappReqId", ConstructorParameterDescription(self.webappReqId))])
             }
         }
         case requestedButton(Cons_requestedButton)
@@ -250,10 +250,10 @@ public extension Api.bots {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .requestedButton(let _data):
-                return ("requestedButton", [("webappReqId", _data.webappReqId as Any)])
+                return ("requestedButton", [("webappReqId", ConstructorParameterDescription(_data.webappReqId))])
             }
         }
 
@@ -281,8 +281,8 @@ public extension Api.channels {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("adminLogResults", [("events", self.events as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("adminLogResults", [("events", ConstructorParameterDescription(self.events)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case adminLogResults(Cons_adminLogResults)
@@ -312,10 +312,10 @@ public extension Api.channels {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .adminLogResults(let _data):
-                return ("adminLogResults", [("events", _data.events as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("adminLogResults", [("events", ConstructorParameterDescription(_data.events)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -355,8 +355,8 @@ public extension Api.channels {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("channelParticipant", [("participant", self.participant as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("channelParticipant", [("participant", ConstructorParameterDescription(self.participant)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case channelParticipant(Cons_channelParticipant)
@@ -382,10 +382,10 @@ public extension Api.channels {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .channelParticipant(let _data):
-                return ("channelParticipant", [("participant", _data.participant as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("channelParticipant", [("participant", ConstructorParameterDescription(_data.participant)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -427,8 +427,8 @@ public extension Api.channels {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("channelParticipants", [("count", self.count as Any), ("participants", self.participants as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("channelParticipants", [("count", ConstructorParameterDescription(self.count)), ("participants", ConstructorParameterDescription(self.participants)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case channelParticipants(Cons_channelParticipants)
@@ -465,10 +465,10 @@ public extension Api.channels {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .channelParticipants(let _data):
-                return ("channelParticipants", [("count", _data.count as Any), ("participants", _data.participants as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("channelParticipants", [("count", ConstructorParameterDescription(_data.count)), ("participants", ConstructorParameterDescription(_data.participants)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             case .channelParticipantsNotModified:
                 return ("channelParticipantsNotModified", [])
             }
@@ -506,170 +506,6 @@ public extension Api.channels {
     }
 }
 public extension Api.channels {
-    enum Found: TypeConstructorDescription {
-        public class Cons_found: TypeConstructorDescription {
-            public var flags: Int32
-            public var results: [Api.Peer]
-            public var chats: [Api.Chat]
-            public var users: [Api.User]
-            public var nextOffset: String?
-            public init(flags: Int32, results: [Api.Peer], chats: [Api.Chat], users: [Api.User], nextOffset: String?) {
-                self.flags = flags
-                self.results = results
-                self.chats = chats
-                self.users = users
-                self.nextOffset = nextOffset
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("found", [("flags", self.flags as Any), ("results", self.results as Any), ("chats", self.chats as Any), ("users", self.users as Any), ("nextOffset", self.nextOffset as Any)])
-            }
-        }
-        case found(Cons_found)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .found(let _data):
-                if boxed {
-                    buffer.appendInt32(824755388)
-                }
-                serializeInt32(_data.flags, buffer: buffer, boxed: false)
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.results.count))
-                for item in _data.results {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.chats.count))
-                for item in _data.chats {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                if Int(_data.flags) & Int(1 << 0) != 0 {
-                    serializeString(_data.nextOffset!, buffer: buffer, boxed: false)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .found(let _data):
-                return ("found", [("flags", _data.flags as Any), ("results", _data.results as Any), ("chats", _data.chats as Any), ("users", _data.users as Any), ("nextOffset", _data.nextOffset as Any)])
-            }
-        }
-
-        public static func parse_found(_ reader: BufferReader) -> Found? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.Peer]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
-            }
-            var _3: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _4: [Api.User]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {
-                _5 = parseString(reader)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.channels.Found.found(Cons_found(flags: _1!, results: _2!, chats: _3!, users: _4!, nextOffset: _5))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.channels {
-    enum PersonalChannels: TypeConstructorDescription {
-        public class Cons_personalChannels: TypeConstructorDescription {
-            public var channels: [Api.PersonalChannel]
-            public var chats: [Api.Chat]
-            public var users: [Api.User]
-            public init(channels: [Api.PersonalChannel], chats: [Api.Chat], users: [Api.User]) {
-                self.channels = channels
-                self.chats = chats
-                self.users = users
-            }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("personalChannels", [("channels", self.channels as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
-            }
-        }
-        case personalChannels(Cons_personalChannels)
-
-        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-            switch self {
-            case .personalChannels(let _data):
-                if boxed {
-                    buffer.appendInt32(-694491059)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.channels.count))
-                for item in _data.channels {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.chats.count))
-                for item in _data.chats {
-                    item.serialize(buffer, true)
-                }
-                buffer.appendInt32(481674261)
-                buffer.appendInt32(Int32(_data.users.count))
-                for item in _data.users {
-                    item.serialize(buffer, true)
-                }
-                break
-            }
-        }
-
-        public func descriptionFields() -> (String, [(String, Any)]) {
-            switch self {
-            case .personalChannels(let _data):
-                return ("personalChannels", [("channels", _data.channels as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
-            }
-        }
-
-        public static func parse_personalChannels(_ reader: BufferReader) -> PersonalChannels? {
-            var _1: [Api.PersonalChannel]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PersonalChannel.self)
-            }
-            var _2: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.channels.PersonalChannels.personalChannels(Cons_personalChannels(channels: _1!, chats: _2!, users: _3!))
-            }
-            else {
-                return nil
-            }
-        }
-    }
-}
-public extension Api.channels {
     enum SendAsPeers: TypeConstructorDescription {
         public class Cons_sendAsPeers: TypeConstructorDescription {
             public var peers: [Api.SendAsPeer]
@@ -680,8 +516,8 @@ public extension Api.channels {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("sendAsPeers", [("peers", self.peers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("sendAsPeers", [("peers", ConstructorParameterDescription(self.peers)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case sendAsPeers(Cons_sendAsPeers)
@@ -711,10 +547,10 @@ public extension Api.channels {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .sendAsPeers(let _data):
-                return ("sendAsPeers", [("peers", _data.peers as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("sendAsPeers", [("peers", ConstructorParameterDescription(_data.peers)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -752,8 +588,8 @@ public extension Api.channels {
                 self.title = title
                 self.options = options
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("sponsoredMessageReportResultChooseOption", [("title", self.title as Any), ("options", self.options as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("sponsoredMessageReportResultChooseOption", [("title", ConstructorParameterDescription(self.title)), ("options", ConstructorParameterDescription(self.options))])
             }
         }
         case sponsoredMessageReportResultAdsHidden
@@ -786,12 +622,12 @@ public extension Api.channels {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .sponsoredMessageReportResultAdsHidden:
                 return ("sponsoredMessageReportResultAdsHidden", [])
             case .sponsoredMessageReportResultChooseOption(let _data):
-                return ("sponsoredMessageReportResultChooseOption", [("title", _data.title as Any), ("options", _data.options as Any)])
+                return ("sponsoredMessageReportResultChooseOption", [("title", ConstructorParameterDescription(_data.title)), ("options", ConstructorParameterDescription(_data.options))])
             case .sponsoredMessageReportResultReported:
                 return ("sponsoredMessageReportResultReported", [])
             }
@@ -838,8 +674,8 @@ public extension Api.chatlists {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("chatlistInvite", [("flags", self.flags as Any), ("title", self.title as Any), ("emoticon", self.emoticon as Any), ("peers", self.peers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("chatlistInvite", [("flags", ConstructorParameterDescription(self.flags)), ("title", ConstructorParameterDescription(self.title)), ("emoticon", ConstructorParameterDescription(self.emoticon)), ("peers", ConstructorParameterDescription(self.peers)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         public class Cons_chatlistInviteAlready: TypeConstructorDescription {
@@ -855,8 +691,8 @@ public extension Api.chatlists {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("chatlistInviteAlready", [("filterId", self.filterId as Any), ("missingPeers", self.missingPeers as Any), ("alreadyPeers", self.alreadyPeers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("chatlistInviteAlready", [("filterId", ConstructorParameterDescription(self.filterId)), ("missingPeers", ConstructorParameterDescription(self.missingPeers)), ("alreadyPeers", ConstructorParameterDescription(self.alreadyPeers)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case chatlistInvite(Cons_chatlistInvite)
@@ -918,12 +754,12 @@ public extension Api.chatlists {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .chatlistInvite(let _data):
-                return ("chatlistInvite", [("flags", _data.flags as Any), ("title", _data.title as Any), ("emoticon", _data.emoticon as Any), ("peers", _data.peers as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("chatlistInvite", [("flags", ConstructorParameterDescription(_data.flags)), ("title", ConstructorParameterDescription(_data.title)), ("emoticon", ConstructorParameterDescription(_data.emoticon)), ("peers", ConstructorParameterDescription(_data.peers)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             case .chatlistInviteAlready(let _data):
-                return ("chatlistInviteAlready", [("filterId", _data.filterId as Any), ("missingPeers", _data.missingPeers as Any), ("alreadyPeers", _data.alreadyPeers as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("chatlistInviteAlready", [("filterId", ConstructorParameterDescription(_data.filterId)), ("missingPeers", ConstructorParameterDescription(_data.missingPeers)), ("alreadyPeers", ConstructorParameterDescription(_data.alreadyPeers)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1007,8 +843,8 @@ public extension Api.chatlists {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("chatlistUpdates", [("missingPeers", self.missingPeers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("chatlistUpdates", [("missingPeers", ConstructorParameterDescription(self.missingPeers)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case chatlistUpdates(Cons_chatlistUpdates)
@@ -1038,10 +874,10 @@ public extension Api.chatlists {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .chatlistUpdates(let _data):
-                return ("chatlistUpdates", [("missingPeers", _data.missingPeers as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("chatlistUpdates", [("missingPeers", ConstructorParameterDescription(_data.missingPeers)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1079,8 +915,8 @@ public extension Api.chatlists {
                 self.filter = filter
                 self.invite = invite
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedChatlistInvite", [("filter", self.filter as Any), ("invite", self.invite as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("exportedChatlistInvite", [("filter", ConstructorParameterDescription(self.filter)), ("invite", ConstructorParameterDescription(self.invite))])
             }
         }
         case exportedChatlistInvite(Cons_exportedChatlistInvite)
@@ -1097,10 +933,10 @@ public extension Api.chatlists {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .exportedChatlistInvite(let _data):
-                return ("exportedChatlistInvite", [("filter", _data.filter as Any), ("invite", _data.invite as Any)])
+                return ("exportedChatlistInvite", [("filter", ConstructorParameterDescription(_data.filter)), ("invite", ConstructorParameterDescription(_data.invite))])
             }
         }
 
@@ -1135,8 +971,8 @@ public extension Api.chatlists {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("exportedInvites", [("invites", self.invites as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("exportedInvites", [("invites", ConstructorParameterDescription(self.invites)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case exportedInvites(Cons_exportedInvites)
@@ -1166,10 +1002,10 @@ public extension Api.chatlists {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .exportedInvites(let _data):
-                return ("exportedInvites", [("invites", _data.invites as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("exportedInvites", [("invites", ConstructorParameterDescription(_data.invites)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1209,8 +1045,8 @@ public extension Api.contacts {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("blocked", [("blocked", self.blocked as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("blocked", [("blocked", ConstructorParameterDescription(self.blocked)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         public class Cons_blockedSlice: TypeConstructorDescription {
@@ -1224,8 +1060,8 @@ public extension Api.contacts {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("blockedSlice", [("count", self.count as Any), ("blocked", self.blocked as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("blockedSlice", [("count", ConstructorParameterDescription(self.count)), ("blocked", ConstructorParameterDescription(self.blocked)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case blocked(Cons_blocked)
@@ -1277,12 +1113,12 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .blocked(let _data):
-                return ("blocked", [("blocked", _data.blocked as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("blocked", [("blocked", ConstructorParameterDescription(_data.blocked)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             case .blockedSlice(let _data):
-                return ("blockedSlice", [("count", _data.count as Any), ("blocked", _data.blocked as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("blockedSlice", [("count", ConstructorParameterDescription(_data.count)), ("blocked", ConstructorParameterDescription(_data.blocked)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1346,8 +1182,8 @@ public extension Api.contacts {
                 self.contacts = contacts
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("contactBirthdays", [("contacts", self.contacts as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("contactBirthdays", [("contacts", ConstructorParameterDescription(self.contacts)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case contactBirthdays(Cons_contactBirthdays)
@@ -1372,10 +1208,10 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .contactBirthdays(let _data):
-                return ("contactBirthdays", [("contacts", _data.contacts as Any), ("users", _data.users as Any)])
+                return ("contactBirthdays", [("contacts", ConstructorParameterDescription(_data.contacts)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1410,8 +1246,8 @@ public extension Api.contacts {
                 self.savedCount = savedCount
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("contacts", [("contacts", self.contacts as Any), ("savedCount", self.savedCount as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("contacts", [("contacts", ConstructorParameterDescription(self.contacts)), ("savedCount", ConstructorParameterDescription(self.savedCount)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case contacts(Cons_contacts)
@@ -1443,10 +1279,10 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .contacts(let _data):
-                return ("contacts", [("contacts", _data.contacts as Any), ("savedCount", _data.savedCount as Any), ("users", _data.users as Any)])
+                return ("contacts", [("contacts", ConstructorParameterDescription(_data.contacts)), ("savedCount", ConstructorParameterDescription(_data.savedCount)), ("users", ConstructorParameterDescription(_data.users))])
             case .contactsNotModified:
                 return ("contactsNotModified", [])
             }
@@ -1491,8 +1327,8 @@ public extension Api.contacts {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("found", [("myResults", self.myResults as Any), ("results", self.results as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("found", [("myResults", ConstructorParameterDescription(self.myResults)), ("results", ConstructorParameterDescription(self.results)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case found(Cons_found)
@@ -1527,10 +1363,10 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .found(let _data):
-                return ("found", [("myResults", _data.myResults as Any), ("results", _data.results as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("found", [("myResults", ConstructorParameterDescription(_data.myResults)), ("results", ConstructorParameterDescription(_data.results)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1577,8 +1413,8 @@ public extension Api.contacts {
                 self.retryContacts = retryContacts
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("importedContacts", [("imported", self.imported as Any), ("popularInvites", self.popularInvites as Any), ("retryContacts", self.retryContacts as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("importedContacts", [("imported", ConstructorParameterDescription(self.imported)), ("popularInvites", ConstructorParameterDescription(self.popularInvites)), ("retryContacts", ConstructorParameterDescription(self.retryContacts)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case importedContacts(Cons_importedContacts)
@@ -1613,10 +1449,10 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .importedContacts(let _data):
-                return ("importedContacts", [("imported", _data.imported as Any), ("popularInvites", _data.popularInvites as Any), ("retryContacts", _data.retryContacts as Any), ("users", _data.users as Any)])
+                return ("importedContacts", [("imported", ConstructorParameterDescription(_data.imported)), ("popularInvites", ConstructorParameterDescription(_data.popularInvites)), ("retryContacts", ConstructorParameterDescription(_data.retryContacts)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1661,8 +1497,8 @@ public extension Api.contacts {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("resolvedPeer", [("peer", self.peer as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("resolvedPeer", [("peer", ConstructorParameterDescription(self.peer)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case resolvedPeer(Cons_resolvedPeer)
@@ -1688,10 +1524,10 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .resolvedPeer(let _data):
-                return ("resolvedPeer", [("peer", _data.peer as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("resolvedPeer", [("peer", ConstructorParameterDescription(_data.peer)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             }
         }
 
@@ -1731,8 +1567,8 @@ public extension Api.contacts {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("sponsoredPeers", [("peers", self.peers as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("sponsoredPeers", [("peers", ConstructorParameterDescription(self.peers)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case sponsoredPeers(Cons_sponsoredPeers)
@@ -1768,10 +1604,10 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .sponsoredPeers(let _data):
-                return ("sponsoredPeers", [("peers", _data.peers as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("sponsoredPeers", [("peers", ConstructorParameterDescription(_data.peers)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             case .sponsoredPeersEmpty:
                 return ("sponsoredPeersEmpty", [])
             }
@@ -1816,8 +1652,8 @@ public extension Api.contacts {
                 self.chats = chats
                 self.users = users
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("topPeers", [("categories", self.categories as Any), ("chats", self.chats as Any), ("users", self.users as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("topPeers", [("categories", ConstructorParameterDescription(self.categories)), ("chats", ConstructorParameterDescription(self.chats)), ("users", ConstructorParameterDescription(self.users))])
             }
         }
         case topPeers(Cons_topPeers)
@@ -1859,10 +1695,10 @@ public extension Api.contacts {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .topPeers(let _data):
-                return ("topPeers", [("categories", _data.categories as Any), ("chats", _data.chats as Any), ("users", _data.users as Any)])
+                return ("topPeers", [("categories", ConstructorParameterDescription(_data.categories)), ("chats", ConstructorParameterDescription(_data.chats)), ("users", ConstructorParameterDescription(_data.users))])
             case .topPeersDisabled:
                 return ("topPeersDisabled", [])
             case .topPeersNotModified:
@@ -1898,6 +1734,80 @@ public extension Api.contacts {
         }
         public static func parse_topPeersNotModified(_ reader: BufferReader) -> TopPeers? {
             return Api.contacts.TopPeers.topPeersNotModified
+        }
+    }
+}
+public extension Api.fragment {
+    enum CollectibleInfo: TypeConstructorDescription {
+        public class Cons_collectibleInfo: TypeConstructorDescription {
+            public var purchaseDate: Int32
+            public var currency: String
+            public var amount: Int64
+            public var cryptoCurrency: String
+            public var cryptoAmount: Int64
+            public var url: String
+            public init(purchaseDate: Int32, currency: String, amount: Int64, cryptoCurrency: String, cryptoAmount: Int64, url: String) {
+                self.purchaseDate = purchaseDate
+                self.currency = currency
+                self.amount = amount
+                self.cryptoCurrency = cryptoCurrency
+                self.cryptoAmount = cryptoAmount
+                self.url = url
+            }
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("collectibleInfo", [("purchaseDate", ConstructorParameterDescription(self.purchaseDate)), ("currency", ConstructorParameterDescription(self.currency)), ("amount", ConstructorParameterDescription(self.amount)), ("cryptoCurrency", ConstructorParameterDescription(self.cryptoCurrency)), ("cryptoAmount", ConstructorParameterDescription(self.cryptoAmount)), ("url", ConstructorParameterDescription(self.url))])
+            }
+        }
+        case collectibleInfo(Cons_collectibleInfo)
+
+        public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+            switch self {
+            case .collectibleInfo(let _data):
+                if boxed {
+                    buffer.appendInt32(1857945489)
+                }
+                serializeInt32(_data.purchaseDate, buffer: buffer, boxed: false)
+                serializeString(_data.currency, buffer: buffer, boxed: false)
+                serializeInt64(_data.amount, buffer: buffer, boxed: false)
+                serializeString(_data.cryptoCurrency, buffer: buffer, boxed: false)
+                serializeInt64(_data.cryptoAmount, buffer: buffer, boxed: false)
+                serializeString(_data.url, buffer: buffer, boxed: false)
+                break
+            }
+        }
+
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+            switch self {
+            case .collectibleInfo(let _data):
+                return ("collectibleInfo", [("purchaseDate", ConstructorParameterDescription(_data.purchaseDate)), ("currency", ConstructorParameterDescription(_data.currency)), ("amount", ConstructorParameterDescription(_data.amount)), ("cryptoCurrency", ConstructorParameterDescription(_data.cryptoCurrency)), ("cryptoAmount", ConstructorParameterDescription(_data.cryptoAmount)), ("url", ConstructorParameterDescription(_data.url))])
+            }
+        }
+
+        public static func parse_collectibleInfo(_ reader: BufferReader) -> CollectibleInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: String?
+            _6 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.fragment.CollectibleInfo.collectibleInfo(Cons_collectibleInfo(purchaseDate: _1!, currency: _2!, amount: _3!, cryptoCurrency: _4!, cryptoAmount: _5!, url: _6!))
+            }
+            else {
+                return nil
+            }
         }
     }
 }

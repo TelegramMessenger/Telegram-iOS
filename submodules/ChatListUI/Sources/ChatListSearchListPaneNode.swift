@@ -1191,6 +1191,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         presence: nil,
                         hasUnseenMentions: false,
                         hasUnseenReactions: false,
+                        hasUnseenPollVotes: false,
                         draftState: nil,
                         mediaDraftContentType: nil,
                         inputActivities: nil,
@@ -3580,8 +3581,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             interaction.messageContextAction(EngineMessage(message), node, rect, gesture, key, fetchResourceId)
-        }, toggleMediaPlayback: { _ in
-        }, toggleMessagesSelection: { messageId, selected in
+        }, toggleMediaPlayback: nil, toggleMessagesSelection: { messageId, selected in
             if let messageId = messageId.first {
                 interaction.toggleMessageSelection(messageId, selected)
             }
@@ -5839,6 +5839,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
                             presence: nil,
                             hasUnseenMentions: false,
                             hasUnseenReactions: false,
+                            hasUnseenPollVotes: false,
                             draftState: nil,
                             mediaDraftContentType: nil,
                             inputActivities: nil,

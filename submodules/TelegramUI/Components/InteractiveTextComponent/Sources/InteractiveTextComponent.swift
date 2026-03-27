@@ -56,12 +56,21 @@ private let expandableBlockMaskImage: UIImage = {
 }()
 
 private final class InteractiveTextNodeStrikethrough {
+    enum Style {
+        case single
+        case wavy
+    }
+
     let range: NSRange
     let frame: CGRect
-    
-    init(range: NSRange, frame: CGRect) {
+    let color: UIColor?
+    let style: Style
+
+    init(range: NSRange, frame: CGRect, color: UIColor? = nil, style: Style = .single) {
         self.range = range
         self.frame = frame
+        self.color = color
+        self.style = style
     }
 }
 
@@ -1814,11 +1823,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                             let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
                             line.strikethroughs.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height)))
-                        } else if let _ = attributes[NSAttributedString.Key.underlineStyle] {
+                        } else if let underlineStyle = attributes[NSAttributedString.Key.underlineStyle] as? Int {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
                             let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            line.underlines.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height)))
+                            line.underlines.append(InteractiveTextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height), color: attributes[NSAttributedString.Key.underlineColor] as? UIColor, style: underlineStyle == NSUnderlineStyle.patternDot.rawValue ? .wavy : .single))
                         }
                         
                         if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
@@ -2518,11 +2527,46 @@ final class TextContentItemLayer: SimpleLayer {
                                         textColor = color
                                     }
                                 }
-                                if let textColor = textColor {
-                                    context.setFillColor(textColor.cgColor)
+                                switch strikethrough.style {
+                                case .single:
+                                    if let color = strikethrough.color {
+                                        context.setFillColor(color.cgColor)
+                                    } else if let textColor {
+                                        context.setFillColor(textColor.cgColor)
+                                    }
+                                    let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                                    context.fill(CGRect(x: frame.minX, y: frame.maxY - 2.0, width: frame.width, height: 1.0))
+                                case .wavy:
+                                    if let color = strikethrough.color {
+                                        context.setStrokeColor(color.cgColor)
+                                    } else if let textColor {
+                                        context.setStrokeColor(textColor.cgColor)
+                                    }
+                                    context.setLineWidth(1.33)
+                                    context.setLineCap(.round)
+                                    context.setLineJoin(.round)
+                                    let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.maxY + 12.0)
+
+                                    let amplitude: CGFloat = 1.2
+                                    let period: CGFloat = 8.0
+                                    let phase: CGFloat = -0.5
+                                    let midY = frame.midY
+                                    let step: CGFloat = 1.0
+
+                                    context.saveGState()
+                                    context.clip(to: frame)
+
+                                    var x = frame.minX
+                                    context.move(to: CGPoint(x: x, y: midY + amplitude * sin(phase)))
+                                    x += step
+                                    while x <= frame.maxX + step {
+                                        let y = midY + amplitude * sin((x - frame.minX) * 2.0 * .pi / period + phase)
+                                        context.addLine(to: CGPoint(x: x, y: y))
+                                        x += step
+                                    }
+                                    context.strokePath()
+                                    context.restoreGState()
                                 }
-                                let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
-                                context.fill(CGRect(x: frame.minX, y: frame.maxY - 2.0, width: frame.width, height: 1.0))
                             }
                         }
                     }

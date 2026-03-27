@@ -20,7 +20,7 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
     
     public var modeUpdated: ((TGMediaLivePhotoMode) -> Void)?
     
-    var context: AccountContext?
+    let context: AccountContext
     var present: ((ViewController, Any?) -> Void)?
     
     var view: UIView {
@@ -31,10 +31,12 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
         return self.bounds.insetBy(dx: -16.0, dy: -16.0).contains(point)
     }
         
-    override init(frame: CGRect) {
+    init(context: AccountContext) {
+        self.context = context
+        
         self.backgroundView = GlassContextExtractableContainer()
         
-        super.init(frame: frame)
+        super.init(frame: .zero)
         
         self.addSubview(self.backgroundView)
         self.backgroundView.contentView.addSubview(self.button)
@@ -49,29 +51,25 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
     }
 
     @objc private func buttonPressed() {
-        guard let context = self.context else {
-            return
-        }
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
         
         var items: [ContextMenuItem] = []
-        items.append(.action(ContextMenuActionItem(text: "Live", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveOn"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_LivePhoto_Live, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveOn"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
             self?.modeUpdated?(.live)
             
             f(.default)
         })))
-        items.append(.action(ContextMenuActionItem(text: "Loop", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveLoop"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_LivePhoto_Loop, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveLoop"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
             self?.modeUpdated?(.loop)
             
             f(.default)
         })))
-        items.append(.action(ContextMenuActionItem(text: "Bounce", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveBounce"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_LivePhoto_Bounce, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveBounce"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
             self?.modeUpdated?(.bounce)
             
             f(.default)
         })))
-        items.append(.action(ContextMenuActionItem(text: "Live Off", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveOff"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_LivePhoto_LiveOff, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveOff"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
             self?.modeUpdated?(.off)
             
             f(.default)
@@ -97,20 +95,22 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
     }
     
     func update() {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
         let iconName: String
         let labelText: String
         switch self.mode {
         case .live:
-            labelText = "Live"
+            labelText = presentationData.strings.MediaPicker_LivePhoto_Live
             iconName = "Media Editor/LiveOn"
         case .loop:
-            labelText = "Loop"
+            labelText = presentationData.strings.MediaPicker_LivePhoto_Loop
             iconName = "Media Editor/LiveLoop"
         case .bounce:
-            labelText = "Bounce"
+            labelText = presentationData.strings.MediaPicker_LivePhoto_Bounce
             iconName = "Media Editor/LiveBounce"
         default:
-            labelText = "Live Off"
+            labelText = presentationData.strings.MediaPicker_LivePhoto_LiveOff
             iconName = "Media Editor/LiveOff"
         }
         

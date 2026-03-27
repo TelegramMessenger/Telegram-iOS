@@ -58,7 +58,7 @@ extension TelegramMediaPollResults {
     init(apiResults: Api.PollResults) {
         switch apiResults {
             case let .pollResults(pollResultsData):
-                let (results, totalVoters, recentVoters, solution, solutionEntities) = (pollResultsData.results, pollResultsData.totalVoters, pollResultsData.recentVoters, pollResultsData.solution, pollResultsData.solutionEntities)
+                let (flags, results, totalVoters, recentVoters, solution, solutionEntities) = (pollResultsData.flags, pollResultsData.results, pollResultsData.totalVoters, pollResultsData.recentVoters, pollResultsData.solution, pollResultsData.solutionEntities)
                 var parsedSolution: TelegramMediaPollResults.Solution?
                 if let solution = solution, let solutionEntities = solutionEntities, !solution.isEmpty {
                     var solutionMedia: Media?
@@ -67,10 +67,14 @@ extension TelegramMediaPollResults {
                     }
                     parsedSolution = TelegramMediaPollResults.Solution(text: solution, entities: messageTextEntitiesFromApiEntities(solutionEntities), media: solutionMedia)
                 }
+                var hasUnseenVotes: Bool?
+                if (flags & (1 << 0)) == 0 {//isMin
+                    hasUnseenVotes = (flags & (1 << 6)) != 0
+                }
 
                 self.init(voters: results.flatMap({ $0.map(TelegramMediaPollOptionVoters.init(apiVoters:)) }), totalVoters: totalVoters, recentVoters: recentVoters.flatMap { recentVoters in
                     return recentVoters.map { $0.peerId }
-                    } ?? [], solution: parsedSolution)
+                    } ?? [], solution: parsedSolution, hasUnseenVotes: hasUnseenVotes)
         }
     }
 }

@@ -186,12 +186,16 @@ public enum MessageActionUrlAuthResult {
         public let platform: String
         public let ip: String
         public let region: String
+        public let isApp: Bool
+        public let appName: String?
         
-        public init(browser: String, platform: String, ip: String, region: String) {
+        public init(browser: String, platform: String, ip: String, region: String, isApp: Bool, appName: String?) {
             self.browser = browser
             self.platform = platform
             self.ip = ip
             self.region = region
+            self.isApp = isApp
+            self.appName = appName
         }
     }
     
@@ -254,7 +258,14 @@ func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageAct
             let (apiFlags, bot, domain) = (urlAuthResultRequestData.flags, urlAuthResultRequestData.bot, urlAuthResultRequestData.domain)
             var clientData: MessageActionUrlAuthResult.ClientData?
             if let browser = urlAuthResultRequestData.browser, let platform = urlAuthResultRequestData.platform, let ip = urlAuthResultRequestData.ip, let region = urlAuthResultRequestData.region {
-                clientData = MessageActionUrlAuthResult.ClientData(browser: browser, platform: platform, ip: ip, region: region)
+                clientData = MessageActionUrlAuthResult.ClientData(
+                    browser: browser,
+                    platform: platform,
+                    ip: ip,
+                    region: region,
+                    isApp: (apiFlags & (1 << 6)) != 0,
+                    appName: urlAuthResultRequestData.verifiedAppName
+                )
             }
             var flags: MessageActionUrlAuthResult.Flags = []
             if (apiFlags & (1 << 0)) != 0 {
@@ -263,7 +274,6 @@ func _internal_requestMessageActionUrlAuth(account: Account, subject: MessageAct
             if (apiFlags & (1 << 1)) != 0 {
                 flags.insert(.requestPhoneNumber)
             }
-        
             if (apiFlags & (1 << 5)) != 0 {
                 flags.insert(.showMatchCodesFirst)
             }

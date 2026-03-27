@@ -3028,7 +3028,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     playlistLocation: playlistLocation,
                     parentNavigationController: self.controller?.navigationController as? NavigationController
                 )
-                self.controller?.present(musicController, in: .window(.root))
+                musicController.navigationPresentation = .flatModal
+                self.controller?.push(musicController)
             }
         })
     }

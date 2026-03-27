@@ -178,6 +178,7 @@ struct StoreMessageHistoryThreadData {
     var topMessageId: Int32
     var unreadMentionCount: Int32
     var unreadReactionCount: Int32
+    var unreadPollVoteCount: Int32
 }
 
 struct PeerThreadCombinedState: Equatable, Codable {
@@ -567,6 +568,7 @@ struct LoadMessageHistoryThreadsResult {
         var topMessage: Int32
         var unreadMentionsCount: Int32
         var unreadReactionsCount: Int32
+        var unreadPollVoteCount: Int32
         var index: StoredPeerThreadCombinedState.Index?
         var threadPeer: Peer?
         
@@ -576,6 +578,7 @@ struct LoadMessageHistoryThreadsResult {
             topMessage: Int32,
             unreadMentionsCount: Int32,
             unreadReactionsCount: Int32,
+            unreadPollVoteCount: Int32,
             index: StoredPeerThreadCombinedState.Index,
             threadPeer: Peer?
         ) {
@@ -584,6 +587,7 @@ struct LoadMessageHistoryThreadsResult {
             self.topMessage = topMessage
             self.unreadMentionsCount = unreadMentionsCount
             self.unreadReactionsCount = unreadReactionsCount
+            self.unreadPollVoteCount = unreadPollVoteCount
             self.index = index
             self.threadPeer = threadPeer
         }
@@ -695,6 +699,7 @@ public func _internal_fillSavedMessageHistory(accountPeerId: PeerId, postbox: Po
                 topMessage: message.id.id,
                 unreadMentionsCount: 0,
                 unreadReactionsCount: 0,
+                unreadPollVoteCount: 0,
                 index: StoredPeerThreadCombinedState.Index(timestamp: message.timestamp, threadId: threadId, messageId: message.id.id),
                 threadPeer: nil
             ))
@@ -844,6 +849,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 topMessage: topMessage,
                                 unreadMentionsCount: 0,
                                 unreadReactionsCount: 0,
+                                unreadPollVoteCount: 0,
                                 index: topicIndex,
                                 threadPeer: threadPeer
                             ))
@@ -900,6 +906,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 topMessage: topMessage,
                                 unreadMentionsCount: 0,
                                 unreadReactionsCount: unreadReactionsCount,
+                                unreadPollVoteCount: 0,
                                 index: topicIndex,
                                 threadPeer: threadPeer
                             ))
@@ -1001,6 +1008,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 topMessage: topMessage,
                                 unreadMentionsCount: 0,
                                 unreadReactionsCount: 0,
+                                unreadPollVoteCount: 0,
                                 index: topicIndex,
                                 threadPeer: threadPeer
                             ))
@@ -1057,6 +1065,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                 topMessage: topMessage,
                                 unreadMentionsCount: 0,
                                 unreadReactionsCount: unreadReactionsCount,
+                                unreadPollVoteCount: 0,
                                 index: topicIndex,
                                 threadPeer: threadPeer
                             ))
@@ -1158,7 +1167,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                         for topic in topics {
                             switch topic {
                             case let .forumTopic(forumTopicData):
-                                let (flags, id, date, peer, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings, draft) = (forumTopicData.flags, forumTopicData.id, forumTopicData.date, forumTopicData.peer, forumTopicData.title, forumTopicData.iconColor, forumTopicData.iconEmojiId, forumTopicData.topMessage, forumTopicData.readInboxMaxId, forumTopicData.readOutboxMaxId, forumTopicData.unreadCount, forumTopicData.unreadMentionsCount, forumTopicData.unreadReactionsCount, forumTopicData.fromId, forumTopicData.notifySettings, forumTopicData.draft)
+                                let (flags, id, date, peer, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, unreadPollVoteCount, fromId, notifySettings, draft) = (forumTopicData.flags, forumTopicData.id, forumTopicData.date, forumTopicData.peer, forumTopicData.title, forumTopicData.iconColor, forumTopicData.iconEmojiId, forumTopicData.topMessage, forumTopicData.readInboxMaxId, forumTopicData.readOutboxMaxId, forumTopicData.unreadCount, forumTopicData.unreadMentionsCount, forumTopicData.unreadReactionsCount, forumTopicData.unreadPollVotesCount, forumTopicData.fromId, forumTopicData.notifySettings, forumTopicData.draft)
                                 let _ = draft
                                 let _ = peer
                                 
@@ -1208,6 +1217,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                                     topMessage: topMessage,
                                     unreadMentionsCount: unreadMentionsCount,
                                     unreadReactionsCount: unreadReactionsCount,
+                                    unreadPollVoteCount: unreadPollVoteCount,
                                     index: topicIndex,
                                     threadPeer: nil
                                 ))
@@ -1274,6 +1284,7 @@ func applyLoadMessageHistoryThreadsResults(accountPeerId: PeerId, transaction: T
             
             transaction.replaceMessageTagSummary(peerId: result.peerId, threadId: item.threadId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: item.unreadMentionsCount, maxId: item.topMessage)
             transaction.replaceMessageTagSummary(peerId: result.peerId, threadId: item.threadId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: item.unreadReactionsCount, maxId: item.topMessage)
+            transaction.replaceMessageTagSummary(peerId: result.peerId, threadId: item.threadId, tagMask: .unseenPollVote, namespace: Namespaces.Message.Cloud, customTag: nil, count: item.unreadPollVoteCount, maxId: item.topMessage)
             
             if item.topMessage != 0 {
                 //transaction.removeHole(peerId: result.peerId, threadId: item.threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: item.topMessage ... (Int32.max - 1))
@@ -1428,6 +1439,7 @@ public func _internal_searchForumTopics(account: Account, peerId: EnginePeer.Id,
                     presence: nil,
                     hasUnseenMentions: false,
                     hasUnseenReactions: false,
+                    hasUnseenPollVotes: false,
                     forumTopicData: EngineChatList.ForumTopicData(
                         id: item.threadId,
                         title: itemData.info.title,

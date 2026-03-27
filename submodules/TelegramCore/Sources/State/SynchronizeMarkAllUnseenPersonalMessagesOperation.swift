@@ -46,3 +46,25 @@ func addSynchronizeMarkAllUnseenReactionsOperation(transaction: Transaction, pee
     
     transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeMarkAllUnseenReactionsOperation(threadId: threadId, maxId: maxId))
 }
+
+func addSynchronizeMarkAllUnseenPollVotesOperation(transaction: Transaction, peerId: PeerId, maxId: MessageId.Id, threadId: Int64?) {
+    let tag: PeerOperationLogTag = OperationLogTags.SynchronizeMarkAllUnseenPollVotes
+    var topLocalIndex: Int32?
+    var currentMaxId: MessageId.Id?
+    transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
+        topLocalIndex = entry.tagLocalIndex
+        if let operation = entry.contents as? SynchronizeMarkAllUnseenReactionsOperation, operation.threadId == threadId {
+            currentMaxId = operation.maxId
+        }
+        return false
+    })
+    
+    if let topLocalIndex = topLocalIndex {
+        if let currentMaxId = currentMaxId, currentMaxId >= maxId {
+            return
+        }
+        let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
+    }
+    
+    transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeMarkAllUnseenReactionsOperation(threadId: threadId, maxId: maxId))
+}

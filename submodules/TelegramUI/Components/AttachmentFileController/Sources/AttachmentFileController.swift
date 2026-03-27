@@ -311,7 +311,15 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
     }
 }
 
-private func attachmentFileControllerEntries(presentationData: PresentationData, mode: AttachmentFileControllerMode, state: AttachmentFileControllerState, savedMusic: [Message]?, recentDocuments: [Message]?, hasScan: Bool, empty: Bool) -> [AttachmentFileEntry] {
+private func attachmentFileControllerEntries(
+    presentationData: PresentationData,
+    mode: AttachmentFileControllerMode,
+    state: AttachmentFileControllerState,
+    savedMusic: [Message]?,
+    recentDocuments: [Message]?,
+    hasScan: Bool,
+    empty: Bool
+) -> [AttachmentFileEntry] {
     guard !empty else {
         return []
     }
@@ -332,7 +340,7 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
         listTitle = presentationData.strings.Attachment_SharedAudio
     }
 
-    if case .audio = mode {
+    if case let .audio(audioMode) = mode, audioMode != .savedMusic {
         if let savedMusic, savedMusic.count > 0 {
             entries.append(.savedHeader(presentationData.theme, presentationData.strings.MediaEditor_Audio_SavedMusic.uppercased()))
 
@@ -521,8 +529,14 @@ private func messageSelectionState(state: AttachmentFileControllerState, message
 }
 
 public enum AttachmentFileControllerMode {
+    public enum AudioMode {
+        case chat
+        case story
+        case savedMusic
+    }
+    
     case recent
-    case audio(story: Bool)
+    case audio(AudioMode)
     
     var isAudio: Bool {
         if case .audio = self {
@@ -548,10 +562,10 @@ public func makeAttachmentFileControllerImpl(
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     mode: AttachmentFileControllerMode = .recent,
     source: AttachmentFileControllerSource = .generic,
-    bannedSendMedia: (Int32, Bool)?,
-    presentGallery: @escaping () -> Void,
-    presentFiles: @escaping () -> Void,
-    presentDocumentScanner: (() -> Void)?,
+    bannedSendMedia: (Int32, Bool)? = nil,
+    presentGallery: @escaping () -> Void = {},
+    presentFiles: @escaping () -> Void = {},
+    presentDocumentScanner: (() -> Void)? = nil,
     send: @escaping ([AnyMediaReference], Bool, Int32?, NSAttributedString?) -> Void
 ) -> AttachmentFileController {
     let actionsDisposable = DisposableSet()
@@ -573,9 +587,11 @@ public func makeAttachmentFileControllerImpl(
     
     var isAudio = false
     var isAttach = true
-    if case let .audio(isStory) = mode {
+    if case let .audio(mode) = mode {
         isAudio = true
-        isAttach = !isStory
+        if case .story = mode {
+            isAttach = false
+        }
     }
     
     var didPreviewAudio = false
@@ -876,12 +892,11 @@ public func makeAttachmentFileControllerImpl(
         }
         
         if case let .poll(pollMode) = source {
-            //TODO:localize
             switch pollMode {
             case .description:
-                subtitle = "Add file to the poll description"
+                subtitle = presentationData.strings.Attachment_File_PollSubtitle_Description
             case .quizAnswer:
-                subtitle = "Add file to the quiz explanation"
+                subtitle = presentationData.strings.Attachment_File_PollSubtitle_Explanation
             }
         }
         
@@ -1032,6 +1047,11 @@ public func makeAttachmentFileControllerImpl(
             context.sharedContext.mediaManager.setPlaylist(nil, type: .music, control: .playback(.pause))
         }
     }
+
+    if case let .audio(audioMode) = mode, audioMode != .chat {
+        controller.hasBottomEdgeEffect = false
+    }
+    
     updateIsSearchingImpl = { [weak controller] isSearching in
         controller?.isSearching = isSearching
     }
@@ -1074,14 +1094,13 @@ public func storyAudioPickerController(
     let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, style: .glass, chatLocation: nil, buttons: [.audio], initialButton: .audio, fromMenu: false, hasTextInput: false)
     controller.requestController = { _, present in
-        let filePickerController = makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: .audio(story: true), bannedSendMedia: nil, presentGallery: {}, presentFiles: {
+        let filePickerController = makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, mode: .audio(.story), bannedSendMedia: nil, presentGallery: {}, presentFiles: {
             selectFromFiles()
             dismissImpl?()
         }, presentDocumentScanner: nil, send: { files, _, _, _ in
             completion(files.first!)
             dismissImpl?()
         }) as! AttachmentFileControllerImpl
-        filePickerController.hasBottomEdgeEffect = false
         present(filePickerController, filePickerController.mediaPickerContext)
         return true
     }

@@ -22,7 +22,7 @@ func localizedLanguageName(strings: PresentationStrings, language: String) -> St
         translateTitle = string
     } else {
         let languageLocale = Locale(identifier: language)
-        let toLanguage = languageLocale.localizedString(forLanguageCode: toLang) ?? ""
+        let toLanguage = languageLocale.localizedString(forLanguageCode: toLang)?.capitalized ?? ""
         return toLanguage
     }
     return translateTitle
@@ -77,7 +77,7 @@ final class TextProcessingTranslateContentComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let styles: [TelegramComposeAIMessageMode.Style]
+    let styles: [TextProcessingScreen.Style]
     let inputText: TextWithEntities
     let externalState: ExternalState
     let mode: Mode
@@ -90,7 +90,7 @@ final class TextProcessingTranslateContentComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        styles: [TelegramComposeAIMessageMode.Style],
+        styles: [TextProcessingScreen.Style],
         externalState: ExternalState,
         inputText: TextWithEntities,
         mode: Mode,
@@ -229,16 +229,6 @@ final class TextProcessingTranslateContentComponent: Component {
                 }
             }
         }
-        
-        @objc private func onTooltipTapGesture(_ recognizer: UITapGestureRecognizer) {
-            guard let component = self.component else {
-                return
-            }
-            if case .ended = recognizer.state {
-                component.externalState.displayStyleTooltip = false
-                self.state?.updated(transition: .easeInOut(duration: 0.2))
-            }
-        }
 
         func update(component: TextProcessingTranslateContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
@@ -320,6 +310,7 @@ final class TextProcessingTranslateContentComponent: Component {
                 let sourceTextSize = self.sourceText.update(
                     transition: transition,
                     component: AnyComponent(TextProcessingStyleSelectionComponent(
+                        context: component.context,
                         theme: component.theme,
                         strings: component.strings,
                         styles: component.styles,
@@ -488,8 +479,15 @@ final class TextProcessingTranslateContentComponent: Component {
                 } else {
                     tooltipTransition = tooltipTransition.withAnimation(.none)
                     tooltip = ComponentView()
-                    dimView = UIView()
-                    dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.onTooltipTapGesture(_:))))
+                    let dimViewValue = TransparentHitView()
+                    dimViewValue.onTap = { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.externalState.displayStyleTooltip = false
+                        self.state?.updated(transition: .easeInOut(duration: 0.2))
+                    }
+                    dimView = dimViewValue
                     self.styleTooltip = (dimView, tooltip)
                 }
                 let tooltipSize = tooltip.update(

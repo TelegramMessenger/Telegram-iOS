@@ -41,6 +41,7 @@ public enum PresentationResourceKey: Int32 {
     case itemListDisclosureArrow
     case disclosureOptionArrowsImage
     case itemListDisclosureLocked
+    case itemListDisclosureSwitchLock
     case itemListCheckIcon
     case itemListSecondaryCheckIcon
     case itemListDisabledCheckIcon
@@ -255,6 +256,7 @@ public enum PresentationResourceKey: Int32 {
     case chatHistoryNavigationUpButtonImage
     case chatHistoryMentionsButtonImage
     case chatHistoryReactionsButtonImage
+    case chatHistoryPollVotesButtonImage
     case chatHistoryNavigationButtonBadgeImage
     
     case chatMessageAttachedContentButtonIncoming
@@ -304,11 +306,7 @@ public enum PresentationResourceKey: Int32 {
     case genericSearchBar
     
     case inAppNotificationBackground
-    
-    case groupInfoAdminsIcon
-    case groupInfoPermissionsIcon
-    case groupInfoMembersIcon
-    
+        
     case emptyChatListCheckIcon
 
     case chatFreeCommentButtonIcon
@@ -397,6 +395,8 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatListBadgeBackgroundMention(CGFloat)
     case badgeBackgroundReactions(CGFloat)
     case badgeBackgroundInactiveReactions(CGFloat)
+    case badgeBackgroundPollVotes(CGFloat)
+    case badgeBackgroundInactivePollVotes(CGFloat)
     case chatListBadgeBackgroundInactiveMention(CGFloat)
     case chatListBadgeBackgroundPinned(CGFloat)
     case badgeBackgroundBorder(CGFloat)

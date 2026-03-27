@@ -66,7 +66,7 @@ public enum LegacyICloudFilePickerMode {
     }
 }
 
-public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, url: URL? = nil, documentTypes: [String] = ["public.item"], forceDarkTheme: Bool = false, dismissed: @escaping () -> Void = {}, completion: @escaping ([URL]) -> Void) -> ViewController {
+public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, hasMultiselection: Bool = false, url: URL? = nil, documentTypes: [String] = ["public.item"], forceDarkTheme: Bool = false, dismissed: @escaping () -> Void = {}, completion: @escaping ([URL]) -> Void) -> ViewController {
     var dismissImpl: (() -> Void)?
     let legacyController = LegacyICloudFileController(presentation: .modal(animateIn: true), theme: theme, completion: { urls in
         dismissImpl?()
@@ -89,7 +89,7 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
         dismissImpl?()
     }
     controller.delegate = legacyController
-    if #available(iOSApplicationExtension 11.0, iOS 11.0, *), case .default = mode {
+    if #available(iOSApplicationExtension 11.0, iOS 11.0, *), hasMultiselection {
         controller.allowsMultipleSelection = true
     }
     

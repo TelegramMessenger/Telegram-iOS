@@ -669,7 +669,19 @@ public struct PresentationResourcesChat {
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: UIColor.white), let cgImage = image.cgImage {
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigateToReactions"), color: UIColor.white), let cgImage = image.cgImage {
+                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })?.withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
+    public static func chatHistoryPollVotesButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatHistoryPollVotesButtonImage.rawValue, { theme in
+            return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigateToPollVotes"), color: UIColor.white), let cgImage = image.cgImage {
                     context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
                 }
             })?.withRenderingMode(.alwaysTemplate)
@@ -1012,25 +1024,7 @@ public struct PresentationResourcesChat {
             })
         })
     }
-    
-    public static func groupInfoAdminsIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.groupInfoAdminsIcon.rawValue, { _ in
-            return UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon")?.precomposed()
-        })
-    }
-    
-    public static func groupInfoPermissionsIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.groupInfoPermissionsIcon.rawValue, { _ in
-            return UIImage(bundleImageName: "Chat/Info/GroupPermissionsIcon")?.precomposed()
-        })
-    }
-    
-    public static func groupInfoMembersIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.groupInfoMembersIcon.rawValue, { _ in
-            return UIImage(bundleImageName: "Chat/Info/GroupMembersIcon")?.precomposed()
-        })
-    }
-    
+                
     public static func chatOutgoingFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
         return theme.image(PresentationResourceParameterKey.chatOutgoingFullCheck(size), { _ in
             return generateCheckImage(partial: false, color: theme.chat.message.outgoingCheckColor, width: size)

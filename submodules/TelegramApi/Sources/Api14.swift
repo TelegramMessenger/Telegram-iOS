@@ -7,8 +7,8 @@ public extension Api {
                 self.id = id
                 self.accessHash = accessHash
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputTheme", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputTheme", [("id", ConstructorParameterDescription(self.id)), ("accessHash", ConstructorParameterDescription(self.accessHash))])
             }
         }
         public class Cons_inputThemeSlug: TypeConstructorDescription {
@@ -16,8 +16,8 @@ public extension Api {
             public init(slug: String) {
                 self.slug = slug
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputThemeSlug", [("slug", self.slug as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputThemeSlug", [("slug", ConstructorParameterDescription(self.slug))])
             }
         }
         case inputTheme(Cons_inputTheme)
@@ -41,12 +41,12 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputTheme(let _data):
-                return ("inputTheme", [("id", _data.id as Any), ("accessHash", _data.accessHash as Any)])
+                return ("inputTheme", [("id", ConstructorParameterDescription(_data.id)), ("accessHash", ConstructorParameterDescription(_data.accessHash))])
             case .inputThemeSlug(let _data):
-                return ("inputThemeSlug", [("slug", _data.slug as Any)])
+                return ("inputThemeSlug", [("slug", ConstructorParameterDescription(_data.slug))])
             }
         }
 
@@ -96,8 +96,8 @@ public extension Api {
                 self.wallpaper = wallpaper
                 self.wallpaperSettings = wallpaperSettings
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputThemeSettings", [("flags", self.flags as Any), ("baseTheme", self.baseTheme as Any), ("accentColor", self.accentColor as Any), ("outboxAccentColor", self.outboxAccentColor as Any), ("messageColors", self.messageColors as Any), ("wallpaper", self.wallpaper as Any), ("wallpaperSettings", self.wallpaperSettings as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputThemeSettings", [("flags", ConstructorParameterDescription(self.flags)), ("baseTheme", ConstructorParameterDescription(self.baseTheme)), ("accentColor", ConstructorParameterDescription(self.accentColor)), ("outboxAccentColor", ConstructorParameterDescription(self.outboxAccentColor)), ("messageColors", ConstructorParameterDescription(self.messageColors)), ("wallpaper", ConstructorParameterDescription(self.wallpaper)), ("wallpaperSettings", ConstructorParameterDescription(self.wallpaperSettings))])
             }
         }
         case inputThemeSettings(Cons_inputThemeSettings)
@@ -131,10 +131,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputThemeSettings(let _data):
-                return ("inputThemeSettings", [("flags", _data.flags as Any), ("baseTheme", _data.baseTheme as Any), ("accentColor", _data.accentColor as Any), ("outboxAccentColor", _data.outboxAccentColor as Any), ("messageColors", _data.messageColors as Any), ("wallpaper", _data.wallpaper as Any), ("wallpaperSettings", _data.wallpaperSettings as Any)])
+                return ("inputThemeSettings", [("flags", ConstructorParameterDescription(_data.flags)), ("baseTheme", ConstructorParameterDescription(_data.baseTheme)), ("accentColor", ConstructorParameterDescription(_data.accentColor)), ("outboxAccentColor", ConstructorParameterDescription(_data.outboxAccentColor)), ("messageColors", ConstructorParameterDescription(_data.messageColors)), ("wallpaper", ConstructorParameterDescription(_data.wallpaper)), ("wallpaperSettings", ConstructorParameterDescription(_data.wallpaperSettings))])
             }
         }
 
@@ -194,8 +194,8 @@ public extension Api {
                 self.userId = userId
                 self.accessHash = accessHash
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputUser", [("userId", self.userId as Any), ("accessHash", self.accessHash as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputUser", [("userId", ConstructorParameterDescription(self.userId)), ("accessHash", ConstructorParameterDescription(self.accessHash))])
             }
         }
         public class Cons_inputUserFromMessage: TypeConstructorDescription {
@@ -207,8 +207,8 @@ public extension Api {
                 self.msgId = msgId
                 self.userId = userId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputUserFromMessage", [("peer", self.peer as Any), ("msgId", self.msgId as Any), ("userId", self.userId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputUserFromMessage", [("peer", ConstructorParameterDescription(self.peer)), ("msgId", ConstructorParameterDescription(self.msgId)), ("userId", ConstructorParameterDescription(self.userId))])
             }
         }
         case inputUser(Cons_inputUser)
@@ -246,14 +246,14 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputUser(let _data):
-                return ("inputUser", [("userId", _data.userId as Any), ("accessHash", _data.accessHash as Any)])
+                return ("inputUser", [("userId", ConstructorParameterDescription(_data.userId)), ("accessHash", ConstructorParameterDescription(_data.accessHash))])
             case .inputUserEmpty:
                 return ("inputUserEmpty", [])
             case .inputUserFromMessage(let _data):
-                return ("inputUserFromMessage", [("peer", _data.peer as Any), ("msgId", _data.msgId as Any), ("userId", _data.userId as Any)])
+                return ("inputUserFromMessage", [("peer", ConstructorParameterDescription(_data.peer)), ("msgId", ConstructorParameterDescription(_data.msgId)), ("userId", ConstructorParameterDescription(_data.userId))])
             case .inputUserSelf:
                 return ("inputUserSelf", [])
             }
@@ -309,8 +309,8 @@ public extension Api {
                 self.id = id
                 self.accessHash = accessHash
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputWallPaper", [("id", self.id as Any), ("accessHash", self.accessHash as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputWallPaper", [("id", ConstructorParameterDescription(self.id)), ("accessHash", ConstructorParameterDescription(self.accessHash))])
             }
         }
         public class Cons_inputWallPaperNoFile: TypeConstructorDescription {
@@ -318,8 +318,8 @@ public extension Api {
             public init(id: Int64) {
                 self.id = id
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputWallPaperNoFile", [("id", self.id as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputWallPaperNoFile", [("id", ConstructorParameterDescription(self.id))])
             }
         }
         public class Cons_inputWallPaperSlug: TypeConstructorDescription {
@@ -327,8 +327,8 @@ public extension Api {
             public init(slug: String) {
                 self.slug = slug
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputWallPaperSlug", [("slug", self.slug as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputWallPaperSlug", [("slug", ConstructorParameterDescription(self.slug))])
             }
         }
         case inputWallPaper(Cons_inputWallPaper)
@@ -359,14 +359,14 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputWallPaper(let _data):
-                return ("inputWallPaper", [("id", _data.id as Any), ("accessHash", _data.accessHash as Any)])
+                return ("inputWallPaper", [("id", ConstructorParameterDescription(_data.id)), ("accessHash", ConstructorParameterDescription(_data.accessHash))])
             case .inputWallPaperNoFile(let _data):
-                return ("inputWallPaperNoFile", [("id", _data.id as Any)])
+                return ("inputWallPaperNoFile", [("id", ConstructorParameterDescription(_data.id))])
             case .inputWallPaperSlug(let _data):
-                return ("inputWallPaperSlug", [("slug", _data.slug as Any)])
+                return ("inputWallPaperSlug", [("slug", ConstructorParameterDescription(_data.slug))])
             }
         }
 
@@ -421,8 +421,8 @@ public extension Api {
                 self.mimeType = mimeType
                 self.attributes = attributes
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputWebDocument", [("url", self.url as Any), ("size", self.size as Any), ("mimeType", self.mimeType as Any), ("attributes", self.attributes as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputWebDocument", [("url", ConstructorParameterDescription(self.url)), ("size", ConstructorParameterDescription(self.size)), ("mimeType", ConstructorParameterDescription(self.mimeType)), ("attributes", ConstructorParameterDescription(self.attributes))])
             }
         }
         case inputWebDocument(Cons_inputWebDocument)
@@ -445,10 +445,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputWebDocument(let _data):
-                return ("inputWebDocument", [("url", _data.url as Any), ("size", _data.size as Any), ("mimeType", _data.mimeType as Any), ("attributes", _data.attributes as Any)])
+                return ("inputWebDocument", [("url", ConstructorParameterDescription(_data.url)), ("size", ConstructorParameterDescription(_data.size)), ("mimeType", ConstructorParameterDescription(_data.mimeType)), ("attributes", ConstructorParameterDescription(_data.attributes))])
             }
         }
 
@@ -489,8 +489,8 @@ public extension Api {
                 self.title = title
                 self.performer = performer
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputWebFileAudioAlbumThumbLocation", [("flags", self.flags as Any), ("document", self.document as Any), ("title", self.title as Any), ("performer", self.performer as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputWebFileAudioAlbumThumbLocation", [("flags", ConstructorParameterDescription(self.flags)), ("document", ConstructorParameterDescription(self.document)), ("title", ConstructorParameterDescription(self.title)), ("performer", ConstructorParameterDescription(self.performer))])
             }
         }
         public class Cons_inputWebFileGeoPointLocation: TypeConstructorDescription {
@@ -508,8 +508,8 @@ public extension Api {
                 self.zoom = zoom
                 self.scale = scale
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputWebFileGeoPointLocation", [("geoPoint", self.geoPoint as Any), ("accessHash", self.accessHash as Any), ("w", self.w as Any), ("h", self.h as Any), ("zoom", self.zoom as Any), ("scale", self.scale as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputWebFileGeoPointLocation", [("geoPoint", ConstructorParameterDescription(self.geoPoint)), ("accessHash", ConstructorParameterDescription(self.accessHash)), ("w", ConstructorParameterDescription(self.w)), ("h", ConstructorParameterDescription(self.h)), ("zoom", ConstructorParameterDescription(self.zoom)), ("scale", ConstructorParameterDescription(self.scale))])
             }
         }
         public class Cons_inputWebFileLocation: TypeConstructorDescription {
@@ -519,8 +519,8 @@ public extension Api {
                 self.url = url
                 self.accessHash = accessHash
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputWebFileLocation", [("url", self.url as Any), ("accessHash", self.accessHash as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputWebFileLocation", [("url", ConstructorParameterDescription(self.url)), ("accessHash", ConstructorParameterDescription(self.accessHash))])
             }
         }
         case inputWebFileAudioAlbumThumbLocation(Cons_inputWebFileAudioAlbumThumbLocation)
@@ -565,14 +565,14 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputWebFileAudioAlbumThumbLocation(let _data):
-                return ("inputWebFileAudioAlbumThumbLocation", [("flags", _data.flags as Any), ("document", _data.document as Any), ("title", _data.title as Any), ("performer", _data.performer as Any)])
+                return ("inputWebFileAudioAlbumThumbLocation", [("flags", ConstructorParameterDescription(_data.flags)), ("document", ConstructorParameterDescription(_data.document)), ("title", ConstructorParameterDescription(_data.title)), ("performer", ConstructorParameterDescription(_data.performer))])
             case .inputWebFileGeoPointLocation(let _data):
-                return ("inputWebFileGeoPointLocation", [("geoPoint", _data.geoPoint as Any), ("accessHash", _data.accessHash as Any), ("w", _data.w as Any), ("h", _data.h as Any), ("zoom", _data.zoom as Any), ("scale", _data.scale as Any)])
+                return ("inputWebFileGeoPointLocation", [("geoPoint", ConstructorParameterDescription(_data.geoPoint)), ("accessHash", ConstructorParameterDescription(_data.accessHash)), ("w", ConstructorParameterDescription(_data.w)), ("h", ConstructorParameterDescription(_data.h)), ("zoom", ConstructorParameterDescription(_data.zoom)), ("scale", ConstructorParameterDescription(_data.scale))])
             case .inputWebFileLocation(let _data):
-                return ("inputWebFileLocation", [("url", _data.url as Any), ("accessHash", _data.accessHash as Any)])
+                return ("inputWebFileLocation", [("url", ConstructorParameterDescription(_data.url)), ("accessHash", ConstructorParameterDescription(_data.accessHash))])
             }
         }
 
@@ -667,8 +667,8 @@ public extension Api {
                 self.termsUrl = termsUrl
                 self.subscriptionPeriod = subscriptionPeriod
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("invoice", [("flags", self.flags as Any), ("currency", self.currency as Any), ("prices", self.prices as Any), ("maxTipAmount", self.maxTipAmount as Any), ("suggestedTipAmounts", self.suggestedTipAmounts as Any), ("termsUrl", self.termsUrl as Any), ("subscriptionPeriod", self.subscriptionPeriod as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("invoice", [("flags", ConstructorParameterDescription(self.flags)), ("currency", ConstructorParameterDescription(self.currency)), ("prices", ConstructorParameterDescription(self.prices)), ("maxTipAmount", ConstructorParameterDescription(self.maxTipAmount)), ("suggestedTipAmounts", ConstructorParameterDescription(self.suggestedTipAmounts)), ("termsUrl", ConstructorParameterDescription(self.termsUrl)), ("subscriptionPeriod", ConstructorParameterDescription(self.subscriptionPeriod))])
             }
         }
         case invoice(Cons_invoice)
@@ -706,10 +706,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .invoice(let _data):
-                return ("invoice", [("flags", _data.flags as Any), ("currency", _data.currency as Any), ("prices", _data.prices as Any), ("maxTipAmount", _data.maxTipAmount as Any), ("suggestedTipAmounts", _data.suggestedTipAmounts as Any), ("termsUrl", _data.termsUrl as Any), ("subscriptionPeriod", _data.subscriptionPeriod as Any)])
+                return ("invoice", [("flags", ConstructorParameterDescription(_data.flags)), ("currency", ConstructorParameterDescription(_data.currency)), ("prices", ConstructorParameterDescription(_data.prices)), ("maxTipAmount", ConstructorParameterDescription(_data.maxTipAmount)), ("suggestedTipAmounts", ConstructorParameterDescription(_data.suggestedTipAmounts)), ("termsUrl", ConstructorParameterDescription(_data.termsUrl)), ("subscriptionPeriod", ConstructorParameterDescription(_data.subscriptionPeriod))])
             }
         }
 
@@ -765,8 +765,8 @@ public extension Api {
                 self.key = key
                 self.value = value
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("jsonObjectValue", [("key", self.key as Any), ("value", self.value as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("jsonObjectValue", [("key", ConstructorParameterDescription(self.key)), ("value", ConstructorParameterDescription(self.value))])
             }
         }
         case jsonObjectValue(Cons_jsonObjectValue)
@@ -783,10 +783,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .jsonObjectValue(let _data):
-                return ("jsonObjectValue", [("key", _data.key as Any), ("value", _data.value as Any)])
+                return ("jsonObjectValue", [("key", ConstructorParameterDescription(_data.key)), ("value", ConstructorParameterDescription(_data.value))])
             }
         }
 
@@ -815,8 +815,8 @@ public extension Api {
             public init(value: [Api.JSONValue]) {
                 self.value = value
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("jsonArray", [("value", self.value as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("jsonArray", [("value", ConstructorParameterDescription(self.value))])
             }
         }
         public class Cons_jsonBool: TypeConstructorDescription {
@@ -824,8 +824,8 @@ public extension Api {
             public init(value: Api.Bool) {
                 self.value = value
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("jsonBool", [("value", self.value as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("jsonBool", [("value", ConstructorParameterDescription(self.value))])
             }
         }
         public class Cons_jsonNumber: TypeConstructorDescription {
@@ -833,8 +833,8 @@ public extension Api {
             public init(value: Double) {
                 self.value = value
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("jsonNumber", [("value", self.value as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("jsonNumber", [("value", ConstructorParameterDescription(self.value))])
             }
         }
         public class Cons_jsonObject: TypeConstructorDescription {
@@ -842,8 +842,8 @@ public extension Api {
             public init(value: [Api.JSONObjectValue]) {
                 self.value = value
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("jsonObject", [("value", self.value as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("jsonObject", [("value", ConstructorParameterDescription(self.value))])
             }
         }
         public class Cons_jsonString: TypeConstructorDescription {
@@ -851,8 +851,8 @@ public extension Api {
             public init(value: String) {
                 self.value = value
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("jsonString", [("value", self.value as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("jsonString", [("value", ConstructorParameterDescription(self.value))])
             }
         }
         case jsonArray(Cons_jsonArray)
@@ -910,20 +910,20 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .jsonArray(let _data):
-                return ("jsonArray", [("value", _data.value as Any)])
+                return ("jsonArray", [("value", ConstructorParameterDescription(_data.value))])
             case .jsonBool(let _data):
-                return ("jsonBool", [("value", _data.value as Any)])
+                return ("jsonBool", [("value", ConstructorParameterDescription(_data.value))])
             case .jsonNull:
                 return ("jsonNull", [])
             case .jsonNumber(let _data):
-                return ("jsonNumber", [("value", _data.value as Any)])
+                return ("jsonNumber", [("value", ConstructorParameterDescription(_data.value))])
             case .jsonObject(let _data):
-                return ("jsonObject", [("value", _data.value as Any)])
+                return ("jsonObject", [("value", ConstructorParameterDescription(_data.value))])
             case .jsonString(let _data):
-                return ("jsonString", [("value", _data.value as Any)])
+                return ("jsonString", [("value", ConstructorParameterDescription(_data.value))])
             }
         }
 
@@ -1010,8 +1010,8 @@ public extension Api {
                 self.peerType = peerType
                 self.maxQuantity = maxQuantity
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputKeyboardButtonRequestPeer", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("buttonId", self.buttonId as Any), ("peerType", self.peerType as Any), ("maxQuantity", self.maxQuantity as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputKeyboardButtonRequestPeer", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("buttonId", ConstructorParameterDescription(self.buttonId)), ("peerType", ConstructorParameterDescription(self.peerType)), ("maxQuantity", ConstructorParameterDescription(self.maxQuantity))])
             }
         }
         public class Cons_inputKeyboardButtonUrlAuth: TypeConstructorDescription {
@@ -1029,8 +1029,8 @@ public extension Api {
                 self.url = url
                 self.bot = bot
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputKeyboardButtonUrlAuth", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("fwdText", self.fwdText as Any), ("url", self.url as Any), ("bot", self.bot as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputKeyboardButtonUrlAuth", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("fwdText", ConstructorParameterDescription(self.fwdText)), ("url", ConstructorParameterDescription(self.url)), ("bot", ConstructorParameterDescription(self.bot))])
             }
         }
         public class Cons_inputKeyboardButtonUserProfile: TypeConstructorDescription {
@@ -1044,8 +1044,8 @@ public extension Api {
                 self.text = text
                 self.userId = userId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("inputKeyboardButtonUserProfile", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("userId", self.userId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("inputKeyboardButtonUserProfile", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("userId", ConstructorParameterDescription(self.userId))])
             }
         }
         public class Cons_keyboardButton: TypeConstructorDescription {
@@ -1057,8 +1057,8 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButton", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButton", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_keyboardButtonBuy: TypeConstructorDescription {
@@ -1070,8 +1070,8 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonBuy", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonBuy", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_keyboardButtonCallback: TypeConstructorDescription {
@@ -1085,8 +1085,8 @@ public extension Api {
                 self.text = text
                 self.data = data
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonCallback", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("data", self.data as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonCallback", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("data", ConstructorParameterDescription(self.data))])
             }
         }
         public class Cons_keyboardButtonCopy: TypeConstructorDescription {
@@ -1100,8 +1100,8 @@ public extension Api {
                 self.text = text
                 self.copyText = copyText
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonCopy", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("copyText", self.copyText as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonCopy", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("copyText", ConstructorParameterDescription(self.copyText))])
             }
         }
         public class Cons_keyboardButtonGame: TypeConstructorDescription {
@@ -1113,8 +1113,8 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonGame", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonGame", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_keyboardButtonRequestGeoLocation: TypeConstructorDescription {
@@ -1126,8 +1126,8 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonRequestGeoLocation", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonRequestGeoLocation", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_keyboardButtonRequestPeer: TypeConstructorDescription {
@@ -1145,8 +1145,8 @@ public extension Api {
                 self.peerType = peerType
                 self.maxQuantity = maxQuantity
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonRequestPeer", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("buttonId", self.buttonId as Any), ("peerType", self.peerType as Any), ("maxQuantity", self.maxQuantity as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonRequestPeer", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("buttonId", ConstructorParameterDescription(self.buttonId)), ("peerType", ConstructorParameterDescription(self.peerType)), ("maxQuantity", ConstructorParameterDescription(self.maxQuantity))])
             }
         }
         public class Cons_keyboardButtonRequestPhone: TypeConstructorDescription {
@@ -1158,8 +1158,8 @@ public extension Api {
                 self.style = style
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonRequestPhone", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonRequestPhone", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_keyboardButtonRequestPoll: TypeConstructorDescription {
@@ -1173,8 +1173,8 @@ public extension Api {
                 self.quiz = quiz
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonRequestPoll", [("flags", self.flags as Any), ("style", self.style as Any), ("quiz", self.quiz as Any), ("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonRequestPoll", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("quiz", ConstructorParameterDescription(self.quiz)), ("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_keyboardButtonSimpleWebView: TypeConstructorDescription {
@@ -1188,8 +1188,8 @@ public extension Api {
                 self.text = text
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonSimpleWebView", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonSimpleWebView", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("url", ConstructorParameterDescription(self.url))])
             }
         }
         public class Cons_keyboardButtonSwitchInline: TypeConstructorDescription {
@@ -1205,8 +1205,8 @@ public extension Api {
                 self.query = query
                 self.peerTypes = peerTypes
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonSwitchInline", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("query", self.query as Any), ("peerTypes", self.peerTypes as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonSwitchInline", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("query", ConstructorParameterDescription(self.query)), ("peerTypes", ConstructorParameterDescription(self.peerTypes))])
             }
         }
         public class Cons_keyboardButtonUrl: TypeConstructorDescription {
@@ -1220,8 +1220,8 @@ public extension Api {
                 self.text = text
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonUrl", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonUrl", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("url", ConstructorParameterDescription(self.url))])
             }
         }
         public class Cons_keyboardButtonUrlAuth: TypeConstructorDescription {
@@ -1239,8 +1239,8 @@ public extension Api {
                 self.url = url
                 self.buttonId = buttonId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonUrlAuth", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("fwdText", self.fwdText as Any), ("url", self.url as Any), ("buttonId", self.buttonId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonUrlAuth", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("fwdText", ConstructorParameterDescription(self.fwdText)), ("url", ConstructorParameterDescription(self.url)), ("buttonId", ConstructorParameterDescription(self.buttonId))])
             }
         }
         public class Cons_keyboardButtonUserProfile: TypeConstructorDescription {
@@ -1254,8 +1254,8 @@ public extension Api {
                 self.text = text
                 self.userId = userId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonUserProfile", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("userId", self.userId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonUserProfile", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("userId", ConstructorParameterDescription(self.userId))])
             }
         }
         public class Cons_keyboardButtonWebView: TypeConstructorDescription {
@@ -1269,8 +1269,8 @@ public extension Api {
                 self.text = text
                 self.url = url
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("keyboardButtonWebView", [("flags", self.flags as Any), ("style", self.style as Any), ("text", self.text as Any), ("url", self.url as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("keyboardButtonWebView", [("flags", ConstructorParameterDescription(self.flags)), ("style", ConstructorParameterDescription(self.style)), ("text", ConstructorParameterDescription(self.text)), ("url", ConstructorParameterDescription(self.url))])
             }
         }
         case inputKeyboardButtonRequestPeer(Cons_inputKeyboardButtonRequestPeer)
@@ -1511,44 +1511,44 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .inputKeyboardButtonRequestPeer(let _data):
-                return ("inputKeyboardButtonRequestPeer", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("buttonId", _data.buttonId as Any), ("peerType", _data.peerType as Any), ("maxQuantity", _data.maxQuantity as Any)])
+                return ("inputKeyboardButtonRequestPeer", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("buttonId", ConstructorParameterDescription(_data.buttonId)), ("peerType", ConstructorParameterDescription(_data.peerType)), ("maxQuantity", ConstructorParameterDescription(_data.maxQuantity))])
             case .inputKeyboardButtonUrlAuth(let _data):
-                return ("inputKeyboardButtonUrlAuth", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("fwdText", _data.fwdText as Any), ("url", _data.url as Any), ("bot", _data.bot as Any)])
+                return ("inputKeyboardButtonUrlAuth", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("fwdText", ConstructorParameterDescription(_data.fwdText)), ("url", ConstructorParameterDescription(_data.url)), ("bot", ConstructorParameterDescription(_data.bot))])
             case .inputKeyboardButtonUserProfile(let _data):
-                return ("inputKeyboardButtonUserProfile", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("userId", _data.userId as Any)])
+                return ("inputKeyboardButtonUserProfile", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("userId", ConstructorParameterDescription(_data.userId))])
             case .keyboardButton(let _data):
-                return ("keyboardButton", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any)])
+                return ("keyboardButton", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text))])
             case .keyboardButtonBuy(let _data):
-                return ("keyboardButtonBuy", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any)])
+                return ("keyboardButtonBuy", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text))])
             case .keyboardButtonCallback(let _data):
-                return ("keyboardButtonCallback", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("data", _data.data as Any)])
+                return ("keyboardButtonCallback", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("data", ConstructorParameterDescription(_data.data))])
             case .keyboardButtonCopy(let _data):
-                return ("keyboardButtonCopy", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("copyText", _data.copyText as Any)])
+                return ("keyboardButtonCopy", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("copyText", ConstructorParameterDescription(_data.copyText))])
             case .keyboardButtonGame(let _data):
-                return ("keyboardButtonGame", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any)])
+                return ("keyboardButtonGame", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text))])
             case .keyboardButtonRequestGeoLocation(let _data):
-                return ("keyboardButtonRequestGeoLocation", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any)])
+                return ("keyboardButtonRequestGeoLocation", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text))])
             case .keyboardButtonRequestPeer(let _data):
-                return ("keyboardButtonRequestPeer", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("buttonId", _data.buttonId as Any), ("peerType", _data.peerType as Any), ("maxQuantity", _data.maxQuantity as Any)])
+                return ("keyboardButtonRequestPeer", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("buttonId", ConstructorParameterDescription(_data.buttonId)), ("peerType", ConstructorParameterDescription(_data.peerType)), ("maxQuantity", ConstructorParameterDescription(_data.maxQuantity))])
             case .keyboardButtonRequestPhone(let _data):
-                return ("keyboardButtonRequestPhone", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any)])
+                return ("keyboardButtonRequestPhone", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text))])
             case .keyboardButtonRequestPoll(let _data):
-                return ("keyboardButtonRequestPoll", [("flags", _data.flags as Any), ("style", _data.style as Any), ("quiz", _data.quiz as Any), ("text", _data.text as Any)])
+                return ("keyboardButtonRequestPoll", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("quiz", ConstructorParameterDescription(_data.quiz)), ("text", ConstructorParameterDescription(_data.text))])
             case .keyboardButtonSimpleWebView(let _data):
-                return ("keyboardButtonSimpleWebView", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("url", _data.url as Any)])
+                return ("keyboardButtonSimpleWebView", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("url", ConstructorParameterDescription(_data.url))])
             case .keyboardButtonSwitchInline(let _data):
-                return ("keyboardButtonSwitchInline", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("query", _data.query as Any), ("peerTypes", _data.peerTypes as Any)])
+                return ("keyboardButtonSwitchInline", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("query", ConstructorParameterDescription(_data.query)), ("peerTypes", ConstructorParameterDescription(_data.peerTypes))])
             case .keyboardButtonUrl(let _data):
-                return ("keyboardButtonUrl", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("url", _data.url as Any)])
+                return ("keyboardButtonUrl", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("url", ConstructorParameterDescription(_data.url))])
             case .keyboardButtonUrlAuth(let _data):
-                return ("keyboardButtonUrlAuth", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("fwdText", _data.fwdText as Any), ("url", _data.url as Any), ("buttonId", _data.buttonId as Any)])
+                return ("keyboardButtonUrlAuth", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("fwdText", ConstructorParameterDescription(_data.fwdText)), ("url", ConstructorParameterDescription(_data.url)), ("buttonId", ConstructorParameterDescription(_data.buttonId))])
             case .keyboardButtonUserProfile(let _data):
-                return ("keyboardButtonUserProfile", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("userId", _data.userId as Any)])
+                return ("keyboardButtonUserProfile", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("userId", ConstructorParameterDescription(_data.userId))])
             case .keyboardButtonWebView(let _data):
-                return ("keyboardButtonWebView", [("flags", _data.flags as Any), ("style", _data.style as Any), ("text", _data.text as Any), ("url", _data.url as Any)])
+                return ("keyboardButtonWebView", [("flags", ConstructorParameterDescription(_data.flags)), ("style", ConstructorParameterDescription(_data.style)), ("text", ConstructorParameterDescription(_data.text)), ("url", ConstructorParameterDescription(_data.url))])
             }
         }
 

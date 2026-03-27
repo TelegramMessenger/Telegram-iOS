@@ -9,8 +9,8 @@ public extension Api {
                 self.thisDc = thisDc
                 self.nearestDc = nearestDc
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("nearestDc", [("country", self.country as Any), ("thisDc", self.thisDc as Any), ("nearestDc", self.nearestDc as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("nearestDc", [("country", ConstructorParameterDescription(self.country)), ("thisDc", ConstructorParameterDescription(self.thisDc)), ("nearestDc", ConstructorParameterDescription(self.nearestDc))])
             }
         }
         case nearestDc(Cons_nearestDc)
@@ -28,10 +28,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .nearestDc(let _data):
-                return ("nearestDc", [("country", _data.country as Any), ("thisDc", _data.thisDc as Any), ("nearestDc", _data.nearestDc as Any)])
+                return ("nearestDc", [("country", ConstructorParameterDescription(_data.country)), ("thisDc", ConstructorParameterDescription(_data.thisDc)), ("nearestDc", ConstructorParameterDescription(_data.nearestDc))])
             }
         }
 
@@ -63,8 +63,8 @@ public extension Api {
                 self.title = title
                 self.data = data
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("notificationSoundLocal", [("title", self.title as Any), ("data", self.data as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("notificationSoundLocal", [("title", ConstructorParameterDescription(self.title)), ("data", ConstructorParameterDescription(self.data))])
             }
         }
         public class Cons_notificationSoundRingtone: TypeConstructorDescription {
@@ -72,8 +72,8 @@ public extension Api {
             public init(id: Int64) {
                 self.id = id
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("notificationSoundRingtone", [("id", self.id as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("notificationSoundRingtone", [("id", ConstructorParameterDescription(self.id))])
             }
         }
         case notificationSoundDefault
@@ -109,16 +109,16 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .notificationSoundDefault:
                 return ("notificationSoundDefault", [])
             case .notificationSoundLocal(let _data):
-                return ("notificationSoundLocal", [("title", _data.title as Any), ("data", _data.data as Any)])
+                return ("notificationSoundLocal", [("title", ConstructorParameterDescription(_data.title)), ("data", ConstructorParameterDescription(_data.data))])
             case .notificationSoundNone:
                 return ("notificationSoundNone", [])
             case .notificationSoundRingtone(let _data):
-                return ("notificationSoundRingtone", [("id", _data.id as Any)])
+                return ("notificationSoundRingtone", [("id", ConstructorParameterDescription(_data.id))])
             }
         }
 
@@ -164,8 +164,8 @@ public extension Api {
                 self.peer = peer
                 self.topMsgId = topMsgId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("notifyForumTopic", [("peer", self.peer as Any), ("topMsgId", self.topMsgId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("notifyForumTopic", [("peer", ConstructorParameterDescription(self.peer)), ("topMsgId", ConstructorParameterDescription(self.topMsgId))])
             }
         }
         public class Cons_notifyPeer: TypeConstructorDescription {
@@ -173,8 +173,8 @@ public extension Api {
             public init(peer: Api.Peer) {
                 self.peer = peer
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("notifyPeer", [("peer", self.peer as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("notifyPeer", [("peer", ConstructorParameterDescription(self.peer))])
             }
         }
         case notifyBroadcasts
@@ -216,16 +216,16 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .notifyBroadcasts:
                 return ("notifyBroadcasts", [])
             case .notifyChats:
                 return ("notifyChats", [])
             case .notifyForumTopic(let _data):
-                return ("notifyForumTopic", [("peer", _data.peer as Any), ("topMsgId", _data.topMsgId as Any)])
+                return ("notifyForumTopic", [("peer", ConstructorParameterDescription(_data.peer)), ("topMsgId", ConstructorParameterDescription(_data.topMsgId))])
             case .notifyPeer(let _data):
-                return ("notifyPeer", [("peer", _data.peer as Any)])
+                return ("notifyPeer", [("peer", ConstructorParameterDescription(_data.peer))])
             case .notifyUsers:
                 return ("notifyUsers", [])
             }
@@ -278,8 +278,8 @@ public extension Api {
             public init(date: Int32) {
                 self.date = date
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("outboxReadDate", [("date", self.date as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("outboxReadDate", [("date", ConstructorParameterDescription(self.date))])
             }
         }
         case outboxReadDate(Cons_outboxReadDate)
@@ -295,10 +295,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .outboxReadDate(let _data):
-                return ("outboxReadDate", [("date", _data.date as Any)])
+                return ("outboxReadDate", [("date", ConstructorParameterDescription(_data.date))])
             }
         }
 
@@ -332,8 +332,8 @@ public extension Api {
                 self.documents = documents
                 self.views = views
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("page", [("flags", self.flags as Any), ("url", self.url as Any), ("blocks", self.blocks as Any), ("photos", self.photos as Any), ("documents", self.documents as Any), ("views", self.views as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("page", [("flags", ConstructorParameterDescription(self.flags)), ("url", ConstructorParameterDescription(self.url)), ("blocks", ConstructorParameterDescription(self.blocks)), ("photos", ConstructorParameterDescription(self.photos)), ("documents", ConstructorParameterDescription(self.documents)), ("views", ConstructorParameterDescription(self.views))])
             }
         }
         case page(Cons_page)
@@ -368,10 +368,10 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .page(let _data):
-                return ("page", [("flags", _data.flags as Any), ("url", _data.url as Any), ("blocks", _data.blocks as Any), ("photos", _data.photos as Any), ("documents", _data.documents as Any), ("views", _data.views as Any)])
+                return ("page", [("flags", ConstructorParameterDescription(_data.flags)), ("url", ConstructorParameterDescription(_data.url)), ("blocks", ConstructorParameterDescription(_data.blocks)), ("photos", ConstructorParameterDescription(_data.photos)), ("documents", ConstructorParameterDescription(_data.documents)), ("views", ConstructorParameterDescription(_data.views))])
             }
         }
 
@@ -418,8 +418,8 @@ public extension Api {
             public init(name: String) {
                 self.name = name
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockAnchor", [("name", self.name as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockAnchor", [("name", ConstructorParameterDescription(self.name))])
             }
         }
         public class Cons_pageBlockAudio: TypeConstructorDescription {
@@ -429,8 +429,8 @@ public extension Api {
                 self.audioId = audioId
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockAudio", [("audioId", self.audioId as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockAudio", [("audioId", ConstructorParameterDescription(self.audioId)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockAuthorDate: TypeConstructorDescription {
@@ -440,8 +440,8 @@ public extension Api {
                 self.author = author
                 self.publishedDate = publishedDate
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockAuthorDate", [("author", self.author as Any), ("publishedDate", self.publishedDate as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockAuthorDate", [("author", ConstructorParameterDescription(self.author)), ("publishedDate", ConstructorParameterDescription(self.publishedDate))])
             }
         }
         public class Cons_pageBlockBlockquote: TypeConstructorDescription {
@@ -451,8 +451,8 @@ public extension Api {
                 self.text = text
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockBlockquote", [("text", self.text as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockBlockquote", [("text", ConstructorParameterDescription(self.text)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockChannel: TypeConstructorDescription {
@@ -460,8 +460,8 @@ public extension Api {
             public init(channel: Api.Chat) {
                 self.channel = channel
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockChannel", [("channel", self.channel as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockChannel", [("channel", ConstructorParameterDescription(self.channel))])
             }
         }
         public class Cons_pageBlockCollage: TypeConstructorDescription {
@@ -471,8 +471,8 @@ public extension Api {
                 self.items = items
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockCollage", [("items", self.items as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockCollage", [("items", ConstructorParameterDescription(self.items)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockCover: TypeConstructorDescription {
@@ -480,8 +480,8 @@ public extension Api {
             public init(cover: Api.PageBlock) {
                 self.cover = cover
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockCover", [("cover", self.cover as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockCover", [("cover", ConstructorParameterDescription(self.cover))])
             }
         }
         public class Cons_pageBlockDetails: TypeConstructorDescription {
@@ -493,8 +493,8 @@ public extension Api {
                 self.blocks = blocks
                 self.title = title
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockDetails", [("flags", self.flags as Any), ("blocks", self.blocks as Any), ("title", self.title as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockDetails", [("flags", ConstructorParameterDescription(self.flags)), ("blocks", ConstructorParameterDescription(self.blocks)), ("title", ConstructorParameterDescription(self.title))])
             }
         }
         public class Cons_pageBlockEmbed: TypeConstructorDescription {
@@ -514,8 +514,8 @@ public extension Api {
                 self.h = h
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockEmbed", [("flags", self.flags as Any), ("url", self.url as Any), ("html", self.html as Any), ("posterPhotoId", self.posterPhotoId as Any), ("w", self.w as Any), ("h", self.h as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockEmbed", [("flags", ConstructorParameterDescription(self.flags)), ("url", ConstructorParameterDescription(self.url)), ("html", ConstructorParameterDescription(self.html)), ("posterPhotoId", ConstructorParameterDescription(self.posterPhotoId)), ("w", ConstructorParameterDescription(self.w)), ("h", ConstructorParameterDescription(self.h)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockEmbedPost: TypeConstructorDescription {
@@ -535,8 +535,8 @@ public extension Api {
                 self.blocks = blocks
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockEmbedPost", [("url", self.url as Any), ("webpageId", self.webpageId as Any), ("authorPhotoId", self.authorPhotoId as Any), ("author", self.author as Any), ("date", self.date as Any), ("blocks", self.blocks as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockEmbedPost", [("url", ConstructorParameterDescription(self.url)), ("webpageId", ConstructorParameterDescription(self.webpageId)), ("authorPhotoId", ConstructorParameterDescription(self.authorPhotoId)), ("author", ConstructorParameterDescription(self.author)), ("date", ConstructorParameterDescription(self.date)), ("blocks", ConstructorParameterDescription(self.blocks)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockFooter: TypeConstructorDescription {
@@ -544,8 +544,8 @@ public extension Api {
             public init(text: Api.RichText) {
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockFooter", [("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockFooter", [("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_pageBlockHeader: TypeConstructorDescription {
@@ -553,8 +553,8 @@ public extension Api {
             public init(text: Api.RichText) {
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockHeader", [("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockHeader", [("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_pageBlockKicker: TypeConstructorDescription {
@@ -562,8 +562,8 @@ public extension Api {
             public init(text: Api.RichText) {
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockKicker", [("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockKicker", [("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_pageBlockList: TypeConstructorDescription {
@@ -571,8 +571,8 @@ public extension Api {
             public init(items: [Api.PageListItem]) {
                 self.items = items
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockList", [("items", self.items as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockList", [("items", ConstructorParameterDescription(self.items))])
             }
         }
         public class Cons_pageBlockMap: TypeConstructorDescription {
@@ -588,8 +588,8 @@ public extension Api {
                 self.h = h
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockMap", [("geo", self.geo as Any), ("zoom", self.zoom as Any), ("w", self.w as Any), ("h", self.h as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockMap", [("geo", ConstructorParameterDescription(self.geo)), ("zoom", ConstructorParameterDescription(self.zoom)), ("w", ConstructorParameterDescription(self.w)), ("h", ConstructorParameterDescription(self.h)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockOrderedList: TypeConstructorDescription {
@@ -597,8 +597,8 @@ public extension Api {
             public init(items: [Api.PageListOrderedItem]) {
                 self.items = items
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockOrderedList", [("items", self.items as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockOrderedList", [("items", ConstructorParameterDescription(self.items))])
             }
         }
         public class Cons_pageBlockParagraph: TypeConstructorDescription {
@@ -606,8 +606,8 @@ public extension Api {
             public init(text: Api.RichText) {
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockParagraph", [("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockParagraph", [("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_pageBlockPhoto: TypeConstructorDescription {
@@ -623,8 +623,8 @@ public extension Api {
                 self.url = url
                 self.webpageId = webpageId
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockPhoto", [("flags", self.flags as Any), ("photoId", self.photoId as Any), ("caption", self.caption as Any), ("url", self.url as Any), ("webpageId", self.webpageId as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockPhoto", [("flags", ConstructorParameterDescription(self.flags)), ("photoId", ConstructorParameterDescription(self.photoId)), ("caption", ConstructorParameterDescription(self.caption)), ("url", ConstructorParameterDescription(self.url)), ("webpageId", ConstructorParameterDescription(self.webpageId))])
             }
         }
         public class Cons_pageBlockPreformatted: TypeConstructorDescription {
@@ -634,8 +634,8 @@ public extension Api {
                 self.text = text
                 self.language = language
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockPreformatted", [("text", self.text as Any), ("language", self.language as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockPreformatted", [("text", ConstructorParameterDescription(self.text)), ("language", ConstructorParameterDescription(self.language))])
             }
         }
         public class Cons_pageBlockPullquote: TypeConstructorDescription {
@@ -645,8 +645,8 @@ public extension Api {
                 self.text = text
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockPullquote", [("text", self.text as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockPullquote", [("text", ConstructorParameterDescription(self.text)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockRelatedArticles: TypeConstructorDescription {
@@ -656,8 +656,8 @@ public extension Api {
                 self.title = title
                 self.articles = articles
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockRelatedArticles", [("title", self.title as Any), ("articles", self.articles as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockRelatedArticles", [("title", ConstructorParameterDescription(self.title)), ("articles", ConstructorParameterDescription(self.articles))])
             }
         }
         public class Cons_pageBlockSlideshow: TypeConstructorDescription {
@@ -667,8 +667,8 @@ public extension Api {
                 self.items = items
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockSlideshow", [("items", self.items as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockSlideshow", [("items", ConstructorParameterDescription(self.items)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         public class Cons_pageBlockSubheader: TypeConstructorDescription {
@@ -676,8 +676,8 @@ public extension Api {
             public init(text: Api.RichText) {
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockSubheader", [("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockSubheader", [("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_pageBlockSubtitle: TypeConstructorDescription {
@@ -685,8 +685,8 @@ public extension Api {
             public init(text: Api.RichText) {
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockSubtitle", [("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockSubtitle", [("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_pageBlockTable: TypeConstructorDescription {
@@ -698,8 +698,8 @@ public extension Api {
                 self.title = title
                 self.rows = rows
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockTable", [("flags", self.flags as Any), ("title", self.title as Any), ("rows", self.rows as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockTable", [("flags", ConstructorParameterDescription(self.flags)), ("title", ConstructorParameterDescription(self.title)), ("rows", ConstructorParameterDescription(self.rows))])
             }
         }
         public class Cons_pageBlockTitle: TypeConstructorDescription {
@@ -707,8 +707,8 @@ public extension Api {
             public init(text: Api.RichText) {
                 self.text = text
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockTitle", [("text", self.text as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockTitle", [("text", ConstructorParameterDescription(self.text))])
             }
         }
         public class Cons_pageBlockVideo: TypeConstructorDescription {
@@ -720,8 +720,8 @@ public extension Api {
                 self.videoId = videoId
                 self.caption = caption
             }
-            public func descriptionFields() -> (String, [(String, Any)]) {
-                return ("pageBlockVideo", [("flags", self.flags as Any), ("videoId", self.videoId as Any), ("caption", self.caption as Any)])
+            public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
+                return ("pageBlockVideo", [("flags", ConstructorParameterDescription(self.flags)), ("videoId", ConstructorParameterDescription(self.videoId)), ("caption", ConstructorParameterDescription(self.caption))])
             }
         }
         case pageBlockAnchor(Cons_pageBlockAnchor)
@@ -1011,66 +1011,66 @@ public extension Api {
             }
         }
 
-        public func descriptionFields() -> (String, [(String, Any)]) {
+        public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .pageBlockAnchor(let _data):
-                return ("pageBlockAnchor", [("name", _data.name as Any)])
+                return ("pageBlockAnchor", [("name", ConstructorParameterDescription(_data.name))])
             case .pageBlockAudio(let _data):
-                return ("pageBlockAudio", [("audioId", _data.audioId as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockAudio", [("audioId", ConstructorParameterDescription(_data.audioId)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockAuthorDate(let _data):
-                return ("pageBlockAuthorDate", [("author", _data.author as Any), ("publishedDate", _data.publishedDate as Any)])
+                return ("pageBlockAuthorDate", [("author", ConstructorParameterDescription(_data.author)), ("publishedDate", ConstructorParameterDescription(_data.publishedDate))])
             case .pageBlockBlockquote(let _data):
-                return ("pageBlockBlockquote", [("text", _data.text as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockBlockquote", [("text", ConstructorParameterDescription(_data.text)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockChannel(let _data):
-                return ("pageBlockChannel", [("channel", _data.channel as Any)])
+                return ("pageBlockChannel", [("channel", ConstructorParameterDescription(_data.channel))])
             case .pageBlockCollage(let _data):
-                return ("pageBlockCollage", [("items", _data.items as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockCollage", [("items", ConstructorParameterDescription(_data.items)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockCover(let _data):
-                return ("pageBlockCover", [("cover", _data.cover as Any)])
+                return ("pageBlockCover", [("cover", ConstructorParameterDescription(_data.cover))])
             case .pageBlockDetails(let _data):
-                return ("pageBlockDetails", [("flags", _data.flags as Any), ("blocks", _data.blocks as Any), ("title", _data.title as Any)])
+                return ("pageBlockDetails", [("flags", ConstructorParameterDescription(_data.flags)), ("blocks", ConstructorParameterDescription(_data.blocks)), ("title", ConstructorParameterDescription(_data.title))])
             case .pageBlockDivider:
                 return ("pageBlockDivider", [])
             case .pageBlockEmbed(let _data):
-                return ("pageBlockEmbed", [("flags", _data.flags as Any), ("url", _data.url as Any), ("html", _data.html as Any), ("posterPhotoId", _data.posterPhotoId as Any), ("w", _data.w as Any), ("h", _data.h as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockEmbed", [("flags", ConstructorParameterDescription(_data.flags)), ("url", ConstructorParameterDescription(_data.url)), ("html", ConstructorParameterDescription(_data.html)), ("posterPhotoId", ConstructorParameterDescription(_data.posterPhotoId)), ("w", ConstructorParameterDescription(_data.w)), ("h", ConstructorParameterDescription(_data.h)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockEmbedPost(let _data):
-                return ("pageBlockEmbedPost", [("url", _data.url as Any), ("webpageId", _data.webpageId as Any), ("authorPhotoId", _data.authorPhotoId as Any), ("author", _data.author as Any), ("date", _data.date as Any), ("blocks", _data.blocks as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockEmbedPost", [("url", ConstructorParameterDescription(_data.url)), ("webpageId", ConstructorParameterDescription(_data.webpageId)), ("authorPhotoId", ConstructorParameterDescription(_data.authorPhotoId)), ("author", ConstructorParameterDescription(_data.author)), ("date", ConstructorParameterDescription(_data.date)), ("blocks", ConstructorParameterDescription(_data.blocks)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockFooter(let _data):
-                return ("pageBlockFooter", [("text", _data.text as Any)])
+                return ("pageBlockFooter", [("text", ConstructorParameterDescription(_data.text))])
             case .pageBlockHeader(let _data):
-                return ("pageBlockHeader", [("text", _data.text as Any)])
+                return ("pageBlockHeader", [("text", ConstructorParameterDescription(_data.text))])
             case .pageBlockKicker(let _data):
-                return ("pageBlockKicker", [("text", _data.text as Any)])
+                return ("pageBlockKicker", [("text", ConstructorParameterDescription(_data.text))])
             case .pageBlockList(let _data):
-                return ("pageBlockList", [("items", _data.items as Any)])
+                return ("pageBlockList", [("items", ConstructorParameterDescription(_data.items))])
             case .pageBlockMap(let _data):
-                return ("pageBlockMap", [("geo", _data.geo as Any), ("zoom", _data.zoom as Any), ("w", _data.w as Any), ("h", _data.h as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockMap", [("geo", ConstructorParameterDescription(_data.geo)), ("zoom", ConstructorParameterDescription(_data.zoom)), ("w", ConstructorParameterDescription(_data.w)), ("h", ConstructorParameterDescription(_data.h)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockOrderedList(let _data):
-                return ("pageBlockOrderedList", [("items", _data.items as Any)])
+                return ("pageBlockOrderedList", [("items", ConstructorParameterDescription(_data.items))])
             case .pageBlockParagraph(let _data):
-                return ("pageBlockParagraph", [("text", _data.text as Any)])
+                return ("pageBlockParagraph", [("text", ConstructorParameterDescription(_data.text))])
             case .pageBlockPhoto(let _data):
-                return ("pageBlockPhoto", [("flags", _data.flags as Any), ("photoId", _data.photoId as Any), ("caption", _data.caption as Any), ("url", _data.url as Any), ("webpageId", _data.webpageId as Any)])
+                return ("pageBlockPhoto", [("flags", ConstructorParameterDescription(_data.flags)), ("photoId", ConstructorParameterDescription(_data.photoId)), ("caption", ConstructorParameterDescription(_data.caption)), ("url", ConstructorParameterDescription(_data.url)), ("webpageId", ConstructorParameterDescription(_data.webpageId))])
             case .pageBlockPreformatted(let _data):
-                return ("pageBlockPreformatted", [("text", _data.text as Any), ("language", _data.language as Any)])
+                return ("pageBlockPreformatted", [("text", ConstructorParameterDescription(_data.text)), ("language", ConstructorParameterDescription(_data.language))])
             case .pageBlockPullquote(let _data):
-                return ("pageBlockPullquote", [("text", _data.text as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockPullquote", [("text", ConstructorParameterDescription(_data.text)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockRelatedArticles(let _data):
-                return ("pageBlockRelatedArticles", [("title", _data.title as Any), ("articles", _data.articles as Any)])
+                return ("pageBlockRelatedArticles", [("title", ConstructorParameterDescription(_data.title)), ("articles", ConstructorParameterDescription(_data.articles))])
             case .pageBlockSlideshow(let _data):
-                return ("pageBlockSlideshow", [("items", _data.items as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockSlideshow", [("items", ConstructorParameterDescription(_data.items)), ("caption", ConstructorParameterDescription(_data.caption))])
             case .pageBlockSubheader(let _data):
-                return ("pageBlockSubheader", [("text", _data.text as Any)])
+                return ("pageBlockSubheader", [("text", ConstructorParameterDescription(_data.text))])
             case .pageBlockSubtitle(let _data):
-                return ("pageBlockSubtitle", [("text", _data.text as Any)])
+                return ("pageBlockSubtitle", [("text", ConstructorParameterDescription(_data.text))])
             case .pageBlockTable(let _data):
-                return ("pageBlockTable", [("flags", _data.flags as Any), ("title", _data.title as Any), ("rows", _data.rows as Any)])
+                return ("pageBlockTable", [("flags", ConstructorParameterDescription(_data.flags)), ("title", ConstructorParameterDescription(_data.title)), ("rows", ConstructorParameterDescription(_data.rows))])
             case .pageBlockTitle(let _data):
-                return ("pageBlockTitle", [("text", _data.text as Any)])
+                return ("pageBlockTitle", [("text", ConstructorParameterDescription(_data.text))])
             case .pageBlockUnsupported:
                 return ("pageBlockUnsupported", [])
             case .pageBlockVideo(let _data):
-                return ("pageBlockVideo", [("flags", _data.flags as Any), ("videoId", _data.videoId as Any), ("caption", _data.caption as Any)])
+                return ("pageBlockVideo", [("flags", ConstructorParameterDescription(_data.flags)), ("videoId", ConstructorParameterDescription(_data.videoId)), ("caption", ConstructorParameterDescription(_data.caption))])
             }
         }
 

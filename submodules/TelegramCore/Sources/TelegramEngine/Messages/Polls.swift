@@ -4,7 +4,7 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-private func cloudMediaToInputMedia(_ media: Media) -> Api.InputMedia? {
+func pollCloudMediaToInputMedia(_ media: Media) -> Api.InputMedia? {
     if let image = media as? TelegramMediaImage,
        let reference = image.reference,
        case let .cloud(id, accessHash, maybeFileReference) = reference {
@@ -127,7 +127,7 @@ func _internal_addPollOption(account: Account, messageId: MessageId, text: Strin
     |> castError(AddPollOptionError.self)
     |> mapToSignal { peer in
         if let inputPeer = apiInputPeer(peer) {
-            let inputMedia = mediaReference.flatMap { cloudMediaToInputMedia($0.media) }
+            let inputMedia = mediaReference.flatMap { pollCloudMediaToInputMedia($0.media) }
             let flags: Int32 = inputMedia != nil ? (1 << 0) : 0
             let apiAnswer: Api.PollAnswer = .inputPollAnswer(.init(flags: flags, text: .textWithEntities(.init(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary()))), media: inputMedia))
             return account.network.request(Api.functions.messages.addPollAnswer(peer: inputPeer, msgId: messageId.id, answer: apiAnswer))

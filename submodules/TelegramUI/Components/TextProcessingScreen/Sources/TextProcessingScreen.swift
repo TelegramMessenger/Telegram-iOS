@@ -40,7 +40,7 @@ final class TextProcessingContentComponent: Component {
     let externalState: ExternalState
     let context: AccountContext
     let mode: TextProcessingScreen.Mode
-    let styles: [TelegramComposeAIMessageMode.Style]
+    let styles: [TextProcessingScreen.Style]
     let inputText: TextWithEntities
     let initialEditState: TextProcessingScreen.EditState?
     let shouldDisplayStyleNotice: Bool
@@ -52,7 +52,7 @@ final class TextProcessingContentComponent: Component {
         externalState: ExternalState,
         context: AccountContext,
         mode: TextProcessingScreen.Mode,
-        styles: [TelegramComposeAIMessageMode.Style],
+        styles: [TextProcessingScreen.Style],
         inputText: TextWithEntities,
         initialEditState: TextProcessingScreen.EditState?,
         shouldDisplayStyleNotice: Bool,
@@ -553,7 +553,7 @@ private final class TextProcessingSheetComponent: Component {
     let context: AccountContext
     let mode: TextProcessingScreen.Mode
     let ignoredTranslationLanguages: [String]
-    let styles: [TelegramComposeAIMessageMode.Style]
+    let styles: [TextProcessingScreen.Style]
     let inputText: TextWithEntities
     let initialEditState: TextProcessingScreen.EditState?
     let shouldDisplayStyleNotice: Bool
@@ -564,7 +564,7 @@ private final class TextProcessingSheetComponent: Component {
         context: AccountContext,
         mode: TextProcessingScreen.Mode,
         ignoredTranslationLanguages: [String],
-        styles: [TelegramComposeAIMessageMode.Style],
+        styles: [TextProcessingScreen.Style],
         inputText: TextWithEntities,
         initialEditState: TextProcessingScreen.EditState?,
         shouldDisplayStyleNotice: Bool,
@@ -1031,11 +1031,13 @@ private final class TextProcessingSheetComponent: Component {
                 let menuSize = languageSelectionMenu.update(
                     transition: transition,
                     component: AnyComponent(TextProcessingLanguageSelectionComponent(
+                        context: component.context,
                         theme: theme,
                         strings: environmentValue.strings,
                         sourceView: languageSelectionMenuDataValue.sourceView,
                         topLanguages: [],
                         selectedLanguageCode: languageSelectionMenuDataValue.currentLanguage,
+                        ignoredTranslationLanguages: component.ignoredTranslationLanguages,
                         currentStyle: languageSelectionMenuDataValue.currentStyle,
                         displayStyles: languageSelectionMenuDataValue.displayStyle ? component.styles : nil,
                         completion: languageSelectionMenuDataValue.completion,
@@ -1087,10 +1089,29 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         }
     }
     
+    public struct Style: Equatable {
+        public let name: String
+        public let emoji: String
+        public let emojiFileId: Int64?
+        public let emojiFile: TelegramMediaFile?
+        
+        public var id: TelegramComposeAIMessageMode.StyleId {
+            return .style(self.name)
+        }
+        
+        public init(name: String, emoji: String, emojiFileId: Int64?, emojiFile: TelegramMediaFile?) {
+            self.name = name
+            self.emoji = emoji
+            self.emojiFileId = emojiFileId
+            self.emojiFile = emojiFile
+        }
+    }
+    
     private let context: AccountContext
 
     public init(
         context: AccountContext,
+        theme: PresentationTheme? = nil,
         mode: Mode,
         ignoredTranslationLanguages: [String],
         inputText: TextWithEntities,
@@ -1099,7 +1120,18 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
     ) async {
         self.context = context
         
-        let styles = await context.engine.messages.composeAIMessageStyles().get()
+        let rawStyles = await context.engine.messages.composeAIMessageStyles().get()
+        var styles: [Style] = []
+        let resolvedEmojiFiles: [Int64: TelegramMediaFile] = await context.engine.stickers.resolveInlineStickersLocal(fileIds: Array(Set(rawStyles.compactMap({ $0.emojiFileId })))).get()
+        for value in rawStyles {
+            styles.append(Style(
+                name: value.name,
+                emoji: value.emoji,
+                emojiFileId: value.emojiFileId,
+                emojiFile: value.emojiFileId.flatMap { resolvedEmojiFiles[$0] }
+            ))
+        }
+        
         let shouldDisplayStyleNotice = await ApplicationSpecificNotice.getAITextProcessingStyleSelection(accountManager: context.sharedContext.accountManager).get() < 3
         
         var initialEditState: EditState?
@@ -1124,7 +1156,7 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
-            theme: .default
+            theme: theme.flatMap({ .custom($0) }) ?? .default
         )
 
         self.statusBar.statusBarStyle = .Ignore

@@ -528,7 +528,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
                 component: AnyComponent(
                     BalancedTextComponent(
                         text: .plain(balanceTitleAttributedText),
-                        maximumNumberOfLines: 2
+                        maximumNumberOfLines: 3
                     )
                 ),
                 environment: {},

@@ -13,7 +13,16 @@ import LegacyMediaPickerUI
 import Photos
 import MediaAssetsContext
 
-private func galleryFetchResultItems(fetchResult: PHFetchResult<PHAsset>, index: Int, reversed: Bool, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, stickersContext: TGPhotoPaintStickersContext, immediateThumbnail: UIImage?) -> ([TGModernGalleryItem], TGModernGalleryItem?) {
+private func galleryFetchResultItems(
+    fetchResult: PHFetchResult<PHAsset>,
+    index: Int,
+    reversed: Bool,
+    selectionContext: TGMediaSelectionContext?,
+    editingContext: TGMediaEditingContext,
+    stickersContext: TGPhotoPaintStickersContext,
+    immediateThumbnail: UIImage?,
+    asFile: Bool
+) -> ([TGModernGalleryItem], TGModernGalleryItem?) {
     var focusItem: TGModernGalleryItem?
     var galleryItems: [TGModernGalleryItem] = []
     
@@ -24,6 +33,7 @@ private func galleryFetchResultItems(fetchResult: PHFetchResult<PHAsset>, index:
             galleryItem.selectionContext = selectionContext
             galleryItem.editingContext = editingContext
             galleryItem.stickersContext = stickersContext
+            galleryItem.asFile = asFile
             galleryItems.append(galleryItem)
             
             if i == index {
@@ -112,6 +122,7 @@ func presentLegacyMediaPickerGallery(
     immediateThumbnail: UIImage?,
     selectionContext: TGMediaSelectionContext?,
     editingContext: TGMediaEditingContext,
+    asFile: Bool,
     hasSilentPosting: Bool,
     hasSchedule: Bool,
     hasTimer: Bool,
@@ -151,9 +162,8 @@ func presentLegacyMediaPickerGallery(
         } else if peer == nil {
             return nil
         }
-        let livePhotoButton = LivePhotoButton()
+        let livePhotoButton = LivePhotoButton(context: context)
         livePhotoButton.present = present
-        livePhotoButton.context = context
         return livePhotoButton
     }
     paintStickersContext.editCover = { dimensions, completion in
@@ -166,10 +176,10 @@ func presentLegacyMediaPickerGallery(
     
     let (items, focusItem): ([TGModernGalleryItem], TGModernGalleryItem?)
     switch source {
-        case let .fetchResult(fetchResult, index, reversed):
-            (items, focusItem) = galleryFetchResultItems(fetchResult: fetchResult, index: index, reversed: reversed, selectionContext: selectionContext, editingContext: editingContext, stickersContext: paintStickersContext, immediateThumbnail: immediateThumbnail)
-        case let .selection(item):
-            (items, focusItem) = gallerySelectionItems(item: item, selectionContext: selectionContext, editingContext: editingContext, stickersContext: paintStickersContext, immediateThumbnail: immediateThumbnail)
+    case let .fetchResult(fetchResult, index, reversed):
+        (items, focusItem) = galleryFetchResultItems(fetchResult: fetchResult, index: index, reversed: reversed, selectionContext: selectionContext, editingContext: editingContext, stickersContext: paintStickersContext, immediateThumbnail: immediateThumbnail, asFile: asFile)
+    case let .selection(item):
+        (items, focusItem) = gallerySelectionItems(item: item, selectionContext: selectionContext, editingContext: editingContext, stickersContext: paintStickersContext, immediateThumbnail: immediateThumbnail)
     }
     
     let recipientName: String?
@@ -183,7 +193,23 @@ func presentLegacyMediaPickerGallery(
         }
     }
     
-    let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: true, allowCaptionEntities: true, hasTimer: hasTimer, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: true, hasCamera: false, recipientName: recipientName, isScheduledMessages: isScheduledMessages, hasCoverButton: hasCoverButton)!
+    let model = TGMediaPickerGalleryModel(
+        context: legacyController.context,
+        items: items,
+        focus: focusItem,
+        selectionContext: selectionContext,
+        editingContext: editingContext,
+        hasCaptions: true,
+        allowCaptionEntities: true,
+        hasTimer: hasTimer,
+        onlyCrop: false,
+        inhibitDocumentCaptions: false,
+        hasSelectionPanel: true,
+        hasCamera: false,
+        recipientName: recipientName,
+        isScheduledMessages: isScheduledMessages,
+        hasCoverButton: hasCoverButton
+    )!
     model.stickersContext = paintStickersContext
     controller.model = model
     model.controller = controller

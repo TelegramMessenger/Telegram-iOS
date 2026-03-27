@@ -762,7 +762,6 @@ private final class SheetContent: CombinedComponent {
             
             var actionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
             if let replaceText = component.replaceText {
-                //TODO:localize
                 actionsSectionItems.append(AnyComponentWithIdentity(id: "replace", component: AnyComponent(ListActionItemComponent(
                     theme: theme,
                     style: .glass,
@@ -949,7 +948,6 @@ private final class TranslateSheetComponent: CombinedComponent {
                     )),
                     titleItem: AnyComponent(
                         VStack([
-                            //TODO:localize
                             AnyComponentWithIdentity(id: "title", component: AnyComponent(
                                 MultilineTextComponent(text: .plain(NSAttributedString(string: "Translation", font: Font.semibold(17.0), textColor: theme.list.itemPrimaryTextColor)))
                             )),
