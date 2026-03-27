@@ -162,9 +162,8 @@ func presentLegacyMediaPickerGallery(
         } else if peer == nil {
             return nil
         }
-        let livePhotoButton = LivePhotoButton()
+        let livePhotoButton = LivePhotoButton(context: context)
         livePhotoButton.present = present
-        livePhotoButton.context = context
         return livePhotoButton
     }
     paintStickersContext.editCover = { dimensions, completion in

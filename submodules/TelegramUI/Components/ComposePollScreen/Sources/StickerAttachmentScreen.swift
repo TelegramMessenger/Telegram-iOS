@@ -1186,27 +1186,26 @@ final class StickerAttachmentScreen: ViewControllerComponentContainer, Attachmen
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         switch source {
         case let .poll(pollMode):
-            //TODO:localize
             let title: String
             let subtitle: String
             switch mode {
             case .stickers:
-                title = "Sticker"
+                title = presentationData.strings.StickerPicker_Title
                 switch pollMode {
                 case .description:
-                    subtitle = "Add sticker to the poll description"
+                    subtitle = ""
                 case .quizAnswer:
-                    subtitle = "Add sticker to the quiz explanation"
+                    subtitle = ""
                 case .option:
-                    subtitle = "Add sticker to this option"
+                    subtitle = presentationData.strings.StickerPicker_PollSubtitle_PollOption
                 }
             case .emoji:
                 title = "Emoji"
                 switch pollMode {
                 case .description:
-                    subtitle = "Add emoji to the poll description"
+                    subtitle = ""
                 case .quizAnswer:
-                    subtitle = "Add emoji to the quiz explanation"
+                    subtitle = ""
                 case .option:
                     subtitle = "Add emoji to this option"
                 }

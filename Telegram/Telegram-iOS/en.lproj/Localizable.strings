@@ -16041,3 +16041,55 @@ Error: %8$@";
 
 "CreatePoll.Deadline.Title" = "Deadline";
 "CreatePoll.Deadline.SetDeadline" = "Set Deadline";
+
+"Attachment.File.PollSubtitle.Description" = "Add file to the poll description";
+"Attachment.File.PollSubtitle.Explanation" = "Add file to the quiz explanation";
+
+"Location.PollSubtitle.Description" = "Add location to the poll description";
+"Location.PollSubtitle.Explanation" = "Add location to the quiz explanation";
+"Location.PollSubtitle.PollOption" = "Add location to this option";
+
+"MediaPicker.PollSubtitle.Description" = "Add media to the poll description";
+"MediaPicker.PollSubtitle.Explanation" = "Add media to the quiz explanation";
+"MediaPicker.PollSubtitle.PollOption" = "Add media to this option";
+
+"StickerPicker.Title" = "Sticker";
+"StickerPicker.PollSubtitle.PollOption" = "Add media to this option";
+
+"Chat.Poll.HiddenResultsTooltip" = "Results will appear after the poll ends";
+
+"CreatePoll.DescriptionPlaceholder" = "Add Description (optional)";
+"CreatePoll.OptionsTitle" = "OPTIONS";
+
+"CreatePoll.SettingsTitle" = "SETTINGS";
+"CreatePoll.ShowWhoVoted" = "Show Who Voted";
+"CreatePoll.ShowWhoVotedInfo" = "Display voter names on each option";
+"CreatePoll.MultiAnswer" = "Allow Multiple Answers";
+"CreatePoll.MultiAnswerInfo" = "Voters can select more than one option";
+"CreatePoll.AddingOptions" = "Allow Adding Options";
+"CreatePoll.AddingOptionsInfo" = "Participants can suggest new options";
+"CreatePoll.Revoting" = "Allow Revoting";
+"CreatePoll.RevotingInfo" = "Voters can change their vote";
+"CreatePoll.ShuffleOptions" = "Shuffle Options";
+"CreatePoll.ShuffleOptionsInfo" = "Answers appear in random order for each voter";
+"CreatePoll.EnableQuiz" = "Set Correct Answer";
+"CreatePoll.EnableQuizInfo" = "Mark one option as the right answer";
+"CreatePoll.EnableQuizMultiInfo" = "Mark one or more options as the right answer";
+"CreatePoll.LimitDuration" = "Limit Duration";
+"CreatePoll.LimitDurationInfo" = "Automatically close the poll at set time";
+"CreatePoll.LimitDuration.Duration" = "Duration";
+"CreatePoll.LimitDuration.PollEnds" = "Poll Ends";
+"CreatePoll.LimitDuration.HideResults" = "Hide Results";
+"CreatePoll.LimitDuration.HideResultsInfo" = "If you switch this on, results will be visible only after the poll closes.";
+"CreatePoll.MediaUploading.Title" = "Please Wait";
+"CreatePoll.MediaUploading.Text" = "Poll media is still uploading...";
+"CreatePoll.DiscardPoll" = "Discard Poll?";
+
+"CreatePoll.Media.Replace" = "Replace";
+"CreatePoll.Media.Delete" = "Delete";
+"CreatePoll.TimeLimit.Custom" = "Custom";
+
+"MediaPicker.LivePhoto.Live" = "Live";
+"MediaPicker.LivePhoto.Loop" = "Loop";
+"MediaPicker.LivePhoto.Bounce" = "Bounce";
+"MediaPicker.LivePhoto.LiveOff" = "Live Off";

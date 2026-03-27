@@ -892,12 +892,11 @@ public func makeAttachmentFileControllerImpl(
         }
         
         if case let .poll(pollMode) = source {
-            //TODO:localize
             switch pollMode {
             case .description:
-                subtitle = "Add file to the poll description"
+                subtitle = presentationData.strings.Attachment_File_PollSubtitle_Description
             case .quizAnswer:
-                subtitle = "Add file to the quiz explanation"
+                subtitle = presentationData.strings.Attachment_File_PollSubtitle_Explanation
             }
         }
         
