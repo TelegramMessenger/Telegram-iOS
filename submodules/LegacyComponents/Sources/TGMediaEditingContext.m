@@ -144,12 +144,15 @@
     SPipe *_captionAbovePipe;
     SPipe *_highQualityPhotoPipe;
     SPipe *_livePhotoModePipe;
+    SPipe *_forceLivePhotoPipe;
     
     NSAttributedString *_forcedCaption;
     
     bool _captionAbove;
     
     bool _highQualityPhoto;
+    
+    bool _forceLivePhotoEnabled;
 }
 @end
 
@@ -227,6 +230,7 @@
         _captionAbovePipe = [[SPipe alloc] init];
         _highQualityPhotoPipe = [[SPipe alloc] init];
         _livePhotoModePipe = [[SPipe alloc] init];
+        _forceLivePhotoPipe = [[SPipe alloc] init];
     }
     return self;
 }
@@ -989,6 +993,27 @@
     _highQualityPhotoPipe.sink(@(highQualityPhoto));
 }
 
+- (bool)isForceLivePhotoEnabled {
+    return _forceLivePhotoEnabled;
+}
+
+- (SSignal *)forceLivePhotoEnabled
+{
+    __weak TGMediaEditingContext *weakSelf = self;
+    SSignal *updateSignal = [_forceLivePhotoPipe.signalProducer() map:^NSNumber *(NSNumber *update)
+    {
+        __strong TGMediaEditingContext *strongSelf = weakSelf;
+        return @(strongSelf->_forceLivePhotoEnabled);
+    }];
+    
+    return [[SSignal single:@(_forceLivePhotoEnabled)] then:updateSignal];
+}
+
+- (void)setForceLivePhotoEnabled:(bool)forceLivePhotoEnabled
+{
+    _forceLivePhotoEnabled = forceLivePhotoEnabled;
+    _forceLivePhotoPipe.sink(@(forceLivePhotoEnabled));
+}
 
 - (SSignal *)facesForItem:(NSObject<TGMediaEditableItem> *)item
 {

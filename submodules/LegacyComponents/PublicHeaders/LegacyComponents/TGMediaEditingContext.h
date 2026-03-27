@@ -132,6 +132,10 @@ typedef NS_ENUM(NSUInteger, TGMediaLivePhotoMode)
 - (SSignal *)highQualityPhoto;
 - (void)setHighQualityPhoto:(bool)highQualityPhoto;
 
+- (bool)isForceLivePhotoEnabled;
+- (SSignal *)forceLivePhotoEnabled;
+- (void)setForceLivePhotoEnabled:(bool)forceLivePhotoEnabled;
+
 - (SSignal *)facesForItem:(NSObject<TGMediaEditableItem> *)item;
 - (void)setFaces:(NSArray *)faces forItem:(NSObject<TGMediaEditableItem> *)item;
 
