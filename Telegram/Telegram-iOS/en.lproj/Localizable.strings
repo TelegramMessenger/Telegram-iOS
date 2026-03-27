@@ -16095,6 +16095,11 @@ Error: %8$@";
 "MediaPicker.LivePhoto.Bounce" = "Bounce";
 "MediaPicker.LivePhoto.LiveOff" = "Live Off";
 
+"MediaPicker.LivePhoto.Tooltip.Live" = "Live Photo turned on";
+"MediaPicker.LivePhoto.Tooltip.Loop" = "Live Photo with Loop effect turned on";
+"MediaPicker.LivePhoto.Tooltip.Bounce" = "Live Photo with Bounce effect turned on";
+"MediaPicker.LivePhoto.Tooltip.LiveOff" = "Live Photo turned off";
+
 "AuthConfirmation.UnverifiedApp" = "Unverified App";
 
 "Chat.ManagedBot.CreatedTitle" = "**%@** is ready!";

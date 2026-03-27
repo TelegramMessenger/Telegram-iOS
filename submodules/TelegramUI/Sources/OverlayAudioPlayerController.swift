@@ -9,6 +9,7 @@ import AccountContext
 import ShareController
 import UndoUI
 import AttachmentFileController
+import LegacyMediaPickerUI
 
 final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayerController {
     private let context: AccountContext
@@ -156,9 +157,24 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                 guard let self, let navigationController = self.parentNavigationController else {
                     return
                 }
+                var dismissImpl: (() -> Void)?
                 let controller = makeAttachmentFileControllerImpl(
                     context: self.context,
                     mode: .audio(.savedMusic),
+                    presentFiles: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        dismissImpl?()
+                        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                        let controller = legacyICloudFilePicker(theme: presentationData.theme, mode: .import, documentTypes: ["public.mp3", "public.mpeg-4-audio", "public.aac-audio", "org.xiph.flac"], completion: { urls in
+                            guard let url = urls.first else {
+                                return
+                            }
+                            print(url)
+                        })
+                        self.present(controller, in: .window(.root))
+                    },
                     send: { [weak self] mediaReferences, _, _, _ in
                         guard let self, let reference = mediaReferences.first?.concrete(TelegramMediaFile.self) else {
                             return
@@ -168,6 +184,9 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                 ) as! AttachmentFileControllerImpl
                 controller.navigationPresentation = .modal
                 navigationController.pushViewController(controller)
+                dismissImpl = { [weak controller] in
+                    controller?.dismiss()
+                }
             },
             getParentController: { [weak self] in
                 return self

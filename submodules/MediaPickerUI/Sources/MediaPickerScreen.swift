@@ -33,7 +33,9 @@ import ComponentFlow
 import BundleIconComponent
 import LottieComponent
 import GlassBarButtonComponent
+import GlassControls
 import AlertComponent
+import MultilineTextComponent
 
 final class MediaPickerInteraction {
     let downloadManager: AssetDownloadManager
@@ -237,6 +239,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private let titleView: MediaPickerTitleView
     private let cancelButtonNode: WebAppCancelButtonNode
     
+    private var buttons: ComponentView<Empty>?
     private var cancelButton: ComponentView<Empty>?
     private var rightButton: ComponentView<Empty>?
     private let moreButtonPlayOnce = ActionSlot<Void>()
@@ -1164,7 +1167,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
         }
         
-        private func updateSelectionState(animated: Bool = false, updateLayout: Bool = true) {
+        fileprivate func updateSelectionState(animated: Bool = false, updateLayout: Bool = true) {
             self.gridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? MediaPickerGridItemNode {
                     itemNode.updateSelectionState(animated: animated)
@@ -2102,6 +2105,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         
         if case .glass = style {
             self.cancelButton = ComponentView()
+            self.buttons = ComponentView()
         }
         self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
@@ -2635,8 +2639,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         let useGlassButtons = (isBack || !self.controllerNode.scrolledToTop) && !self.controllerNode.isSwitchingAssetGroup
         
         let barButtonSideInset: CGFloat = 16.0
-        let barButtonSize = CGSize(width: 44.0, height: 44.0)
-        
+    
+    
         var buttonTransition = ComponentTransition.easeInOut(duration: 0.25)
         if case let .animated(duration, _) = transition, duration > 0.25 {
             buttonTransition = .easeInOut(duration: duration)
@@ -2659,123 +2663,247 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         transition.updateAlpha(layer: self.controllerNode.topEdgeEffectView.layer, alpha: self.controllerNode.scrolledExactlyToTop && self.controllerNode.currentDisplayMode == .all ? 0.0 : 1.0)
         self.controllerNode.topEdgeEffectView.update(content: topEdgeColor, blur: true, alpha: 0.8, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: ComponentTransition(transition))
         
-        if let cancelButton = self.cancelButton {
-            if cancelButton.view == nil {
-                buttonTransition = .immediate
-            }
-            let cancelButtonSize = cancelButton.update(
-                transition: buttonTransition,
-                component: AnyComponent(GlassBarButtonComponent(
-                    size: barButtonSize,
-                    backgroundColor: nil,
-                    isDark: self.presentationData.theme.overallDarkAppearance,
-                    state: .glass,
-                    component: AnyComponentWithIdentity(id: isBack ? "back" : "close", component: AnyComponent(
-                        BundleIconComponent(
-                            name: isBack ? "Navigation/Back" : "Navigation/Close",
-                            tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor
-                        )
-                    )),
-                    action: { [weak self] _ in
-                        self?.cancelPressed()
+        let leftControlItems: [GlassControlGroupComponent.Item] = [
+            GlassControlGroupComponent.Item(
+                id: AnyHashable(isBack ? "back" : "close"),
+                content: .icon(isBack ? "Navigation/Back" : "Navigation/Close"),
+                action: { [weak self] in
+                    guard let self else {
+                        return
                     }
-                )),
-                environment: {},
-                containerSize: barButtonSize
-            )
-            let cancelButtonFrame = CGRect(origin: CGPoint(x: barButtonSideInset + layout.safeInsets.left, y: barButtonSideInset), size: cancelButtonSize)
-            if let view = cancelButton.view {
-                if view.superview == nil {
-                    self.view.addSubview(view)
+                    self.cancelPressed()
                 }
-                view.bounds = CGRect(origin: .zero, size: cancelButtonFrame.size)
-                view.center = cancelButtonFrame.center
+            )
+        ]
+        var rightControlItems: [GlassControlGroupComponent.Item] = []
+        if moreIsVisible, case .glass = self.style {
+            if self.hasSelectButton {
+                rightControlItems.append(GlassControlGroupComponent.Item(
+                    id: AnyHashable("select"),
+                    content: .text(self.presentationData.strings.Common_Select),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.selectPressed()
+                    }
+                ))
+            } else {
+                rightControlItems.append(GlassControlGroupComponent.Item(
+                    id: AnyHashable("more"),
+                    content: .animation("anim_morewide"),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if let controlsView = self.buttons?.view as? GlassControlPanelComponent.View, let rightItemView = controlsView.rightItemView, let sourceView = rightItemView.itemView(id: AnyHashable("more")) {
+                            self.searchOrMorePressed(view: sourceView, gesture: nil)
+                        }
+                    }
+                ))
+            }
+            
+            var hasLivePhoto = false
+            if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
+                for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                    if let item = item as? TGMediaAsset, let asset = item.backingAsset {
+                        if asset.mediaSubtypes.contains(.photoLive) {
+                            hasLivePhoto = true
+                            break
+                        }
+                    }
+                }
+                if hasLivePhoto {
+                    let isForceLivePhoto = editingContext.isForceLivePhotoEnabled()
+                    rightControlItems.insert(GlassControlGroupComponent.Item(
+                        id: AnyHashable(isForceLivePhoto ? "livePhoto_on" : "livePhoto_off"),
+                        content: .icon(isForceLivePhoto ? "Media Editor/LiveOn" : "Media Editor/LiveOff"),
+                        action: { [weak self, weak editingContext] in
+                            guard let self, let editingContext else {
+                                return
+                            }
+                            editingContext.setForceLivePhotoEnabled(!isForceLivePhoto)
+                            self.controllerNode.updateSelectionState()
+                            
+                            let iconName: String
+                            let text: String
+                            if !isForceLivePhoto {
+                                iconName = "Media Editor/LiveLargeOn"
+                                text = self.presentationData.strings.MediaPicker_LivePhoto_Tooltip_Live
+                            } else {
+                                iconName = "Media Editor/LiveLargeOff"
+                                text = self.presentationData.strings.MediaPicker_LivePhoto_Tooltip_LiveOff
+                            }
+                            
+                            let controller = TooltipInfoScreen(
+                                context: self.context,
+                                content: AnyComponent(HStack([
+                                    AnyComponentWithIdentity(id: "icon", component: AnyComponent(
+                                        BundleIconComponent(name: iconName, tintColor: .white)
+                                    )),
+                                    AnyComponentWithIdentity(id: "label", component: AnyComponent(
+                                        MultilineTextComponent(text: .plain(NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)))
+                                    ))
+                                ], spacing: 11.0)),
+                                alignment: .bottom
+                            )
+                            self.present(controller, in: .current)
+                        }
+                    ), at: 0)
+                }
             }
         }
         
-        if moreIsVisible, case .glass = self.style {
-            let moreButton: ComponentView<Empty>
-            if let current = self.rightButton {
-                moreButton = current
-            } else {
-                moreButton = ComponentView<Empty>()
-                self.rightButton = moreButton
+        if let buttons = self.buttons {
+            if buttons.view == nil {
+                buttonTransition = .immediate
             }
-            
-            let buttonComponent: AnyComponent<Empty>
-            let rightButtonSize: CGSize
-            if self.hasSelectButton {
-                buttonComponent = AnyComponent(GlassBarButtonComponent(
-                    size: nil,
-                    backgroundColor: nil,
-                    isDark: self.presentationData.theme.overallDarkAppearance,
-                    state: .glass,
-                    component: AnyComponentWithIdentity(id: "select", component: AnyComponent(
-                        Text(text: self.presentationData.strings.Common_Select, font: Font.semibold(17.0), color: self.presentationData.theme.chat.inputPanel.panelControlColor)
-                    )),
-                    action: { [weak self] _ in
-                        self?.selectPressed()
-                        self?.moreButtonPlayOnce.invoke(Void())
-                    })
-                )
-                rightButtonSize = CGSize(width: 160.0, height: 44.0)
-            } else {
-                buttonComponent = AnyComponent(GlassBarButtonComponent(
-                    size: barButtonSize,
-                    backgroundColor: nil,
-                    isDark: self.presentationData.theme.overallDarkAppearance,
-                    state: .glass,
-                    component: AnyComponentWithIdentity(id: "more", component: AnyComponent(
-                        LottieComponent(
-                            content: LottieComponent.AppBundleContent(
-                                name: "anim_morewide"
-                            ),
-                            color: self.presentationData.theme.chat.inputPanel.panelControlColor,
-                            size: CGSize(width: 34.0, height: 34.0),
-                            playOnce: self.moreButtonPlayOnce
-                        )
-                    )),
-                    action: { [weak self] view in
-                        self?.searchOrMorePressed(view: view, gesture: nil)
-                        self?.moreButtonPlayOnce.invoke(Void())
-                    })
-                )
-                rightButtonSize = barButtonSize
-            }
-            
-            let moreButtonSize = moreButton.update(
+            let buttonsSize = buttons.update(
                 transition: buttonTransition,
-                component: buttonComponent,
+                component: AnyComponent(GlassControlPanelComponent(
+                    theme: self.presentationData.theme,
+                    leftItem: GlassControlPanelComponent.Item(
+                        items: leftControlItems,
+                        background: .panel
+                    ),
+                    centralItem: nil,
+                    rightItem: rightControlItems.isEmpty ? nil : GlassControlPanelComponent.Item(
+                        items: rightControlItems,
+                        background: .panel
+                    ),
+                    centerAlignmentIfPossible: true,
+                    isDark: self.presentationData.theme.overallDarkAppearance
+                )),
                 environment: {},
-                containerSize: rightButtonSize
+                containerSize: CGSize(width: layout.size.width - barButtonSideInset * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: 44.0)
             )
-            let moreButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - moreButtonSize.width - barButtonSideInset - layout.safeInsets.right, y: barButtonSideInset), size: moreButtonSize)
-            if let view = moreButton.view {
+            let buttonsFrame = CGRect(origin: CGPoint(x: barButtonSideInset + layout.safeInsets.left, y: barButtonSideInset), size: buttonsSize)
+            if let view = buttons.view {
                 if view.superview == nil {
                     self.view.addSubview(view)
-                    if transition.isAnimated {
-                        let transition = ComponentTransition(transition)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-                        transition.animateScale(view: view, from: 0.1, to: 1.0)
-                    }
                 }
-                view.bounds = CGRect(origin: .zero, size: moreButtonFrame.size)
-                view.center = moreButtonFrame.center
-            }
-        } else if let moreButton = self.rightButton {
-            self.rightButton = nil
-            if let view = moreButton.view {
-                if transition.isAnimated {
-                    let transition = ComponentTransition(transition)
-                    view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
-                        view.removeFromSuperview()
-                    })
-                    transition.animateScale(view: view, from: 1.0, to: 0.1)
-                } else {
-                    view.removeFromSuperview()
-                }
+                view.bounds = CGRect(origin: .zero, size: buttonsFrame.size)
+                view.center = buttonsFrame.center
             }
         }
+        
+        
+//        if let cancelButton = self.cancelButton {
+//            if cancelButton.view == nil {
+//                buttonTransition = .immediate
+//            }
+//            let cancelButtonSize = cancelButton.update(
+//                transition: buttonTransition,
+//                component: AnyComponent(GlassBarButtonComponent(
+//                    size: barButtonSize,
+//                    backgroundColor: nil,
+//                    isDark: self.presentationData.theme.overallDarkAppearance,
+//                    state: .glass,
+//                    component: AnyComponentWithIdentity(id: isBack ? "back" : "close", component: AnyComponent(
+//                        BundleIconComponent(
+//                            name: isBack ? "Navigation/Back" : "Navigation/Close",
+//                            tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor
+//                        )
+//                    )),
+//                    action: { [weak self] _ in
+//                        self?.cancelPressed()
+//                    }
+//                )),
+//                environment: {},
+//                containerSize: barButtonSize
+//            )
+//            let cancelButtonFrame = CGRect(origin: CGPoint(x: barButtonSideInset + layout.safeInsets.left, y: barButtonSideInset), size: cancelButtonSize)
+//            if let view = cancelButton.view {
+//                if view.superview == nil {
+//                    self.view.addSubview(view)
+//                }
+//                view.bounds = CGRect(origin: .zero, size: cancelButtonFrame.size)
+//                view.center = cancelButtonFrame.center
+//            }
+//        }
+//        
+//        if moreIsVisible, case .glass = self.style {
+//            let moreButton: ComponentView<Empty>
+//            if let current = self.rightButton {
+//                moreButton = current
+//            } else {
+//                moreButton = ComponentView<Empty>()
+//                self.rightButton = moreButton
+//            }
+//            
+//            let buttonComponent: AnyComponent<Empty>
+//            let rightButtonSize: CGSize
+//            if self.hasSelectButton {
+//                buttonComponent = AnyComponent(GlassBarButtonComponent(
+//                    size: nil,
+//                    backgroundColor: nil,
+//                    isDark: self.presentationData.theme.overallDarkAppearance,
+//                    state: .glass,
+//                    component: AnyComponentWithIdentity(id: "select", component: AnyComponent(
+//                        Text(text: self.presentationData.strings.Common_Select, font: Font.semibold(17.0), color: self.presentationData.theme.chat.inputPanel.panelControlColor)
+//                    )),
+//                    action: { [weak self] _ in
+//                        self?.selectPressed()
+//                    })
+//                )
+//                rightButtonSize = CGSize(width: 160.0, height: 44.0)
+//            } else {
+//                buttonComponent = AnyComponent(GlassBarButtonComponent(
+//                    size: barButtonSize,
+//                    backgroundColor: nil,
+//                    isDark: self.presentationData.theme.overallDarkAppearance,
+//                    state: .glass,
+//                    component: AnyComponentWithIdentity(id: "more", component: AnyComponent(
+//                        LottieComponent(
+//                            content: LottieComponent.AppBundleContent(
+//                                name: "anim_morewide"
+//                            ),
+//                            color: self.presentationData.theme.chat.inputPanel.panelControlColor,
+//                            size: CGSize(width: 34.0, height: 34.0),
+//                            playOnce: self.moreButtonPlayOnce
+//                        )
+//                    )),
+//                    action: { [weak self] view in
+//                        self?.searchOrMorePressed(view: view, gesture: nil)
+//                        self?.moreButtonPlayOnce.invoke(Void())
+//                    })
+//                )
+//                rightButtonSize = barButtonSize
+//            }
+//            
+//            let moreButtonSize = moreButton.update(
+//                transition: buttonTransition,
+//                component: buttonComponent,
+//                environment: {},
+//                containerSize: rightButtonSize
+//            )
+//            let moreButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - moreButtonSize.width - barButtonSideInset - layout.safeInsets.right, y: barButtonSideInset), size: moreButtonSize)
+//            if let view = moreButton.view {
+//                if view.superview == nil {
+//                    self.view.addSubview(view)
+//                    if transition.isAnimated {
+//                        let transition = ComponentTransition(transition)
+//                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+//                        transition.animateScale(view: view, from: 0.1, to: 1.0)
+//                    }
+//                }
+//                view.bounds = CGRect(origin: .zero, size: moreButtonFrame.size)
+//                view.center = moreButtonFrame.center
+//            }
+//        } else if let moreButton = self.rightButton {
+//            self.rightButton = nil
+//            if let view = moreButton.view {
+//                if transition.isAnimated {
+//                    let transition = ComponentTransition(transition)
+//                    view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+//                        view.removeFromSuperview()
+//                    })
+//                    transition.animateScale(view: view, from: 1.0, to: 0.1)
+//                } else {
+//                    view.removeFromSuperview()
+//                }
+//            }
+//        }
         
         if case .assets(_, .story) = self.subject {
             if self.selectionCount > 0 {

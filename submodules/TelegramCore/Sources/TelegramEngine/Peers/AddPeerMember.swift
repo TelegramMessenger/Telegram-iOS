@@ -388,6 +388,7 @@ func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId:
 public enum CreateBotError {
     case generic
     case occupied
+    case limitExceeded
 }
 
 func _internal_createBot(account: Account, name: String, username: String, managerPeerId: PeerId, viaDeeplink: Bool) -> Signal<EnginePeer, CreateBotError> {
@@ -410,6 +411,8 @@ func _internal_createBot(account: Account, name: String, username: String, manag
         |> mapError { error -> CreateBotError in
             if error.errorDescription == "USERNAME_OCCUPIED" {
                 return .occupied
+            } else if error.errorDescription == "BOT_CREATE_LIMIT_EXCEEDED" {
+                return .limitExceeded
             } else {
                 return .generic
             }

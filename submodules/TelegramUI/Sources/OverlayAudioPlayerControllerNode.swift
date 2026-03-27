@@ -871,14 +871,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 )
             )
         }
-        rightControlItems.append(
-            GlassControlGroupComponent.Item(
-                id: AnyHashable("search"),
-                content: .icon("Navigation/Search"),
-                action: {
-                }
-            )
-        )
+//        rightControlItems.append(
+//            GlassControlGroupComponent.Item(
+//                id: AnyHashable("search"),
+//                content: .icon("Navigation/Search"),
+//                action: {
+//                }
+//            )
+//        )
         
         let headerInset: CGFloat = 16.0
         let headerButtonsSize = self.headerButtons.update(
@@ -891,7 +891,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                         background: .panel
                     ),
                     centralItem: nil,
-                    rightItem: GlassControlPanelComponent.Item(
+                    rightItem: rightControlItems.isEmpty ? nil : GlassControlPanelComponent.Item(
                         items: rightControlItems,
                         background: .panel
                     ),
