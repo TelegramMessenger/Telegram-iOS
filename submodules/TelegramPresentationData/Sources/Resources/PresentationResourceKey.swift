@@ -41,6 +41,7 @@ public enum PresentationResourceKey: Int32 {
     case itemListDisclosureArrow
     case disclosureOptionArrowsImage
     case itemListDisclosureLocked
+    case itemListDisclosureSwitchLock
     case itemListCheckIcon
     case itemListSecondaryCheckIcon
     case itemListDisabledCheckIcon
@@ -304,11 +305,7 @@ public enum PresentationResourceKey: Int32 {
     case genericSearchBar
     
     case inAppNotificationBackground
-    
-    case groupInfoAdminsIcon
-    case groupInfoPermissionsIcon
-    case groupInfoMembersIcon
-    
+        
     case emptyChatListCheckIcon
 
     case chatFreeCommentButtonIcon

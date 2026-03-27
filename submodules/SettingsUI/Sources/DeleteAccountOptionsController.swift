@@ -119,7 +119,7 @@ private enum DeleteAccountOptionsEntry: ItemListNodeEntry, Equatable {
                     arguments.setupTwoStepAuth()
                 })
             case let .setPasscode(_, title, text):
-                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.deleteSetPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.faceId, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.setPasscode()
                 })
             case let .clearCache(_, title, text):

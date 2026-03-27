@@ -44,8 +44,6 @@ extension ChatControllerImpl {
                 }
                 
                 var items: [ContextMenuItem] = []
-                
-                //TODO:localize
                 items.append(.action(ContextMenuActionItem(text: isStarred ? self.presentationData.strings.Stickers_RemoveFromFavorites : self.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                     f(.default)
                     

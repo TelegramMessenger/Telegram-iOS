@@ -444,8 +444,7 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     case .image:
         return (NSAttributedString(string: strings.Message_Photo), true)
     case .livePhoto:
-        //TODO:localize
-        return (NSAttributedString(string: "Live Photo"), true)
+        return (NSAttributedString(string: strings.Message_LivePhoto), true)
     case .video:
         return (NSAttributedString(string: strings.Message_Video), true)
     case .videoMessage:

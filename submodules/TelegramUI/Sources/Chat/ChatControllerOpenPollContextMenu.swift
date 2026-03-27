@@ -55,7 +55,7 @@ extension ChatControllerImpl {
             var items: [ContextMenuItem] = []
             if !poll.isClosed && (selectedOptions.isEmpty || !poll.revotingDisabled) {
                 if selectedOptions.contains(pollOption.opaqueIdentifier) {
-                    items.append(.action(ContextMenuActionItem(text: "Retract Vote", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unvote"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Poll_RetractOptionVote, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unvote"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                         guard let self else {
                             return
                         }
@@ -66,7 +66,7 @@ extension ChatControllerImpl {
                         })
                     })))
                 } else {
-                    items.append(.action(ContextMenuActionItem(text: "Vote", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/StopPoll"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Poll_VoteOption, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/StopPoll"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                         guard let self else {
                             return
                         }
@@ -82,9 +82,8 @@ extension ChatControllerImpl {
                 }
             }
             
-            //TODO:localize
             if canReplyInChat(self.presentationInterfaceState, accountPeerId: self.context.account.peerId) {
-                items.append(.action(ContextMenuActionItem(text: "Reply to Option", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Poll_ReplyToOption, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.actionSheet.primaryTextColor)
                 }, action: { [weak self] c, _ in
                     guard let self else {
@@ -165,9 +164,18 @@ extension ChatControllerImpl {
             }
             
             if let addedByPeer, let date = pollOption.date {
-                if poll.isCreator || addedByPeer.id == self.context.account.peerId {
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self]  _, f in
+                var canRemove = false
+                if poll.isCreator {
+                    canRemove = true
+                } else if addedByPeer.id == self.context.account.peerId {
+                    let pollConfiguration = PollConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                    if currentTime < date + pollConfiguration.pollOptionDeletePeriod {
+                        canRemove = true
+                    }
+                }
+                if canRemove {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_Poll_RemoveOption, textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self]  _, f in
                         f(.default)
                         
                         guard let self else {
@@ -183,30 +191,30 @@ extension ChatControllerImpl {
                 let dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: date, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
                     dateFormatString: { value in
                         if addedByPeer.id == self.context.account.peerId {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_Date(value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestampYou_Date(value).string, ranges: [])
                         } else {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_Date(peerName, value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestamp_Date(peerName, value).string, ranges: [])
                         }
                     },
                     tomorrowFormatString: { value in
                         if addedByPeer.id == self.context.account.peerId {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_TodayAt(value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestampYou_TodayAt(value).string, ranges: [])
                         } else {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_TodayAt(peerName, value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestamp_TodayAt(peerName, value).string, ranges: [])
                         }
                     },
                     todayFormatString: { value in
                         if addedByPeer.id == self.context.account.peerId {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_TodayAt(value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestampYou_TodayAt(value).string, ranges: [])
                         } else {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_TodayAt(peerName, value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestamp_TodayAt(peerName, value).string, ranges: [])
                         }
                     },
                     yesterdayFormatString: { value in
                         if addedByPeer.id == self.context.account.peerId {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestampYou_YesterdayAt(value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestampYou_YesterdayAt(value).string, ranges: [])
                         } else {
-                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PolOptionAddedTimestamp_YesterdayAt(peerName, value).string, ranges: [])
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PollOptionAddedTimestamp_YesterdayAt(peerName, value).string, ranges: [])
                         }
                     }
                 )).string
@@ -223,13 +231,12 @@ extension ChatControllerImpl {
             
             self.canReadHistory.set(false)
             
-            //TODO:localize
             var sources: [ContextController.Source] = []
             sources.append(
                 ContextController.Source(
                     id: AnyHashable(OptionsId.item),
-                    title: "Option",
-                    footer: "You're viewing actions for one option.\nYou can switch to actions for the list.",
+                    title: self.presentationData.strings.Chat_Poll_ContextMenu_SectionOption,
+                    footer: self.presentationData.strings.Chat_Poll_ContextMenu_SectionsInfo,
                     source: .extracted(ChatTodoItemContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode)),
                     items: .single(ContextController.Items(content: .list(items)))
                 )
@@ -240,7 +247,7 @@ extension ChatControllerImpl {
             sources.append(
                 ContextController.Source(
                     id: AnyHashable(OptionsId.message),
-                    title: "Poll",
+                    title: self.presentationData.strings.Chat_Poll_ContextMenu_SectionPoll,
                     source: .extracted(messageContentSource),
                     items: .single(actions)
                 )
@@ -263,5 +270,25 @@ extension ChatControllerImpl {
             
             self.window?.presentInGlobalOverlay(contextController)
         })
+    }
+}
+
+private struct PollConfiguration {
+    static var defaultValue: PollConfiguration {
+        return PollConfiguration(pollOptionDeletePeriod: 300)
+    }
+    
+    let pollOptionDeletePeriod: Int32
+    
+    init(pollOptionDeletePeriod: Int32) {
+        self.pollOptionDeletePeriod = pollOptionDeletePeriod
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> PollConfiguration {
+        if let data = appConfiguration.data, let pollOptionDeletePeriod = data["poll_answer_delete_period"] as? Double {
+            return PollConfiguration(pollOptionDeletePeriod: Int32(pollOptionDeletePeriod))
+        } else {
+            return .defaultValue
+        }
     }
 }

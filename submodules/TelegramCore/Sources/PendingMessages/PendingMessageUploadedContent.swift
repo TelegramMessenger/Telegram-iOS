@@ -358,61 +358,26 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
             pollMediaFlags |= 1 << 1
         }
 
-        func cloudMediaToInputMedia(_ media: Media) -> Api.InputMedia? {
-            if let image = media as? TelegramMediaImage,
-               let reference = image.reference,
-               case let .cloud(id, accessHash, maybeFileReference) = reference {
-                let fileReference = maybeFileReference ?? Data()
-                return .inputMediaPhoto(.init(flags: 0, id: .inputPhoto(.init(id: id, accessHash: accessHash, fileReference: Buffer(data: fileReference))), ttlSeconds: nil, video: nil))
-            } else if let file = media as? TelegramMediaFile,
-                      let resource = file.resource as? CloudDocumentMediaResource {
-                return .inputMediaDocument(.init(flags: 0, id: .inputDocument(.init(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data()))), videoCover: nil, videoTimestamp: nil, ttlSeconds: nil, query: nil))
-            } else if let map = media as? TelegramMediaMap {
-                var geoFlags: Int32 = 0
-                if map.accuracyRadius != nil {
-                    geoFlags |= 1 << 0
-                }
-                let geoPoint = Api.InputGeoPoint.inputGeoPoint(.init(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })))
-                if let venue = map.venue {
-                    return .inputMediaVenue(.init(geoPoint: geoPoint, title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? ""))
-                } else {
-                    return .inputMediaGeoPoint(.init(geoPoint: geoPoint))
-                }
-            }
-            return nil
-        }
-
         var apiAnswers: [Api.PollAnswer] = []
         for (_, option) in poll.options.enumerated() {
             let textWithEntities = Api.TextWithEntities.textWithEntities(.init(text: option.text, entities: apiEntitiesFromMessageTextEntities(option.entities, associatedPeers: SimpleDictionary())))
-            if let media = option.media, let inputMedia = cloudMediaToInputMedia(media) {
+            if let media = option.media, let inputMedia = pollCloudMediaToInputMedia(media) {
                 apiAnswers.append(.inputPollAnswer(.init(flags: 1 << 0, text: textWithEntities, media: inputMedia)))
             } else {
                 apiAnswers.append(.pollAnswer(.init(flags: 0, text: textWithEntities, option: Buffer(data: option.opaqueIdentifier), media: nil, addedBy: nil, date: nil)))
             }
         }
-
-        if let attached = poll.attachedMedia, let im = cloudMediaToInputMedia(attached) {
+        
+        let attachedInputMedia = poll.attachedMedia.flatMap(pollCloudMediaToInputMedia)
+        if attachedInputMedia != nil {
             pollMediaFlags |= 1 << 3
-            if let solMedia = poll.results.solution?.media, let sm = cloudMediaToInputMedia(solMedia) {
-                pollMediaFlags |= 1 << 2
-                
-                let inputPoll = Api.InputMedia.inputMediaPoll(.init(flags: pollMediaFlags, poll: Api.Poll.poll(.init(id: 0, flags: pollFlags, question: .textWithEntities(.init(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary()))), answers: apiAnswers, closePeriod: poll.deadlineTimeout, closeDate: poll.deadlineDate, hash: 0)), correctAnswers: correctAnswers, attachedMedia: im, solution: mappedSolution, solutionEntities: mappedSolutionEntities, solutionMedia: sm))
-                return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil, cacheReferenceKey: nil)))
-            } else {
-                let inputPoll = Api.InputMedia.inputMediaPoll(.init(flags: pollMediaFlags, poll: Api.Poll.poll(.init(id: 0, flags: pollFlags, question: .textWithEntities(.init(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary()))), answers: apiAnswers, closePeriod: poll.deadlineTimeout, closeDate: poll.deadlineDate, hash: 0)), correctAnswers: correctAnswers, attachedMedia: im, solution: mappedSolution, solutionEntities: mappedSolutionEntities, solutionMedia: nil))
-                return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil, cacheReferenceKey: nil)))
-            }
-        } else {
-            var apiSolutionMedia: Api.InputMedia?
-            if let solMedia = poll.results.solution?.media, let sm = cloudMediaToInputMedia(solMedia) {
-                apiSolutionMedia = sm
-                pollMediaFlags |= 1 << 2
-            }
-            
-            let inputPoll = Api.InputMedia.inputMediaPoll(.init(flags: pollMediaFlags, poll: Api.Poll.poll(.init(id: 0, flags: pollFlags, question: .textWithEntities(.init(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary()))), answers: apiAnswers, closePeriod: poll.deadlineTimeout, closeDate: poll.deadlineDate, hash: 0)), correctAnswers: correctAnswers, attachedMedia: nil, solution: mappedSolution, solutionEntities: mappedSolutionEntities, solutionMedia: apiSolutionMedia))
-            return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil, cacheReferenceKey: nil)))
         }
+        let solutionInputMedia = poll.results.solution?.media.flatMap(pollCloudMediaToInputMedia)
+        if solutionInputMedia != nil {
+            pollMediaFlags |= 1 << 2
+        }
+        let inputPoll = Api.InputMedia.inputMediaPoll(.init(flags: pollMediaFlags, poll: .poll(.init(id: 0, flags: pollFlags, question: .textWithEntities(.init( text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary()) )), answers: apiAnswers, closePeriod: poll.deadlineTimeout, closeDate: poll.deadlineDate, hash: 0)), correctAnswers: correctAnswers, attachedMedia: attachedInputMedia, solution: mappedSolution, solutionEntities: mappedSolutionEntities, solutionMedia: solutionInputMedia))
+        return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputPoll, text), reuploadInfo: nil, cacheReferenceKey: nil)))
     } else if let todo = media as? TelegramMediaTodo {
         var flags: Int32 = 0
         if todo.flags.contains(.othersCanAppend) {

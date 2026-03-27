@@ -2626,18 +2626,13 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                 let viewResultsString: String
                 if let poll, let totalVoters = poll.results.totalVoters {
-                    //TODO:localize
                     if case .public = poll.publicity {
-                        viewResultsString = "View Votes (\(totalVoters))"
+                        viewResultsString = item.presentationData.strings.MessagePoll_ViewVotes(compactNumericCountString(Int(totalVoters), decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)).string
                     } else {
                         if isPreviewingResults {
-                            viewResultsString = "< Vote"
+                            viewResultsString = item.presentationData.strings.MessagePoll_BackToVote
                         } else {
-                            if totalVoters == 1 {
-                                viewResultsString = "\(totalVoters) vote >"
-                            } else {
-                                viewResultsString = "\(totalVoters) votes >"
-                            }
+                            viewResultsString = item.presentationData.strings.MessagePoll_ViewVote(totalVoters)
                         }
                     }
                 } else {

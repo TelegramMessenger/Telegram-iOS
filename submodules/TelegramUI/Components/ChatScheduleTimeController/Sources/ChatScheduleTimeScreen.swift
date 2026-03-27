@@ -226,8 +226,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             case .format:
                 title = strings.Conversation_FormatDate_Title
             case .poll:
-                //TODO:localize
-                title = "Deadline"
+                title = strings.CreatePoll_Deadline_Title
             }
             let titleSize = self.title.update(
                 transition: transition,
@@ -497,8 +496,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             case .format:
                 buttonTitle = component.currentTime != nil ? strings.Conversation_FormatDate_EditDate : strings.Conversation_FormatDate_AddDate
             case .poll:
-                //TODO:localize
-                buttonTitle = "Set Deadline"
+                buttonTitle = strings.CreatePoll_Deadline_SetDeadline
             }
                 
             let buttonSideInset: CGFloat = 30.0

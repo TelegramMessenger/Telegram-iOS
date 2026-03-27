@@ -547,13 +547,13 @@ public final class GiftStoreContentComponent: Component {
             })))
             
             items.append(.separator)
-            items.append(.action(ContextMenuActionItem(text: "All Listings", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_AllListings, icon: { theme in
                 return component.resaleGiftsContext.currentState?.starsOnly == false ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
             }, action: { [weak self] _, f in
                 f(.default)
                 self?.updateStarsOnly(false)
             })))
-            items.append(.action(ContextMenuActionItem(text: "For Stars Only", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_Store_StarsOnlyListings, icon: { theme in
                 return component.resaleGiftsContext.currentState?.starsOnly == true ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : UIImage()
             }, action: { [weak self] _, f in
                 f(.default)
@@ -1497,11 +1497,10 @@ final class GiftStoreScreenComponent: Component {
             }
             
             if let tonState = self.starsState, tonState.balance.value == 0 {
-                //TODO:localize
                 let starsFilterSize = self.starsFilter.update(
                     transition: transition,
                     component: AnyComponent(
-                        StarsFilterComponent(theme: theme, text: "Show listings for stars only", isSelected: component.resaleGiftsContext.currentState?.starsOnly ?? false, selectionUpdated: { [weak self] starsOnly in
+                        StarsFilterComponent(theme: theme, text: environment.strings.Gift_Store_ShowStarsListings, isSelected: component.resaleGiftsContext.currentState?.starsOnly ?? false, selectionUpdated: { [weak self] starsOnly in
                             guard let self else {
                                 return
                             }

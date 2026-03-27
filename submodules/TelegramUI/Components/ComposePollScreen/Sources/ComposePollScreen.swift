@@ -2006,7 +2006,7 @@ final class ComposePollScreenComponent: Component {
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                         Image(image: self.cachedAddIcon, size: CGSize(width: 30.0, height: 30.0))
                     )), false),
-                    accessory: .toggle(ListActionItemComponent.Toggle(style: .lock(isLocked: self.isQuiz), isOn: self.canAddOptions, isInteractive: !self.isQuiz, action: { [weak self] _ in
+                    accessory: .toggle(ListActionItemComponent.Toggle(style: self.isQuiz ? .lock : .regular, isOn: self.canAddOptions, isInteractive: !self.isQuiz, action: { [weak self] _ in
                         guard let self else {
                             return
                         }

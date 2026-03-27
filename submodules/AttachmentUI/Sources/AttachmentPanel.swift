@@ -236,14 +236,13 @@ private final class AttachButtonComponent: CombinedComponent {
                 name = strings.Attachment_Gift
                 imageName = "Chat/Attach Menu/Gift"
             case .sticker:
-                //TODO:localize
-                name = "Sticker"
+                name = strings.Attachment_Sticker
                 imageName = "Chat/Attach Menu/Sticker"
             case .emoji:
                 name = "Emoji"
                 imageName = "Chat/Attach Menu/Emoji"
             case .audio:
-                name = "Audio"
+                name = strings.Attachment_Audio
                 imageName = "Chat/Attach Menu/Audio"
             case let .app(bot):
                 botPeer = bot.peer
@@ -2168,12 +2167,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             case .gift:
                 accessibilityTitle = self.presentationData.strings.Attachment_Gift
             case .sticker:
-                //TODO:localize
-                accessibilityTitle = "Sticker"
+                accessibilityTitle = self.presentationData.strings.Attachment_Sticker
             case .emoji:
                 accessibilityTitle = "Emoji"
             case .audio:
-                accessibilityTitle = "Audio"
+                accessibilityTitle = self.presentationData.strings.Attachment_Audio
             case let .app(bot):
                 accessibilityTitle = bot.shortName
             case .standalone:

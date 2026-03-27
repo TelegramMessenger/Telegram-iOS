@@ -60,7 +60,7 @@ public enum EnergySavingItemType: CaseIterable {
             )
         case .loopEmoji:
             return (
-                PresentationResourcesSettings.emoji,
+                PresentationResourcesSettings.emojiTeal,
                 strings.PowerSavingScreen_OptionAutoplayEmojiTitle,
                 strings.PowerSavingScreen_OptionAutoplayEmojiText
             )

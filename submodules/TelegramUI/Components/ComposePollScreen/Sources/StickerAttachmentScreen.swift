@@ -19,6 +19,7 @@ import CounterControllerTitleView
 import GlassBackgroundComponent
 import GlassBarButtonComponent
 import BundleIconComponent
+import EdgeEffect
 
 final class StickerAttachmentScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -51,6 +52,9 @@ final class StickerAttachmentScreenComponent: Component {
     }
     
     final class View: UIView, UIScrollViewDelegate {
+        private var topEdgeEffectView: EdgeEffectView
+        private var bottomEdgeEffectView: EdgeEffectView
+        
         fileprivate let keyboardView: ComponentView<Empty>
         private let keyboardClippingView: KeyboardClippingView
         private let panelBackgroundView: GlassBackgroundView
@@ -115,6 +119,8 @@ final class StickerAttachmentScreenComponent: Component {
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
             self.keyboardClippingView = KeyboardClippingView()
+            self.topEdgeEffectView = EdgeEffectView()
+            self.bottomEdgeEffectView = EdgeEffectView()
             self.panelBackgroundView = GlassBackgroundView()
             self.panelClippingView = UIView()
             self.panelHostView = PagerExternalTopPanelContainer()
@@ -123,6 +129,8 @@ final class StickerAttachmentScreenComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.keyboardClippingView)
+            self.addSubview(self.topEdgeEffectView)
+            self.addSubview(self.bottomEdgeEffectView)
             self.addSubview(self.panelBackgroundView)
             self.panelBackgroundView.contentView.addSubview(self.panelClippingView)
             self.panelClippingView.addSubview(self.panelHostView)
@@ -889,7 +897,9 @@ final class StickerAttachmentScreenComponent: Component {
             let environment = environment[EnvironmentType.self].value
             self.environment = environment
             
-            self.backgroundColor = environment.theme.list.plainBackgroundColor
+            let theme = environment.theme.withModalBlocksBackground()
+            
+            self.backgroundColor = theme.list.plainBackgroundColor
             
             if self.component == nil {
                 let data = combineLatest(
@@ -961,7 +971,7 @@ final class StickerAttachmentScreenComponent: Component {
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
-                    theme: environment.theme,
+                    theme: theme,
                     strings: environment.strings,
                     isContentInFocus: true,
                     containerInsets: UIEdgeInsets(top: topPanelHeight + topInset - 11.0, left: 0.0, bottom: 0.0, right: 0.0),
@@ -1076,7 +1086,7 @@ final class StickerAttachmentScreenComponent: Component {
                 self.panelClippingView.layer.cornerRadius = panelBackgroundFrame.height * 0.5
                 transition.setFrame(view: self.panelClippingView, frame: CGRect(origin: .zero, size: panelBackgroundFrame.size))
                 
-                self.panelBackgroundView.update(size: panelBackgroundFrame.size, cornerRadius: panelBackgroundFrame.size.height * 0.5, isDark: environment.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, isVisible: !self.searchVisible, transition: transition)
+                self.panelBackgroundView.update(size: panelBackgroundFrame.size, cornerRadius: panelBackgroundFrame.size.height * 0.5, isDark: theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, isVisible: !self.searchVisible, transition: transition)
                 transition.setFrame(view: self.panelBackgroundView, frame: panelBackgroundFrame)
                 
                 transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight - topInset), size: keyboardSize))
@@ -1089,12 +1099,12 @@ final class StickerAttachmentScreenComponent: Component {
                 component: AnyComponent(GlassBarButtonComponent(
                     size: barButtonSize,
                     backgroundColor: nil,
-                    isDark: environment.theme.overallDarkAppearance,
+                    isDark: theme.overallDarkAppearance,
                     state: .glass,
                     component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
                         BundleIconComponent(
                             name: "Navigation/Close",
-                            tintColor: environment.theme.chat.inputPanel.panelControlColor
+                            tintColor: theme.chat.inputPanel.panelControlColor
                         )
                     )),
                     action: { [weak self] _ in
@@ -1117,6 +1127,15 @@ final class StickerAttachmentScreenComponent: Component {
                 transition.setAlpha(view: cancelButtonView, alpha: self.searchVisible ? 0.0 : 1.0)
                 transition.setScale(view: cancelButtonView, scale: self.searchVisible ? 0.001 : 1.0)
             }
+            
+            let edgeEffectHeight: CGFloat = 88.0
+            let topEdgeEffectFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.topEdgeEffectView, frame: topEdgeEffectFrame)
+            self.topEdgeEffectView.update(content: theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: topEdgeEffectFrame, edge: .top, edgeSize: topEdgeEffectFrame.height, transition: transition)
+            
+            let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - edgeEffectHeight - environment.additionalInsets.bottom), size: CGSize(width: availableSize.width, height: edgeEffectHeight))
+            transition.setFrame(view: self.bottomEdgeEffectView, frame: bottomEdgeEffectFrame)
+            self.bottomEdgeEffectView.update(content: theme.list.blocksBackgroundColor, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectFrame.height, transition: transition)
             
             return availableSize
         }

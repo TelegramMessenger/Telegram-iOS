@@ -375,30 +375,30 @@ final class DataCategoryItemComponent: Component {
             
             
             if themeUpdated {
-                let imageName: String
+                let image: UIImage?
                 switch component.category.key {
                 case .photos:
-                    imageName = "Settings/Menu/DataPhotos"
+                    image = PresentationResourcesSettings.photosLightBlue
                 case .videos:
-                    imageName = "Settings/Menu/DataVideo"
+                    image = PresentationResourcesSettings.videosBlue
                 case .files:
-                    imageName = "Settings/Menu/DataFiles"
+                    image = PresentationResourcesSettings.filesGreen
                 case .music:
-                    imageName = "Settings/Menu/DataMusic"
+                    image = PresentationResourcesSettings.music
                 case .messages:
-                    imageName = "Settings/Menu/DataMessages"
+                    image = PresentationResourcesSettings.messages
                 case .stickers:
-                    imageName = "Settings/Menu/DataStickers"
+                    image = PresentationResourcesSettings.stickersYellow
                 case .voiceMessages:
-                    imageName = "Settings/Menu/DataVoice"
+                    image = PresentationResourcesSettings.voices
                 case .calls:
-                    imageName = "Settings/Menu/DataCalls"
+                    image = PresentationResourcesSettings.calls
                 case .totalIn:
-                    imageName = "Settings/Menu/DataIn"
+                    image = PresentationResourcesSettings.download
                 case .totalOut:
-                    imageName = "Settings/Menu/DataOut"
+                    image = PresentationResourcesSettings.upload
                 }
-                self.iconView.image = UIImage(bundleImageName: imageName)
+                self.iconView.image = image
             }
             
             var leftInset: CGFloat = 62.0

@@ -273,8 +273,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         let string = strongSelf.strings.Chat_ReplyPanel_ReplyToTodoItem
                         titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
                     } else if case .pollOption = strongSelf.innerSubject {
-                        //TODO:localize
-                        let string = "Reply to Poll Option"
+                        let string = strongSelf.strings.Chat_ReplyPanel_ReplyToPollOption
                         titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
                     } else if let _ = strongSelf.quote {
                         let string = strongSelf.strings.Chat_ReplyPanel_ReplyToQuoteBy(authorName).string
