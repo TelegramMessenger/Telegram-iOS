@@ -221,10 +221,20 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
         }
         
         func displayPhoneNumberConfirmation(commit: @escaping (Bool) -> Void) {
-            guard case let .request(domain, _, _, _, _, _) = self.subject else {
+            guard case let .request(domain, _, clientData, _, _, _) = self.subject else {
                 return
             }
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let sourceTitle: String
+            if let clientData, clientData.isApp {
+                if let appName = clientData.appName {
+                    sourceTitle = appName
+                } else {
+                    sourceTitle = presentationData.strings.AuthConfirmation_UnverifiedApp
+                }
+            } else {
+                sourceTitle = domain
+            }
             
             let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
             |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -236,7 +246,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 let alertController = textAlertController(
                     context: self.context,
                     title: presentationData.strings.AuthConfirmation_PhoneNumberConfirmation_Title,
-                    text: presentationData.strings.AuthConfirmation_PhoneNumberConfirmation_Text(domain, phoneNumber).string,
+                    text: presentationData.strings.AuthConfirmation_PhoneNumberConfirmation_Text(sourceTitle, phoneNumber).string,
                     actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.AuthConfirmation_PhoneNumberConfirmation_Deny, action: {
                             commit(false)
@@ -346,6 +356,17 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
             guard case let .request(domain, bot, clientData, flags, matchCodes, _) = state.subject else {
                 fatalError()
             }
+            
+            let sourceTitle: String
+            if let clientData, clientData.isApp {
+                if let appName = clientData.appName {
+                    sourceTitle = appName
+                } else {
+                    sourceTitle = strings.AuthConfirmation_UnverifiedApp
+                }
+            } else {
+                sourceTitle = domain
+            }
 
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
@@ -421,7 +442,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 
                 let emojiDescriptionString: String
                 if flags.contains(.showMatchCodesFirst) {
-                    emojiDescriptionString = strings.AuthConfirmation_Emoji_DescriptionFirst(domain).string
+                    emojiDescriptionString = strings.AuthConfirmation_Emoji_DescriptionFirst(sourceTitle).string
                 } else {
                     emojiDescriptionString = strings.AuthConfirmation_Emoji_Description
                 }
@@ -546,10 +567,10 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 )
                 contentHeight += avatar.size.height
                 contentHeight += 18.0
-                
+                                
                 let title = title.update(
                     component: MultilineTextComponent(
-                        text: .markdown(text: strings.AuthConfirmation_Title(domain).string, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.controlAccentColor), link: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
+                        text: .markdown(text: strings.AuthConfirmation_Title(sourceTitle).string, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.controlAccentColor), link: MarkdownAttributeSet(font: titleFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 2
                     ),
@@ -564,9 +585,16 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                 contentHeight += title.size.height
                 contentHeight += 16.0
                 
+                let descriptionString: String
+                if let clientData, clientData.isApp {
+                    descriptionString = strings.AuthConfirmation_DescriptionApp
+                } else {
+                    descriptionString = strings.AuthConfirmation_Description
+                }
+                
                 let description = description.update(
                     component: MultilineTextComponent(
-                        text: .markdown(text: strings.AuthConfirmation_Description, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
+                        text: .markdown(text: descriptionString, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.actionSheet.primaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: theme.actionSheet.primaryTextColor), linkAttribute: { _ in return nil })),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 3,
                         lineSpacing: 0.2

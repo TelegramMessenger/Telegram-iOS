@@ -880,7 +880,7 @@ public enum PremiumPerk: CaseIterable {
         case .businessIntro:
             return "Item List/Icons/Intro"
         case .businessLinks:
-            return "Item List/Icons/Link"
+            return "Item List/Icons/BusinessLink"
         }
     }
 }
@@ -1042,24 +1042,18 @@ private struct PremiumProduct: Equatable {
 
 final class PerkIconComponent: CombinedComponent {
     let backgroundColor: UIColor
-    let foregroundColor: UIColor
     let iconName: String
     
     init(
         backgroundColor: UIColor,
-        foregroundColor: UIColor,
         iconName: String
     ) {
         self.backgroundColor = backgroundColor
-        self.foregroundColor = foregroundColor
         self.iconName = iconName
     }
     
     static func ==(lhs: PerkIconComponent, rhs: PerkIconComponent) -> Bool {
         if lhs.backgroundColor != rhs.backgroundColor {
-            return false
-        }
-        if lhs.foregroundColor != rhs.foregroundColor {
             return false
         }
         if lhs.iconName != rhs.iconName {
@@ -1069,38 +1063,19 @@ final class PerkIconComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let background = Child(RoundedRectangle.self)
-        let icon = Child(BundleIconComponent.self)
-
+        let image = Child(Image.self)
         return { context in
             let component = context.component
-        
             let iconSize = CGSize(width: 30.0, height: 30.0)
-            
-            let background = background.update(
-                component: RoundedRectangle(
-                    color: component.backgroundColor,
-                    cornerRadius: 7.0
+            let image = image.update(
+                component: Image(image:
+                    renderSettingsIcon(name: component.iconName, backgroundColors: [component.backgroundColor])
                 ),
                 availableSize: iconSize,
                 transition: context.transition
             )
-            
-            let icon = icon.update(
-                component: BundleIconComponent(
-                    name: component.iconName,
-                    tintColor: .white
-                ),
-                availableSize: iconSize,
-                transition: context.transition
-            )
-            
-            let iconPosition = CGPoint(x: background.size.width / 2.0, y: background.size.height / 2.0)
-            context.add(background
-                .position(iconPosition)
-            )
-            context.add(icon
-                .position(iconPosition)
+            context.add(image
+                .position(CGPoint(x: iconSize.width / 2.0, y: iconSize.height / 2.0))
             )
             return iconSize
         }
@@ -2191,7 +2166,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         ], alignment: .left, spacing: 2.0)),
                         leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                             backgroundColor: gradientColors[i],
-                            foregroundColor: .white,
                             iconName: perk.iconName
                         ))), false),
                         accessory: accountContext != nil ? .arrow : nil,
@@ -2382,7 +2356,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         ], alignment: .left, spacing: 2.0)),
                         leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                             backgroundColor: gradientColors[min(i, gradientColors.count - 1)],
-                            foregroundColor: .white,
                             iconName: perk.iconName
                         ))), false),
                         action: { [weak state] _ in
@@ -2580,7 +2553,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         ], alignment: .left, spacing: 2.0)),
                         leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                             backgroundColor: UIColor(rgb: 0x676bff),
-                            foregroundColor: .white,
                             iconName: "Item List/Icons/Case"
                         ))), false),
                         icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
@@ -2623,7 +2595,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     ], alignment: .left, spacing: 2.0)),
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                         backgroundColor: UIColor(rgb: 0x4492ff),
-                        foregroundColor: .white,
                         iconName: "Item List/Icons/Tag"
                     ))), false),
                     action: { _ in
@@ -2658,7 +2629,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     ], alignment: .left, spacing: 2.0)),
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
                         backgroundColor: UIColor(rgb: 0x41a6a5),
-                        foregroundColor: .white,
                         iconName: "Item List/Icons/Stories"
                     ))), false),
                     action: {  _ in

@@ -3742,10 +3742,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if shouldDisplayHiddenResultsTooltip {
-                        //TODO:localize
                         let controller = UndoOverlayController(
                             presentationData: strongSelf.presentationData,
-                            content: .universal(animation: "anim_timer", scale: 0.06, colors: [:], title: nil, text: "Results will appear after the poll ends", customUndoText: nil, timeout: nil),
+                            content: .universal(animation: "anim_timer", scale: 0.06, colors: [:], title: nil, text: strongSelf.presentationData.strings.Chat_Poll_HiddenResultsTooltip, customUndoText: nil, timeout: nil),
                             action: { _ in return true }
                         )
                         strongSelf.present(controller, in: .current)

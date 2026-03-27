@@ -224,7 +224,7 @@ final class PasskeysScreenListComponent: Component {
                 } else {
                     iconComponent = AnyComponentWithIdentity(
                         id: "icon",
-                        component: AnyComponent(BundleIconComponent(name: "Settings/Menu/Passkeys", tintColor: nil))
+                        component: AnyComponent(Image(image: PresentationResourcesSettings.passkeys))
                     )
                 }
                 

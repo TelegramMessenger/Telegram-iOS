@@ -208,8 +208,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     case let imageMedia as TelegramMediaImage:
                         if message.text.isEmpty {
                             if imageMedia.flags.contains(.isLivePhoto) {
-                                //TODO:localize
-                                messageText = "Live Photo"
+                                messageText = strings.Message_LivePhoto
                             } else {
                                 messageText = strings.Message_Photo
                             }

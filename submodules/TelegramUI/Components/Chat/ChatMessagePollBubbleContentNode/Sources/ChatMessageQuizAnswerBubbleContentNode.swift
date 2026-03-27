@@ -45,8 +45,7 @@ public final class ChatMessageQuizAnswerBubbleContentNode: ChatMessageBubbleCont
         let contentNodeLayout = self.contentNode.asyncLayout()
         
         return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
-            //TODO:localize
-            let title: String = "Explanation"
+            let title: String = item.presentationData.strings.MessagePoll_Explanation
             var text: String = ""
             var entities: [MessageTextEntity] = []
             var mediaAndFlags: ([Media], ChatMessageAttachedContentNodeMediaFlags)? = nil

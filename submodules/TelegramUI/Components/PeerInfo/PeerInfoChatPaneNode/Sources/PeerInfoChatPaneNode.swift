@@ -182,8 +182,7 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScro
         |> map { count in
             if let count {
                 if tag == .polls {
-                    //TODO:localize
-                    return PeerInfoStatusData(text: "\(count) polls", isActivity: false, key: .polls)
+                    return PeerInfoStatusData(text: strings.SharedMedia_PollCount(Int32(count)), isActivity: false, key: .polls)
                 } else {
                     return PeerInfoStatusData(text: strings.Conversation_Messages(Int32(count)), isActivity: false, key: .savedMessages)
                 }

@@ -785,7 +785,6 @@ public final class MediaStreamComponent: CombinedComponent {
                     content: AnyComponent(RoundGradientButtonComponent(
                         gradientColors: [UIColor(red: 0.165, green: 0.173, blue: 0.357, alpha: 1).cgColor],
                         image: generateTintedImage(image: UIImage(bundleImageName: "Call/CallShareButton"), color: .white),
-                        // TODO: localize:
                         title: presentationData.strings.VoiceChat_ShareShort)),
                     action: {
                         guard let controller = controller() as? MediaStreamComponentController else {

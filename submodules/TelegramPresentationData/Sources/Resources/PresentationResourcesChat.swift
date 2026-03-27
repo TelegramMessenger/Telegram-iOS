@@ -1024,25 +1024,7 @@ public struct PresentationResourcesChat {
             })
         })
     }
-    
-    public static func groupInfoAdminsIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.groupInfoAdminsIcon.rawValue, { _ in
-            return UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon")?.precomposed()
-        })
-    }
-    
-    public static func groupInfoPermissionsIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.groupInfoPermissionsIcon.rawValue, { _ in
-            return UIImage(bundleImageName: "Chat/Info/GroupPermissionsIcon")?.precomposed()
-        })
-    }
-    
-    public static func groupInfoMembersIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.groupInfoMembersIcon.rawValue, { _ in
-            return UIImage(bundleImageName: "Chat/Info/GroupMembersIcon")?.precomposed()
-        })
-    }
-    
+                
     public static func chatOutgoingFullCheck(_ theme: PresentationTheme, size: CGFloat) -> UIImage? {
         return theme.image(PresentationResourceParameterKey.chatOutgoingFullCheck(size), { _ in
             return generateCheckImage(partial: false, color: theme.chat.message.outgoingCheckColor, width: size)

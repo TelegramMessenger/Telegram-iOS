@@ -16,7 +16,7 @@ public final class ListActionItemComponent: Component {
     public enum ToggleStyle: Equatable {
         case regular
         case icons
-        case lock(isLocked: Bool)
+        case lock
     }
     
     public struct Toggle: Equatable {
@@ -360,6 +360,7 @@ public final class ListActionItemComponent: Component {
         
         private var arrowView: UIImageView?
         private var switchNode: SwitchNode?
+        private var lockView: UIImageView?
         private var iconSwitchNode: IconSwitchNode?
         private var activityIndicatorView: UIActivityIndicatorView?
         private var customAccessoryView: ComponentView<Empty>?
@@ -827,6 +828,50 @@ public final class ListActionItemComponent: Component {
                     }
                     let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: switchY), size: switchSize)
                     switchTransition.setFrame(view: switchNode.view, frame: switchFrame)
+                          
+                    if case .lock = toggle.style {
+                        let lockView: UIImageView
+                        var lockTransition = transition
+                        if let current = self.lockView {
+                            lockView = current
+                            if themeUpdated {
+                                lockView.image = PresentationResourcesItemList.disclosureSwitchLockImage(component.theme)
+                            }
+                        } else {
+                            lockTransition = lockTransition.withAnimation(.none)
+                            lockView = UIImageView(image: PresentationResourcesItemList.disclosureSwitchLockImage(component.theme))
+                            self.lockView = lockView
+                            self.button.addSubview(lockView)
+                            
+                            if !transition.animation.isImmediate {
+                                transition.animateAlpha(view: lockView, from: 0.0, to: 1.0)
+                                transition.animateScale(view: lockView, from: 0.01, to: 1.0)
+                            }
+                        }
+                        
+                        if let image = lockView.image {
+                            let originX: CGFloat
+                            if #available(iOS 26.0, *) {
+                                originX = switchFrame.minX + 14.0 - UIScreenPixel
+                            } else {
+                                originX = switchFrame.minX + 8.0 + UIScreenPixel
+                            }
+                            let lockFrame = CGRect(origin: CGPoint(x: originX, y: switchFrame.midY - image.size.height * 0.5), size: image.size)
+                            lockTransition.setFrame(view: lockView, frame: lockFrame)
+                        }
+                    } else {
+                        if let lockView = self.lockView {
+                            self.lockView = nil
+                            if transition.animation.isImmediate {
+                                lockView.removeFromSuperview()
+                            } else {
+                                transition.setScale(view: lockView, scale: 0.01)
+                                transition.setAlpha(view: lockView, alpha: 0.0, completion: { [weak lockView] _ in
+                                    lockView?.removeFromSuperview()
+                                })
+                            }
+                        }
+                    }
                 case .icons:
                     let switchNode: IconSwitchNode
                     var switchTransition = transition
@@ -836,7 +881,6 @@ public final class ListActionItemComponent: Component {
                     }
                     if let current = self.iconSwitchNode {
                         switchNode = current
-                        switchNode.updateIsLocked(toggle.style == .lock(isLocked: true))
                         if switchNode.isOn != toggle.isOn {
                             switchNode.setOn(toggle.isOn, animated: !transition.animation.isImmediate)
                         }
@@ -844,7 +888,6 @@ public final class ListActionItemComponent: Component {
                         switchTransition = switchTransition.withAnimation(.none)
                         updateSwitchTheme = true
                         switchNode = IconSwitchNode()
-                        switchNode.updateIsLocked(toggle.style == .lock(isLocked: true))
                         switchNode.setOn(toggle.isOn, animated: false)
                         self.iconSwitchNode = switchNode
                         self.button.addSubview(switchNode.view)

@@ -45,6 +45,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func disclosureSwitchLockImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListDisclosureSwitchLock.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/SwitchLockIcon"), color: theme.list.disclosureArrowColor)
+        })
+    }
+    
     public static func checkIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListCheckIcon.rawValue, { theme in
             return generateItemListCheckIcon(color: theme.list.itemAccentColor)

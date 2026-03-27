@@ -1315,8 +1315,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                         ))
                         canReorder = true
                     case .polls:
-                        //TODO:localize
-                        content = .title(HorizontalTabsComponent.Tab.Title(text: "Polls", entities: [], enableAnimations: false))
+                        content = .title(HorizontalTabsComponent.Tab.Title(text: presentationData.strings.PeerInfo_PanePolls, entities: [], enableAnimations: false))
                     }
                     
                     return HorizontalTabsComponent.Tab(

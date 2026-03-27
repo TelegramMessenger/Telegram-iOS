@@ -266,11 +266,11 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelAdminsControllerArguments
         switch self {
             case let .recentActions(_, text):
-                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.recentActions, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openRecentActions()
                 })
             case let .antiSpam(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: UIImage(bundleImageName: "Chat/Info/AntiSpam")?.precomposed(), title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesSettings.antiSpam, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateAntiSpamEnabled(value)
                 })
             case let .antiSpamInfo(_, text):

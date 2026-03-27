@@ -181,7 +181,10 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
                 |> map { generator -> UIImage? in
                     let size = CGSize(width: 30.0, height: 30.0)
                     let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: .zero))
-                    return context?.generateImage()
+                    if let iconImage = context?.generateImage() {
+                        return renderAttachAppIcon(iconImage: iconImage)
+                    }
+                    return nil
                 }
                 let _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: fileReference).startStandalone()
             } else {

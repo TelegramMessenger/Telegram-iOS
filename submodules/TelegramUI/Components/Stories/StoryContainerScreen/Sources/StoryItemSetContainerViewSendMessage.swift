@@ -2496,7 +2496,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            component.controller()?.present(legacyICloudFilePicker(theme: presentationData.theme, completion: { [weak self, weak view] urls in
+            component.controller()?.present(legacyICloudFilePicker(theme: presentationData.theme, hasMultiselection: true, completion: { [weak self, weak view] urls in
                 if let strongSelf = self, let view, !urls.isEmpty {
                     var signals: [Signal<ICloudFileDescription?, NoError>] = []
                     for url in urls {

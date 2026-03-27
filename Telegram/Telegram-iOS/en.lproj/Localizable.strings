@@ -15733,6 +15733,7 @@ Error: %8$@";
 
 "AuthConfirmation.Title" = "Log in to **%@**";
 "AuthConfirmation.Description" = "This site will receive your **name**,\n**username** and **profile photo**.";
+"AuthConfirmation.DescriptionApp" = "This app will receive your **name**,\n**username** and **profile photo**.";
 "AuthConfirmation.Device" = "Device";
 "AuthConfirmation.IpAddress" ="IP Address";
 "AuthConfirmation.Info" ="This login attempt came from the device above.";
@@ -15987,13 +15988,13 @@ Error: %8$@";
 
 "Notification.ManagedBotCreated" = "%@ bot created";
 
-"Chat.PolOptionAddedTimestamp.Date" = "Added by %1$@ %2$@";
-"Chat.PolOptionAddedTimestamp.TodayAt" = "Added by %1$@ today at %2$@";
-"Chat.PolOptionAddedTimestamp.YesterdayAt" = "Added by %1$@ yesterday at %2$@";
+"Chat.PollOptionAddedTimestamp.Date" = "Added by %1$@ %2$@";
+"Chat.PollOptionAddedTimestamp.TodayAt" = "Added by %1$@ today at %2$@";
+"Chat.PollOptionAddedTimestamp.YesterdayAt" = "Added by %1$@ yesterday at %2$@";
 
-"Chat.PolOptionAddedTimestampYou.Date" = "Added by you %1$@";
-"Chat.PolOptionAddedTimestampYou.TodayAt" = "Added by you today at %1$@";
-"Chat.PolOptionAddedTimestampYou.YesterdayAt" = "Added by you yesterday at %1$@";
+"Chat.PollOptionAddedTimestampYou.Date" = "Added by you %1$@";
+"Chat.PollOptionAddedTimestampYou.TodayAt" = "Added by you today at %1$@";
+"Chat.PollOptionAddedTimestampYou.YesterdayAt" = "Added by you yesterday at %1$@";
 
 "MessagePoll.EndsIn" = "ends in %@";
 "MessagePoll.EndsInDays_1" = "ends in %@ day";
@@ -16005,3 +16006,93 @@ Error: %8$@";
 
 "Premium.AiTools" = "AI Tools";
 "Premium.AiToolsInfo" = "Transform your messages and entire chats in your preferred style and language.";
+
+"Message.LivePhoto" = "Live Photo";
+
+"Attachment.Sticker" = "Sticker";
+"Attachment.Audio" = "Audio";
+
+"Chat.ReplyPanel.ReplyToPollOption" = "Reply to Poll Option";
+
+"SharedMedia.PollCount_1" = "1 poll";
+"SharedMedia.PollCount_any" = "%@ polls";
+
+"PeerInfo.PanePolls" = "Polls";
+
+"MediaPlayer.SavedMusic.RemoveFromProfileShort" = "Remove from Profile";
+
+"Gift.Store.ShowStarsListings" = "Show listings for stars only";
+"Gift.Store.AllListings" = "All Listings";
+"Gift.Store.StarsOnlyListings" = "For Stars Only";
+
+"MessagePoll.ViewVotes" = "View Votes (%@)";
+"MessagePoll.ViewVote_1" = "%@ vote >";
+"MessagePoll.ViewVote_any" = "%@ votes >";
+"MessagePoll.BackToVote" = "< Vote";
+"MessagePoll.Explanation" = "Explanation";
+
+"Chat.Poll.ReplyToOption" = "Reply to Option";
+"Chat.Poll.VoteOption" = "Vote";
+"Chat.Poll.RetractOptionVote" = "Retract Vote";
+"Chat.Poll.RemoveOption" = "Remoev";
+
+"Chat.Poll.ContextMenu.SectionOption" = "Option";
+"Chat.Poll.ContextMenu.SectionPoll" = "Poll";
+"Chat.Poll.ContextMenu.SectionsInfo" = "You're viewing actions for one option.\nYou can switch to actions for the list.";
+
+"CreatePoll.Deadline.Title" = "Deadline";
+"CreatePoll.Deadline.SetDeadline" = "Set Deadline";
+
+"Attachment.File.PollSubtitle.Description" = "Add file to the poll description";
+"Attachment.File.PollSubtitle.Explanation" = "Add file to the quiz explanation";
+
+"Location.PollSubtitle.Description" = "Add location to the poll description";
+"Location.PollSubtitle.Explanation" = "Add location to the quiz explanation";
+"Location.PollSubtitle.PollOption" = "Add location to this option";
+
+"MediaPicker.PollSubtitle.Description" = "Add media to the poll description";
+"MediaPicker.PollSubtitle.Explanation" = "Add media to the quiz explanation";
+"MediaPicker.PollSubtitle.PollOption" = "Add media to this option";
+
+"StickerPicker.Title" = "Sticker";
+"StickerPicker.PollSubtitle.PollOption" = "Add sticker to this option";
+
+"Chat.Poll.HiddenResultsTooltip" = "Results will appear after the poll ends";
+
+"CreatePoll.DescriptionPlaceholder" = "Add Description (optional)";
+"CreatePoll.OptionsTitle" = "OPTIONS";
+
+"CreatePoll.SettingsTitle" = "SETTINGS";
+"CreatePoll.ShowWhoVoted" = "Show Who Voted";
+"CreatePoll.ShowWhoVotedInfo" = "Display voter names on each option";
+"CreatePoll.MultiAnswer" = "Allow Multiple Answers";
+"CreatePoll.MultiAnswerInfo" = "Voters can select more than one option";
+"CreatePoll.AddingOptions" = "Allow Adding Options";
+"CreatePoll.AddingOptionsInfo" = "Participants can suggest new options";
+"CreatePoll.Revoting" = "Allow Revoting";
+"CreatePoll.RevotingInfo" = "Voters can change their vote";
+"CreatePoll.ShuffleOptions" = "Shuffle Options";
+"CreatePoll.ShuffleOptionsInfo" = "Answers appear in random order for each voter";
+"CreatePoll.EnableQuiz" = "Set Correct Answer";
+"CreatePoll.EnableQuizInfo" = "Mark one option as the right answer";
+"CreatePoll.EnableQuizMultiInfo" = "Mark one or more options as the right answer";
+"CreatePoll.LimitDuration" = "Limit Duration";
+"CreatePoll.LimitDurationInfo" = "Automatically close the poll at set time";
+"CreatePoll.LimitDuration.Duration" = "Duration";
+"CreatePoll.LimitDuration.PollEnds" = "Poll Ends";
+"CreatePoll.LimitDuration.HideResults" = "Hide Results";
+"CreatePoll.LimitDuration.HideResultsInfo" = "If you switch this on, results will be visible only after the poll closes.";
+"CreatePoll.MediaUploading.Title" = "Please Wait";
+"CreatePoll.MediaUploading.Text" = "Poll media is still uploading...";
+"CreatePoll.DiscardPoll" = "Discard Poll?";
+
+"CreatePoll.Media.Replace" = "Replace";
+"CreatePoll.Media.Delete" = "Delete";
+"CreatePoll.TimeLimit.Custom" = "Custom";
+
+"MediaPicker.LivePhoto.Live" = "Live";
+"MediaPicker.LivePhoto.Loop" = "Loop";
+"MediaPicker.LivePhoto.Bounce" = "Bounce";
+"MediaPicker.LivePhoto.LiveOff" = "Live Off";
+
+"AuthConfirmation.UnverifiedApp" = "Unverified App";

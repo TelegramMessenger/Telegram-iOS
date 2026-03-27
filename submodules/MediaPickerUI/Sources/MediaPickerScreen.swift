@@ -2085,14 +2085,13 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     self.titleView.title = presentationData.strings.MediaPicker_ChooseCover
                 case let .poll(pollMode, _):
                     self.titleView.title = presentationData.strings.MediaPicker_Recents
-                    //TODO:localize
                     switch pollMode {
                     case .description:
-                        self.titleView.subtitle = "Add media to the poll description"
+                        self.titleView.subtitle = presentationData.strings.MediaPicker_PollSubtitle_Description
                     case .quizAnswer:
-                        self.titleView.subtitle = "Add media to the quiz explanation"
+                        self.titleView.subtitle = presentationData.strings.MediaPicker_PollSubtitle_Explanation
                     case .option:
-                        self.titleView.subtitle = "Add media to this option"
+                        self.titleView.subtitle = presentationData.strings.MediaPicker_PollSubtitle_PollOption
                     }
                     self.titleView.isEnabled = true
                 }

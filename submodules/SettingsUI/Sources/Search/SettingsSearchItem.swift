@@ -53,7 +53,7 @@ extension SettingsSearchableItemIcon {
             case .chatFolders:
                 return PresentationResourcesSettings.chatFolders
             case .deleteAccount:
-                return PresentationResourcesSettings.deleteAccount
+                return PresentationResourcesSettings.block
             case .devices:
                 return PresentationResourcesSettings.devices
             case .premium:

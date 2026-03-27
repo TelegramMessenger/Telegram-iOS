@@ -152,7 +152,7 @@ public func presentPollAttachmentScreen(
                     attachmentController?.dismiss(animated: true)
                     
                     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = legacyICloudFilePicker(theme: presentationData.theme, mode: .import, documentTypes: ["public.item"], completion: { urls in
+                    let controller = legacyICloudFilePicker(theme: presentationData.theme, documentTypes: ["public.item"], completion: { urls in
                         guard let url = urls.first else {
                             return
                         }

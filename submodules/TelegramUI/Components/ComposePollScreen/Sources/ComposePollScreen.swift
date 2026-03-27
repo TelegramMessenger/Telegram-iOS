@@ -1030,8 +1030,7 @@ final class ComposePollScreenComponent: Component {
                 if let file = media.media.media as? TelegramMediaFile, file.isSticker || file.isCustomEmoji {
                     var items: [ContextMenuItem] = []
                     
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Replace", icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.CreatePoll_Media_Replace, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, f in
                         f(.default)
@@ -1041,7 +1040,7 @@ final class ComposePollScreenComponent: Component {
                         self.openAttachedMedia(subject: subject, replace: true)
                     })))
                     
-                    items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.CreatePoll_Media_Delete, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                     }, action: { [weak self] _, f in
                         f(.default)
@@ -1072,8 +1071,7 @@ final class ComposePollScreenComponent: Component {
                 } else {
                     var items: [ContextMenuItem] = []
                     
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Replace", icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.CreatePoll_Media_Replace, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, f in
                         f(.default)
@@ -1083,7 +1081,7 @@ final class ComposePollScreenComponent: Component {
                         self.openAttachedMedia(subject: subject, replace: true)
                     })))
                     
-                    items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.CreatePoll_Media_Delete, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                     }, action: { [weak self] _, f in
                         f(.default)
@@ -1163,8 +1161,7 @@ final class ComposePollScreenComponent: Component {
                 })))
             }
             
-            //TODO:localize
-            subItems.append(.action(ContextMenuActionItem(text: "Custom", icon: { theme in
+            subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.CreatePoll_TimeLimit_Custom, icon: { theme in
                 return nil
             }, action: { [weak self] _, f in
                 f(.default)
@@ -1449,18 +1446,7 @@ final class ComposePollScreenComponent: Component {
                 assumeIsEditing: self.inputMediaNodeTargetTag === self.pollTextFieldTag,
                 characterLimit: component.initialData.maxPollTextLength,
                 emptyLineHandling: .allowed,
-                returnKeyAction: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    let _ = self
-//                    if !self.pollOptions.isEmpty {
-//                        if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[0].id] {
-//                            if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
-//                                pollOptionComponentView.activateInput()
-//                            }
-//                        }
-//                    }
+                returnKeyAction: {
                 },
                 backspaceKeyAction: nil,
                 selection: nil,
@@ -1484,7 +1470,6 @@ final class ComposePollScreenComponent: Component {
             var pollDescriptionAttachment: ListComposePollOptionComponent.Attachment
             pollDescriptionAttachment = .init(media: self.pollDescriptionMedia?.media, progress: self.pollDescriptionMedia?.progress, alwaysDisplayAttachButton: true)
             
-            //TODO:localize
             pollTextSectionItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ListComposePollOptionComponent(
                 externalState: self.pollDescriptionInputState,
                 context: component.context,
@@ -1548,9 +1533,8 @@ final class ComposePollScreenComponent: Component {
                 if let itemView = pollTextSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
                     itemView.updateCustomPlaceholder(value: environment.strings.CreatePoll_TextPlaceholder, size: itemView.bounds.size, transition: .immediate)
                 }
-                //TODO:localize
                 if let itemView = pollTextSectionView.itemView(id: 1) as? ListComposePollOptionComponent.View {
-                    itemView.updateCustomPlaceholder(value: "Add Description (optional)", size: itemView.bounds.size, transition: .immediate)
+                    itemView.updateCustomPlaceholder(value: environment.strings.CreatePoll_DescriptionPlaceholder, size: itemView.bounds.size, transition: .immediate)
                 }
             }
             contentHeight += pollTextSectionSize.height
@@ -1764,13 +1748,12 @@ final class ComposePollScreenComponent: Component {
                 transition: transition
             )
             
-            //TODO:localize
             let sectionHeaderSideInset: CGFloat = 16.0
             let pollOptionsSectionHeaderSize = self.pollOptionsSectionHeader.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "OPTIONS",
+                        string: environment.strings.CreatePoll_OptionsTitle,
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                         textColor: theme.list.freeTextColor
                     )),
@@ -1891,7 +1874,6 @@ final class ComposePollScreenComponent: Component {
             contentHeight += pollOptionsSectionFooterSize.height
             contentHeight += sectionSpacing
                         
-            //TODO:localize
             var pollSettingsSectionItems: [AnyComponentWithIdentity<Empty>] = []
             if !isChannel {
                 pollSettingsSectionItems.append(AnyComponentWithIdentity(id: "anonymous", component: AnyComponent(ListActionItemComponent(
@@ -1900,7 +1882,7 @@ final class ComposePollScreenComponent: Component {
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Show Who Voted",
+                                string: environment.strings.CreatePoll_ShowWhoVoted,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: theme.list.itemPrimaryTextColor
                             )),
@@ -1908,7 +1890,7 @@ final class ComposePollScreenComponent: Component {
                         ))),
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Display voter names on each option",
+                                string: environment.strings.CreatePoll_ShowWhoVotedInfo,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
                                 textColor: theme.list.itemSecondaryTextColor
                             )),
@@ -1939,7 +1921,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Allow Multiple Answers",
+                            string: environment.strings.CreatePoll_MultiAnswer,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: theme.list.itemPrimaryTextColor
                         )),
@@ -1947,7 +1929,7 @@ final class ComposePollScreenComponent: Component {
                     ))),
                     AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Voters can select more than one option",
+                            string: environment.strings.CreatePoll_MultiAnswerInfo,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
                             textColor: theme.list.itemSecondaryTextColor
                         )),
@@ -1987,7 +1969,7 @@ final class ComposePollScreenComponent: Component {
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Allow Adding Options",
+                                string: environment.strings.CreatePoll_AddingOptions,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: theme.list.itemPrimaryTextColor
                             )),
@@ -1995,7 +1977,7 @@ final class ComposePollScreenComponent: Component {
                         ))),
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Participants can suggest new options",
+                                string: environment.strings.CreatePoll_AddingOptionsInfo,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
                                 textColor: theme.list.itemSecondaryTextColor
                             )),
@@ -2007,7 +1989,7 @@ final class ComposePollScreenComponent: Component {
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                         Image(image: self.cachedAddIcon, size: CGSize(width: 30.0, height: 30.0))
                     )), false),
-                    accessory: .toggle(ListActionItemComponent.Toggle(style: .lock(isLocked: self.isQuiz), isOn: self.canAddOptions, isInteractive: !self.isQuiz, action: { [weak self] _ in
+                    accessory: .toggle(ListActionItemComponent.Toggle(style: self.isQuiz ? .lock : .regular, isOn: self.canAddOptions, isInteractive: !self.isQuiz, action: { [weak self] _ in
                         guard let self else {
                             return
                         }
@@ -2027,7 +2009,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Allow Revoting",
+                            string: environment.strings.CreatePoll_Revoting,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: theme.list.itemPrimaryTextColor
                         )),
@@ -2035,7 +2017,7 @@ final class ComposePollScreenComponent: Component {
                     ))),
                     AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Voters can change their vote",
+                            string: environment.strings.CreatePoll_RevotingInfo,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
                             textColor: theme.list.itemSecondaryTextColor
                         )),
@@ -2063,7 +2045,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Shuffle Options",
+                            string: environment.strings.CreatePoll_ShuffleOptions,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: theme.list.itemPrimaryTextColor
                         )),
@@ -2071,7 +2053,7 @@ final class ComposePollScreenComponent: Component {
                     ))),
                     AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Answers appear in random order for each voter",
+                            string: environment.strings.CreatePoll_ShuffleOptionsInfo,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
                             textColor: theme.list.itemSecondaryTextColor
                         )),
@@ -2099,7 +2081,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Set Correct Answer",
+                            string: environment.strings.CreatePoll_EnableQuiz,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: theme.list.itemPrimaryTextColor
                         )),
@@ -2107,7 +2089,7 @@ final class ComposePollScreenComponent: Component {
                     ))),
                     AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: self.effectiveIsMultiAnswer ? "Mark one or more options as the right answer" : "Mark one option as the right answer",
+                            string: self.effectiveIsMultiAnswer ? environment.strings.CreatePoll_EnableQuizMultiInfo : environment.strings.CreatePoll_EnableQuizInfo,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
                             textColor: theme.list.itemSecondaryTextColor
                         )),
@@ -2141,7 +2123,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Limit Duration",
+                            string: environment.strings.CreatePoll_LimitDuration,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: theme.list.itemPrimaryTextColor
                         )),
@@ -2149,7 +2131,7 @@ final class ComposePollScreenComponent: Component {
                     ))),
                     AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Automatically close the poll at set time",
+                            string: environment.strings.CreatePoll_LimitDurationInfo,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0),
                             textColor: theme.list.itemSecondaryTextColor
                         )),
@@ -2182,10 +2164,10 @@ final class ComposePollScreenComponent: Component {
                 
                 switch self.timeLimit {
                 case let .duration(duration):
-                    title = "Duration"
+                    title = environment.strings.CreatePoll_LimitDuration_Duration
                     value = timeIntervalString(strings: environment.strings, value: duration)
                 case let .deadline(deadline):
-                    title = "Poll Ends"
+                    title = environment.strings.CreatePoll_LimitDuration_PollEnds
                     value = stringForMediumCompactDate(timestamp: deadline, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat, withTime: true)
                 }
                 
@@ -2229,7 +2211,7 @@ final class ComposePollScreenComponent: Component {
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Hide Results",
+                                string: environment.strings.CreatePoll_LimitDuration_HideResults,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: theme.list.itemPrimaryTextColor
                             )),
@@ -2252,7 +2234,7 @@ final class ComposePollScreenComponent: Component {
                 
                 pollSettingsFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "If you switch this on, results will be visible only after the poll closes.",
+                        string: environment.strings.CreatePoll_LimitDuration_HideResultsInfo,
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                         textColor: theme.list.freeTextColor
                     )),
@@ -2260,7 +2242,6 @@ final class ComposePollScreenComponent: Component {
                 ))
             }
                     
-            //TODO:localize
             let pollSettingsSectionSize = self.pollSettingsSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -2268,7 +2249,7 @@ final class ComposePollScreenComponent: Component {
                     style: .glass,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "SETTINGS",
+                            string: environment.strings.CreatePoll_SettingsTitle,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: theme.list.freeTextColor
                         )),
@@ -2900,11 +2881,10 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
             self.completion(poll)
             self.dismiss()
         } else if case .isUploading = validatedInput {
-            //TODO:localize
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let controller = UndoOverlayController(
                 presentationData: presentationData,
-                content: .info(title: "Please wait", text: "Poll media is still uploading...", timeout: nil, customUndoText: nil),
+                content: .info(title: presentationData.strings.CreatePoll_MediaUploading_Title, text: presentationData.strings.CreatePoll_MediaUploading_Text, timeout: nil, customUndoText: nil),
                 position: .top,
                 action: { _ in
                     return false
@@ -2933,9 +2913,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
         }
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if componentView.hasAnyData {
-            //TODO:localize
-            let text = "Discard poll?"
-            let controller = textAlertController(context: self.context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
+            let controller = textAlertController(context: self.context, title: nil, text: presentationData.strings.CreatePoll_DiscardPoll, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Attachment_CancelSelectionAlertYes, action: {
                 completion()
             })])
