@@ -15733,6 +15733,7 @@ Error: %8$@";
 
 "AuthConfirmation.Title" = "Log in to **%@**";
 "AuthConfirmation.Description" = "This site will receive your **name**,\n**username** and **profile photo**.";
+"AuthConfirmation.DescriptionApp" = "This app will receive your **name**,\n**username** and **profile photo**.";
 "AuthConfirmation.Device" = "Device";
 "AuthConfirmation.IpAddress" ="IP Address";
 "AuthConfirmation.Info" ="This login attempt came from the device above.";
@@ -16093,3 +16094,5 @@ Error: %8$@";
 "MediaPicker.LivePhoto.Loop" = "Loop";
 "MediaPicker.LivePhoto.Bounce" = "Bounce";
 "MediaPicker.LivePhoto.LiveOff" = "Live Off";
+
+"AuthConfirmation.UnverifiedApp" = "Unverified App";
