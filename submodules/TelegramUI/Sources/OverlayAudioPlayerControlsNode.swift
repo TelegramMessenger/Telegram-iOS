@@ -33,7 +33,7 @@ private func generateBackground(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setShadow(offset: CGSize(width: 0.0, height: -4.0), blur: 30.0, color: UIColor(white: 0.0, alpha: 0.2).cgColor)
-        context.setFillColor(theme.list.plainBackgroundColor.cgColor)
+        context.setFillColor(theme.list.modalPlainBackgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(x: 0.0, y: 8.0), size: CGSize(width: 20.0, height: 20.0)))
     })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10 + 8)
 }
