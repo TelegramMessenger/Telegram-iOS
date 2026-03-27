@@ -8,19 +8,6 @@ import TelegramCore
 import EmojiStatusComponent
 import AccountContext
 
-func localizedStyleName(strings: PresentationStrings, styleId: TelegramComposeAIMessageMode.StyleId) -> String {
-    switch styleId {
-    case .neutral:
-        return strings.TextProcessingStyle_Neutral
-    case let .style(name):
-        if let value = strings.primaryComponent.dict["TextProcessingStyle.\(name)"] {
-            return value
-        } else {
-            return name.capitalized
-        }
-    }
-}
-
 final class TextProcessingStyleSelectionComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
@@ -160,10 +147,9 @@ final class TextProcessingStyleSelectionComponent: Component {
                     component: AnyComponent(ItemComponent(
                         context: component.context,
                         theme: component.theme,
-                        icon: style.emoji,
                         iconFileId: style.emojiFileId,
                         iconFile: style.emojiFile,
-                        title: localizedStyleName(strings: component.strings, styleId: .style(style.name))
+                        title: style.title
                     )),
                     environment: {},
                     containerSize: CGSize(width: maxItemWidth, height: availableSize.height)
@@ -272,7 +258,6 @@ final class TextProcessingStyleSelectionComponent: Component {
 private final class ItemComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
-    let icon: String
     let iconFileId: Int64?
     let iconFile: TelegramMediaFile?
     let title: String
@@ -280,14 +265,12 @@ private final class ItemComponent: Component {
     init(
         context: AccountContext,
         theme: PresentationTheme,
-        icon: String,
         iconFileId: Int64?,
         iconFile: TelegramMediaFile?,
         title: String
     ) {
         self.context = context
         self.theme = theme
-        self.icon = icon
         self.iconFileId = iconFileId
         self.iconFile = iconFile
         self.title = title
@@ -295,9 +278,6 @@ private final class ItemComponent: Component {
     
     static func ==(lhs: ItemComponent, rhs: ItemComponent) -> Bool {
         if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.icon != rhs.icon {
             return false
         }
         if lhs.iconFileId != rhs.iconFileId {
@@ -377,7 +357,7 @@ private final class ItemComponent: Component {
                 ))
             } else {
                 iconComponent = AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.icon, font: Font.regular(25.0), textColor: .black))
+                    text: .plain(NSAttributedString(string: "❌", font: Font.regular(25.0), textColor: .black))
                 ))
             }
 
