@@ -16096,3 +16096,53 @@ Error: %8$@";
 "MediaPicker.LivePhoto.LiveOff" = "Live Off";
 
 "AuthConfirmation.UnverifiedApp" = "Unverified App";
+
+"Chat.ManagedBot.CreatedTitle" = "**%@** is ready!";
+"Chat.ManagedBot.CreatedText" = "Tap **Start** below to test your new chatbot. Its behavior is defined by **%@**.";
+"Chat.CreateBotLink" = "Create Bot";
+
+"Chat.InlineTopicMenu.TabAll" = "All";
+
+"CreateBot.Title" = "Create Bot";
+"CreateBot.Text" = "[%@]() wound like to create and manage a chatbot on your behalf.";
+"CreateBot.SectionName" = "BOT NAME";
+"CreateBot.SectionUsername" = "BOT USERNAME";
+"CreateBot.NamePlaceholder" = "Name";
+"CreateBot.UsernameStatus.Checking" = "Checking...";
+"CreateBot.UsernameStatus.Invalid" = "You can only use **a-z**, **0-9** and underscores.";
+"CreateBot.UsernameStatus.Taken" = "This username is already taken.";
+"CreateBot.UsernameStatus.Short" = "A username must have at least 5 characters.";
+"CreateBot.UsernameStatus.Number" = "A username can't start with a number";
+"CreateBot.UsernameStatus.Link" = "Link: t.me/%@";
+"CreateBot.UnsavedAlert.Title" = "Unsaved Changes";
+"CreateBot.UnsavedAlert.Text" = "You have not finished creating a bot.";
+"CreateBot.UnsavedAlert.Discard" = "Discard";
+"CreateBot.ActionButton" = "Create";
+"CreateBot.InputBadge" = "edit";
+
+"PeerInfo.ManagedBotFooter" = "Created and managed by [@%@]()";
+
+"Conversation.ReadAllPollVotes" = "Read All Poll Votes";
+"Chat.PanelSetBotPhoto" = "Set Profile Photo";
+
+"TextProcessing.TitleEdit" = "AI Editor";
+"TextProcessing.TitleTranslate" = "Translation";
+"TextProcessing.TabTranslate" = "Translate";
+"TextProcessing.TabStylize" = "Style";
+"TextProcessing.TabFix" = "Fix";
+"TextProcessing.ActionTitleNonPremium" = "Increase Limit";
+"TextProcessing.ActionValueNonPremium" = "X50";
+"TextProcessing.ActionApply" = "Apply";
+"TextProcessing.ActionClose" = "Close";
+"TextProcessing.LimitToast.Title" = "Daily limit reached";
+"TextProcessing.LimitToast.Text" = "Get **Telegram Premium** for **50x** more text edits per day.";
+"TextProcessing.Emojify" = "Emojify";
+"TextProcessing.TextExpand" = "more";
+"TextProcessing.TextCollapse" = "less";
+"TextProcessing.Translate.FromLanguage" = "From {}";
+"TextProcessing.Translate.ToLanguage" = "To {}";
+"TextProcessing.OriginalBadge" = "Original:";
+"TextProcessing.OriginalStyleBadge" = "Original";
+"TextProcessing.ResultBadge" = "Result";
+"TextProcessing.Translate.LanguageStyle" = "%1$@ (%2$@)";
+"TextProcessing.StyleTooltip" = "Select Style";

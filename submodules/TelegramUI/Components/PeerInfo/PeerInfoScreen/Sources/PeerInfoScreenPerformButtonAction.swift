@@ -689,7 +689,6 @@ extension PeerInfoScreenNode {
                             hasPaidFee = true
                         }
                         if !hasPaidFee {
-                            //TODO:localize
                             items.append(.action(ContextMenuActionItem(text: "Return Fee", icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Paid"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in

@@ -14,18 +14,39 @@ import TooltipComponent
 
 private let languageRecognizer = NLLanguageRecognizer()
 
-func localizedLanguageName(strings: PresentationStrings, language: String) -> String {
-    let toLang = language
-    let key = "Translation.Language.\(toLang)"
-    let translateTitle: String
-    if let string = strings.primaryComponent.dict[key] {
-        translateTitle = string
-    } else {
-        let languageLocale = Locale(identifier: language)
-        let toLanguage = languageLocale.localizedString(forLanguageCode: toLang)?.capitalized ?? ""
-        return toLanguage
+enum LocalizedLanguageNameKind {
+    case neutral
+    case translateFrom
+    case translateTo
+}
+
+func localizedLanguageName(strings: PresentationStrings, language: String, kind: LocalizedLanguageNameKind) -> String {
+    var result: String?
+    
+    switch kind {
+    case .neutral:
+        if let value = strings.primaryComponent.dict["Translation.Language.\(language)"] {
+            result = value
+        }
+    case .translateFrom:
+        if let value = strings.primaryComponent.dict["Translation.LanguageFrom.\(language)"] {
+            result = value
+        }
+    case .translateTo:
+        if let value = strings.primaryComponent.dict["Translation.LanguageTo.\(language)"] {
+            result = value
+        }
     }
-    return translateTitle
+    if result == nil {
+        if let value = strings.primaryComponent.dict["Translation.Language.\(language)"] {
+            result = value
+        }
+    }
+    if result == nil {
+        let languageLocale = Locale(identifier: language)
+        result = languageLocale.localizedString(forLanguageCode: language)?.capitalized
+    }
+    return result ?? ""
 }
 
 final class TextProcessingTranslateContentComponent: Component {
@@ -139,6 +160,8 @@ final class TextProcessingTranslateContentComponent: Component {
 
     final class View: UIView {
         private let sourceText = ComponentView<Empty>()
+        private let styleSelection = ComponentView<Empty>()
+        private let styleSelectionContainer: UIView
         private let targetText = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
         
@@ -152,6 +175,9 @@ final class TextProcessingTranslateContentComponent: Component {
         
         override init(frame: CGRect) {
             self.separatorLayer = SimpleLayer()
+            self.styleSelectionContainer = SparseContainerView()
+            self.styleSelectionContainer.clipsToBounds = true
+            self.styleSelectionContainer.layer.cornerRadius = 26.0
             
             super.init(frame: frame)
             
@@ -277,37 +303,34 @@ final class TextProcessingTranslateContentComponent: Component {
             let bottomInset: CGFloat = 14.0
             let blockSpacing: CGFloat = 30.0
             
-            let fromPrefix: String
-            let toPrefix: String
+            let fromFormat: String
+            let toFormat: String
             var toTitle: String
             switch component.mode {
             case .translate:
-                fromPrefix = "From"
-                toPrefix = "To"
-                toTitle = localizedLanguageName(strings: component.strings, language: component.externalState.result?.language ?? "")
-                if component.externalState.style != .neutral {
-                    toTitle.append(" (")
-                    let styleName = localizedStyleName(strings: component.strings, styleId: component.externalState.style)
-                    toTitle.append(styleName)
-                    toTitle.append(")")
+                fromFormat = component.strings.TextProcessing_Translate_FromLanguage
+                toFormat = component.strings.TextProcessing_Translate_ToLanguage
+                toTitle = localizedLanguageName(strings: component.strings, language: component.externalState.result?.language ?? "", kind: .translateTo)
+                if case .style = component.externalState.style {
+                    toTitle = component.strings.TextProcessing_Translate_LanguageStyle(toTitle, localizedStyleName(strings: component.strings, styleId: component.externalState.style)).string
                 }
             case .stylize, .fix:
-                fromPrefix = "Original:"
+                fromFormat = component.strings.TextProcessing_OriginalBadge
                 if case .stylize = component.mode {
                     if component.externalState.style == .neutral {
-                        toPrefix = "Original"
+                        toFormat = component.strings.TextProcessing_OriginalStyleBadge
                     } else {
-                        toPrefix = "Result"
+                        toFormat = component.strings.TextProcessing_ResultBadge
                     }
                 } else {
-                    toPrefix = "Result"
+                    toFormat = component.strings.TextProcessing_ResultBadge
                 }
                 toTitle = ""
             }
             
             contentHeight += topInset
             if case .stylize = component.mode {
-                let sourceTextSize = self.sourceText.update(
+                let styleSelectionSize = self.styleSelection.update(
                     transition: transition,
                     component: AnyComponent(TextProcessingStyleSelectionComponent(
                         context: component.context,
@@ -335,15 +358,16 @@ final class TextProcessingTranslateContentComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 46.0)
                 )
-                let sourceTextFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: sourceTextSize)
-                contentHeight += sourceTextSize.height
+                let styleSelectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: styleSelectionSize)
+                contentHeight += styleSelectionSize.height
                 
-                if let sourceTextView = self.sourceText.view {
-                    if sourceTextView.superview == nil {
-                        self.sourceText.parentState = state
-                        self.addSubview(sourceTextView)
+                if let styleSelectionView = self.styleSelection.view {
+                    if styleSelectionView.superview == nil {
+                        self.styleSelection.parentState = state
+                        self.styleSelectionContainer.addSubview(styleSelectionView)
+                        self.addSubview(self.styleSelectionContainer)
                     }
-                    transition.setFrame(view: sourceTextView, frame: sourceTextFrame)
+                    transition.setFrame(view: styleSelectionView, frame: styleSelectionFrame)
                 }
             } else {
                 let sourceTextSize = self.sourceText.update(
@@ -352,8 +376,8 @@ final class TextProcessingTranslateContentComponent: Component {
                         context: component.context,
                         theme: component.theme,
                         strings: component.strings,
-                        titlePrefix: fromPrefix,
-                        title: localizedLanguageName(strings: component.strings, language: component.externalState.sourceLanguage ?? ""),
+                        titleFormat: fromFormat,
+                        title: localizedLanguageName(strings: component.strings, language: component.externalState.sourceLanguage ?? "", kind: .translateFrom),
                         titleAction: nil,
                         isExpanded: (
                             component.externalState.isSourceTextExpanded,
@@ -397,7 +421,7 @@ final class TextProcessingTranslateContentComponent: Component {
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,
-                    titlePrefix: toPrefix,
+                    titleFormat: toFormat,
                     title: toTitle,
                     titleAction: component.mode == .translate ? { [weak self] sourceView in
                         guard let self, let component = self.component, let result = component.externalState.result else {
@@ -494,7 +518,7 @@ final class TextProcessingTranslateContentComponent: Component {
                     transition: tooltipTransition,
                     component: AnyComponent(TooltipComponent(
                         content: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "Select Style", font: Font.regular(15.0), textColor: .white))
+                            text: .plain(NSAttributedString(string: component.strings.TextProcessing_StyleTooltip, font: Font.regular(15.0), textColor: .white))
                         ))
                     )),
                     environment: {},
@@ -521,6 +545,8 @@ final class TextProcessingTranslateContentComponent: Component {
                     }
                 }
             }
+            
+            transition.setFrame(view: self.styleSelectionContainer, frame: CGRect(origin: CGPoint(), size: size))
 
             return size
         }

@@ -229,7 +229,7 @@ final class TextProcessingContentComponent: Component {
                 tabs.append(TabBarComponent.Item(
                     content: .customItem(TabBarComponent.Item.Content.CustomItem(
                         id: "translate",
-                        title: "Translate",
+                        title: environment.strings.TextProcessing_TabTranslate,
                         icon: .bundleIcon(name: "TextProcessing/TabTranslate")
                     )),
                     action: { [weak self] _ in
@@ -251,7 +251,7 @@ final class TextProcessingContentComponent: Component {
                 tabs.append(TabBarComponent.Item(
                     content: .customItem(TabBarComponent.Item.Content.CustomItem(
                         id: "stylize",
-                        title: "Style",
+                        title: environment.strings.TextProcessing_TabStylize,
                         icon: .bundleIcon(name: "TextProcessing/TabStylize")
                     )),
                     action: { [weak self] _ in
@@ -274,7 +274,7 @@ final class TextProcessingContentComponent: Component {
                 tabs.append(TabBarComponent.Item(
                     content: .customItem(TabBarComponent.Item.Content.CustomItem(
                         id: "fix",
-                        title: "Fix",
+                        title: environment.strings.TextProcessing_TabFix,
                         icon: .bundleIcon(name: "TextProcessing/TabFix")
                     )),
                     action: { [weak self] _ in
@@ -437,31 +437,6 @@ final class TextProcessingContentComponent: Component {
             
             var actionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
             if case .translate = component.mode {
-                /*if let replaceText = component.replaceText {
-                 //TODO:localize
-                 actionsSectionItems.append(AnyComponentWithIdentity(id: "replace", component: AnyComponent(ListActionItemComponent(
-                 theme: theme,
-                 style: .glass,
-                 title: AnyComponent(
-                 MultilineTextComponent(
-                 text: .plain(NSAttributedString(
-                 string: "Replace with Translation",
-                 font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize),
-                 textColor: theme.list.itemAccentColor
-                 )),
-                 maximumNumberOfLines: 1
-                 )
-                 ),
-                 leftIcon: .custom(AnyComponentWithIdentity(id: "icon", component: AnyComponent(BundleIconComponent(name: "Chat/Context Menu/Replace", tintColor: theme.list.itemAccentColor))), false),
-                 action: { [weak state] _ in
-                 guard let state else {
-                 return
-                 }
-                 replaceText(state.translatedText?.0 ?? state.text, state.translatedText?.1 ?? state.entities)
-                 component.dismiss()
-                 }
-                 ))))
-                 }*/
                 if let copyTranslation = component.copyCurrentResult {
                     actionsSectionItems.append(AnyComponentWithIdentity(id: "copy", component: AnyComponent(ListActionItemComponent(
                         theme: environment.theme,
@@ -489,7 +464,7 @@ final class TextProcessingContentComponent: Component {
                         title: AnyComponent(
                             MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: "Translate Entire Chat",
+                                    string: environment.strings.Localization_TranslateEntireChat,
                                     font: Font.regular(17.0),
                                     textColor: environment.theme.list.itemAccentColor
                                 )),
@@ -765,13 +740,12 @@ private final class TextProcessingSheetComponent: Component {
             var performSendAction: ((TextWithEntities) -> Void)?
             var hasLongPressActions = false
             let isMainActionEnabled: Bool
-            //TODO:localize (for AI: don't remove this line)
             let actionButtonTitle: String
             var actionButtonShowsIncreaseLimit = false
             
             if self.contentExternalState.nonPremiumFloodTriggered {
                 isMainActionEnabled = true
-                actionButtonTitle = "Increase Limit"
+                actionButtonTitle = environmentValue.strings.TextProcessing_ActionTitleNonPremium
                 actionButtonShowsIncreaseLimit = true
                 performMainAction = { [weak self] in
                     guard let self, let component = self.component else {
@@ -780,8 +754,8 @@ private final class TextProcessingSheetComponent: Component {
                     
                     let context = component.context
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = component.context.sharedContext.makePremiumDemoController(context: component.context, subject: .doubleLimits, forceDark: false, action: {
-                        let controller = component.context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
+                    let controller = component.context.sharedContext.makePremiumDemoController(context: component.context, subject: .aiTools, forceDark: false, action: {
+                        let controller = component.context.sharedContext.makePremiumIntroController(context: context, source: .aiTools, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
                     }, dismissed: nil)
                     replaceImpl = { [weak controller] c in
@@ -792,7 +766,7 @@ private final class TextProcessingSheetComponent: Component {
             } else {
                 switch component.mode {
                 case let .edit(_, completion, send, sendContextActions):
-                    actionButtonTitle = "Apply"
+                    actionButtonTitle = environmentValue.strings.TextProcessing_ActionApply
                     performSendAction = send
                     isMainActionEnabled = !self.contentExternalState.isProcessing
                     hasLongPressActions = sendContextActions != nil
@@ -806,7 +780,7 @@ private final class TextProcessingSheetComponent: Component {
                         dismiss(true)
                     }
                 case .translate:
-                    actionButtonTitle = "Close"
+                    actionButtonTitle = environmentValue.strings.TextProcessing_ActionClose
                     isMainActionEnabled = true
                     performMainAction = {
                         dismiss(true)
@@ -827,9 +801,9 @@ private final class TextProcessingSheetComponent: Component {
             let titleString: String
             switch component.mode {
             case .edit:
-                titleString = "AI Editor"
+                titleString = environmentValue.strings.TextProcessing_TitleEdit
             case .translate:
-                titleString = "Translation"
+                titleString = environmentValue.strings.TextProcessing_TitleTranslate
             }
 
             let sheetSize = self.sheet.update(
@@ -903,6 +877,7 @@ private final class TextProcessingSheetComponent: Component {
                     bottomItem: AnyComponent(
                         ActionButtonsComponent(
                             theme: theme,
+                            strings: environmentValue.strings,
                             actionTitle: actionButtonTitle,
                             actionButtonShowsIncreaseLimit: actionButtonShowsIncreaseLimit,
                             action: isMainActionEnabled ? performMainAction : nil,
@@ -982,10 +957,10 @@ private final class TextProcessingSheetComponent: Component {
                         )),
                         content: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: "Daily limit reached", font: Font.semibold(14.0), textColor: .white)),
+                                text: .plain(NSAttributedString(string: environmentValue.strings.TextProcessing_LimitToast_Title, font: Font.semibold(14.0), textColor: .white)),
                             ))),
                             AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                text: .markdown(text: "Get **Telegram Premium** for **50x** more text edits per day.", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
+                                text: .markdown(text: environmentValue.strings.TextProcessing_LimitToast_Text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
                                 maximumNumberOfLines: 0
                             )))
                         ], alignment: .left, spacing: 6.0)),
@@ -1302,6 +1277,7 @@ private final class TitleComponent: Component {
 
 private final class ActionButtonsComponent: Component {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let actionTitle: String
     let actionButtonShowsIncreaseLimit: Bool
     let action: (() -> Void)?
@@ -1310,6 +1286,7 @@ private final class ActionButtonsComponent: Component {
     
     init(
         theme: PresentationTheme,
+        strings: PresentationStrings,
         actionTitle: String,
         actionButtonShowsIncreaseLimit: Bool,
         action: (() -> Void)?,
@@ -1317,6 +1294,7 @@ private final class ActionButtonsComponent: Component {
         longPressSendAction: ((UIView) -> Void)?
     ) {
         self.theme = theme
+        self.strings = strings
         self.actionTitle = actionTitle
         self.actionButtonShowsIncreaseLimit = actionButtonShowsIncreaseLimit
         self.action = action
@@ -1326,6 +1304,9 @@ private final class ActionButtonsComponent: Component {
     
     static func ==(lhs: ActionButtonsComponent, rhs: ActionButtonsComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.actionTitle != rhs.actionTitle {
@@ -1380,6 +1361,7 @@ private final class ActionButtonsComponent: Component {
             ))))
             if component.actionButtonShowsIncreaseLimit {
                 actionButtonContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(IncreaseLimitBadgeComponent(
+                    title: component.strings.TextProcessing_ActionValueNonPremium,
                     fillColor: component.theme.list.itemCheckColors.foregroundColor,
                     foregroundColor: .clear
                 ))))
@@ -1484,18 +1466,24 @@ private final class ActionButtonsComponent: Component {
 }
 
 private final class IncreaseLimitBadgeComponent: Component {
+    let title: String
     let fillColor: UIColor
     let foregroundColor: UIColor
     
     init(
+        title: String,
         fillColor: UIColor,
         foregroundColor: UIColor
     ) {
+        self.title = title
         self.fillColor = fillColor
         self.foregroundColor = foregroundColor
     }
     
     static func ==(lhs: IncreaseLimitBadgeComponent, rhs: IncreaseLimitBadgeComponent) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
         if lhs.fillColor != rhs.fillColor {
             return false
         }
@@ -1532,7 +1520,7 @@ private final class IncreaseLimitBadgeComponent: Component {
             let topInset: CGFloat = 1.0
             let bottomInset: CGFloat = 0.0
             
-            let text = NSAttributedString(string: "X50", font: Font.with(size: 14.0, design: .round, weight: .semibold), textColor: .clear)
+            let text = NSAttributedString(string: component.title, font: Font.with(size: 14.0, design: .round, weight: .semibold), textColor: .clear)
             let rawTextSize = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
             let textSize = CGSize(width: ceil(rawTextSize.width), height: ceil(rawTextSize.height))
             let backgroundSize = CGSize(width: leftInset + rightInset + textSize.width, height: topInset + bottomInset + textSize.height)

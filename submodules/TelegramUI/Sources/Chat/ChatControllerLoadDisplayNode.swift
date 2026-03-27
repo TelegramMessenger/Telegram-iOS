@@ -1611,10 +1611,9 @@ extension ChatControllerImpl {
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
             var menuItems: [ContextMenuItem] = []
-            //TODO:localize
             menuItems.append(.action(ContextMenuActionItem(
                 id: nil,
-                text: "Read All Poll Votes",
+                text: strongSelf.presentationData.strings.Conversation_ReadAllPollVotes,
                 textColor: .primary,
                 textLayout: .singleLine,
                 icon: { theme in
