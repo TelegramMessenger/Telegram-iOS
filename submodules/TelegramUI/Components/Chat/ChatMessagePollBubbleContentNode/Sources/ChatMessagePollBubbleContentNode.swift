@@ -2338,7 +2338,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             item.controllerInteraction.requestAddMessagePollOption(item.message.id, trimmedNewOptionText, entities, optionData, self.currentNewOptionMedia?.media)
             return
         } else if self.newOptionIsFocused {
-            return
+            self.addOptionNode?.resignInput()
         }
 
         var hasSelection = false

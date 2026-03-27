@@ -187,7 +187,11 @@ extension ChatControllerImpl {
                 
                 items.append(.separator)
                 
-                let peerName = "**\(addedByPeer.compactDisplayTitle)**"
+                var peerName = addedByPeer.compactDisplayTitle
+                if peerName.count > 20 {
+                    peerName = peerName.prefix(20) + "..."
+                }
+                peerName = "**\(peerName)**"
                 let dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: date, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
                     dateFormatString: { value in
                         if addedByPeer.id == self.context.account.peerId {

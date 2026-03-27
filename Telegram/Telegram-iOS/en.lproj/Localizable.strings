@@ -16018,7 +16018,7 @@ Error: %8$@";
 
 "PeerInfo.PanePolls" = "Polls";
 
-"MediaPlayer.SavedMusic.RemoveFromProfile" = "Remove from Profile";
+"MediaPlayer.SavedMusic.RemoveFromProfileShort" = "Remove from Profile";
 
 "Gift.Store.ShowStarsListings" = "Show listings for stars only";
 "Gift.Store.AllListings" = "All Listings";
@@ -16054,7 +16054,7 @@ Error: %8$@";
 "MediaPicker.PollSubtitle.PollOption" = "Add media to this option";
 
 "StickerPicker.Title" = "Sticker";
-"StickerPicker.PollSubtitle.PollOption" = "Add media to this option";
+"StickerPicker.PollSubtitle.PollOption" = "Add sticker to this option";
 
 "Chat.Poll.HiddenResultsTooltip" = "Results will appear after the poll ends";
 

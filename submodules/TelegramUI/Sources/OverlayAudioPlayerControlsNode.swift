@@ -1007,7 +1007,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
             var buttonBackgroundColor = self.presentationData.theme.list.itemCheckColors.fillColor
             if savedMusic {
                 profileAudioButtonContent =  AnyComponentWithIdentity(id: "removeFromProfile", component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: self.presentationData.strings.MediaPlayer_SavedMusic_RemoveFromProfile, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)))
+                    MultilineTextComponent(text: .plain(NSAttributedString(string: self.presentationData.strings.MediaPlayer_SavedMusic_RemoveFromProfileShort, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)))
                 ))
                 buttonBackgroundColor = self.presentationData.theme.list.controlSecondaryColor
             } else {
