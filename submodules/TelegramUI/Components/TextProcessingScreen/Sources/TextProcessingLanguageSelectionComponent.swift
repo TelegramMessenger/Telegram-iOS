@@ -8,6 +8,8 @@ import MultilineTextComponent
 import BundleIconComponent
 import TelegramCore
 import TranslateUI
+import EmojiStatusComponent
+import AccountContext
 
 final class TextProcessingLanguageSelectionComponent: Component {
     public struct Language: Equatable {
@@ -22,34 +24,40 @@ final class TextProcessingLanguageSelectionComponent: Component {
         }
     }
 
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let sourceView: UIView
     let topLanguages: [Language]
     let selectedLanguageCode: String
+    let ignoredTranslationLanguages: [String]
     let currentStyle: TelegramComposeAIMessageMode.StyleId
-    let displayStyles: [TelegramComposeAIMessageMode.Style]?
+    let displayStyles: [TextProcessingScreen.Style]?
     let completion: (String, TelegramComposeAIMessageMode.StyleId) -> Void
     let dismissed: () -> Void
     let inputHeight: CGFloat
 
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         sourceView: UIView,
         topLanguages: [Language],
         selectedLanguageCode: String,
+        ignoredTranslationLanguages: [String],
         currentStyle: TelegramComposeAIMessageMode.StyleId,
-        displayStyles: [TelegramComposeAIMessageMode.Style]?,
+        displayStyles: [TextProcessingScreen.Style]?,
         completion: @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void,
         dismissed: @escaping () -> Void,
         inputHeight: CGFloat
     ) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.sourceView = sourceView
         self.topLanguages = topLanguages
         self.selectedLanguageCode = selectedLanguageCode
+        self.ignoredTranslationLanguages = ignoredTranslationLanguages
         self.currentStyle = currentStyle
         self.displayStyles = displayStyles
         self.completion = completion
@@ -68,6 +76,9 @@ final class TextProcessingLanguageSelectionComponent: Component {
             return false
         }
         if lhs.selectedLanguageCode != rhs.selectedLanguageCode {
+            return false
+        }
+        if lhs.ignoredTranslationLanguages != rhs.ignoredTranslationLanguages {
             return false
         }
         if lhs.currentStyle != rhs.currentStyle {
@@ -396,6 +407,9 @@ final class TextProcessingLanguageSelectionComponent: Component {
             
             if self.mainItems.isEmpty {
                 self.mainItems = supportedTranslationLanguages.compactMap { item in
+                    if component.ignoredTranslationLanguages.contains(item) {
+                        return nil
+                    }
                     return Language(id: item, languageCode: item, name: localizedLanguageName(strings: component.strings, language: item))
                 }
                 var topIds: [String] = []
@@ -451,7 +465,8 @@ final class TextProcessingLanguageSelectionComponent: Component {
             let filteredItems = self.filteredMainItems
             let effectiveTopItemCount = self.searchQuery.isEmpty ? self.mainTopItemCount : 0
             let searchSeparatorHeight: CGFloat = 20.0
-            let mainContentHeight = mainContainerInset * 2.0 + searchItemHeight + searchSeparatorHeight + CGFloat(filteredItems.count) * mainItemSize.height + (effectiveTopItemCount != 0 ? 20.0 : 0.0)
+            let totalTopItemCount = self.mainTopItemCount
+            let mainContentHeight = mainContainerInset * 2.0 + searchItemHeight + searchSeparatorHeight + CGFloat(self.mainItems.count) * mainItemSize.height + (totalTopItemCount != 0 ? 20.0 : 0.0)
             
             let maxAvailableHeight = max(mainItemSize.height * 2.0, availableSize.height - component.inputHeight - containerSideInset * 2.0)
             var mainSize = CGSize(width: mainWidth, height: min(min(370.0, maxAvailableHeight), mainContentHeight))
@@ -460,10 +475,10 @@ final class TextProcessingLanguageSelectionComponent: Component {
             var selectedStyleItemFrame: CGRect?
             let stylesSpacing: CGFloat = 8.0
             if let displayStyles = component.displayStyles {
-                var styleData: [(id: TelegramComposeAIMessageMode.StyleId, icon: String, title: String)] = []
-                styleData.append((.neutral, "🏳️", localizedStyleName(strings: component.strings, styleId: .neutral)))
+                var styleData: [(id: TelegramComposeAIMessageMode.StyleId, icon: String, iconFileId: Int64?, iconFile: TelegramMediaFile?, title: String)] = []
+                styleData.append((.neutral, "🏳️", nil, nil, localizedStyleName(strings: component.strings, styleId: .neutral)))
                 for item in displayStyles {
-                    styleData.append((item.id, item.emoji, localizedStyleName(strings: component.strings, styleId: item.id)))
+                    styleData.append((item.id, item.emoji, item.emojiFileId, item.emojiFile, localizedStyleName(strings: component.strings, styleId: item.id)))
                 }
 
                 let stylesItemSize = CGSize(width: 82.0, height: 60.0)
@@ -483,8 +498,11 @@ final class TextProcessingLanguageSelectionComponent: Component {
                     let _ = itemView.update(
                         transition: itemViewTransition,
                         component: AnyComponent(StyleItemComponent(
+                            context: component.context,
                             theme: component.theme,
                             icon: item.icon,
+                            iconFileId: item.iconFileId,
+                            iconFile: item.iconFile,
                             title: item.title,
                             action: { [weak self] in
                                 guard let self else {
@@ -834,28 +852,43 @@ private final class LanguageItemComponent: Component {
 }
 
 private final class StyleItemComponent: Component {
+    let context: AccountContext
     let theme: PresentationTheme
     let icon: String
+    let iconFileId: Int64?
+    let iconFile: TelegramMediaFile?
     let title: String
     let action: () -> Void
-    
+
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         icon: String,
+        iconFileId: Int64?,
+        iconFile: TelegramMediaFile?,
         title: String,
         action: @escaping () -> Void
     ) {
+        self.context = context
         self.theme = theme
         self.icon = icon
+        self.iconFileId = iconFileId
+        self.iconFile = iconFile
         self.title = title
         self.action = action
     }
-    
+
     static func ==(lhs: StyleItemComponent, rhs: StyleItemComponent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.icon != rhs.icon {
+            return false
+        }
+        if lhs.iconFileId != rhs.iconFileId {
+            return false
+        }
+        if lhs.iconFile?.fileId != rhs.iconFile?.fileId {
             return false
         }
         if lhs.title != rhs.title {
@@ -891,10 +924,18 @@ private final class StyleItemComponent: Component {
         }
         
         func update(component: StyleItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            let previousComponent = self.component
             self.component = component
             self.state = state
 
             let iconTintColor = component.theme.list.itemPrimaryTextColor
+
+            if previousComponent?.iconFileId != component.iconFileId {
+                if let imageIcon = self.imageIcon {
+                    self.imageIcon = nil
+                    imageIcon.view?.removeFromSuperview()
+                }
+            }
 
             let imageIcon: ComponentView<Empty>
             var iconTransition = transition
@@ -906,11 +947,39 @@ private final class StyleItemComponent: Component {
                 self.imageIcon = imageIcon
             }
 
+            let iconComponent: AnyComponent<Empty>
+            if let iconFileId = component.iconFileId {
+                let iconSize = CGSize(width: 34.0, height: 34.0)
+                let content: EmojiStatusComponent.AnimationContent
+                if let file = component.iconFile {
+                    content = .file(file: file)
+                } else {
+                    content = .customEmoji(fileId: iconFileId)
+                }
+                iconComponent = AnyComponent(EmojiStatusComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    content: .animation(
+                        content: content,
+                        size: iconSize,
+                        placeholderColor: component.theme.list.mediaPlaceholderColor,
+                        themeColor: component.theme.list.itemAccentColor,
+                        loopMode: .count(0)
+                    ),
+                    size: iconSize,
+                    isVisibleForAnimations: true,
+                    action: nil
+                ))
+            } else {
+                iconComponent = AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: component.icon, font: Font.regular(25.0), textColor: .black))
+                ))
+            }
+
             let iconSize = imageIcon.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.icon, font: Font.regular(25.0), textColor: .black))
-                )),
+                component: iconComponent,
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
