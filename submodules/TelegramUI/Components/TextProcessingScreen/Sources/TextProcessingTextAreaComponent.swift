@@ -189,11 +189,18 @@ final class TextProcessingTextAreaComponent: Component {
             guard let result = super.hitTest(point, with: event) else {
                 return nil
             }
-            if result == self.textSelectionNode?.view && !self.displayContentsUnderSpoilers.value {
+            if result == self.textSelectionNode?.view {
                 if let textView = self.text.view as? InteractiveTextComponent.View {
                     let textPoint = self.convert(point, to: textView.textNode.view)
                     if let attributes = textView.textNode.attributesAtPoint(textPoint, orNearest: false)?.1 {
                         if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                            if !self.displayContentsUnderSpoilers.value {
+                                if let value = textView.textNode.view.hitTest(textPoint, with: event) {
+                                    return value
+                                }
+                            }
+                        }
+                        if attributes[NSAttributedString.Key(rawValue: "TelegramBlockQuote")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Blockquote")] != nil {
                             if let value = textView.textNode.view.hitTest(textPoint, with: event) {
                                 return value
                             }
@@ -359,6 +366,7 @@ final class TextProcessingTextAreaComponent: Component {
                 entities: component.text?.entities ?? self.previousText?.entities ?? [],
                 baseColor: component.theme.list.itemPrimaryTextColor,
                 linkColor: component.theme.list.itemAccentColor,
+                baseQuoteTintColor: component.theme.list.itemAccentColor,
                 baseFont: Font.regular(fontSize),
                 linkFont: Font.regular(fontSize),
                 boldFont: Font.semibold(fontSize),
@@ -406,7 +414,7 @@ final class TextProcessingTextAreaComponent: Component {
                     textStroke: nil,
                     displayContentsUnderSpoilers: self.displayContentsUnderSpoilers.value,
                     customTruncationToken: nil,
-                    expandedBlocks: Set(),
+                    expandedBlocks: self.expandedBlockIds,
                     context: component.context,
                     cache: component.context.animationCache,
                     renderer: component.context.animationRenderer,
@@ -549,7 +557,7 @@ final class TextProcessingTextAreaComponent: Component {
                 }
                 
                 if component.copyAction != nil, let textLayout = self.textState.layout {
-                    if textLayout.trailingLineWidth >= availableSize.width - sideInset - 32.0 || textLayout.trailingLineIsRTL {
+                    if textLayout.trailingLineWidth >= availableSize.width - sideInset - 32.0 || textLayout.trailingLineIsRTL || textLayout.trailingLineIsBlock {
                         textContainerFrame.size.height += 28.0
                     }
                 }
@@ -696,7 +704,7 @@ final class TextProcessingTextAreaComponent: Component {
                         textStroke: nil,
                         displayContentsUnderSpoilers: true,
                         customTruncationToken: nil,
-                        expandedBlocks: Set(),
+                        expandedBlocks: self.expandedBlockIds,
                         context: component.context,
                         cache: component.context.animationCache,
                         renderer: component.context.animationRenderer,

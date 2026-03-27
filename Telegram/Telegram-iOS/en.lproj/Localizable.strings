@@ -16118,6 +16118,8 @@ Error: %8$@";
 "CreateBot.UsernameStatus.Taken" = "This username is already taken.";
 "CreateBot.UsernameStatus.Short" = "A username must have at least 5 characters.";
 "CreateBot.UsernameStatus.Number" = "A username can't start with a number";
+"CreateBot.UsernameStatus.LimitExceeded_1" = "You can't create more than %d bot.";
+"CreateBot.UsernameStatus.LimitExceeded_any" = "You can't create more than %d bots.";
 "CreateBot.UsernameStatus.Link" = "Link: t.me/%@";
 "CreateBot.UnsavedAlert.Title" = "Unsaved Changes";
 "CreateBot.UnsavedAlert.Text" = "You have not finished creating a bot.";
@@ -16151,3 +16153,5 @@ Error: %8$@";
 "TextProcessing.ResultBadge" = "Result";
 "TextProcessing.Translate.LanguageStyle" = "%1$@ (%2$@)";
 "TextProcessing.StyleTooltip" = "Select Style";
+
+"Bot.AlertCanNotCreateBots" = "%@ can't manage other bots.";

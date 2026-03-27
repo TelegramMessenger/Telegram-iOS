@@ -637,30 +637,40 @@ private final class CreateBotSheetComponent: Component {
                     }
                 })
             }, error: { [weak self] error in
-                guard let self, let environment = self.environment, let component = self.component else {
-                    return
+                Task { @MainActor in
+                    guard let self, let environment = self.environment, let component = self.component else {
+                        return
+                    }
+                    
+                    self.isCreating = false
+                    self.state?.updated(transition: .immediate)
+                    
+                    let text: String
+                    switch error {
+                    case .generic:
+                        text = environment.strings.Login_UnknownError
+                    case .occupied:
+                        text = environment.strings.CreateBot_UsernameStatus_Taken
+                    case .limitExceeded:
+                        let isPremium = (await component.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
+                        ).get())?.isPremium ?? false
+                        let limits = await component.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: isPremium)
+                        ).get()
+                        text = environment.strings.CreateBot_UsernameStatus_LimitExceeded(Int32(limits.maxBotsCreated))
+                    }
+                    
+                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                    self.environment?.controller()?.push(textAlertController(
+                        context: component.context,
+                        title: nil,
+                        text: text,
+                        actions: [
+                            .init(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                        ]
+                    ))
                 }
-                
-                self.isCreating = false
-                self.state?.updated(transition: .immediate)
-                
-                let text: String
-                switch error {
-                case .generic:
-                    text = environment.strings.Login_UnknownError
-                case .occupied:
-                    text = environment.strings.CreateBot_UsernameStatus_Taken
-                }
-                
-                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                self.environment?.controller()?.push(textAlertController(
-                    context: component.context,
-                    title: nil,
-                    text: text,
-                    actions: [
-                        .init(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
-                    ]
-                ))
             })
         }
 
