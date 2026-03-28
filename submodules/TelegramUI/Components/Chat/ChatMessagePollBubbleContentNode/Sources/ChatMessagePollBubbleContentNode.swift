@@ -3726,7 +3726,7 @@ private func resolvedOptionOrder(for item: ChatMessageBubbleContentItem) -> [(In
         return []
     }
     let defaultOrderedOptions = Array(poll.options.enumerated()).map { ($0.offset, $0.element) }
-    guard poll.shuffleAnswers else {
+    guard poll.shuffleAnswers && !poll.isCreator else {
         return defaultOrderedOptions
     }
 

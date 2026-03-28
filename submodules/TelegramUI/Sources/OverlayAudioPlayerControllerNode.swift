@@ -47,8 +47,10 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
     private let historyFrameNode: SparseNode
     private let historyFrameLeftOverlayNode: ASDisplayNode
     private let historyFrameRightOverlayNode: ASDisplayNode
+    private let historyFrameTopOverlayClipNode: ASDisplayNode
     private let historyFrameTopOverlayNode: ASDisplayNode
     private let historyFrameTopMaskNode: ASImageNode
+    private let collapseNode: HighlightableButtonNode
     private let headerButtons = ComponentView<Empty>()
     private let title = ComponentView<Empty>()
     
@@ -73,7 +75,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
     private var peer: EnginePeer?
     
     private var copyProtectionEnabled = false
-    
+        
     init(
         context: AccountContext,
         chatLocation: ChatLocation,
@@ -279,6 +281,9 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.historyFrameRightOverlayNode = ASDisplayNode()
         self.historyFrameRightOverlayNode.backgroundColor = self.presentationData.theme.list.modalBlocksBackgroundColor
         
+        self.historyFrameTopOverlayClipNode = ASDisplayNode()
+        self.historyFrameTopOverlayClipNode.clipsToBounds = true
+        
         self.historyFrameTopOverlayNode = ASDisplayNode()
         self.historyFrameTopOverlayNode.cornerRadius = 38.0
         self.historyFrameTopOverlayNode.clipsToBounds = true
@@ -320,6 +325,10 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             }
         )
         self.historyNode.clipsToBounds = true
+        
+        self.collapseNode = HighlightableButtonNode()
+        self.collapseNode.displaysAsynchronously = false
+        self.collapseNode.setImage(generateCollapseIcon(theme: self.presentationData.theme), for: [])
         
         super.init()
         
@@ -425,8 +434,10 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         self.historyFrameNode.addSubnode(self.historyFrameLeftOverlayNode)
         self.historyFrameNode.addSubnode(self.historyFrameRightOverlayNode)
-        self.historyFrameNode.addSubnode(self.historyFrameTopOverlayNode)
+        self.historyFrameNode.addSubnode(self.historyFrameTopOverlayClipNode)
+        self.historyFrameTopOverlayClipNode.addSubnode(self.historyFrameTopOverlayNode)
         self.historyFrameNode.addSubnode(self.historyFrameTopMaskNode)
+        self.historyFrameNode.addSubnode(self.collapseNode)
         
         self.historyNode.beganInteractiveDragging = { [weak self] _ in
             self?.controlsNode.collapse()
@@ -617,6 +628,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.historyFrameTopOverlayNode.backgroundColor = self.presentationData.theme.list.modalBlocksBackgroundColor
         self.historyFrameTopMaskNode.image = PresentationResourcesItemList.cornersImage(self.presentationData.theme.withModalBlocksBackground(), top: true, bottom: false, glass: true)
         
+        self.collapseNode.setImage(generateCollapseIcon(theme: self.presentationData.theme), for: [])
+        
         self.controlsNode.updatePresentationData(self.presentationData)
     }
     
@@ -642,6 +655,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         let _ = self.context.engine.messages.enqueueOutgoingMessage(to: self.context.account.peerId, replyTo: nil, content: .file(file)).start()
         
+        //TODO:localize
         let controller = UndoOverlayController(
             presentationData: self.presentationData,
             content: .forward(savedMessages: true, text: "Audio forwarded to Saved Messages."),
@@ -649,7 +663,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 return true
             }
         )
-        self.getParentController()?.present(controller, in: .window(.root))
+        self.getParentController()?.present(controller, in: .current)
     }
     
     private func updateMusicSaved(file: FileMediaReference, isSaved: Bool) {
@@ -712,7 +726,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 return true
             }
         )
-        self.getParentController()?.present(controller, in: .window(.root))
+        self.getParentController()?.present(controller, in: .current)
         
         self.updateMusicSaved(file: file, isSaved: true)
     }
@@ -743,7 +757,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 self.context.sharedContext.mediaManager.setPlaylist(nil, type: self.type, control: .playback(.pause))
             }
         } else {
-            self.getParentController()?.present(controller, in: .window(.root))
+            self.getParentController()?.present(controller, in: .current)
         }
         
         self.updateMusicSaved(file: file, isSaved: false)
@@ -786,7 +800,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             return
         }
         
-        let expandDistance: CGFloat = 78.0
+        let expandDistance = self.effectiveHeaderHeight
         let topOffsetFraction = max(0.0, min(1.0, self.historyContentOffset / expandDistance))
         
         let minScale: CGFloat = (layout.size.width - 6.0 * 2.0) / layout.size.width
@@ -801,6 +815,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         transition.updateTransform(layer: self.containerContainingNode.layer, transform: containerTransform)
         transition.updateCornerRadius(node: self.containerContainingNode, cornerRadius: layout.deviceMetrics.screenCornerRadius)
+    }
+    
+    private var effectiveHeaderHeight: CGFloat {
+        var headerHeight: CGFloat = 38.0
+        if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case .savedMusic = playlistLocation {
+            headerHeight = 78.0
+        }
+        return headerHeight
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -821,7 +843,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         insets.right = 16.0
         insets.bottom = 0.0
                         
-        let headerHeight: CGFloat = 78.0
+        let headerHeight = self.effectiveHeaderHeight
+
         let listTopInset = layoutTopInset + headerHeight
         let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - controlsHeight)
         
@@ -843,100 +866,107 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             replacementHistoryNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         }
         
-
-        let leftControlItems: [GlassControlGroupComponent.Item] = [
-            GlassControlGroupComponent.Item(
-                id: AnyHashable("close"),
-                content: .icon("Navigation/Close"),
-                action: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.requestDismiss()
-                }
-            )
-        ]
-        var rightControlItems: [GlassControlGroupComponent.Item] = []
-        if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case let .savedMusic(savedMusicContext, _, _) = playlistLocation, savedMusicContext.peerId == self.context.account.peerId {
-            rightControlItems.append(
+        if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case .savedMusic = playlistLocation {
+            let leftControlItems: [GlassControlGroupComponent.Item] = [
                 GlassControlGroupComponent.Item(
-                    id: AnyHashable("add"),
-                    content: .icon("Navigation/Add"),
+                    id: AnyHashable("close"),
+                    content: .icon("Navigation/Close"),
                     action: { [weak self] in
                         guard let self else {
                             return
                         }
-                        self.requestAdd()
+                        self.requestDismiss()
                     }
                 )
-            )
-        }
-//        rightControlItems.append(
-//            GlassControlGroupComponent.Item(
-//                id: AnyHashable("search"),
-//                content: .icon("Navigation/Search"),
-//                action: {
-//                }
-//            )
-//        )
-        
-        let headerInset: CGFloat = 16.0
-        let headerButtonsSize = self.headerButtons.update(
-            transition: ComponentTransition(transition),
-            component: AnyComponent(
-                GlassControlPanelComponent(
-                    theme: self.presentationData.theme,
-                    leftItem: GlassControlPanelComponent.Item(
-                        items: leftControlItems,
-                        background: .panel
-                    ),
-                    centralItem: nil,
-                    rightItem: rightControlItems.isEmpty ? nil : GlassControlPanelComponent.Item(
-                        items: rightControlItems,
-                        background: .panel
-                    ),
-                    centerAlignmentIfPossible: true,
-                    isDark: self.presentationData.theme.overallDarkAppearance
+            ]
+            var rightControlItems: [GlassControlGroupComponent.Item] = []
+            if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case let .savedMusic(savedMusicContext, _, _) = playlistLocation, savedMusicContext.peerId == self.context.account.peerId {
+                rightControlItems.append(
+                    GlassControlGroupComponent.Item(
+                        id: AnyHashable("add"),
+                        content: .icon("Navigation/Add"),
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.requestAdd()
+                        }
+                    )
                 )
-            ),
-            environment: {},
-            containerSize: CGSize(width: layout.size.width - headerInset * 2.0, height: 44.0)
-        )
-        if let headerButtonsView = self.headerButtons.view {
-            if headerButtonsView.superview == nil {
-                self.historyFrameNode.view.addSubview(headerButtonsView)
             }
-            headerButtonsView.frame = CGRect(origin: CGPoint(x: headerInset, y: headerInset), size: headerButtonsSize)
-        }
-        
-        //TODO:localize
-        let titleString: String
-        if let peer = self.peer {
-            if peer.id == self.context.account.peerId {
-                titleString = "Your Playlist"
+            //        rightControlItems.append(
+            //            GlassControlGroupComponent.Item(
+            //                id: AnyHashable("search"),
+            //                content: .icon("Navigation/Search"),
+            //                action: {
+            //                }
+            //            )
+            //        )
+            
+            let headerInset: CGFloat = 16.0
+            let headerButtonsSize = self.headerButtons.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(
+                    GlassControlPanelComponent(
+                        theme: self.presentationData.theme,
+                        leftItem: GlassControlPanelComponent.Item(
+                            items: leftControlItems,
+                            background: .panel
+                        ),
+                        centralItem: nil,
+                        rightItem: rightControlItems.isEmpty ? nil : GlassControlPanelComponent.Item(
+                            items: rightControlItems,
+                            background: .panel
+                        ),
+                        centerAlignmentIfPossible: true,
+                        isDark: self.presentationData.theme.overallDarkAppearance
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: layout.size.width - headerInset * 2.0, height: 44.0)
+            )
+            if let headerButtonsView = self.headerButtons.view {
+                if headerButtonsView.superview == nil {
+                    self.historyFrameNode.view.addSubview(headerButtonsView)
+                }
+                headerButtonsView.frame = CGRect(origin: CGPoint(x: headerInset, y: headerInset), size: headerButtonsSize)
+            }
+            
+            //TODO:localize
+            let titleString: String
+            if let peer = self.peer {
+                if peer.id == self.context.account.peerId {
+                    titleString = "Your Playlist"
+                } else {
+                    titleString = "\(peer.compactDisplayTitle)'s Playlist"
+                }
             } else {
-                titleString = "\(peer.compactDisplayTitle)'s Playlist"
+                titleString = ""
             }
-        } else {
-            titleString = "Playlist"
+            
+            let titleSize = self.title.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(
+                    MultilineTextComponent(text: .plain(NSAttributedString(string: titleString, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)))
+                ),
+                environment: {},
+                containerSize: CGSize(width: layout.size.width - 70.0 * 2.0, height: headerHeight)
+            )
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.historyFrameNode.view.addSubview(titleView)
+                }
+                titleView.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: 29.0), size: titleSize)
+            }
         }
         
-        let titleSize = self.title.update(
-            transition: ComponentTransition(transition),
-            component: AnyComponent(
-                MultilineTextComponent(text: .plain(NSAttributedString(string: titleString, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)))
-            ),
-            environment: {},
-            containerSize: CGSize(width: layout.size.width - 70.0 * 2.0, height: headerHeight)
-        )
-        if let titleView = self.title.view {
-            if titleView.superview == nil {
-                self.historyFrameNode.view.addSubview(titleView)
-            }
-            titleView.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: 29.0), size: titleSize)
-        }
+        transition.updateFrame(node: self.collapseNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -7.0), size: CGSize(width: layout.size.width, height: 30.0)))
         
         self.updateHistoryContentOffset(self.historyNode.visibleContentOffset(), transition: transition)
+        
+        var layout = layout
+        layout.intrinsicInsets.bottom = controlsHeight
+        self.getParentController()?.presentationContext.containerLayoutUpdated(layout, transition: transition)
     }
     
     func animateIn() {
@@ -1041,7 +1071,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.floatingHeaderOffset = offset
         
         let sideInset: CGFloat = 16.0
-        let headerHeight: CGFloat = 78.0
+        let headerHeight = self.effectiveHeaderHeight
         
         let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
 
@@ -1052,11 +1082,12 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         let frameFrame = CGRect(origin: CGPoint(x: 0.0, y: backgroundOffset), size: CGSize(width: layout.size.width, height: layout.size.height))
         let topOverlayFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: headerHeight))
-        let leftOverlayFrame = CGRect(origin: CGPoint(x: 0.0, y: headerHeight), size: CGSize(width: sideInset, height: layout.size.height))
-        let rightOverlayFrame = CGRect(origin: CGPoint(x: layout.size.width - sideInset, y: headerHeight), size: CGSize(width: sideInset, height: layout.size.height))
+        let leftOverlayFrame = CGRect(origin: CGPoint(x: 0.0, y: topOverlayFrame.maxY - 1.0), size: CGSize(width: sideInset, height: layout.size.height))
+        let rightOverlayFrame = CGRect(origin: CGPoint(x: layout.size.width - sideInset, y: topOverlayFrame.maxY - 1.0), size: CGSize(width: sideInset, height: layout.size.height))
         
         self.historyFrameNode.frame = frameFrame
-        self.historyFrameTopOverlayNode.frame = topOverlayFrame
+        self.historyFrameTopOverlayClipNode.frame = topOverlayFrame
+        self.historyFrameTopOverlayNode.frame = CGRect(origin: .zero, size: CGSize(width: topOverlayFrame.width, height: 78.0))
         self.historyFrameLeftOverlayNode.frame = leftOverlayFrame
         self.historyFrameRightOverlayNode.frame = rightOverlayFrame
         if let image = self.historyFrameTopMaskNode.image {
@@ -1489,4 +1520,16 @@ private final class OverlayAudioPlayerContextExtractedContentSource: ContextExtr
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
+}
+
+private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 36.0, height: 6.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 3.0)
+        context.setFillColor(theme.list.controlSecondaryColor.cgColor)
+        context.addPath(path.cgPath)
+        context.fillPath()
+    })
 }

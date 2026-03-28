@@ -15984,7 +15984,7 @@ Error: %8$@";
 "Notification.PollAddedOptionYou" = "You added the option \"%1$@\" to the poll";
 
 "Notification.PollDeletedOption" = "%1$@ deleted the option \"%2$@\" from the poll";
-"Notification.PollDeletedOptionYou" = "You deleted the option \"%1$@\" to the poll";
+"Notification.PollDeletedOptionYou" = "You deleted the option \"%1$@\" from the poll";
 
 "Notification.ManagedBotCreated" = "%@ bot created";
 
@@ -16034,7 +16034,7 @@ Error: %8$@";
 "Chat.Poll.ReplyToOption" = "Reply to Option";
 "Chat.Poll.VoteOption" = "Vote";
 "Chat.Poll.RetractOptionVote" = "Retract Vote";
-"Chat.Poll.RemoveOption" = "Remoev";
+"Chat.Poll.RemoveOption" = "Remove";
 
 "Chat.Poll.ContextMenu.SectionOption" = "Option";
 "Chat.Poll.ContextMenu.SectionPoll" = "Poll";

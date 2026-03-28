@@ -1069,18 +1069,18 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
     }
     
     public struct Style: Equatable {
-        public let name: String
-        public let emoji: String
+        public let type: String
+        public let title: String
         public let emojiFileId: Int64?
         public let emojiFile: TelegramMediaFile?
         
         public var id: TelegramComposeAIMessageMode.StyleId {
-            return .style(self.name)
+            return .style(self.type)
         }
         
-        public init(name: String, emoji: String, emojiFileId: Int64?, emojiFile: TelegramMediaFile?) {
-            self.name = name
-            self.emoji = emoji
+        public init(type: String, title: String, emojiFileId: Int64?, emojiFile: TelegramMediaFile?) {
+            self.type = type
+            self.title = title
             self.emojiFileId = emojiFileId
             self.emojiFile = emojiFile
         }
@@ -1104,8 +1104,8 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         let resolvedEmojiFiles: [Int64: TelegramMediaFile] = await context.engine.stickers.resolveInlineStickersLocal(fileIds: Array(Set(rawStyles.compactMap({ $0.emojiFileId })))).get()
         for value in rawStyles {
             styles.append(Style(
-                name: value.name,
-                emoji: value.emoji,
+                type: value.type,
+                title: value.title,
                 emojiFileId: value.emojiFileId,
                 emojiFile: value.emojiFileId.flatMap { resolvedEmojiFiles[$0] }
             ))

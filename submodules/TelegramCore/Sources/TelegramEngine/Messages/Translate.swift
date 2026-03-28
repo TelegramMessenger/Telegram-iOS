@@ -415,17 +415,17 @@ public enum TelegramComposeAIMessageMode {
     }
     
     public struct Style: Equatable {
-        public let name: String
-        public let emoji: String
+        public let type: String
+        public let title: String
         public let emojiFileId: Int64?
         
         public var id: StyleId {
-            return .style(self.name)
+            return .style(self.type)
         }
         
-        public init(name: String, emoji: String, emojiFileId: Int64?) {
-            self.name = name
-            self.emoji = emoji
+        public init(type: String, title: String, emojiFileId: Int64?) {
+            self.type = type
+            self.title = title
             self.emojiFileId = emojiFileId
         }
     }
@@ -459,9 +459,9 @@ func _internal_composeAIMessageStyles(account: Account) -> Signal<[TelegramCompo
         var result: [TelegramComposeAIMessageMode.Style] = []
         if let data = currentAppConfiguration(transaction: transaction).data, let value = data["ai_compose_styles"] as? [[String]] {
             for item in value {
-                if item.count >= 2 {
-                    let emojiFileId: Int64? = item.count > 2 ? Int64(item[2]) : nil
-                    result.append(TelegramComposeAIMessageMode.Style(name: item[1], emoji: item[0], emojiFileId: emojiFileId))
+                if item.count >= 3 {
+                    let emojiFileId: Int64? = Int64(item[1])
+                    result.append(TelegramComposeAIMessageMode.Style(type: item[0], title: item[2], emojiFileId: emojiFileId))
                 }
             }
         }

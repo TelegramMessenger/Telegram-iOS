@@ -475,10 +475,10 @@ final class TextProcessingLanguageSelectionComponent: Component {
             var selectedStyleItemFrame: CGRect?
             let stylesSpacing: CGFloat = 8.0
             if let displayStyles = component.displayStyles {
-                var styleData: [(id: TelegramComposeAIMessageMode.StyleId, icon: String, iconFileId: Int64?, iconFile: TelegramMediaFile?, title: String)] = []
-                styleData.append((.neutral, "🏳️", nil, nil, localizedStyleName(strings: component.strings, styleId: .neutral)))
+                var styleData: [(id: TelegramComposeAIMessageMode.StyleId, iconFileId: Int64?, iconFile: TelegramMediaFile?, title: String)] = []
+                styleData.append((.neutral, nil, nil, component.strings.TextProcessingStyle_Neutral))
                 for item in displayStyles {
-                    styleData.append((item.id, item.emoji, item.emojiFileId, item.emojiFile, localizedStyleName(strings: component.strings, styleId: item.id)))
+                    styleData.append((item.id, item.emojiFileId, item.emojiFile, item.title))
                 }
 
                 let stylesItemSize = CGSize(width: 82.0, height: 60.0)
@@ -500,7 +500,6 @@ final class TextProcessingLanguageSelectionComponent: Component {
                         component: AnyComponent(StyleItemComponent(
                             context: component.context,
                             theme: component.theme,
-                            icon: item.icon,
                             iconFileId: item.iconFileId,
                             iconFile: item.iconFile,
                             title: item.title,
@@ -854,7 +853,6 @@ private final class LanguageItemComponent: Component {
 private final class StyleItemComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
-    let icon: String
     let iconFileId: Int64?
     let iconFile: TelegramMediaFile?
     let title: String
@@ -863,7 +861,6 @@ private final class StyleItemComponent: Component {
     init(
         context: AccountContext,
         theme: PresentationTheme,
-        icon: String,
         iconFileId: Int64?,
         iconFile: TelegramMediaFile?,
         title: String,
@@ -871,7 +868,6 @@ private final class StyleItemComponent: Component {
     ) {
         self.context = context
         self.theme = theme
-        self.icon = icon
         self.iconFileId = iconFileId
         self.iconFile = iconFile
         self.title = title
@@ -880,9 +876,6 @@ private final class StyleItemComponent: Component {
 
     static func ==(lhs: StyleItemComponent, rhs: StyleItemComponent) -> Bool {
         if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.icon != rhs.icon {
             return false
         }
         if lhs.iconFileId != rhs.iconFileId {
@@ -973,7 +966,7 @@ private final class StyleItemComponent: Component {
                 ))
             } else {
                 iconComponent = AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.icon, font: Font.regular(25.0), textColor: .black))
+                    text: .plain(NSAttributedString(string: "❌", font: Font.regular(25.0), textColor: .black))
                 ))
             }
 

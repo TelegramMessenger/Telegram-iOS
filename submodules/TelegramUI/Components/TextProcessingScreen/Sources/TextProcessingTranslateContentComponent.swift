@@ -339,8 +339,8 @@ final class TextProcessingTranslateContentComponent: Component {
                 fromFormat = component.strings.TextProcessing_Translate_FromLanguage
                 toFormat = component.strings.TextProcessing_Translate_ToLanguage
                 toTitle = localizedLanguageName(strings: component.strings, language: component.externalState.result?.language ?? "", kind: .translateTo)
-                if case .style = component.externalState.style {
-                    toTitle = component.strings.TextProcessing_Translate_LanguageStyle(toTitle, localizedStyleName(strings: component.strings, styleId: component.externalState.style)).string
+                if case .style = component.externalState.style, let styleTitle = component.styles.first(where: { $0.id == component.externalState.style })?.title {
+                    toTitle = component.strings.TextProcessing_Translate_LanguageStyle(toTitle, styleTitle).string
                 }
             case .stylize, .fix:
                 fromFormat = component.strings.TextProcessing_OriginalBadge
