@@ -1016,7 +1016,6 @@ private final class TextProcessingSheetComponent: Component {
                         sourceView: languageSelectionMenuDataValue.sourceView,
                         topLanguages: [],
                         selectedLanguageCode: languageSelectionMenuDataValue.currentLanguage,
-                        ignoredTranslationLanguages: component.ignoredTranslationLanguages,
                         currentStyle: languageSelectionMenuDataValue.currentStyle,
                         displayStyles: languageSelectionMenuDataValue.displayStyle ? component.styles : nil,
                         completion: languageSelectionMenuDataValue.completion,
@@ -1092,7 +1091,6 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         context: AccountContext,
         theme: PresentationTheme? = nil,
         mode: Mode,
-        ignoredTranslationLanguages: [String],
         inputText: TextWithEntities,
         copyResult: ((TextWithEntities) -> Void)?,
         translateChat: ((String) -> Void)?
@@ -1119,13 +1117,21 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
                 TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.textProcessingEditingState(peerId: saveRestoreStateId))
             ).get()?.get(EditState.self)
         }
+        
+        let sharedDataEntries = await context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings]).get()
+        let translationSettings: TranslationSettings
+        if let value = sharedDataEntries.entries[ApplicationSpecificSharedDataKeys.translationSettings], let parsedValue = value.get(TranslationSettings.self) {
+            translationSettings = parsedValue
+        } else {
+            translationSettings = .defaultSettings
+        }
 
         super.init(
             context: context,
             component: TextProcessingSheetComponent(
                 context: context,
                 mode: mode,
-                ignoredTranslationLanguages: ignoredTranslationLanguages,
+                ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                 styles: styles,
                 inputText: inputText,
                 initialEditState: initialEditState,

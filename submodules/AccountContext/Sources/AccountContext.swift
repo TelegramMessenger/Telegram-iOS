@@ -1562,7 +1562,6 @@ public protocol SharedAccountContext: AnyObject {
         context: AccountContext,
         theme: PresentationTheme?,
         mode: TextProcessingScreenMode,
-        ignoredTranslationLanguages: [String],
         inputText: TextWithEntities,
         copyResult: ((TextWithEntities) -> Void)?,
         translateChat: ((String) -> Void)?

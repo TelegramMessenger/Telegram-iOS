@@ -762,14 +762,6 @@ public class AttachmentController: ViewController, MinimizableController {
                         return
                     }
                     
-                    let sharedDataEntries = await controller.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings]).get()
-                    let translationSettings: TranslationSettings
-                    if let value = sharedDataEntries.entries[ApplicationSpecificSharedDataKeys.translationSettings], let parsedValue = value.get(TranslationSettings.self) {
-                        translationSettings = parsedValue
-                    } else {
-                        translationSettings = .defaultSettings
-                    }
-                    
                     let textProcessingScreen = await controller.context.sharedContext.makeTextProcessingScreen(
                         context: controller.context,
                         theme: self.presentationData.theme,
@@ -791,7 +783,6 @@ public class AttachmentController: ViewController, MinimizableController {
                             },
                             sendContextActions: nil
                         ),
-                        ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                         inputText: TextWithEntities(text: caption.string, entities: []),
                         copyResult: nil,
                         translateChat: nil
