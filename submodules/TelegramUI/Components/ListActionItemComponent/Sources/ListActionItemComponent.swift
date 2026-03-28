@@ -496,17 +496,8 @@ public final class ListActionItemComponent: Component {
                 contentRightInset = customAccessorySizeValue.width + customAccessory.insets.left + customAccessory.insets.right
             }
             
-            var contentInsets = component.contentInsets
-            switch component.style {
-            case .glass:
-                if contentInsets.top == 12.0 && contentInsets.bottom == 12.0 {
-                    contentInsets.top = 16.0
-                    contentInsets.bottom = 16.0
-                }
-            case .legacy:
-                break
-            }
-            
+            let contentInsets = component.contentInsets
+         
             var contentHeight: CGFloat = 0.0
             contentHeight += contentInsets.top
             
@@ -531,10 +522,14 @@ public final class ListActionItemComponent: Component {
                 contentLeftInset = floor((availableSize.width - titleSize.width) / 2.0)
             }
                        
-            let titleY = contentHeight
             contentHeight += titleSize.height
-            
             contentHeight += contentInsets.bottom
+            
+            if case .glass = component.style, contentHeight < 52.0 {
+                contentHeight = 52.0
+            }
+            
+            let titleY = floorToScreenPixels((contentHeight - titleSize.height) / 2.0)
             
             if let iconValue = component.icon {
                 if previousComponent?.icon?.component.id != iconValue.component.id, let icon = self.icon {

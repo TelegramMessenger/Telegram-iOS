@@ -5,6 +5,11 @@ import Display
 import Markdown
 
 public final class MultilineTextComponent: Component {
+    public final class CrossfadeTransition {
+        public init() {
+        }
+    }
+    
     public enum TextContent: Equatable {
         case plain(NSAttributedString)
         case markdown(text: String, attributes: MarkdownAttributes)
@@ -141,7 +146,7 @@ public final class MultilineTextComponent: Component {
                 attributedString = parseMarkdownIntoAttributedString(text, attributes: attributes)
             }
             
-            //let previousText = self.attributedText?.string
+            let previousText = self.attributedText?.string
                                         
             self.attributedText = attributedString
             self.maximumNumberOfLines = component.maximumNumberOfLines
@@ -160,7 +165,7 @@ public final class MultilineTextComponent: Component {
             self.tapAttributeAction = component.tapAction
             self.longTapAttributeAction = component.longTapAction
                         
-            /*if case let .curve(duration, _) = transition.animation, let previousText = previousText, previousText != attributedString.string {
+            if case let .curve(duration, _) = transition.animation, let _ = transition.userData(CrossfadeTransition.self), let previousText = previousText, previousText != attributedString.string {
                 if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
                     snapshotView.center = self.center
                     self.superview?.addSubview(snapshotView)
@@ -170,7 +175,7 @@ public final class MultilineTextComponent: Component {
                     })
                     self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
                 }
-            }*/
+            }
             
             let size = self.updateLayout(availableSize)
                  

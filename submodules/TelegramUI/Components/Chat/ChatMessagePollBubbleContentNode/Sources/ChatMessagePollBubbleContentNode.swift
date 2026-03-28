@@ -719,13 +719,21 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         self.fetchDisposable.dispose()
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        var result = super.hitTest(point, with: event)
+        if let mediaFrame = self.mediaFrame, mediaFrame.contains(point) {
+            result = self.view
+        }
+        return result
+    }
+    
     override func didLoad() {
         super.didLoad()
 
         self.highlightedBackgroundNode.view.tag = 0x1bad
         self.separatorNode.view.tag = 0x3bad
     }
-
+    
     @objc private func buttonPressed() {
         guard !self.ignoreNextTap else {
             self.ignoreNextTap = false

@@ -110,13 +110,7 @@ public func saveToCameraRoll(context: AccountContext, postbox: Postbox, userLoca
                             PHPhotoLibrary.shared().performChanges({
                                 if isImage {
                                     if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                                            PHAssetCreationRequest.forAsset().addResource(with: .photo, data: fileData, options: nil)
-                                        } else {
-                                            if let image = UIImage(data: fileData) {
-                                                PHAssetChangeRequest.creationRequestForAsset(from: image)
-                                            }
-                                        }
+                                        PHAssetCreationRequest.forAsset().addResource(with: .photo, data: fileData, options: nil)
                                     }
                                 } else {
                                     if let _ = try? FileManager.default.copyItem(atPath: data.path, toPath: tempVideoPath) {

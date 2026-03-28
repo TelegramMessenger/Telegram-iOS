@@ -762,10 +762,10 @@ final class ComposeTodoScreenComponent: Component {
             self.component = component
             self.state = state
             
-            let topInset: CGFloat = 24.0
+            let topInset: CGFloat = 8.0
             let bottomInset: CGFloat = 8.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let sectionSpacing: CGFloat = 24.0
+            let sectionSpacing: CGFloat = 30.0
             
             if themeUpdated {
                 self.backgroundColor = theme.list.blocksBackgroundColor

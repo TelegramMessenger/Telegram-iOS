@@ -1419,10 +1419,10 @@ final class ComposePollScreenComponent: Component {
             self.component = component
             self.state = state
             
-            let topInset: CGFloat = 24.0
+            let topInset: CGFloat = 16.0
             let bottomInset: CGFloat = 8.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let sectionSpacing: CGFloat = 24.0
+            let sectionSpacing: CGFloat = 30.0
             
             if themeUpdated {
                 self.backgroundColor = theme.list.blocksBackgroundColor
@@ -1900,6 +1900,7 @@ final class ComposePollScreenComponent: Component {
                         )))
                     ], alignment: .left, spacing: 4.0)),
                     verticalAlignment: .middle,
+                    contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                         Image(image: self.cachedViewIcon, size: CGSize(width: 30.0, height: 30.0))
                     )), false),
@@ -1939,6 +1940,7 @@ final class ComposePollScreenComponent: Component {
                     )))
                 ], alignment: .left, spacing: 4.0)),
                 verticalAlignment: .middle,
+                contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                     Image(image: self.cachedMultipleIcon, size: CGSize(width: 30.0, height: 30.0))
                 )), false),
@@ -1958,7 +1960,7 @@ final class ComposePollScreenComponent: Component {
                         }
                     }
                     
-                    self.state?.updated(transition: .spring(duration: 0.4))
+                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(MultilineTextComponent.CrossfadeTransition()))
                 })),
                 action: nil
             ))))
@@ -1987,6 +1989,7 @@ final class ComposePollScreenComponent: Component {
                         )))
                     ], alignment: .left, spacing: 4.0)),
                     verticalAlignment: .middle,
+                    contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                         Image(image: self.cachedAddIcon, size: CGSize(width: 30.0, height: 30.0))
                     )), false),
@@ -2027,6 +2030,7 @@ final class ComposePollScreenComponent: Component {
                     )))
                 ], alignment: .left, spacing: 4.0)),
                 verticalAlignment: .middle,
+                contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                     Image(image: self.cachedRevoteIcon, size: CGSize(width: 30.0, height: 30.0))
                 )), false),
@@ -2063,6 +2067,7 @@ final class ComposePollScreenComponent: Component {
                     )))
                 ], alignment: .left, spacing: 4.0)),
                 verticalAlignment: .middle,
+                contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                     Image(image: self.cachedShuffleIcon, size: CGSize(width: 30.0, height: 30.0))
                 )), false),
@@ -2099,6 +2104,7 @@ final class ComposePollScreenComponent: Component {
                     )))
                 ], alignment: .left, spacing: 4.0)),
                 verticalAlignment: .middle,
+                contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                     Image(image: self.cachedQuizIcon, size: CGSize(width: 30.0, height: 30.0))
                 )), false),
@@ -2141,6 +2147,7 @@ final class ComposePollScreenComponent: Component {
                     )))
                 ], alignment: .left, spacing: 4.0)),
                 verticalAlignment: .middle,
+                contentInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0),
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                     Image(image: self.cachedDurationIcon, size: CGSize(width: 30.0, height: 30.0))
                 )), false),

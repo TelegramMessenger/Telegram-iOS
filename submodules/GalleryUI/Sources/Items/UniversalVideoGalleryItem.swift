@@ -162,7 +162,6 @@ private let placeholderFont = Font.regular(16.0)
 private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode {
     enum Mode {
         case pictureInPicture
-        case airplay
     }
     
     private let iconNode: ASImageNode
@@ -183,8 +182,6 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
         switch mode {
         case .pictureInPicture:
             text = strings.Embed_PlayingInPIP
-        case .airplay:
-            text = strings.Gallery_AirPlayPlaceholder
         }
         self.textNode.attributedText = NSAttributedString(string: text, font: placeholderFont, textColor: UIColor(rgb: 0x8e8e93))
         
@@ -1868,7 +1865,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 var hasMoreButton = false
                 var file: TelegramMediaFile?
                 for m in message.media {
-                    if let m = m as? TelegramMediaFile, m.isVideo {
+                    if let _ = m as? TelegramMediaImage {
+                        hasMoreButton = true
+                    } else if let m = m as? TelegramMediaFile, m.isVideo {
                         file = m
                         break
                     } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
@@ -2059,13 +2058,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     private func updateDisplayPlaceholder() {
-        self.updateDisplayPlaceholder(!(self.videoNode?.ownsContentNode ?? true) || self.isAirPlayActive)
+        self.updateDisplayPlaceholder(!(self.videoNode?.ownsContentNode ?? true))
     }
     
     private func updateDisplayPlaceholder(_ displayPlaceholder: Bool) {
         if displayPlaceholder && !self.disablePictureInPicturePlaceholder {
             if self.pictureInPictureNode == nil {
-                let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.presentationData.strings, mode: self.isAirPlayActive ? .airplay : .pictureInPicture)
+                let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.presentationData.strings, mode: .pictureInPicture)
                 pictureInPictureNode.isUserInteractionEnabled = false
                 self.pictureInPictureNode = pictureInPictureNode
                 self.insertSubnode(pictureInPictureNode, aboveSubnode: self.scrollNode)
@@ -3772,16 +3771,24 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     })))
                 }
                 
-                //            if #available(iOS 11.0, *) {
-                //                items.append(.action(ContextMenuActionItem(text: "AirPlay", textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/AirPlay"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-                //                    f(.default)
-                //                    guard let strongSelf = self else {
-                //                        return
-                //                    }
-                //                    strongSelf.beginAirPlaySetup()
-                //                })))
-                //            }
-                
+                if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {
+                    let context = strongSelf.context
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: image))
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            guard let controller = strongSelf.galleryController() else {
+                                return
+                            }
+                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        })
+                    })))
+                }
+                                
                 if let (message, _, _) = strongSelf.contentInfo() {
                     for media in message.media {
                         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
@@ -3837,27 +3844,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
 
             return (items, topItems)
-        }
-    }
-    
-    private var isAirPlayActive = false
-    private var externalVideoPlayer: ExternalVideoPlayer?
-    func beginAirPlaySetup() {
-        guard let content = self.item?.content as? NativeVideoContent else {
-            return
-        }
-        if #available(iOS 11.0, *) {
-            self.externalVideoPlayer = ExternalVideoPlayer(context: self.context, content: content)
-            self.externalVideoPlayer?.openRouteSelection()
-            self.externalVideoPlayer?.isActiveUpdated = { [weak self] isActive in
-                if let strongSelf = self {
-                    if strongSelf.isAirPlayActive && !isActive {
-                        strongSelf.externalVideoPlayer = nil
-                    }
-                    strongSelf.isAirPlayActive = isActive
-                    strongSelf.updateDisplayPlaceholder()
-                }
-            }
         }
     }
 

@@ -207,7 +207,11 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(TGMediaEdi
     [super setItem:item synchronously:synchronously];
     
     [self stopAndCleanupLivePhotoPlayback];
-    _livePhotoMode = TGMediaPickerGalleryResolvedLivePhotoMode(item.editingContext, item.editableMediaItem, (TGMediaAsset *)item.asset);
+    if ([item.asset isKindOfClass:[TGMediaAsset class]]) {
+        _livePhotoMode = TGMediaPickerGalleryResolvedLivePhotoMode(item.editingContext, item.editableMediaItem, (TGMediaAsset *)item.asset);
+    } else {
+        _livePhotoMode = TGMediaLivePhotoModeOff;
+    }
     [self updatePaintingImage:[item.editingContext adjustmentsForItem:item.editableMediaItem]];
     
     if (_entitiesView == nil) {
@@ -722,7 +726,11 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(TGMediaEdi
     _paintingImageView.hidden = (_paintingImageView.image == nil) || _livePhotoVideoView.alpha <= FLT_EPSILON;
     _contentView.hidden = false;
     
-    _livePhotoMode = TGMediaPickerGalleryResolvedLivePhotoMode(self.item.editingContext, self.item.editableMediaItem, (TGMediaAsset *)self.item.asset);
+    if ([self.item.asset isKindOfClass:[TGMediaAsset class]]) {
+        _livePhotoMode = TGMediaPickerGalleryResolvedLivePhotoMode(self.item.editingContext, self.item.editableMediaItem, (TGMediaAsset *)self.item.asset);
+    } else {
+        _livePhotoMode = TGMediaLivePhotoModeOff;
+    }
     [self updatePaintingImage:[self currentAdjustments]];
     [self layoutEditedSubviews];
     
