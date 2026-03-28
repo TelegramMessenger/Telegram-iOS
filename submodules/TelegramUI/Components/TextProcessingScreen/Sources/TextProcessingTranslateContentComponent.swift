@@ -50,8 +50,8 @@ func localizedLanguageName(strings: PresentationStrings, language: String, kind:
 }
 
 final class TextProcessingTranslateContentComponent: Component {
-    enum Mode {
-        case translate
+    enum Mode: Equatable {
+        case translate(ignoredLanguages: [String])
         case stylize
         case fix
     }
@@ -280,13 +280,38 @@ final class TextProcessingTranslateContentComponent: Component {
             
             if component.externalState.result == nil {
                 switch component.mode {
-                case .translate:
-                    var languageCode = component.strings.baseLanguageCode
+                case let .translate(ignoredLanguages):
+                    var baseLang = component.strings.baseLanguageCode
                     let rawSuffix = "-raw"
-                    if languageCode.hasSuffix(rawSuffix) {
-                        languageCode = String(languageCode.dropLast(rawSuffix.count))
+                    if baseLang.hasSuffix(rawSuffix) {
+                        baseLang = String(baseLang.dropLast(rawSuffix.count))
                     }
-                    component.externalState.result = (languageCode, nil, [])
+                    var toLanguage = baseLang
+                    
+                    let fromLanguage = component.externalState.sourceLanguage ?? ""
+                    if toLanguage == fromLanguage {
+                        if fromLanguage == "en" {
+                            var dontTranslateLanguages = Set<String>()
+                            if !ignoredLanguages.isEmpty {
+                                dontTranslateLanguages = Set(ignoredLanguages)
+                            } else {
+                                dontTranslateLanguages.insert(baseLang)
+                                for language in systemLanguageCodes() {
+                                    dontTranslateLanguages.insert(language)
+                                }
+                            }
+                            toLanguage = dontTranslateLanguages.first(where: { $0 != "en" }) ?? "en"
+                        } else {
+                            toLanguage = "en"
+                        }
+                        if toLanguage == "en" && fromLanguage == "en" {
+                            if let anyOtherLanguage = NSLocale.preferredLanguages.first(where: { !$0.hasPrefix("en-") }) {
+                                toLanguage = anyOtherLanguage
+                            }
+                        }
+                    }
+                    
+                    component.externalState.result = (toLanguage, nil, [])
                     self.beginTranslationIfNecessary(reset: false)
                 case .stylize:
                     component.externalState.result = ("", component.inputText, [])
@@ -302,6 +327,9 @@ final class TextProcessingTranslateContentComponent: Component {
             let topInset: CGFloat = 17.0
             let bottomInset: CGFloat = 14.0
             let blockSpacing: CGFloat = 30.0
+            
+            let fromLanguage = component.externalState.sourceLanguage ?? ""
+            let fromTitle = localizedLanguageName(strings: component.strings, language: fromLanguage, kind: .translateFrom)
             
             let fromFormat: String
             let toFormat: String
@@ -377,7 +405,7 @@ final class TextProcessingTranslateContentComponent: Component {
                         theme: component.theme,
                         strings: component.strings,
                         titleFormat: fromFormat,
-                        title: localizedLanguageName(strings: component.strings, language: component.externalState.sourceLanguage ?? "", kind: .translateFrom),
+                        title: fromTitle,
                         titleAction: nil,
                         isExpanded: (
                             component.externalState.isSourceTextExpanded,
@@ -415,6 +443,13 @@ final class TextProcessingTranslateContentComponent: Component {
                 }
             }
             
+            let isTranslate: Bool
+            if case .translate = component.mode {
+                isTranslate = true
+            } else {
+                isTranslate = false
+            }
+            
             let targetTextSize = self.targetText.update(
                 transition: transition,
                 component: AnyComponent(TextProcessingTextAreaComponent(
@@ -423,7 +458,7 @@ final class TextProcessingTranslateContentComponent: Component {
                     strings: component.strings,
                     titleFormat: toFormat,
                     title: toTitle,
-                    titleAction: component.mode == .translate ? { [weak self] sourceView in
+                    titleAction: isTranslate ? { [weak self] sourceView in
                         guard let self, let component = self.component, let result = component.externalState.result else {
                             return
                         }
@@ -450,7 +485,7 @@ final class TextProcessingTranslateContentComponent: Component {
                         }
                         component.copyAction?()
                     } : nil,
-                    emojify: (component.mode == .translate || component.mode == .stylize) ? (
+                    emojify: (isTranslate || component.mode == .stylize) ? (
                         component.externalState.emojify,
                         { [weak self] in
                             guard let self, let component = self.component else {

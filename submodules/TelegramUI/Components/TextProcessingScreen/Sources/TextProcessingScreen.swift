@@ -43,6 +43,7 @@ final class TextProcessingContentComponent: Component {
     let styles: [TextProcessingScreen.Style]
     let inputText: TextWithEntities
     let initialEditState: TextProcessingScreen.EditState?
+    let ignoredTranslationLanguages: [String]
     let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: (() -> Void)?
     let translateChat: ((String) -> Void)?
@@ -55,6 +56,7 @@ final class TextProcessingContentComponent: Component {
         styles: [TextProcessingScreen.Style],
         inputText: TextWithEntities,
         initialEditState: TextProcessingScreen.EditState?,
+        ignoredTranslationLanguages: [String],
         shouldDisplayStyleNotice: Bool,
         copyCurrentResult: (() -> Void)?,
         translateChat: ((String) -> Void)?,
@@ -66,6 +68,7 @@ final class TextProcessingContentComponent: Component {
         self.mode = mode
         self.inputText = inputText
         self.initialEditState = initialEditState
+        self.ignoredTranslationLanguages = ignoredTranslationLanguages
         self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
@@ -351,7 +354,7 @@ final class TextProcessingContentComponent: Component {
                     styles: component.styles,
                     externalState: self.translateState,
                     inputText: component.inputText,
-                    mode: .translate,
+                    mode: .translate(ignoredLanguages: component.ignoredTranslationLanguages),
                     copyAction: component.copyCurrentResult,
                     displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
                     present: { [weak self] c, a in
@@ -816,6 +819,7 @@ private final class TextProcessingSheetComponent: Component {
                         styles: component.styles,
                         inputText: component.inputText,
                         initialEditState: component.initialEditState,
+                        ignoredTranslationLanguages: component.ignoredTranslationLanguages,
                         shouldDisplayStyleNotice: component.shouldDisplayStyleNotice,
                         copyCurrentResult: component.copyCurrentResult != nil ? {
                             copyCurrentResultImpl()
