@@ -209,7 +209,8 @@ public final class BrowserBookmarksScreen: ViewController {
                     reverseGroups: false,
                     displayHeaders: .none,
                     hintLinks: true,
-                    isGlobalSearch: false
+                    isGlobalSearch: false,
+                    isMusicPlaylist: false
                 )
             )
             

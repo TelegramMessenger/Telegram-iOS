@@ -2717,7 +2717,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     let isForceLivePhoto = editingContext.isForceLivePhotoEnabled()
                     rightControlItems.insert(GlassControlGroupComponent.Item(
                         id: AnyHashable(isForceLivePhoto ? "livePhoto_on" : "livePhoto_off"),
-                        content: .icon(isForceLivePhoto ? "Media Editor/LiveOn" : "Media Editor/LiveOff"),
+                        content: .icon(isForceLivePhoto ? "Media Editor/LiveLargeOn" : "Media Editor/LiveLargeOff"),
                         action: { [weak self, weak editingContext] in
                             guard let self, let editingContext else {
                                 return

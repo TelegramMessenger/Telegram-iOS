@@ -30,12 +30,20 @@ private func normalizeValue(_ value: CGFloat) -> CGFloat {
 }
 
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
-    return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 20.0, height: 18.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setShadow(offset: CGSize(width: 0.0, height: -4.0), blur: 30.0, color: UIColor(white: 0.0, alpha: 0.2).cgColor)
         context.setFillColor(theme.list.modalPlainBackgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(x: 0.0, y: 8.0), size: CGSize(width: 20.0, height: 20.0)))
-    })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10 + 8)
+    })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 18)
+}
+
+private func generatePlainBackground(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 20.0, height: 18.0 + 25.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(theme.list.modalPlainBackgroundColor.cgColor)
+        context.fill(CGRect(origin: CGPoint(x: 0.0, y: 8.0 + 25.0), size: CGSize(width: 20.0, height: 20.0)))
+    })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 18 + 25)
 }
 
 
@@ -176,6 +184,12 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     private let rateButton: AudioRateButton
     
     let separatorNode: ASDisplayNode
+    
+    var hasPlainBackground = false {
+        didSet {
+            self.backgroundNode.image = self.hasPlainBackground ? generatePlainBackground(theme: self.presentationData.theme) : generateBackground(theme: self.presentationData.theme)
+        }
+    }
         
     var isExpanded = false
     var updateIsExpanded: (() -> Void)?
@@ -249,7 +263,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.shareNode = HighlightableButtonNode()
         self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: presentationData.theme.list.itemPrimaryTextColor), for: [])
         
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 7.0, lineCap: .round, scrubberHandle: .none, backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemPrimaryTextColor, bufferingColor: presentationData.theme.list.itemPrimaryTextColor.withAlphaComponent(0.4), chapters: []))
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 7.0, lineCap: .round, scrubberHandle: .none, backgroundColor: presentationData.theme.list.controlSecondaryColor.withMultipliedAlpha(0.5), foregroundColor: presentationData.theme.list.itemPrimaryTextColor, bufferingColor: presentationData.theme.list.itemPrimaryTextColor.withAlphaComponent(0.4), chapters: []))
         self.leftDurationLabel = MediaPlayerTimeTextNode(textColor: presentationData.theme.list.itemSecondaryTextColor, textFont: Font.medium(12.0))
         self.leftDurationLabel.displaysAsynchronously = false
         self.leftDurationLabel.keepPreviousValueOnEmptyState = true
@@ -684,9 +698,9 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.backwardButton.circleColor = presentationData.theme.list.controlSecondaryColor.withAlphaComponent(0.35)
         self.forwardButton.circleColor = presentationData.theme.list.controlSecondaryColor.withAlphaComponent(0.35)
         
-        self.backgroundNode.image = generateBackground(theme: presentationData.theme)
+        self.backgroundNode.image = self.hasPlainBackground ? generatePlainBackground(theme: presentationData.theme) : generateBackground(theme: presentationData.theme)
         self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: presentationData.theme.list.itemPrimaryTextColor), for: [])
-        self.scrubberNode.updateColors(backgroundColor: presentationData.theme.list.controlSecondaryColor, foregroundColor: presentationData.theme.list.itemPrimaryTextColor)
+        self.scrubberNode.updateColors(backgroundColor: presentationData.theme.list.controlSecondaryColor.withMultipliedAlpha(0.5), foregroundColor: presentationData.theme.list.itemPrimaryTextColor)
         self.leftDurationLabel.textColor = presentationData.theme.list.itemSecondaryTextColor
         self.rightDurationLabel.textColor = presentationData.theme.list.itemSecondaryTextColor
         self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: presentationData.theme.list.itemPrimaryTextColor)
@@ -709,18 +723,16 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     }
     
     private func updateLabels(transition: ContainedViewLayoutTransition) {
-        guard let (width, leftInset, rightInset, bottomInset, maxHeight, _) = self.validLayout else {
+        guard let (width, leftInset, rightInset, _, _, _) = self.validLayout else {
             return
         }
-        
-        let panelHeight = OverlayAudioPlayerControlsNode.heightForLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, maxHeight: maxHeight, isExpanded: self.isExpanded, savedMusic: nil)
         
         let sideInset: CGFloat = 20.0
         
         let infoLabelsLeftInset: CGFloat = 53.0
         let infoLabelsRightInset: CGFloat = 32.0
         
-        let infoVerticalOrigin: CGFloat = panelHeight - OverlayAudioPlayerControlsNode.basePanelHeight + 21.0
+        let infoVerticalOrigin: CGFloat = 21.0
         
         let (titleString, descriptionString, hasArtist, caption) = stringsForDisplayData(self.displayData, presentationData: self.presentationData)
         
@@ -728,7 +740,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
             self.previousCaption = caption
             let chapters = caption.flatMap { parseMediaPlayerChapters($0) } ?? []
             self.chaptersPromise.set(chapters)
-            self.scrubberNode.updateContent(.standard(lineHeight: 7.0, lineCap: .round, scrubberHandle: .none, backgroundColor: self.presentationData.theme.list.controlSecondaryColor, foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor, bufferingColor: self.presentationData.theme.list.itemPrimaryTextColor.withAlphaComponent(0.4), chapters: chapters))
+            self.scrubberNode.updateContent(.standard(lineHeight: 7.0, lineCap: .round, scrubberHandle: .none, backgroundColor: self.presentationData.theme.list.controlSecondaryColor.withMultipliedAlpha(0.5), foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor, bufferingColor: self.presentationData.theme.list.itemPrimaryTextColor.withAlphaComponent(0.4), chapters: chapters))
         }
         
         self.artistButton.isUserInteractionEnabled = hasArtist
@@ -820,7 +832,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.rateButton.setContent(.image(optionsRateImage(rate: rate.stringValue.uppercased(), color: self.presentationData.theme.list.itemSecondaryTextColor)))
     }
     
-    static let basePanelHeight: CGFloat = 164.0
+    static let basePanelHeight: CGFloat = 182.0
     
     static func heightForLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, maxHeight: CGFloat, isExpanded: Bool, savedMusic: Bool?) -> CGFloat {
         var panelHeight: CGFloat = OverlayAudioPlayerControlsNode.basePanelHeight
@@ -830,9 +842,11 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         }
         var height = min(panelHeight, maxHeight)
         if let _ = savedMusic {
-            height += 70.0
+            height += 52.0
             let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: bottomInset, innerDiameter: 52.0, sideInset: 30.0)
             height += buttonInsets.bottom
+        } else {
+            height += 8.0
         }
         return height
     }
@@ -855,7 +869,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         let sideInset: CGFloat = 16.0
         let sideButtonsInset: CGFloat = sideInset + 60.0
         
-        let infoVerticalOrigin: CGFloat = panelHeight - OverlayAudioPlayerControlsNode.basePanelHeight + 21.0
+        let infoVerticalOrigin: CGFloat = 21.0
         
         self.updateLabels(transition: transition)
         
@@ -986,7 +1000,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
                 profileAudioButtonContent =  AnyComponentWithIdentity(id: "removeFromProfile", component: AnyComponent(
                     MultilineTextComponent(text: .plain(NSAttributedString(string: self.presentationData.strings.MediaPlayer_SavedMusic_RemoveFromProfileShort, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)))
                 ))
-                buttonBackgroundColor = self.presentationData.theme.list.controlSecondaryColor
+                buttonBackgroundColor = self.presentationData.theme.list.controlSecondaryColor.withMultipliedAlpha(0.5)
             } else {
                 profileAudioButtonContent = AnyComponentWithIdentity(id: "addToProfile", component: AnyComponent(
                     HStack([

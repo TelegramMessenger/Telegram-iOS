@@ -16155,3 +16155,6 @@ Error: %8$@";
 "TextProcessing.StyleTooltip" = "Select Style";
 
 "Bot.AlertCanNotCreateBots" = "%@ can't manage other bots.";
+
+"MediaPlayer.PlaylistTitle" = "%@'s Playlist";
+"MediaPlayer.PlaylistYourTitle" = "Your Playlist";

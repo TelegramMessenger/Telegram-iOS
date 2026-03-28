@@ -56,6 +56,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
     
     private var floatingHeaderOffset: CGFloat?
     private var historyContentOffset: CGFloat = 0.0
+    private var hasAnyHistoryMessages: Bool?
     private var historyNode: ChatHistoryListNodeImpl
     private var replacementHistoryNode: ChatHistoryListNodeImpl?
     private var replacementHistoryNodeFloatingOffset: CGFloat?
@@ -305,8 +306,12 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 tagMask = .file
         }
         
-        let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+        var isMusicPlaylist = true
+        if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case .savedMusic = playlistLocation {
+            isMusicPlaylist = false
+        }
         
+        let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         self.historyNode = ChatHistoryListNodeImpl(
             context: context,
             updatedPresentationData: (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData),
@@ -319,7 +324,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             subject: .message(id: .id(initialMessageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false),
             controllerInteraction: self.controllerInteraction,
             selectedMessages: .single(nil),
-            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch),
+            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch, isMusicPlaylist: isMusicPlaylist),
             isChatPreview: false,
             messageTransitionNode: { return nil
             }
@@ -476,7 +481,9 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         let copyProtectionEnabled: Signal<Bool, NoError>
         if case let .peer(peerId) = self.chatLocation {
-            if peerId.namespace == Namespaces.Peer.CloudUser {
+            if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case .savedMusic = playlistLocation {
+                copyProtectionEnabled = .single(false)
+            } else if peerId.namespace == Namespaces.Peer.CloudUser {
                 copyProtectionEnabled = context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.CopyProtectionEnabled(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.MyCopyProtectionEnabled(id: peerId)
@@ -622,10 +629,10 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.itemModalBlocksBackgroundColor
-        self.historyFrameLeftOverlayNode.backgroundColor = self.presentationData.theme.list.modalBlocksBackgroundColor
-        self.historyFrameRightOverlayNode.backgroundColor = self.presentationData.theme.list.modalBlocksBackgroundColor
-        self.historyFrameTopOverlayNode.backgroundColor = self.presentationData.theme.list.modalBlocksBackgroundColor
+        self.historyBackgroundContentNode.backgroundColor = self.hasAnyHistoryMessages == true ? self.presentationData.theme.list.itemModalBlocksBackgroundColor : self.presentationData.theme.list.modalPlainBackgroundColor
+        self.historyFrameLeftOverlayNode.backgroundColor = self.hasAnyHistoryMessages == true ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.modalPlainBackgroundColor
+        self.historyFrameRightOverlayNode.backgroundColor = self.hasAnyHistoryMessages == true ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.modalPlainBackgroundColor
+        self.historyFrameTopOverlayNode.backgroundColor = self.hasAnyHistoryMessages == true ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.modalPlainBackgroundColor
         self.historyFrameTopMaskNode.image = PresentationResourcesItemList.cornersImage(self.presentationData.theme.withModalBlocksBackground(), top: true, bottom: false, glass: true)
         
         self.collapseNode.setImage(generateCollapseIcon(theme: self.presentationData.theme), for: [])
@@ -894,14 +901,6 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                     )
                 )
             }
-            //        rightControlItems.append(
-            //            GlassControlGroupComponent.Item(
-            //                id: AnyHashable("search"),
-            //                content: .icon("Navigation/Search"),
-            //                action: {
-            //                }
-            //            )
-            //        )
             
             let headerInset: CGFloat = 16.0
             let headerButtonsSize = self.headerButtons.update(
@@ -932,13 +931,12 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 headerButtonsView.frame = CGRect(origin: CGPoint(x: headerInset, y: headerInset), size: headerButtonsSize)
             }
             
-            //TODO:localize
             let titleString: String
             if let peer = self.peer {
                 if peer.id == self.context.account.peerId {
-                    titleString = "Your Playlist"
+                    titleString = self.presentationData.strings.MediaPlayer_PlaylistYourTitle
                 } else {
-                    titleString = "\(peer.compactDisplayTitle)'s Playlist"
+                    titleString = self.presentationData.strings.MediaPlayer_PlaylistTitle(peer.compactDisplayTitle).string
                 }
             } else {
                 titleString = ""
@@ -965,7 +963,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.updateHistoryContentOffset(self.historyNode.visibleContentOffset(), transition: transition)
         
         var layout = layout
-        layout.intrinsicInsets.bottom = controlsHeight
+        layout.intrinsicInsets.bottom = controlsHeight + 8.0
         self.getParentController()?.presentationContext.containerLayoutUpdated(layout, transition: transition)
     }
     
@@ -989,6 +987,9 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         let result = super.hitTest(point, with: event)
         if !self.bounds.contains(point) {
             return nil
+        }
+        if point.y < self.historyFrameNode.frame.minY {
+            return self.dimNode.view
         }
         return result
     }
@@ -1069,14 +1070,20 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             return
         }
         self.floatingHeaderOffset = offset
+        let previousHasAnyHistoryMessages = self.hasAnyHistoryMessages
+        self.hasAnyHistoryMessages = self.historyNode.hasAnyMessages
+        self.controlsNode.hasPlainBackground = !self.historyNode.hasAnyMessages
         
         let sideInset: CGFloat = 16.0
-        let headerHeight = self.effectiveHeaderHeight
+        let headerHeight: CGFloat = self.effectiveHeaderHeight
         
         let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
 
         let rawControlsOffset = offset + layoutTopInset
-        let backgroundOffset = max(layoutTopInset, rawControlsOffset)
+        var backgroundOffset = max(layoutTopInset, rawControlsOffset)
+        if !self.historyNode.hasAnyMessages {
+            backgroundOffset += 25.0
+        }
         
         let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: backgroundOffset + headerHeight), size: CGSize(width: layout.size.width, height: layout.size.height))
         
@@ -1093,6 +1100,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         if let image = self.historyFrameTopMaskNode.image {
             self.historyFrameTopMaskNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topOverlayFrame.maxY), size: CGSize(width: layout.size.width - sideInset * 2.0, height: image.size.height))
         }
+        self.historyFrameTopMaskNode.isHidden = self.controlsNode.hasPlainBackground
         
         let previousBackgroundFrame = self.historyBackgroundNode.frame
         if !backgroundFrame.equalTo(previousBackgroundFrame) {
@@ -1102,6 +1110,10 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             let positionDelta = CGPoint(x: backgroundFrame.minX - previousBackgroundFrame.minX, y: backgroundFrame.minY - previousBackgroundFrame.minY)
             
             transition.animateOffsetAdditive(node: self.historyBackgroundNode, offset: positionDelta.y)
+        }
+        
+        if self.hasAnyHistoryMessages != previousHasAnyHistoryMessages {
+            self.updatePresentationData(self.presentationData)
         }
     }
     
@@ -1114,6 +1126,11 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 tagMask = .voiceOrInstantVideo
             case .file:
                 tagMask = .file
+        }
+        
+        var isMusicPlaylist = true
+        if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case .savedMusic = playlistLocation {
+            isMusicPlaylist = false
         }
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
@@ -1129,10 +1146,11 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false),
             controllerInteraction: self.controllerInteraction,
             selectedMessages: .single(nil),
-            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch),
+            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch, isMusicPlaylist: isMusicPlaylist),
             isChatPreview: false,
             messageTransitionNode: { return nil
-            })
+            }
+        )
         historyNode.clipsToBounds = true
         historyNode.preloadPages = true
         historyNode.stackFromBottom = true
