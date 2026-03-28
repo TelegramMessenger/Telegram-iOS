@@ -319,7 +319,6 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.addSubnode(self.leftDurationLabel)
         self.addSubnode(self.rightDurationLabel)
         self.addSubnode(self.infoNode)
-        self.addSubnode(self.rateButton)
         self.addSubnode(self.scrubberNode)
         
         self.addSubnode(self.orderButton)
@@ -328,6 +327,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.addSubnode(self.forwardButton)
         self.addSubnode(self.playPauseButton)
         self.playPauseButton.addSubnode(self.playPauseIconNode)
+        self.addSubnode(self.rateButton)
         
         //self.addSubnode(self.separatorNode)
         
@@ -832,7 +832,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.rateButton.setContent(.image(optionsRateImage(rate: rate.stringValue.uppercased(), color: self.presentationData.theme.list.itemSecondaryTextColor)))
     }
     
-    static let basePanelHeight: CGFloat = 182.0
+    static let basePanelHeight: CGFloat = 190.0
     
     static func heightForLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, maxHeight: CGFloat, isExpanded: Bool, savedMusic: Bool?) -> CGFloat {
         var panelHeight: CGFloat = OverlayAudioPlayerControlsNode.basePanelHeight
@@ -965,13 +965,13 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         
         
         let rateRightOffset = timestampLabelWidthForDuration(self.currentDuration)
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - rateRightOffset - 28.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset - 10.0), size: CGSize(width: 24.0, height: 44.0)))
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - rateRightOffset - 38.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset - 6.0 + UIScreenPixel), size: CGSize(width: 24.0, height: 44.0)))
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: width, height: finalPanelHeight + 8.0)))
         
         let buttonSize = CGSize(width: 64.0, height: 64.0)
         let buttonsWidth = min(width - leftInset - rightInset - sideButtonsInset * 2.0, 320.0)
-        let buttonsRect = CGRect(origin: CGPoint(x: floor((width - buttonsWidth) / 2.0), y: scrubberVerticalOrigin + 26.0), size: CGSize(width: buttonsWidth, height: buttonSize.height))
+        let buttonsRect = CGRect(origin: CGPoint(x: floor((width - buttonsWidth) / 2.0), y: scrubberVerticalOrigin + 34.0), size: CGSize(width: buttonsWidth, height: buttonSize.height))
         
         transition.updateFrame(node: self.orderButton, frame: CGRect(origin: CGPoint(x: leftInset + sideInset - 12.0, y: buttonsRect.minY), size: buttonSize))
         transition.updateFrame(node: self.loopingButton, frame: CGRect(origin: CGPoint(x: width - rightInset - sideInset - buttonSize.width + 12.0, y: buttonsRect.minY), size: buttonSize))
