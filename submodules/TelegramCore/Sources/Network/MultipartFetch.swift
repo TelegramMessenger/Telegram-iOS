@@ -1092,7 +1092,7 @@ private func multipartFetchV1(
             subscriber.putNext(.dataPart(resourceOffset: dataOffset, data: data, range: 0 ..< Int64(data.count), complete: false))
         }, reportCompleteSize: { size in
             subscriber.putNext(.resourceSizeUpdated(size))
-            //subscriber.putCompletion()
+            subscriber.putCompletion()
         }, finishWithError: { error in
             subscriber.putError(error)
         }, useMainConnection: useMainConnection)

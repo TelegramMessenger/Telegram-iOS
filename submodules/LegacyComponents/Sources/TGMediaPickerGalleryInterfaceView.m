@@ -43,6 +43,29 @@
 
 #import <LegacyComponents/TGPhotoCaptionInputMixin.h>
 
+static TGMediaAsset *TGMediaPickerGalleryLivePhotoAsset(id<TGMediaEditableItem> editableMediaItem)
+{
+    if ([editableMediaItem isKindOfClass:[TGCameraCapturedVideo class]])
+        return ((TGCameraCapturedVideo *)editableMediaItem).originalAsset;
+
+    if ([editableMediaItem isKindOfClass:[TGMediaAsset class]])
+        return (TGMediaAsset *)editableMediaItem;
+
+    return nil;
+}
+
+static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *livePhotoMode, bool forceLivePhotoEnabled, id<TGMediaEditableItem> editableMediaItem)
+{
+    if (livePhotoMode != nil)
+        return (TGMediaLivePhotoMode)[livePhotoMode unsignedIntegerValue];
+
+    TGMediaAsset *asset = TGMediaPickerGalleryLivePhotoAsset(editableMediaItem);
+    if ((asset.subtypes & TGMediaAssetSubtypePhotoLive) == 0)
+        return TGMediaLivePhotoModeOff;
+
+    return forceLivePhotoEnabled ? TGMediaLivePhotoModeLive : TGMediaLivePhotoModeOff;
+}
+
 @interface TGMediaPickerGalleryWrapperView: UIView
 {
     
@@ -1088,15 +1111,16 @@
             __strong id<TGModernGalleryEditableItem> strongGalleryEditableItem = weakGalleryEditableItem;
             if (strongGalleryEditableItem != nil) {
                 return [[strongGalleryEditableItem.editingContext timerSignalForItem:editableMediaItem] mapToSignal:^id(id timer) {
-                    return [[strongGalleryEditableItem.editingContext livePhotoModeSignalForItem:editableMediaItem] map:^id(id livePhotoMode) {
-                        NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                        if (adjustments != nil)
-                            dict[@"adjustments"] = adjustments;
-                        if (timer != nil)
-                            dict[@"timer"] = timer;
-                        if (livePhotoMode != nil)
-                            dict[@"livePhotoMode"] = livePhotoMode;
-                        return dict;
+                    return [[strongGalleryEditableItem.editingContext forceLivePhotoEnabled] mapToSignal:^SSignal *(NSNumber *forceLivePhotoEnabled) {
+                        return [[strongGalleryEditableItem.editingContext livePhotoModeSignalForItem:editableMediaItem] map:^id(id livePhotoMode) {
+                            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                            if (adjustments != nil)
+                                dict[@"adjustments"] = adjustments;
+                            if (timer != nil)
+                                dict[@"timer"] = timer;
+                            dict[@"livePhotoMode"] = @(TGMediaPickerGalleryResolvedLivePhotoMode(livePhotoMode, [forceLivePhotoEnabled boolValue], editableMediaItem));
+                            return dict;
+                        }];
                     }];
                 }];
             } else {

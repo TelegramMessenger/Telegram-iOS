@@ -16158,3 +16158,5 @@ Error: %8$@";
 
 "MediaPlayer.PlaylistTitle" = "%@'s Playlist";
 "MediaPlayer.PlaylistYourTitle" = "Your Playlist";
+
+"MediaPlayer.AudioForwardedToSavedMesagesTooltip" = "Audio forwarded to Saved Messages.";

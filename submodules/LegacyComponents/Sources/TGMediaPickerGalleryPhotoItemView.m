@@ -33,6 +33,21 @@
 #import <AVFoundation/AVFoundation.h>
 #import <math.h>
 
+static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(TGMediaEditingContext *editingContext, NSObject<TGMediaEditableItem> *editableItem, TGMediaAsset *asset)
+{
+    if (editingContext == nil || editableItem == nil)
+        return TGMediaLivePhotoModeOff;
+
+    NSNumber *livePhotoMode = [editingContext livePhotoModeForItem:editableItem];
+    if (livePhotoMode != nil)
+        return (TGMediaLivePhotoMode)[livePhotoMode unsignedIntegerValue];
+
+    if ((asset.subtypes & TGMediaAssetSubtypePhotoLive) == 0)
+        return TGMediaLivePhotoModeOff;
+
+    return editingContext.isForceLivePhotoEnabled ? TGMediaLivePhotoModeLive : TGMediaLivePhotoModeOff;
+}
+
 @interface TGMediaPickerGalleryPhotoItemView () <UIGestureRecognizerDelegate>
 {
     TGMediaPickerGalleryFetchResultItem *_fetchItem;
@@ -192,7 +207,7 @@
     [super setItem:item synchronously:synchronously];
     
     [self stopAndCleanupLivePhotoPlayback];
-    _livePhotoMode = (item.editingContext != nil) ? [item.editingContext livePhotoModeForItem:item.editableMediaItem] : TGMediaLivePhotoModeOff;
+    _livePhotoMode = TGMediaPickerGalleryResolvedLivePhotoMode(item.editingContext, item.editableMediaItem, (TGMediaAsset *)item.asset);
     [self updatePaintingImage:[item.editingContext adjustmentsForItem:item.editableMediaItem]];
     
     if (_entitiesView == nil) {
@@ -707,7 +722,7 @@
     _paintingImageView.hidden = (_paintingImageView.image == nil) || _livePhotoVideoView.alpha <= FLT_EPSILON;
     _contentView.hidden = false;
     
-    _livePhotoMode = (self.item.editingContext != nil) ? [self.item.editingContext livePhotoModeForItem:self.item.editableMediaItem] : TGMediaLivePhotoModeOff;
+    _livePhotoMode = TGMediaPickerGalleryResolvedLivePhotoMode(self.item.editingContext, self.item.editableMediaItem, (TGMediaAsset *)self.item.asset);
     [self updatePaintingImage:[self currentAdjustments]];
     [self layoutEditedSubviews];
     

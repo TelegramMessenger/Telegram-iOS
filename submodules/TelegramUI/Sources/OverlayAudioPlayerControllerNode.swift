@@ -662,10 +662,9 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         let _ = self.context.engine.messages.enqueueOutgoingMessage(to: self.context.account.peerId, replyTo: nil, content: .file(file)).start()
         
-        //TODO:localize
         let controller = UndoOverlayController(
             presentationData: self.presentationData,
-            content: .forward(savedMessages: true, text: "Audio forwarded to Saved Messages."),
+            content: .forward(savedMessages: true, text: self.presentationData.strings.MediaPlayer_AudioForwardedToSavedMesagesTooltip),
             action: { _ in
                 return true
             }

@@ -113,7 +113,7 @@ typedef NS_ENUM(NSUInteger, TGMediaLivePhotoMode)
 - (void)setPrice:(NSNumber *)price forItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)pricesUpdatedSignal;
 
-- (TGMediaLivePhotoMode)livePhotoModeForItem:(NSObject<TGMediaEditableItem> *)item;
+- (NSNumber *)livePhotoModeForItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)livePhotoModeSignalForItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)livePhotoModeForIdentifier:(NSString *)identifier;
 - (void)setLivePhotoMode:(TGMediaLivePhotoMode)mode forItem:(NSObject<TGMediaEditableItem> *)item;

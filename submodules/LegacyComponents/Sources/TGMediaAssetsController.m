@@ -32,6 +32,33 @@
 #import <LegacyComponents/TGModernButton.h>
 #import "PGPhotoEditor.h"
 
+static TGMediaAsset *TGMediaAssetsLivePhotoAsset(id<TGMediaEditableItem> item)
+{
+    if ([item isKindOfClass:[TGCameraCapturedVideo class]])
+        return ((TGCameraCapturedVideo *)item).originalAsset;
+
+    if ([item isKindOfClass:[TGMediaAsset class]])
+        return (TGMediaAsset *)item;
+
+    return nil;
+}
+
+static TGMediaLivePhotoMode TGMediaAssetsResolvedLivePhotoMode(TGMediaEditingContext *editingContext, NSObject<TGMediaEditableItem> *item)
+{
+    if (editingContext == nil || item == nil)
+        return TGMediaLivePhotoModeOff;
+
+    NSNumber *livePhotoMode = [editingContext livePhotoModeForItem:item];
+    if (livePhotoMode != nil)
+        return (TGMediaLivePhotoMode)[livePhotoMode unsignedIntegerValue];
+
+    TGMediaAsset *asset = TGMediaAssetsLivePhotoAsset(item);
+    if ((asset.subtypes & TGMediaAssetSubtypePhotoLive) == 0)
+        return TGMediaLivePhotoModeOff;
+
+    return editingContext.isForceLivePhotoEnabled ? TGMediaLivePhotoModeLive : TGMediaLivePhotoModeOff;
+}
+
 @interface TGMediaPickerAccessView: UIView
 {
     TGMediaAssetsPallete *_pallete;
@@ -977,7 +1004,7 @@
                 grouping = false;
             }
             
-            TGMediaLivePhotoMode livePhotoMode = [editingContext livePhotoModeForItem:asset];
+            TGMediaLivePhotoMode livePhotoMode = TGMediaAssetsResolvedLivePhotoMode(editingContext, asset);
             if (livePhotoMode == TGMediaLivePhotoModeLoop || livePhotoMode == TGMediaLivePhotoModeBounce) {
                 grouping = false;
             }
@@ -995,7 +1022,7 @@
         }
         
         NSAttributedString *caption = [editingContext captionForItem:asset];
-        TGMediaLivePhotoMode livePhotoMode = [editingContext livePhotoModeForItem:asset];
+        TGMediaLivePhotoMode livePhotoMode = TGMediaAssetsResolvedLivePhotoMode(editingContext, asset);
         
         if (editingContext.isForcedCaption) {
             if (grouping && num > 0) {
@@ -1546,7 +1573,7 @@
             if (adjustments.paintingData.hasAnimation) {
                 grouping = false;
             }
-            TGMediaLivePhotoMode livePhotoMode = [editingContext livePhotoModeForItem:asset];
+            TGMediaLivePhotoMode livePhotoMode = TGMediaAssetsResolvedLivePhotoMode(editingContext, asset);
             if (livePhotoMode == TGMediaLivePhotoModeLoop || livePhotoMode == TGMediaLivePhotoModeBounce) {
                 grouping = false;
             }
