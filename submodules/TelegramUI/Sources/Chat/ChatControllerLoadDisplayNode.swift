@@ -5246,7 +5246,7 @@ extension ChatControllerImpl {
                     if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(mappedId) {
                         if toSubject.setupReply {
                             Queue.mainQueue().after(0.1) {
-                                strongSelf.interfaceInteraction?.setupReplyMessage(mappedId, nil, { _, f in f() })
+                                strongSelf.interfaceInteraction?.setupReplyMessage(mappedId, toSubject.subject, { _, f in f() })
                             }
                         }
                         

@@ -1392,7 +1392,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 chatFilterTag: chatFilterTag,
                 chatLocationContextHolder: self.chatLocationContextHolder,
                 message: message,
-                mediaIndex: params.mediaIndex,
+                mediaSubject: params.mediaSubject,
                 standalone: standalone,
                 copyProtected: self.presentationInterfaceState.copyProtectionEnabled || self.presentationInterfaceState.myCopyProtectionEnabled,
                 reverseMessageGalleryOrder: false,

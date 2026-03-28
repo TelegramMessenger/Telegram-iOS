@@ -59,7 +59,15 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             if !item.controllerInteraction.isOpeningMedia {
-                let params = OpenMessageParams(mode: openChatMessageMode, mediaIndex: self.mediaIndex, progress: self.itemNode?.makeProgress())
+                let mediaSubject: GalleryMediaSubject?
+                if self.media is TelegramMediaPaidContent {
+                    mediaSubject = .paidMediaIndex(self.mediaIndex ?? 0)
+                } else if let _ = item.message.media.first(where: { $0 is TelegramMediaPoll }) {
+                    mediaSubject = .pollDescription
+                } else {
+                    mediaSubject = nil
+                }
+                let params = OpenMessageParams(mode: openChatMessageMode, mediaSubject: mediaSubject, progress: self.itemNode?.makeProgress())
                 let _ = item.controllerInteraction.openMessage(item.message, params)
             }
         }

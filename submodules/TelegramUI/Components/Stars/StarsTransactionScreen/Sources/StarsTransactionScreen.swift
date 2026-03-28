@@ -2012,7 +2012,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 associatedThreadInfo: nil,
                 associatedStories: [:]
             )
-            let gallery = GalleryController(context: self.context, source: .standaloneMessage(message, 0), replaceRootController: { _, _ in
+            let gallery = GalleryController(context: self.context, source: .standaloneMessage(message, .paidMediaIndex(0)), replaceRootController: { _, _ in
             }, baseNavigationController: nil)
             self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
                 if let transitionNode = transitionNode(media) {

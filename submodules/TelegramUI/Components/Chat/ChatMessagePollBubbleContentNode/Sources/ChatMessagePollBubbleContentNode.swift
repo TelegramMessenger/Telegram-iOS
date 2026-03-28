@@ -2913,7 +2913,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                         guard let self, let item = self.item, let option else {
                                             return
                                         }
-                                        item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
+                                        if let poll, case .public = poll.publicity {
+                                            item.controllerInteraction.openMessagePollResults(item.message.id, option.opaqueIdentifier)
+                                        }
                                     }
                                     optionNode.selectionUpdated = { [weak self] in
                                         guard let self else {

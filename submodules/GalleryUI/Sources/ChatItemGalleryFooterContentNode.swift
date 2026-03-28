@@ -172,6 +172,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
     
     private var currentMessage: Message?
     private var currentWebPageAndMedia: (TelegramMediaWebpage, Media)?
+    private var mediaSubject: GalleryMediaSubject?
     private let messageContextDisposable = MetaDisposable()
     
     private var videoFramePreviewNode: (ASImageNode, ImmediateTextNode)?
@@ -834,8 +835,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         }
     }
     
-    func setMessage(_ message: Message, displayInfo: Bool = true, translateToLanguage: String? = nil, peerIsCopyProtected: Bool = false, displayPictureInPictureButton: Bool = false, settingsButtonState: SettingsButtonState? = nil, displayTextRecognitionButton: Bool = false, displayStickersButton: Bool = false, animated: Bool = false) {
+    func setMessage(_ message: Message, mediaSubject: GalleryMediaSubject? = nil, displayInfo: Bool = true, translateToLanguage: String? = nil, peerIsCopyProtected: Bool = false, displayPictureInPictureButton: Bool = false, settingsButtonState: SettingsButtonState? = nil, displayTextRecognitionButton: Bool = false, displayStickersButton: Bool = false, animated: Bool = false) {
         self.currentMessage = message
+        self.mediaSubject = mediaSubject
         
         var displayInfo = displayInfo
         if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.timestamp == 0 {
@@ -937,6 +939,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             canFullscreen = false
         }
         
+        if message.media.contains(where: { $0 is TelegramMediaPoll }) {
+            canDelete = false
+        }
+        
         var authorNameText: String?
         if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
             authorNameText = authorSignature
@@ -954,6 +960,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 hasCaption = true
             } else if media is TelegramMediaImage {
                 hasCaption = true
+            } else if media is TelegramMediaPoll {
+                hasCaption = true
             } else if let file = media as? TelegramMediaFile {
                 hasCaption = file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/")
                 mediaDuration = file.duration
@@ -962,18 +970,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             }
         }
         if hasCaption {
-            var entities: [MessageTextEntity] = []
-            for attribute in message.attributes {
-                if let attribute = attribute as? TextEntitiesMessageAttribute {
-                    entities = attribute.entities
-                    break
-                }
-            }
-            var text = message.text
+            var (text, entities) = galleryMessageCaptionText(message, mediaSubject: mediaSubject)
             if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: mediaDuration) {
                 entities = result
             }
-            if let translateToLanguage, !text.isEmpty {
+            if let translateToLanguage, mediaSubject == nil && !text.isEmpty {
                 for attribute in message.attributes {
                     if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
                         text = attribute.text
@@ -1723,7 +1724,25 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     var messageContentKinds = Set<MessageContentKindKey>()
                     
                     for message in messages {
-                        let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
+                        var currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
+                        if case .poll = currentKind, let poll = message.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {
+                            var media: Media?
+                            switch strongSelf.mediaSubject {
+                            case .pollDescription:
+                                media = poll.attachedMedia
+                            case .pollSolution:
+                                media = poll.results.solution?.media
+                            case let .pollOption(opaqueIdentifier):
+                                if let option = poll.options.first(where: { $0.opaqueIdentifier == opaqueIdentifier }) {
+                                    media = option.media
+                                }
+                            default:
+                                break
+                            }
+                            if let media, let kind = mediaContentKind(EngineMedia(media)) {
+                                currentKind = kind
+                            }
+                        }
                         if beganContentKindScanning, let messageContentKind = generalMessageContentKind, !messageContentKind.isSemanticallyEqual(to: currentKind) {
                             generalMessageContentKind = nil
                         } else if !beganContentKindScanning || currentKind == generalMessageContentKind {
@@ -1758,8 +1777,25 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                     
                     if messages.count == 1 {
                         var subject: ShareControllerSubject = ShareControllerSubject.messages(messages.map { $0._asMessage() })
-                        for m in messages[0].media {
-                            if let image = m as? TelegramMediaImage {
+                        
+                        var media = messages[0].media.first
+                        if let poll = media as? TelegramMediaPoll {
+                            switch strongSelf.mediaSubject {
+                            case .pollDescription:
+                                media = poll.attachedMedia
+                            case .pollSolution:
+                                media = poll.results.solution?.media
+                            case let .pollOption(opaqueIdentifier):
+                                if let option = poll.options.first(where: { $0.opaqueIdentifier == opaqueIdentifier }) {
+                                    media = option.media
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        
+                        if let m = media {
+                            if let image = media as? TelegramMediaImage {
                                 subject = .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(messages[0]._asMessage()), media: m), resource: $0.resource)) }))
                             } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                                 if content.embedType == "iframe" {

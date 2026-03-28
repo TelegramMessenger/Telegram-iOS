@@ -21,18 +21,21 @@ extension ChatControllerImpl {
         var media: Media?
         var text: String?
         var entities: [MessageTextEntity] = []
+        let mediaSubject: GalleryMediaSubject
         switch subject {
         case let .option(option):
             text = option.text
             entities = option.entities
             media = option.media
+            mediaSubject = .pollOption(option.opaqueIdentifier)
         case let .solution(solution):
             text = solution.text
             entities = solution.entities
             media = solution.media
+            mediaSubject = .pollSolution
         }
         
-        guard let text, let media else {
+        guard let _ = text, let media else {
             return
         }
         
@@ -115,7 +118,7 @@ extension ChatControllerImpl {
                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
             }
             
-            let message = message.withUpdatedText(text).withUpdatedAttributes(attributes).withUpdatedMedia([media])
+            let message = message //.withUpdatedText(text).withUpdatedAttributes(attributes)
             let _ = self.context.sharedContext.openChatMessage(OpenChatMessageParams(
                 context: self.context,
                 updatedPresentationData: self.controllerInteraction?.updatedPresentationData,
@@ -123,7 +126,7 @@ extension ChatControllerImpl {
                 chatFilterTag: nil,
                 chatLocationContextHolder: nil,
                 message: message,
-                mediaIndex: 0,
+                mediaSubject: mediaSubject,
                 standalone: true,
                 reverseMessageGalleryOrder: false,
                 navigationController: self.controllerInteraction?.navigationController(),
@@ -205,7 +208,7 @@ extension ChatControllerImpl {
                 },
                 chatAvatarHiddenMedia: { _, _ in
                 },
-                gallerySource: .standaloneMessage(message, 0)
+                gallerySource: .standaloneMessage(message, mediaSubject)
             ))
         }
     }

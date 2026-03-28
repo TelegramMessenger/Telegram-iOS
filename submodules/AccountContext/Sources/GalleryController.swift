@@ -5,9 +5,16 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
+public enum GalleryMediaSubject: Hashable {
+    case paidMediaIndex(Int)
+    case pollDescription
+    case pollOption(Data)
+    case pollSolution
+}
+
 public enum GalleryControllerItemSource {
     case peerMessagesAtId(messageId: MessageId, chatLocation: ChatLocation, customTag: MemoryBuffer?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>)
-    case standaloneMessage(Message, Int?)
+    case standaloneMessage(Message, GalleryMediaSubject?)
     case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, loadMore: (() -> Void)?)
 }
 

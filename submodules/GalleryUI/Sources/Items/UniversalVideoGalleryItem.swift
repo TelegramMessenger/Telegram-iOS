@@ -40,7 +40,7 @@ import VideoPlaybackControlsComponent
 import PhotoResources
 
 public enum UniversalVideoGalleryItemContentInfo {
-    case message(Message, Int?)
+    case message(Message, GalleryMediaSubject?)
     case webPage(TelegramMediaWebpage, Media, ((@escaping () -> GalleryTransitionArguments?, NavigationController?, (ViewController, Any?) -> Void) -> Void)?)
 }
 
@@ -117,10 +117,13 @@ public class UniversalVideoGalleryItem: GalleryItem {
         guard let contentInfo = self.contentInfo else {
             return nil
         }
-        if case let .message(message, mediaIndex) = contentInfo {
+        if case let .message(message, mediaSubject) = contentInfo {
             if let paidContent = message.paidContent {
                 var mediaReference: AnyMediaReference?
-                let mediaIndex = mediaIndex ?? 0
+                var mediaIndex: Int = 0
+                if case let .paidMediaIndex(index) = mediaSubject {
+                    mediaIndex = index
+                }
                 if case let .full(fullMedia) = paidContent.extendedMedia[Int(mediaIndex)], let m = fullMedia as? TelegramMediaFile {
                     mediaReference = .message(message: MessageReference(message), media: m)
                 }
@@ -129,7 +132,17 @@ public class UniversalVideoGalleryItem: GalleryItem {
                         return (0, item)
                     }
                 }
-            } else if let id = message.groupInfo?.stableId {
+            } else if let poll = message.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll, case let .pollOption(opaqueIdentifier) = mediaSubject {
+                var mediaReference: AnyMediaReference?
+                if let optionMedia = poll.options.first(where: { $0.opaqueIdentifier == opaqueIdentifier })?.media as? TelegramMediaFile {
+                    mediaReference = .message(message: MessageReference(message), media: optionMedia)
+                }
+                if let mediaReference {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .peer(message.id.peerId), mediaReference: mediaReference) {
+                        return (0, item)
+                    }
+                }
+            }  else if let id = message.groupInfo?.stableId {
                 var mediaReference: AnyMediaReference?
                 for m in message.media {
                     if let m = m as? TelegramMediaImage {
@@ -1655,8 +1668,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if let validLayout = self.validLayout {
                             if let contentInfo = item.contentInfo {
                                 switch contentInfo {
-                                    case let .message(message, _):
-                                    self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected, displayPictureInPictureButton: self.hasPictureInPicture, settingsButtonState: self.settingsButtonState, displayStickersButton: self.displayStickersButton, animated: true)
+                                    case let .message(message, mediaSubject):
+                                    self.footerContentNode.setMessage(message, mediaSubject: mediaSubject, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected, displayPictureInPictureButton: self.hasPictureInPicture, settingsButtonState: self.settingsButtonState, displayStickersButton: self.displayStickersButton, animated: true)
                                     case let .webPage(webPage, media, _):
                                         self.footerContentNode.setWebPage(webPage, media: media)
                                 }
@@ -1861,7 +1874,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.hasPictureInPicture = false
             }
             
-            if let contentInfo = item.contentInfo, case let .message(message, mediaIndex) = contentInfo {
+            if let contentInfo = item.contentInfo, case let .message(message, mediaSubject) = contentInfo {
                 var hasMoreButton = false
                 var file: TelegramMediaFile?
                 for m in message.media {
@@ -1873,13 +1886,33 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     } else if let m = m as? TelegramMediaWebpage, case let .Loaded(content) = m.content, let f = content.file, f.isVideo {
                         file = f
                         break
-                    } else if let paidContent = message.paidContent {
-                        let mediaIndex = mediaIndex ?? 0
+                    } else if let paidContent = m as? TelegramMediaPaidContent {
+                        var mediaIndex: Int = 0
+                        if case let .paidMediaIndex(index) = mediaSubject {
+                            mediaIndex = index
+                        }
                         let media = paidContent.extendedMedia[mediaIndex]
                         if case let .full(fullMedia) = media, let m = fullMedia as? TelegramMediaFile {
                             file = m
                         }
                         break
+                    } else if let poll = m as? TelegramMediaPoll {
+                        switch mediaSubject {
+                        case .pollDescription:
+                            if let f = poll.attachedMedia as? TelegramMediaFile {
+                                file = f
+                            }
+                        case let .pollOption(opaqueIdentifier):
+                            if let f = poll.options.first(where: { $0.opaqueIdentifier == opaqueIdentifier })?.media as? TelegramMediaFile {
+                                file = f
+                            }
+                        case .pollSolution:
+                            if let f = poll.results.solution?.media as? TelegramMediaFile {
+                                file = f
+                            }
+                        default:
+                            break
+                        }
                     }
                 }
 
@@ -1974,9 +2007,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         var isAd = false
         if let contentInfo = item.contentInfo {
             switch contentInfo {
-                case let .message(message, _):
+                case let .message(message, mediaSubject):
                     isAd = message.adAttribute != nil
-                    self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected, displayPictureInPictureButton: self.hasPictureInPicture, settingsButtonState: self.settingsButtonState, displayStickersButton: self.displayStickersButton)
+                    self.footerContentNode.setMessage(message, mediaSubject: mediaSubject, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected, displayPictureInPictureButton: self.hasPictureInPicture, settingsButtonState: self.settingsButtonState, displayStickersButton: self.displayStickersButton)
                 case let .webPage(webPage, media, _):
                     self.footerContentNode.setWebPage(webPage, media: media)
             }
@@ -3036,9 +3069,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         var isAd = false
         if let contentInfo = item.contentInfo {
             switch contentInfo {
-            case let .message(message, _):
+            case let .message(message, mediaSubject):
                 isAd = message.adAttribute != nil
-                self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected, displayPictureInPictureButton: self.hasPictureInPicture, settingsButtonState: self.settingsButtonState, displayStickersButton: self.displayStickersButton)
+                self.footerContentNode.setMessage(message, mediaSubject: mediaSubject, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected, displayPictureInPictureButton: self.hasPictureInPicture, settingsButtonState: self.settingsButtonState, displayStickersButton: self.displayStickersButton)
             case let .webPage(webPage, media, _):
                 self.footerContentNode.setWebPage(webPage, media: media)
             }
@@ -3181,12 +3214,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let item = self.item else {
             return nil
         }
-        if let contentInfo = item.contentInfo, case let .message(message, mediaIndex) = contentInfo {
+        if let contentInfo = item.contentInfo, case let .message(message, mediaSubject) = contentInfo {
             var file: TelegramMediaFile?
             var isWebpage = false
             for m in message.media {
                 if let paidContent = m as? TelegramMediaPaidContent {
-                    let media = paidContent.extendedMedia[mediaIndex ?? 0]
+                    var mediaIndex: Int = 0
+                    if case let .paidMediaIndex(index) = mediaSubject {
+                        mediaIndex = index
+                    }
+                    let media = paidContent.extendedMedia[mediaIndex]
                     if case let .full(fullMedia) = media, let fullMedia = fullMedia as? TelegramMediaFile, fullMedia.isVideo {
                         file = fullMedia
                     }
@@ -3761,7 +3798,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if let navigationController = strongSelf.baseNavigationController() {
                             strongSelf.beginCustomDismiss(.simpleAnimation)
                             
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
+                            var innerSubject: EngineMessageReplyInnerSubject?
+                            if case let .message(_, mediaSubject) = strongSelf.item?.contentInfo, case let .pollOption(opaqueIdentifier) = mediaSubject {
+                                innerSubject = .pollOption(opaqueIdentifier)
+                            }
+                                
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil, subject: innerSubject), timecode: nil, setupReply: false)))
                             
                             Queue.mainQueue().after(0.3) {
                                 strongSelf.completeCustomDismiss(false)
@@ -3822,7 +3864,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if let self, let navigationController = self.baseNavigationController() {
                             self.beginCustomDismiss(.simpleAnimation)
                             
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: true)))
+                            var innerSubject: EngineMessageReplyInnerSubject?
+                            if case let .message(_, mediaSubject) = strongSelf.item?.contentInfo, case let .pollOption(opaqueIdentifier) = mediaSubject {
+                                innerSubject = .pollOption(opaqueIdentifier)
+                            }
+                            
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil, subject: innerSubject), timecode: nil, setupReply: true)))
                             
                             Queue.mainQueue().after(0.3) {
                                 self.completeCustomDismiss(false)
