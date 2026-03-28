@@ -4375,7 +4375,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         context: AccountContext,
         theme: PresentationTheme?,
         mode: TextProcessingScreenMode,
-        ignoredTranslationLanguages: [String],
         inputText: TextWithEntities,
         copyResult: ((TextWithEntities) -> Void)?,
         translateChat: ((String) -> Void)?
@@ -4384,7 +4383,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             context: context,
             theme: theme,
             mode: mode,
-            ignoredTranslationLanguages: ignoredTranslationLanguages,
             inputText: inputText,
             copyResult: copyResult,
             translateChat: translateChat

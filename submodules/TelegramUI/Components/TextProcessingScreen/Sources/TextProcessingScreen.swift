@@ -43,6 +43,7 @@ final class TextProcessingContentComponent: Component {
     let styles: [TextProcessingScreen.Style]
     let inputText: TextWithEntities
     let initialEditState: TextProcessingScreen.EditState?
+    let ignoredTranslationLanguages: [String]
     let shouldDisplayStyleNotice: Bool
     let copyCurrentResult: (() -> Void)?
     let translateChat: ((String) -> Void)?
@@ -55,6 +56,7 @@ final class TextProcessingContentComponent: Component {
         styles: [TextProcessingScreen.Style],
         inputText: TextWithEntities,
         initialEditState: TextProcessingScreen.EditState?,
+        ignoredTranslationLanguages: [String],
         shouldDisplayStyleNotice: Bool,
         copyCurrentResult: (() -> Void)?,
         translateChat: ((String) -> Void)?,
@@ -66,6 +68,7 @@ final class TextProcessingContentComponent: Component {
         self.mode = mode
         self.inputText = inputText
         self.initialEditState = initialEditState
+        self.ignoredTranslationLanguages = ignoredTranslationLanguages
         self.shouldDisplayStyleNotice = shouldDisplayStyleNotice
         self.copyCurrentResult = copyCurrentResult
         self.translateChat = translateChat
@@ -351,7 +354,7 @@ final class TextProcessingContentComponent: Component {
                     styles: component.styles,
                     externalState: self.translateState,
                     inputText: component.inputText,
-                    mode: .translate,
+                    mode: .translate(ignoredLanguages: component.ignoredTranslationLanguages),
                     copyAction: component.copyCurrentResult,
                     displayLanguageSelectionMenu: component.displayLanguageSelectionMenu,
                     present: { [weak self] c, a in
@@ -816,6 +819,7 @@ private final class TextProcessingSheetComponent: Component {
                         styles: component.styles,
                         inputText: component.inputText,
                         initialEditState: component.initialEditState,
+                        ignoredTranslationLanguages: component.ignoredTranslationLanguages,
                         shouldDisplayStyleNotice: component.shouldDisplayStyleNotice,
                         copyCurrentResult: component.copyCurrentResult != nil ? {
                             copyCurrentResultImpl()
@@ -1012,7 +1016,6 @@ private final class TextProcessingSheetComponent: Component {
                         sourceView: languageSelectionMenuDataValue.sourceView,
                         topLanguages: [],
                         selectedLanguageCode: languageSelectionMenuDataValue.currentLanguage,
-                        ignoredTranslationLanguages: component.ignoredTranslationLanguages,
                         currentStyle: languageSelectionMenuDataValue.currentStyle,
                         displayStyles: languageSelectionMenuDataValue.displayStyle ? component.styles : nil,
                         completion: languageSelectionMenuDataValue.completion,
@@ -1088,7 +1091,6 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
         context: AccountContext,
         theme: PresentationTheme? = nil,
         mode: Mode,
-        ignoredTranslationLanguages: [String],
         inputText: TextWithEntities,
         copyResult: ((TextWithEntities) -> Void)?,
         translateChat: ((String) -> Void)?
@@ -1115,13 +1117,21 @@ public class TextProcessingScreen: ViewControllerComponentContainer {
                 TelegramEngine.EngineData.Item.Configuration.ApplicationSpecificPreference(key: ApplicationSpecificPreferencesKeys.textProcessingEditingState(peerId: saveRestoreStateId))
             ).get()?.get(EditState.self)
         }
+        
+        let sharedDataEntries = await context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings]).get()
+        let translationSettings: TranslationSettings
+        if let value = sharedDataEntries.entries[ApplicationSpecificSharedDataKeys.translationSettings], let parsedValue = value.get(TranslationSettings.self) {
+            translationSettings = parsedValue
+        } else {
+            translationSettings = .defaultSettings
+        }
 
         super.init(
             context: context,
             component: TextProcessingSheetComponent(
                 context: context,
                 mode: mode,
-                ignoredTranslationLanguages: ignoredTranslationLanguages,
+                ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                 styles: styles,
                 inputText: inputText,
                 initialEditState: initialEditState,

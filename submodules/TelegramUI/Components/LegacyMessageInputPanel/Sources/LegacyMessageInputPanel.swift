@@ -357,14 +357,6 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                 entities = generateTextEntities(inputText.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(inputText, maxAnimatedEmojisInText: 0))
             }
             
-            let sharedDataEntries = await self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings]).get()
-            let translationSettings: TranslationSettings
-            if let value = sharedDataEntries.entries[ApplicationSpecificSharedDataKeys.translationSettings], let parsedValue = value.get(TranslationSettings.self) {
-                translationSettings = parsedValue
-            } else {
-                translationSettings = .defaultSettings
-            }
-            
             self.pushViewController(await self.context.sharedContext.makeTextProcessingScreen(
                 context: self.context,
                 theme: defaultDarkColorPresentationTheme,
@@ -379,7 +371,6 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     send: nil,
                     sendContextActions: nil
                 ),
-                ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                 inputText: TextWithEntities(text: inputText.string, entities: entities),
                 copyResult: { [weak self] text in
                     guard let self else {

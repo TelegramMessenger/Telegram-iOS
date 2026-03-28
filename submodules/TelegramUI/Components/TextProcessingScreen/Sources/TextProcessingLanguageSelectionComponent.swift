@@ -30,7 +30,6 @@ final class TextProcessingLanguageSelectionComponent: Component {
     let sourceView: UIView
     let topLanguages: [Language]
     let selectedLanguageCode: String
-    let ignoredTranslationLanguages: [String]
     let currentStyle: TelegramComposeAIMessageMode.StyleId
     let displayStyles: [TextProcessingScreen.Style]?
     let completion: (String, TelegramComposeAIMessageMode.StyleId) -> Void
@@ -44,7 +43,6 @@ final class TextProcessingLanguageSelectionComponent: Component {
         sourceView: UIView,
         topLanguages: [Language],
         selectedLanguageCode: String,
-        ignoredTranslationLanguages: [String],
         currentStyle: TelegramComposeAIMessageMode.StyleId,
         displayStyles: [TextProcessingScreen.Style]?,
         completion: @escaping (String, TelegramComposeAIMessageMode.StyleId) -> Void,
@@ -57,7 +55,6 @@ final class TextProcessingLanguageSelectionComponent: Component {
         self.sourceView = sourceView
         self.topLanguages = topLanguages
         self.selectedLanguageCode = selectedLanguageCode
-        self.ignoredTranslationLanguages = ignoredTranslationLanguages
         self.currentStyle = currentStyle
         self.displayStyles = displayStyles
         self.completion = completion
@@ -76,9 +73,6 @@ final class TextProcessingLanguageSelectionComponent: Component {
             return false
         }
         if lhs.selectedLanguageCode != rhs.selectedLanguageCode {
-            return false
-        }
-        if lhs.ignoredTranslationLanguages != rhs.ignoredTranslationLanguages {
             return false
         }
         if lhs.currentStyle != rhs.currentStyle {
@@ -407,9 +401,6 @@ final class TextProcessingLanguageSelectionComponent: Component {
             
             if self.mainItems.isEmpty {
                 self.mainItems = supportedTranslationLanguages.compactMap { item in
-                    if component.ignoredTranslationLanguages.contains(item) {
-                        return nil
-                    }
                     return Language(id: item, languageCode: item, name: localizedLanguageName(strings: component.strings, language: item, kind: .neutral))
                 }
                 var topIds: [String] = []

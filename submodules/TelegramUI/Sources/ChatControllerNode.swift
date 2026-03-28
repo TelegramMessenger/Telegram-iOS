@@ -4500,14 +4500,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
             }
             
-            let sharedDataEntries = await self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings]).get()
-            let translationSettings: TranslationSettings
-            if let value = sharedDataEntries.entries[ApplicationSpecificSharedDataKeys.translationSettings], let parsedValue = value.get(TranslationSettings.self) {
-                translationSettings = parsedValue
-            } else {
-                translationSettings = .defaultSettings
-            }
-            
             self.controller?.push(await TextProcessingScreen(
                 context: self.context,
                 mode: .edit(
@@ -4575,7 +4567,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         )
                     }
                 ),
-                ignoredTranslationLanguages: translationSettings.ignoredLanguages ?? [],
                 inputText: TextWithEntities(text: inputText.string, entities: entities),
                 copyResult: { [weak self] text in
                     guard let self, let controller = self.controller else {
