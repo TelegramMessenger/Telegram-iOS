@@ -129,7 +129,7 @@ extension MediaEditorScreenImpl {
         if self.isEmbeddedEditor && !(hasAnyChanges || hasEntityChanges) {
             self.saveDraft(id: randomId, isEdit: true)
             
-            self.completion([MediaEditorScreenImpl.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
+            self.completion([MediaEditorScreenImpl.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: nil, randomId: randomId)], { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()
                     Queue.mainQueue().justDispatch {
@@ -464,7 +464,7 @@ extension MediaEditorScreenImpl {
                                     return
                                 }
                                 Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
-                                self.completion([MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: values, duration: duration, dimensions: values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
+                                self.completion([MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: values, duration: duration, dimensions: values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: nil, randomId: randomId)], { [weak self] finished in
                                     self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                         self?.dismiss()
                                         Queue.mainQueue().justDispatch {
@@ -506,7 +506,7 @@ extension MediaEditorScreenImpl {
                             return
                         }
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
-                        self.completion([MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
+                        self.completion([MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, music: nil, randomId: randomId)], { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {
@@ -683,6 +683,7 @@ extension MediaEditorScreenImpl {
                                         coverTimestamp: itemMediaEditor.values.coverImageTimestamp,
                                         options: self.state.privacy,
                                         stickers: stickers,
+                                        music: nil,
                                         randomId: randomId
                                     )
                                     completion(result)
@@ -765,6 +766,7 @@ extension MediaEditorScreenImpl {
                             coverTimestamp: nil,
                             options: self.state.privacy,
                             stickers: stickers,
+                            music: nil,
                             randomId: randomId
                         )
                         completion(result)
@@ -852,11 +854,10 @@ extension MediaEditorScreenImpl {
             coverTimestamp: nil,
             options: self.state.privacy,
             stickers: [],
+            music: nil,
             randomId: randomId
         )
     }
-    
-    
     
     func updateMediaEditorEntities() {
         guard let mediaEditor = self.node.mediaEditor else {

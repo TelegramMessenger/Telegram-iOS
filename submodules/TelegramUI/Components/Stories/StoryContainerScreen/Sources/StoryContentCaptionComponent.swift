@@ -62,6 +62,7 @@ final class StoryContentCaptionComponent: Component {
     let author: EnginePeer
     let forwardInfo: EngineStoryItem.ForwardInfo?
     let forwardInfoStory: Signal<EngineStoryItem?, NoError>?
+    let music: EngineMedia?
     let entities: [MessageTextEntity]
     let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
@@ -79,6 +80,7 @@ final class StoryContentCaptionComponent: Component {
         author: EnginePeer,
         forwardInfo: EngineStoryItem.ForwardInfo?,
         forwardInfoStory: Signal<EngineStoryItem?, NoError>?,
+        music: EngineMedia?,
         entities: [MessageTextEntity],
         entityFiles: [EngineMedia.Id: TelegramMediaFile],
         action: @escaping (Action) -> Void,
@@ -94,6 +96,7 @@ final class StoryContentCaptionComponent: Component {
         self.author = author
         self.forwardInfo = forwardInfo
         self.forwardInfoStory = forwardInfoStory
+        self.music = music
         self.text = text
         self.entities = entities
         self.entityFiles = entityFiles
@@ -121,6 +124,9 @@ final class StoryContentCaptionComponent: Component {
             return false
         }
         if lhs.forwardInfo != rhs.forwardInfo {
+            return false
+        }
+        if lhs.music != rhs.music {
             return false
         }
         if lhs.text != rhs.text {

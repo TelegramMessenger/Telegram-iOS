@@ -868,7 +868,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, itemOffsetInsets: itemOffsetInsets, duration: duration, curve: curve)
         self.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         if let replacementHistoryNode = self.replacementHistoryNode {
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default(duration: nil))
+            transition.updateFrame(node: replacementHistoryNode, frame: CGRect(origin: CGPoint(x: 0.0, y: listTopInset), size: listNodeSize))
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, itemOffsetInsets: itemOffsetInsets, duration: 0.0, curve: .Default(duration: nil))
             replacementHistoryNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         }
         
@@ -1091,13 +1092,13 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         let leftOverlayFrame = CGRect(origin: CGPoint(x: 0.0, y: topOverlayFrame.maxY - 1.0), size: CGSize(width: sideInset, height: layout.size.height))
         let rightOverlayFrame = CGRect(origin: CGPoint(x: layout.size.width - sideInset, y: topOverlayFrame.maxY - 1.0), size: CGSize(width: sideInset, height: layout.size.height))
         
-        self.historyFrameNode.frame = frameFrame
+        transition.updateFrame(node: self.historyFrameNode, frame: frameFrame)
         self.historyFrameTopOverlayClipNode.frame = topOverlayFrame
         self.historyFrameTopOverlayNode.frame = CGRect(origin: .zero, size: CGSize(width: topOverlayFrame.width, height: 78.0))
         self.historyFrameLeftOverlayNode.frame = leftOverlayFrame
         self.historyFrameRightOverlayNode.frame = rightOverlayFrame
         if let image = self.historyFrameTopMaskNode.image {
-            self.historyFrameTopMaskNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topOverlayFrame.maxY), size: CGSize(width: layout.size.width - sideInset * 2.0, height: image.size.height))
+            self.historyFrameTopMaskNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topOverlayFrame.maxY - UIScreenPixel), size: CGSize(width: layout.size.width - sideInset * 2.0, height: image.size.height))
         }
         self.historyFrameTopMaskNode.isHidden = self.controlsNode.hasPlainBackground
         
@@ -1157,23 +1158,33 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         historyNode.updateFloatingHeaderOffset = { [weak self] offset, _ in
             self?.replacementHistoryNodeFloatingOffset = offset
         }
+        self.replacementHistoryNodeFloatingOffset = nil
         self.replacementHistoryNode = historyNode
         if let layout = self.validLayout {
             let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
+            let controlsHeight = self.controlsNode.frame.height
             
             var insets = UIEdgeInsets()
             insets.left = 16.0
             insets.right = 16.0
             insets.bottom = 0.0
-                        
-            let listTopInset = layoutTopInset
-            let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset)
+
+            let headerHeight = self.effectiveHeaderHeight
+            let listTopInset = layoutTopInset + headerHeight
+            let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - controlsHeight)
             
             insets.top = max(0.0, listNodeSize.height - floor(62.0 * 3.5))
             
+            var itemOffsetInsets = insets
+            if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case let .savedMusic(_, _, canReorder) = playlistLocation, canReorder {
+                itemOffsetInsets.top = 0.0
+                itemOffsetInsets.bottom = 0.0
+                insets = itemOffsetInsets
+            }
+
             historyNode.frame = CGRect(origin: CGPoint(x: 0.0, y: listTopInset), size: listNodeSize)
-            
-            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default(duration: nil))
+
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, itemOffsetInsets: itemOffsetInsets, duration: 0.0, curve: .Default(duration: nil))
             historyNode.updateLayout(transition: .immediate, updateSizeAndInsets: updateSizeAndInsets)
         }
         self.replacementHistoryNodeReadyDisposable.set((historyNode.historyState.get() |> take(1) |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
@@ -1194,20 +1205,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             self.setupReordering()
             self.updateHistoryContentOffset(replacementHistoryNode.visibleContentOffset(), transition: .immediate)
             
-            if let validLayout = self.validLayout, let offset = self.replacementHistoryNodeFloatingOffset, let previousOffset = self.floatingHeaderOffset {
+            if let offset = self.replacementHistoryNodeFloatingOffset, let previousOffset = self.floatingHeaderOffset {
                 let offsetDelta = offset - previousOffset
-                
-                let layoutTopInset: CGFloat = max(validLayout.statusBarHeight ?? 0.0, validLayout.safeInsets.top)
-                
-                let controlsBottomOffset = max(layoutTopInset, offset)
-                
+                 
                 let previousBackgroundNode = ASDisplayNode()
                 previousBackgroundNode.isLayerBacked = true
                 previousBackgroundNode.backgroundColor = self.historyBackgroundContentNode.backgroundColor
                 self.contentNode.insertSubnode(previousBackgroundNode, belowSubnode: previousHistoryNode)
                 previousBackgroundNode.frame = self.historyBackgroundNode.frame
-                
-                previousBackgroundNode.layer.animateFrame(from: previousBackgroundNode.frame, to: CGRect(origin: CGPoint(x: 0.0, y: controlsBottomOffset), size: validLayout.size), duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 
                 self.updateFloatingHeaderOffset(offset: offset, transition: .animated(duration: 0.4, curve: .spring))
                 previousHistoryNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousHistoryNode] _ in
@@ -1237,8 +1242,12 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 }
                 switch strongSelf.historyNode.visibleContentOffset() {
                 case let .known(value):
-                    if value <= -10.0 {
-                        strongSelf.requestDismiss()
+                    if let playlistLocation = strongSelf.playlistLocation as? PeerMessagesPlaylistLocation, case let .savedMusic(_, _, canReorder) = playlistLocation, canReorder {
+
+                    } else {
+                        if value <= -10.0 {
+                            strongSelf.requestDismiss()
+                        }
                     }
                 default:
                     break
@@ -1251,14 +1260,16 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             
             if let layout = self.validLayout {
                 let layoutTopInset: CGFloat = max(layout.statusBarHeight ?? 0.0, layout.safeInsets.top)
+                let controlsHeight = self.controlsNode.frame.height
                 
                 var insets = UIEdgeInsets()
                 insets.left = 16.0
                 insets.right = 16.0
                 insets.bottom = 0.0
                 
-                let listTopInset = layoutTopInset
-                let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset)
+                let headerHeight = self.effectiveHeaderHeight
+                let listTopInset = layoutTopInset + headerHeight
+                let listNodeSize = CGSize(width: layout.size.width, height: layout.size.height - listTopInset - controlsHeight)
                 
                 insets.top = max(0.0, listNodeSize.height - floor(62.0 * 3.5))
                 
@@ -1277,6 +1288,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 self.historyNode.recursivelyEnsureDisplaySynchronously(true)
             }
             
+            self.replacementHistoryNodeFloatingOffset = nil
             self.updateHistoryContentOffset(self.historyNode.visibleContentOffset(), transition: .immediate)
         }
     }

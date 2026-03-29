@@ -211,17 +211,17 @@ public final class ListMessageFileItemNode: ListMessageNode {
             self.addSubnode(self.descriptionNode)
         }
         
-        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topic: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)?) -> (CGSize, () -> Void) {
+        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ truncateType: CTLineTruncationType, _ topic: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)?) -> (CGSize, () -> Void) {
             let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
             let makeTopicTitleLayout = TextNode.asyncLayout(self.topicTitleNode)
             
-            return { [weak self] context, constrainedWidth, theme, authorTitle, topic in
+            return { [weak self] context, constrainedWidth, theme, authorTitle, truncateType, topic in
                 var maxTitleWidth = constrainedWidth
                 if let _ = topic {
                     maxTitleWidth = floor(constrainedWidth * 0.7)
                 }
                 
-                let descriptionLayout = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: authorTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+                let descriptionLayout = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: authorTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: truncateType, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
                 
                 var remainingWidth = constrainedWidth - descriptionLayout.0.size.width
                 
@@ -1040,15 +1040,15 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.message?.timestamp ?? 0, relativeTo: timestamp, dateTimeFormat: item.presentationData.dateTimeFormat)
-            let dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+            let dateAttributedString = !item.isGlobalSearchResult ? NSAttributedString() : NSAttributedString(string: dateText, font: dateFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
             
             let (dateNodeLayout, dateNodeApply) = dateNodeMakeLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - contentRightInset - 12.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(item.context, params.width - leftInset - leftOffset - contentRightInset - dateNodeLayout.size.width - 4.0, item.presentationData.theme.theme, titleText, titleExtraData)
+            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(item.context, params.width - leftInset - leftOffset - contentRightInset - dateNodeLayout.size.width - 4.0, item.presentationData.theme.theme, titleText, isAudio ? .end : .middle, titleExtraData)
             
             let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - contentRightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(item.context, params.width - leftInset - leftOffset - contentRightInset - 30.0, item.presentationData.theme.theme, descriptionText, descriptionExtraData)
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(item.context, params.width - leftInset - leftOffset - contentRightInset - 30.0, item.presentationData.theme.theme, descriptionText, .middle, descriptionExtraData)
             
             var (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(TextNodeLayoutArguments(attributedString: extensionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             if extensionTextLayout.truncated, let text = extensionText?.string  {
@@ -1168,7 +1168,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 strongSelf.backgroundNode = backgroundNode
                                 strongSelf.insertSubnode(backgroundNode, at: 0)
                             }
-                            backgroundNode.backgroundColor = item.canReorder ? item.presentationData.theme.theme.list.plainBackgroundColor : item.presentationData.theme.theme.list.itemBlocksBackgroundColor
+                            backgroundNode.backgroundColor = item.canReorder ? item.presentationData.theme.theme.list.itemModalBlocksBackgroundColor : item.presentationData.theme.theme.list.itemBlocksBackgroundColor
                         }
                         
                         strongSelf.separatorNode.backgroundColor = item.presentationData.theme.theme.list.itemPlainSeparatorColor

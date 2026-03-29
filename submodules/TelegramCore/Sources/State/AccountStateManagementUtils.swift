@@ -5457,6 +5457,7 @@ func replayFinalState(
                             isMy: item.isMy,
                             myReaction: updatedReaction,
                             forwardInfo: item.forwardInfo,
+                            music: item.music,
                             authorId: item.authorId,
                             folderIds: item.folderIds
                         ))
@@ -5492,6 +5493,7 @@ func replayFinalState(
                         isMy: item.isMy,
                         myReaction: MessageReaction.Reaction(apiReaction: reaction),
                         forwardInfo: item.forwardInfo,
+                        music: item.music,
                         authorId: item.authorId,
                         folderIds: item.folderIds
                     ))

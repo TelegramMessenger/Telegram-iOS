@@ -4557,6 +4557,7 @@ public final class StoryItemSetContainerComponent: Component {
                         author: component.slice.effectivePeer,
                         forwardInfo: component.slice.item.storyItem.forwardInfo,
                         forwardInfoStory: forwardInfoStory,
+                        music: component.slice.item.storyItem.music,
                         entities: enableEntities ? component.slice.item.storyItem.entities : [],
                         entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in

@@ -500,12 +500,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 
         let searchQuery = self.searchQuery.get()
         |> mapToSignal { query -> Signal<String?, NoError> in
-            if let query = query, !query.isEmpty {
-                return (.complete() |> delay(0.6, queue: Queue.mainQueue()))
-                |> then(.single(query))
-            } else {
-                return .single(query)
-            }
+            return .single(query)
         }
         
         let expandedSectionsPromise = self.expandedSectionsPromise
@@ -525,6 +520,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 shared = .single(nil)
                 |> then(
                     context.engine.messages.searchMessages(location: .sentMedia(tags: [.file]), query: query, state: nil)
+                    |> delay(0.6, queue: Queue.mainQueue())
                     |> map { result -> [Message]? in
                         return result.0.messages
                     }
@@ -535,13 +531,15 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 shared = .single(nil)
                 |> then(
                     context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: [.music], minDate: nil, maxDate: nil), query: query, state: nil)
+                    |> delay(0.6, queue: Queue.mainQueue())
                     |> map { result -> [Message]? in
-                        return result.0.messages
+                        return result.0.messages.filter { !$0.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) }
                     }
                 )
                 savedMusic = .single(nil)
                 |> then(
                     savedMusicContext!.state
+                    |> delay(0.6, queue: Queue.mainQueue())
                     |> map { state in
                         let peerId = context.account.peerId
                         var messages: [Message] = []
@@ -571,13 +569,12 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         return messages
                     }
                 )
-                
-                let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                if let data = context.currentAppConfiguration.with({ $0 }).data, let searchBot = data["music_search_username"] as? String, !searchBot.isEmpty, trimmedQuery.count >= 3 {
+                                
+                if let data = context.currentAppConfiguration.with({ $0 }).data, let searchBot = data["music_search_username"] as? String, !searchBot.isEmpty, query.count >= 3 {
                     globalMusic = .single(nil)
                     |> then(
                         context.engine.peers.resolvePeerByName(name: searchBot, referrer: nil)
+                        |> delay(0.6, queue: Queue.mainQueue())
                         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                             guard case let .result(result) = result else {
                                 return .complete()
@@ -588,7 +585,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                             guard let peer = peer else {
                                 return .single(nil)
                             }
-                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: trimmedQuery, offset: "")
+                            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query, offset: "")
                             |> map { results -> ChatContextResultCollection? in
                                 return results?.results
                             }
@@ -618,7 +615,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         }
                     )
                 } else {
-                    globalMusic = .single(nil)
+                    globalMusic = .single([])
                 }
             }
             
@@ -670,13 +667,22 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         }
                     }
                     
-                    if let globalMusic, !globalMusic.isEmpty {
-                        index = 0
-                        section += 1
-                        
-                        entries.append(.header(title: presentationData.strings.Attachment_PublicMusic, section: section))
-                        for message in globalMusic {
-                            entries.append(.file(index: index, message: message, section: section))
+                    if let globalMusic {
+                        if !globalMusic.isEmpty {
+                            index = 0
+                            section += 1
+                            
+                            entries.append(.header(title: presentationData.strings.Attachment_PublicMusic, section: section))
+                            for message in globalMusic {
+                                entries.append(.file(index: index, message: message, section: section))
+                                index += 1
+                            }
+                        }
+                    } else if messages.isEmpty {
+                        entries.append(.header(title: " ", section: 0))
+                        var index: Int32 = 0
+                        for _ in 0 ..< 16 {
+                            entries.append(.file(index: index, message: nil, section: 0))
                             index += 1
                         }
                     }
@@ -694,6 +700,8 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         }
         
         let previousSearchItems = Atomic<[AttachmentFileSearchEntry]?>(value: nil)
+        let previousHadSharedItems = Atomic<Bool>(value: false)
+        let previousHadSavedItems = Atomic<Bool>(value: false)
         let previousHadGlobalItems = Atomic<Bool>(value: false)
         self.searchDisposable.set((combineLatest(searchQuery, foundItems, self.presentationDataPromise.get())
         |> deliverOnMainQueue).startStrict(next: { [weak self] query, entries, presentationData in
@@ -702,17 +710,30 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 updateActivity(false)
                 let firstTime = previousEntries == nil
                 
+                var hasSharedItems = false
+                var hasSavedItems = false
                 var hasGlobalItems = false
+                
                 if let entries {
                     for entry in entries {
-                        if case let .header(_, section) = entry, section == 2 {
-                            hasGlobalItems = true
+                        if case let .header(title, section) = entry, title != " " {
+                            if section == 0 {
+                                hasSharedItems = true
+                            }
+                            if section == 1 {
+                                hasSavedItems = true
+                            }
+                            if section == 2 {
+                                hasGlobalItems = true
+                            }
                         }
                     }
                 }
+                let hadSharedItems = previousHadSharedItems.swap(hasSharedItems)
+                let hadSavedItems = previousHadSavedItems.swap(hasSavedItems)
                 let hadGlobalItems = previousHadGlobalItems.swap(hasGlobalItems)
                 
-                let crossfade = hadGlobalItems != hasGlobalItems
+                let crossfade = hadSharedItems != hasSharedItems || hadSavedItems != hasSavedItems || hadGlobalItems != hasGlobalItems
                 
                 let transition = attachmentFileSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, isEmpty: entries?.isEmpty ?? false, query: query ?? "", context: context, presentationData: presentationData, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, interaction: interaction, mode: mode, crossfade: crossfade)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
@@ -751,7 +772,8 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
     }
     
     override public func searchTextUpdated(text: String) {
-        self.searchQuery.set(.single(!text.isEmpty ? text : nil))
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.searchQuery.set(.single(!trimmedText.isEmpty ? trimmedText : nil))
     }
     
     private func enqueueTransition(_ transition: AttachmentFileSearchContainerTransition, firstTime: Bool) {

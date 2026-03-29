@@ -6706,6 +6706,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         public let coverTimestamp: Double?
         public let options: MediaEditorResultPrivacy
         public let stickers: [TelegramMediaFile]
+        public let music: TelegramMediaFile?
         public let randomId: Int64
         
         init() {
@@ -6715,6 +6716,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.coverTimestamp = nil
             self.options = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: [])
             self.stickers = []
+            self.music = nil
             self.randomId = 0
         }
         
@@ -6725,6 +6727,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             coverTimestamp: Double? = nil,
             options: MediaEditorResultPrivacy = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: []),
             stickers: [TelegramMediaFile] = [],
+            music: TelegramMediaFile? = nil,
             randomId: Int64 = 0
         ) {
             self.media = media
@@ -6733,6 +6736,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.coverTimestamp = coverTimestamp
             self.options = options
             self.stickers = stickers
+            self.music = music
             self.randomId = randomId
         }
     }
@@ -7766,6 +7770,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     coverTimestamp: nil,
                                     options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: []),
                                     stickers: [],
+                                    music: nil,
                                     randomId: 0
                                 )], { [weak self] finished in
                                     self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in

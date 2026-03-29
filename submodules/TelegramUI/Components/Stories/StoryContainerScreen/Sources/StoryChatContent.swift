@@ -318,6 +318,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isMy: item.isMy,
                         myReaction: item.myReaction,
                         forwardInfo: forwardInfo,
+                        music: item.music.flatMap(EngineMedia.init),
                         author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) },
                         folderIds: item.folderIds
                     )
@@ -356,6 +357,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 isMy: true,
                                 myReaction: nil,
                                 forwardInfo: pendingForwardsInfo[item.randomId],
+                                music: item.music.flatMap(EngineMedia.init),
                                 author: nil,
                                 folderIds: item.folders
                             ))
@@ -1367,6 +1369,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isMy: itemValue.isMy,
                     myReaction: itemValue.myReaction,
                     forwardInfo: forwardInfo,
+                    music: itemValue.music.flatMap(EngineMedia.init),
                     author: itemValue.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) },
                     folderIds: itemValue.folderIds
                 )
@@ -2308,6 +2311,7 @@ private func getCachedStory(storyId: StoryId, transaction: Transaction) -> Engin
             isMy: item.isMy,
             myReaction: item.myReaction,
             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+            music: item.music.flatMap(EngineMedia.init),
             author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
             folderIds: item.folderIds
         )
