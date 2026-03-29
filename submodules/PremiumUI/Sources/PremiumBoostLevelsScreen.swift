@@ -36,6 +36,7 @@ private final class SheetContent: CombinedComponent {
     let mode: PremiumBoostLevelsScreen.Mode
     let status: ChannelBoostStatus?
     let boostState: InternalBoostState.DisplayData?
+    let bottomInset: CGFloat
     let boost: () -> Void
     let copyLink: (String) -> Void
     let dismiss: () -> Void
@@ -52,6 +53,7 @@ private final class SheetContent: CombinedComponent {
         mode: PremiumBoostLevelsScreen.Mode,
         status: ChannelBoostStatus?,
         boostState: InternalBoostState.DisplayData?,
+        bottomInset: CGFloat,
         boost: @escaping () -> Void,
         copyLink: @escaping (String) -> Void,
         dismiss: @escaping () -> Void,
@@ -67,6 +69,7 @@ private final class SheetContent: CombinedComponent {
         self.mode = mode
         self.status = status
         self.boostState = boostState
+        self.bottomInset = bottomInset
         self.boost = boost
         self.copyLink = copyLink
         self.dismiss = dismiss
@@ -96,6 +99,9 @@ private final class SheetContent: CombinedComponent {
             return false
         }
         if lhs.boostState != rhs.boostState {
+            return false
+        }
+        if lhs.bottomInset != rhs.bottomInset {
             return false
         }
         return true
@@ -134,7 +140,6 @@ private final class SheetContent: CombinedComponent {
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let theme = environment.theme
             let strings = environment.strings
-            
             let state = context.state
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
@@ -775,6 +780,7 @@ private final class SheetContent: CombinedComponent {
                 contentSize.height += levels.size.height + 80.0
                 contentSize.height += 60.0
             }
+            contentSize.height += component.bottomInset
                         
             return contentSize
         }
@@ -826,8 +832,8 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
     final class State: ComponentState {
         private let context: AccountContext
         private let peerId: EnginePeer.Id
-        private let mode: PremiumBoostLevelsScreen.Mode
-        private let status: ChannelBoostStatus?
+        fileprivate let mode: PremiumBoostLevelsScreen.Mode
+        fileprivate let status: ChannelBoostStatus?
         private let myBoostStatus: MyBoostStatus?
         private let openPeer: ((EnginePeer) -> Void)?
         private let forceDark: Bool
@@ -838,7 +844,7 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
         private(set) var memberPeer: EnginePeer?
         private var peerDisposable: Disposable?
         
-        private var currentMyBoostCount: Int32 = 0
+        fileprivate var currentMyBoostCount: Int32 = 0
         private var myBoostCount: Int32 = 0
         private var availableBoosts: [MyBoostStatus.Boost] = []
         private var occupiedBoosts: [MyBoostStatus.Boost] = []
@@ -1235,7 +1241,9 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
             let state = context.state
             let theme = environment.theme.withModalBlocksBackground()
             let strings = environment.strings
-            
+
+            state.controller = controller() as? PremiumBoostLevelsScreen
+
             let dismiss: (Bool) -> Void = { animated in
                 if animated {
                     animateOut.invoke(Action { _ in
@@ -1338,6 +1346,24 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
                 )
             }
             
+            var bottomButtonTitle: String?
+            if case .user = state.mode, state.status?.nextLevelBoosts != nil {
+                if state.currentMyBoostCount > 0 {
+                    bottomButtonTitle = strings.ChannelBoost_BoostAgain
+                } else if state.isGroup == true {
+                    bottomButtonTitle = strings.GroupBoost_BoostGroup
+                } else {
+                    bottomButtonTitle = strings.ChannelBoost_BoostChannel
+                }
+            }
+            let bottomButtonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+            let contentBottomInset: CGFloat
+            if bottomButtonTitle != nil {
+                contentBottomInset = bottomButtonInsets.bottom + 52.0 + 16.0
+            } else {
+                contentBottomInset = 0.0
+            }
+
             let sheet = sheet.update(
                 component: ResizableSheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
@@ -1348,6 +1374,7 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
                         mode: context.component.mode,
                         status: context.component.status,
                         boostState: state.boostState,
+                        bottomInset: contentBottomInset,
                         boost: { [weak state] in
                             state?.updateBoostState()
                         },
@@ -1385,31 +1412,33 @@ private final class PremiumBoostLevelsSheetComponent: CombinedComponent {
                         )
                     ),
                     rightItem: rightItem,
-                    bottomItem: "".isEmpty ? nil : AnyComponent(
-                        ButtonComponent(
-                            background: ButtonComponent.Background(
-                                style: .glass,
-                                color: theme.list.itemCheckColors.fillColor,
-                                foreground: theme.list.itemCheckColors.foregroundColor,
-                                pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
-                            ),
-                            content: AnyComponentWithIdentity(
-                                id: AnyHashable(0),
-                                component: AnyComponent(
-                                    ButtonTextContentComponent(
-                                        text: strings.Common_OK,
-                                        badge: 0,
-                                        textColor: theme.list.itemCheckColors.foregroundColor,
-                                        badgeBackground: theme.list.itemCheckColors.foregroundColor,
-                                        badgeForeground: theme.list.itemCheckColors.fillColor
+                    bottomItem: bottomButtonTitle.map { title in
+                        AnyComponent(
+                            ButtonComponent(
+                                background: ButtonComponent.Background(
+                                    style: .glass,
+                                    color: theme.list.itemCheckColors.fillColor,
+                                    foreground: theme.list.itemCheckColors.foregroundColor,
+                                    pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                                ),
+                                content: AnyComponentWithIdentity(
+                                    id: AnyHashable(0),
+                                    component: AnyComponent(
+                                        ButtonTextContentComponent(
+                                            text: title,
+                                            badge: 0,
+                                            textColor: theme.list.itemCheckColors.foregroundColor,
+                                            badgeBackground: theme.list.itemCheckColors.foregroundColor,
+                                            badgeForeground: theme.list.itemCheckColors.fillColor
+                                        )
                                     )
-                                )
-                            ),
-                            action: {
-                                dismiss(true)
-                            }
+                                ),
+                                action: { [weak state] in
+                                    state?.updateBoostState()
+                                }
+                            )
                         )
-                    ),
+                    },
                     backgroundColor: .color(theme.list.modalBlocksBackgroundColor),
                     animateOut: animateOut
                 ),
