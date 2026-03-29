@@ -122,6 +122,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
             var automaticPlayback: Bool = false
             var contentMode: InteractiveMediaNodeContentMode = .aspectFit
+            var isLivePhoto = false
             
             if let updatingMedia = item.attributes.updatingMedia, case let .update(mediaReference) = updatingMedia.media {
                 selectedMedia = mediaReference.media
@@ -136,6 +137,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         
                         if let _ = telegramImage.video {
                             automaticPlayback = true
+                            isLivePhoto = true
                         }
                     } else if let telegramStory = media as? TelegramMediaStory {
                         selectedMedia = telegramStory
@@ -432,7 +434,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 var wideLayout = true
                 if case let .mosaic(_, wide) = position {
                     wideLayout = wide
-                    automaticPlayback = automaticPlayback && wide
+                    automaticPlayback = automaticPlayback && (wide || isLivePhoto)
                 }
                 
                 var updatedPosition: ChatMessageBubbleContentPosition = position
