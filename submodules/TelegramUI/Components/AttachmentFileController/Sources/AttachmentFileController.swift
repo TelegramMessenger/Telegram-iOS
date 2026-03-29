@@ -337,12 +337,12 @@ private func attachmentFileControllerEntries(
     case .recent:
         listTitle = presentationData.strings.Attachment_RecentlySentFiles
     case .audio:
-        listTitle = presentationData.strings.Attachment_SharedAudio
+        listTitle = presentationData.strings.Attachment_ChatsMusic
     }
 
     if case let .audio(audioMode) = mode, audioMode != .savedMusic {
         if let savedMusic, savedMusic.count > 0 {
-            entries.append(.savedHeader(presentationData.theme, presentationData.strings.MediaEditor_Audio_SavedMusic.uppercased()))
+            entries.append(.savedHeader(presentationData.theme, presentationData.strings.Attachment_ProfileMusic.uppercased()))
 
             var savedMusic = savedMusic
             var hasShowMore = false

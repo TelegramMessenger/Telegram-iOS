@@ -430,7 +430,8 @@ public extension Api {
             public var views: Api.StoryViews?
             public var sentReaction: Api.Reaction?
             public var albums: [Int32]?
-            public init(flags: Int32, id: Int32, date: Int32, fromId: Api.Peer?, fwdFrom: Api.StoryFwdHeader?, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, mediaAreas: [Api.MediaArea]?, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?, sentReaction: Api.Reaction?, albums: [Int32]?) {
+            public var music: Api.Document?
+            public init(flags: Int32, id: Int32, date: Int32, fromId: Api.Peer?, fwdFrom: Api.StoryFwdHeader?, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, mediaAreas: [Api.MediaArea]?, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?, sentReaction: Api.Reaction?, albums: [Int32]?, music: Api.Document?) {
                 self.flags = flags
                 self.id = id
                 self.date = date
@@ -445,9 +446,10 @@ public extension Api {
                 self.views = views
                 self.sentReaction = sentReaction
                 self.albums = albums
+                self.music = music
             }
             public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
-                return ("storyItem", [("flags", ConstructorParameterDescription(self.flags)), ("id", ConstructorParameterDescription(self.id)), ("date", ConstructorParameterDescription(self.date)), ("fromId", ConstructorParameterDescription(self.fromId)), ("fwdFrom", ConstructorParameterDescription(self.fwdFrom)), ("expireDate", ConstructorParameterDescription(self.expireDate)), ("caption", ConstructorParameterDescription(self.caption)), ("entities", ConstructorParameterDescription(self.entities)), ("media", ConstructorParameterDescription(self.media)), ("mediaAreas", ConstructorParameterDescription(self.mediaAreas)), ("privacy", ConstructorParameterDescription(self.privacy)), ("views", ConstructorParameterDescription(self.views)), ("sentReaction", ConstructorParameterDescription(self.sentReaction)), ("albums", ConstructorParameterDescription(self.albums))])
+                return ("storyItem", [("flags", ConstructorParameterDescription(self.flags)), ("id", ConstructorParameterDescription(self.id)), ("date", ConstructorParameterDescription(self.date)), ("fromId", ConstructorParameterDescription(self.fromId)), ("fwdFrom", ConstructorParameterDescription(self.fwdFrom)), ("expireDate", ConstructorParameterDescription(self.expireDate)), ("caption", ConstructorParameterDescription(self.caption)), ("entities", ConstructorParameterDescription(self.entities)), ("media", ConstructorParameterDescription(self.media)), ("mediaAreas", ConstructorParameterDescription(self.mediaAreas)), ("privacy", ConstructorParameterDescription(self.privacy)), ("views", ConstructorParameterDescription(self.views)), ("sentReaction", ConstructorParameterDescription(self.sentReaction)), ("albums", ConstructorParameterDescription(self.albums)), ("music", ConstructorParameterDescription(self.music))])
             }
         }
         public class Cons_storyItemDeleted: TypeConstructorDescription {
@@ -482,7 +484,7 @@ public extension Api {
             switch self {
             case .storyItem(let _data):
                 if boxed {
-                    buffer.appendInt32(-302947087)
+                    buffer.appendInt32(379894076)
                 }
                 serializeInt32(_data.flags, buffer: buffer, boxed: false)
                 serializeInt32(_data.id, buffer: buffer, boxed: false)
@@ -532,6 +534,9 @@ public extension Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
                 }
+                if Int(_data.flags) & Int(1 << 20) != 0 {
+                    _data.music!.serialize(buffer, true)
+                }
                 break
             case .storyItemDeleted(let _data):
                 if boxed {
@@ -554,7 +559,7 @@ public extension Api {
         public func descriptionFields() -> (String, [(String, ConstructorParameterDescription)]) {
             switch self {
             case .storyItem(let _data):
-                return ("storyItem", [("flags", ConstructorParameterDescription(_data.flags)), ("id", ConstructorParameterDescription(_data.id)), ("date", ConstructorParameterDescription(_data.date)), ("fromId", ConstructorParameterDescription(_data.fromId)), ("fwdFrom", ConstructorParameterDescription(_data.fwdFrom)), ("expireDate", ConstructorParameterDescription(_data.expireDate)), ("caption", ConstructorParameterDescription(_data.caption)), ("entities", ConstructorParameterDescription(_data.entities)), ("media", ConstructorParameterDescription(_data.media)), ("mediaAreas", ConstructorParameterDescription(_data.mediaAreas)), ("privacy", ConstructorParameterDescription(_data.privacy)), ("views", ConstructorParameterDescription(_data.views)), ("sentReaction", ConstructorParameterDescription(_data.sentReaction)), ("albums", ConstructorParameterDescription(_data.albums))])
+                return ("storyItem", [("flags", ConstructorParameterDescription(_data.flags)), ("id", ConstructorParameterDescription(_data.id)), ("date", ConstructorParameterDescription(_data.date)), ("fromId", ConstructorParameterDescription(_data.fromId)), ("fwdFrom", ConstructorParameterDescription(_data.fwdFrom)), ("expireDate", ConstructorParameterDescription(_data.expireDate)), ("caption", ConstructorParameterDescription(_data.caption)), ("entities", ConstructorParameterDescription(_data.entities)), ("media", ConstructorParameterDescription(_data.media)), ("mediaAreas", ConstructorParameterDescription(_data.mediaAreas)), ("privacy", ConstructorParameterDescription(_data.privacy)), ("views", ConstructorParameterDescription(_data.views)), ("sentReaction", ConstructorParameterDescription(_data.sentReaction)), ("albums", ConstructorParameterDescription(_data.albums)), ("music", ConstructorParameterDescription(_data.music))])
             case .storyItemDeleted(let _data):
                 return ("storyItemDeleted", [("id", ConstructorParameterDescription(_data.id))])
             case .storyItemSkipped(let _data):
@@ -627,6 +632,12 @@ public extension Api {
                     _14 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
                 }
             }
+            var _15: Api.Document?
+            if Int(_1!) & Int(1 << 20) != 0 {
+                if let signature = reader.readInt32() {
+                    _15 = Api.parse(reader, signature: signature) as? Api.Document
+                }
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -641,8 +652,9 @@ public extension Api {
             let _c12 = (Int(_1!) & Int(1 << 3) == 0) || _12 != nil
             let _c13 = (Int(_1!) & Int(1 << 15) == 0) || _13 != nil
             let _c14 = (Int(_1!) & Int(1 << 19) == 0) || _14 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
-                return Api.StoryItem.storyItem(Cons_storyItem(flags: _1!, id: _2!, date: _3!, fromId: _4, fwdFrom: _5, expireDate: _6!, caption: _7, entities: _8, media: _9!, mediaAreas: _10, privacy: _11, views: _12, sentReaction: _13, albums: _14))
+            let _c15 = (Int(_1!) & Int(1 << 20) == 0) || _15 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 {
+                return Api.StoryItem.storyItem(Cons_storyItem(flags: _1!, id: _2!, date: _3!, fromId: _4, fwdFrom: _5, expireDate: _6!, caption: _7, entities: _8, media: _9!, mediaAreas: _10, privacy: _11, views: _12, sentReaction: _13, albums: _14, music: _15))
             }
             else {
                 return nil

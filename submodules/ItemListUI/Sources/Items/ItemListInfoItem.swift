@@ -17,6 +17,11 @@ public enum InfoListItemLinkAction {
 }
 
 public class InfoListItem: ListViewItem {
+    public enum InfoStyle {
+        case `default`
+        case compact
+    }
+    
     public let selectable: Bool = false
     
     let presentationData: ItemListPresentationData
@@ -26,10 +31,11 @@ public class InfoListItem: ListViewItem {
     let style: ItemListStyle
     let hasDecorations: Bool
     let isWarning: Bool
+    let infoStyle: InfoStyle
     let linkAction: ((InfoListItemLinkAction) -> Void)?
     let closeAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle = .legacy, title: String, text: InfoListItemText, style: ItemListStyle, hasDecorations: Bool = true, isWarning: Bool = false, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, systemStyle: ItemListSystemStyle = .legacy, title: String, text: InfoListItemText, style: ItemListStyle, hasDecorations: Bool = true, isWarning: Bool = false, infoStyle: InfoStyle = .default, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
         self.presentationData = presentationData
         self.systemStyle = systemStyle
         self.title = title
@@ -37,6 +43,7 @@ public class InfoListItem: ListViewItem {
         self.style = style
         self.hasDecorations = hasDecorations
         self.isWarning = isWarning
+        self.infoStyle = infoStyle
         self.linkAction = linkAction
         self.closeAction = closeAction
     }
@@ -226,6 +233,7 @@ public class InfoItemNode: ListViewItemNode {
             let smallerTextFont = Font.regular(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 15.0)
             let textFont = Font.regular(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 16.0)
             let textBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 16.0)
+            let smallBadgeFont = Font.semibold(11.0)
             let badgeFont = Font.regular(15.0)
             let largeBadgeFont = Font.regular(24.0)
     
@@ -234,7 +242,18 @@ public class InfoItemNode: ListViewItemNode {
             
             var updatedCloseIcon: UIImage?
             
-            let badgeDiameter: CGFloat = item.isWarning ? 30.0 : 22.0
+            let badgeDiameter: CGFloat
+            let effectiveBadgeFont: UIFont
+            if item.isWarning {
+                badgeDiameter = 30.0
+                effectiveBadgeFont = largeBadgeFont
+            } else if case .compact = item.infoStyle {
+                badgeDiameter = 15.0
+                effectiveBadgeFont = smallBadgeFont
+            } else {
+                badgeDiameter = 22.0
+                effectiveBadgeFont = badgeFont
+            }
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.presentationData.theme.list.itemDestructiveColor)
@@ -267,21 +286,33 @@ public class InfoItemNode: ListViewItemNode {
             case let .plain(text):
                 attributedText = NSAttributedString(string: text, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             case let .markdown(text):
-                attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: item.isWarning ? smallerTextFont : textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), bold: MarkdownAttributeSet(font: textBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+                attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: item.isWarning || item.infoStyle == .compact ? smallerTextFont : textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), bold: MarkdownAttributeSet(font: textBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 }))
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.isWarning ? "⚠️" : "!", font: item.isWarning ? largeBadgeFont : badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var textCutout: TextNodeCutout?
+            if case .compact = item.infoStyle, item.title.isEmpty {
+                textCutout = TextNodeCutout(topLeft: CGSize(width: 22.0, height: 8.0), topRight: nil, bottomRight: nil)
+            }
+            
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.isWarning ? "⚠️" : "!", font: effectiveBadgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets()))
             
             var verticalInset: CGFloat = 0.0
             if case .glass = item.systemStyle {
                 verticalInset = 4.0
             }
             
-            let contentSize = CGSize(width: params.width, height: titleLayout.size.height + textLayout.size.height + 38.0 + verticalInset * 2.0)
+            var contentHeight: CGFloat = titleLayout.size.height + textLayout.size.height + verticalInset * 2.0
+            if case .compact = item.infoStyle {
+                contentHeight += 13.0
+            } else {
+                contentHeight += 38.0
+            }
+            
+            let contentSize = CGSize(width: params.width, height: contentHeight)
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             return (layout, { [weak self] in
@@ -345,6 +376,9 @@ public class InfoItemNode: ListViewItemNode {
                         bottomStripeInset = leftInset
                         if !item.hasDecorations {
                             strongSelf.topStripeNode.isHidden = true
+                            if case .compact = item.infoStyle {
+                                strongSelf.bottomStripeNode.isHidden = true
+                            }
                         }
                     }
                     
@@ -369,13 +403,34 @@ public class InfoItemNode: ListViewItemNode {
                         strongSelf.closeButton.setImage(updatedCloseIcon, for: [])
                     }
                     
-                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset + 15.0 + (item.isWarning ? 4.0 : 0.0)), size: CGSize(width: badgeDiameter, height: badgeDiameter))
+                    var badgeOriginX: CGFloat = leftInset
+                    let badgeOriginY: CGFloat
+                    var labelOffset: CGPoint = .zero
+                    if item.isWarning {
+                        badgeOriginY = verticalInset + 15.0 + 4.0
+                    } else if case .compact = item.infoStyle {
+                        badgeOriginY = 12.0
+                        badgeOriginX += 1
+                        labelOffset = CGPoint(x: UIScreenPixel, y: -1.0)
+                    } else {
+                        badgeOriginY = verticalInset + 15.0
+                    }
                     
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0, y: strongSelf.badgeNode.frame.minY + 2.0 + UIScreenPixel), size: labelLayout.size)
+                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: badgeOriginX, y: badgeOriginY), size: CGSize(width: badgeDiameter, height: badgeDiameter))
+                    
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0) + labelOffset.x, y: strongSelf.badgeNode.frame.minY + 2.0 + UIScreenPixel + labelOffset.y), size: labelLayout.size)
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.maxX + 8.0, y: verticalInset + 16.0), size: titleLayout.size)
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + 9.0), size: textLayout.size)
+                    let textOriginY: CGFloat
+                    if titleLayout.size.height > 0.0 {
+                        textOriginY = strongSelf.titleNode.frame.maxY + 9.0
+                    } else if case .compact = item.infoStyle {
+                        textOriginY = 11.0
+                    } else {
+                        textOriginY = verticalInset + 16.0
+                    }
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textOriginY), size: textLayout.size)
                     
                     strongSelf.closeButton.frame = CGRect(x: params.width - rightInset - 26.0, y: verticalInset + 10.0, width: 32.0, height: 32.0)
                 }

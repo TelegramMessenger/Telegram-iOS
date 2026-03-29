@@ -484,11 +484,13 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                 send(message)
                 self?.listNode.clearHighlightAnimated(true)
             },
-            toggleMediaPlayback: { message in
+            toggleMediaPlayback: { [weak self] message in
                 didPreviewAudio()
                 
                 let playlistLocation: PeerMessagesPlaylistLocation = .custom(messages: .single(([message], 0, false)), canReorder: false, at: message.id, loadMore: nil, hidePanel: true)
                 context.sharedContext.mediaManager.setPlaylist((context, PeerMessagesMediaPlaylist(context: context, location: playlistLocation, chatLocationContextHolder: nil)), type: .music, control: .playback(.togglePlayPause))
+                
+                self?.view.window?.endEditing(true)
             },
             expandSection: { [weak self] section in
             self?.expandedSections.insert(section)
@@ -631,7 +633,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                     var index: Int32 = 0
                     
                     if let savedMusic, !savedMusic.isEmpty {
-                        entries.append(.header(title: "PROFILE MUSIC", section: section))
+                        entries.append(.header(title: presentationData.strings.Attachment_ProfileMusic, section: section))
                         
                         var savedMusic = savedMusic
                         var hasShowMore = false
@@ -652,7 +654,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                     section += 1
                     
                     if !messages.isEmpty {
-                        entries.append(.header(title: "YOUR CHATS", section: section))
+                        entries.append(.header(title: presentationData.strings.Attachment_ChatsMusic, section: section))
                         var messages = messages
                         var hasShowMore = false
                         if messages.count > 4 && !expandedSections.contains(section) {
@@ -672,7 +674,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
                         index = 0
                         section += 1
                         
-                        entries.append(.header(title: "PUBLIC CHATS", section: section))
+                        entries.append(.header(title: presentationData.strings.Attachment_PublicMusic, section: section))
                         for message in globalMusic {
                             entries.append(.file(index: index, message: message, section: section))
                             index += 1

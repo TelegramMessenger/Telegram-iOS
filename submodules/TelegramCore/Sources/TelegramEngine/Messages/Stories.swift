@@ -1373,6 +1373,8 @@ func _internal_uploadStoryImpl(
                             flags |= 1 << 8
                         }
                         
+                        //var apiMusic: Api.InputDocument?
+                        
                         return network.request(Api.functions.stories.sendStory(
                             flags: flags,
                             peer: inputPeer,
@@ -1385,7 +1387,8 @@ func _internal_uploadStoryImpl(
                             period: Int32(period),
                             fwdFromId: fwdFromId,
                             fwdFromStory: fwdFromStory,
-                            albums: folders.isEmpty ? nil : folders.map(Int32.init(clamping:))
+                            albums: folders.isEmpty ? nil : folders.map(Int32.init(clamping:)),
+                            music: nil
                         ))
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
@@ -1798,7 +1801,8 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
                 mediaAreas: inputMediaAreas,
                 caption: apiCaption,
                 entities: apiEntities,
-                privacyRules: privacyRules
+                privacyRules: privacyRules,
+                music: nil
             ))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in
@@ -1907,7 +1911,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
         var flags: Int32 = 0
         flags |= 1 << 2
         
-        return account.network.request(Api.functions.stories.editStory(flags: flags, peer: .inputPeerSelf, id: id, media: nil, mediaAreas: nil, caption: nil, entities: nil, privacyRules: inputRules))
+        return account.network.request(Api.functions.stories.editStory(flags: flags, peer: .inputPeerSelf, id: id, media: nil, mediaAreas: nil, caption: nil, entities: nil, privacyRules: inputRules, music: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

@@ -629,6 +629,7 @@ public struct CachedUserFlags: OptionSet {
     public static let displayGiftButton = CachedUserFlags(rawValue: 1 << 7)
     public static let myCopyProtectionEnabled = CachedUserFlags(rawValue: 1 << 8)
     public static let copyProtectionEnabled = CachedUserFlags(rawValue: 1 << 9)
+    public static let unofficialSecurityRisk = CachedUserFlags(rawValue: 1 << 10)
 }
 
 public final class EditableBotInfo: PostboxCoding, Equatable {

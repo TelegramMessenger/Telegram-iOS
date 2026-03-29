@@ -1780,10 +1780,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
     }
     
     private func updateMediaAccessoryPanel(frame: CGRect?, transition: ContainedViewLayoutTransition) {
-        guard case .glass = self.panelStyle,
-              self.hasMediaAccessoryPanel,
-              let frame,
-              let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType else {
+        guard case .glass = self.panelStyle, self.hasMediaAccessoryPanel, let frame, let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType else {
             self.dismissMediaAccessoryPanel(transition: transition)
             return
         }
@@ -1825,6 +1822,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             transition.updateFrame(node: mediaAccessoryPanel, frame: frame)
             mediaAccessoryPanel.updateLayout(size: frame.size, leftInset: inset, rightInset: inset, isHidden: false, transition: transition)
         }
+        
+        transition.updateAlpha(node: mediaAccessoryPanel.containerNode.headerNode.separatorNode, alpha: self.hideButtons ? 0.0 : 1.0)
     }
     
     func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {

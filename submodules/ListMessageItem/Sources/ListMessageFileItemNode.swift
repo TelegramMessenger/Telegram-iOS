@@ -561,7 +561,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
         guard let item = self.item, let message = item.message else {
             return
         }
-        item.interaction.toggleMediaPlayback?(message)
+        if let resourceStatus = self.resourceStatus, case .playbackStatus = resourceStatus {
+            if let context = self.context {
+                context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: nil)
+            }
+        } else {
+            item.interaction.toggleMediaPlayback?(message)
+        }
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -1696,7 +1702,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                 case .playbackStatus:
                     if let context = self.context {
-                        context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: nil)
+                        if let item = self.item, let message = item.message, let interaction = self.interaction, item.isStoryMusic {
+                            let _ = interaction.openMessage(message, .default)
+                        } else {
+                            context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: nil)
+                        }
                     }
             }
         }

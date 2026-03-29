@@ -16160,3 +16160,9 @@ Error: %8$@";
 "MediaPlayer.PlaylistYourTitle" = "Your Playlist";
 
 "MediaPlayer.AudioForwardedToSavedMesagesTooltip" = "Audio forwarded to Saved Messages.";
+
+"Attachment.ProfileMusic" = "PROFILE MUSIC";
+"Attachment.ChatsMusic" = "YOUR CHATS";
+"Attachment.PublicMusic" = "PUBLIC CHATS";
+
+"PeerInfo.UnofficialSecurityRisk" = "%@ uses an unofficial Telegram client – messages to this user may be less secure.";

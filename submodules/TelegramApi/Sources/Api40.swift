@@ -12788,9 +12788,9 @@ public extension Api.functions.stories {
     }
 }
 public extension Api.functions.stories {
-    static func editStory(flags: Int32, peer: Api.InputPeer, id: Int32, media: Api.InputMedia?, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func editStory(flags: Int32, peer: Api.InputPeer, id: Int32, media: Api.InputMedia?, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule]?, music: Api.InputDocument?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(-1249658298)
+        buffer.appendInt32(744728363)
         serializeInt32(flags, buffer: buffer, boxed: false)
         peer.serialize(buffer, true)
         serializeInt32(id, buffer: buffer, boxed: false)
@@ -12821,7 +12821,10 @@ public extension Api.functions.stories {
                 item.serialize(buffer, true)
             }
         }
-        return (FunctionDescription(name: "stories.editStory", parameters: [("flags", ConstructorParameterDescription(flags)), ("peer", ConstructorParameterDescription(peer)), ("id", ConstructorParameterDescription(id)), ("media", ConstructorParameterDescription(media)), ("mediaAreas", ConstructorParameterDescription(mediaAreas)), ("caption", ConstructorParameterDescription(caption)), ("entities", ConstructorParameterDescription(entities)), ("privacyRules", ConstructorParameterDescription(privacyRules))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        if Int(flags) & Int(1 << 4) != 0 {
+            music!.serialize(buffer, true)
+        }
+        return (FunctionDescription(name: "stories.editStory", parameters: [("flags", ConstructorParameterDescription(flags)), ("peer", ConstructorParameterDescription(peer)), ("id", ConstructorParameterDescription(id)), ("media", ConstructorParameterDescription(media)), ("mediaAreas", ConstructorParameterDescription(mediaAreas)), ("caption", ConstructorParameterDescription(caption)), ("entities", ConstructorParameterDescription(entities)), ("privacyRules", ConstructorParameterDescription(privacyRules)), ("music", ConstructorParameterDescription(music))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {
@@ -13204,9 +13207,9 @@ public extension Api.functions.stories {
     }
 }
 public extension Api.functions.stories {
-    static func sendStory(flags: Int32, peer: Api.InputPeer, media: Api.InputMedia, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64, period: Int32?, fwdFromId: Api.InputPeer?, fwdFromStory: Int32?, albums: [Int32]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+    static func sendStory(flags: Int32, peer: Api.InputPeer, media: Api.InputMedia, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64, period: Int32?, fwdFromId: Api.InputPeer?, fwdFromStory: Int32?, albums: [Int32]?, music: Api.InputDocument?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
         let buffer = Buffer()
-        buffer.appendInt32(1937752812)
+        buffer.appendInt32(-1885443944)
         serializeInt32(flags, buffer: buffer, boxed: false)
         peer.serialize(buffer, true)
         media.serialize(buffer, true)
@@ -13249,7 +13252,10 @@ public extension Api.functions.stories {
                 serializeInt32(item, buffer: buffer, boxed: false)
             }
         }
-        return (FunctionDescription(name: "stories.sendStory", parameters: [("flags", ConstructorParameterDescription(flags)), ("peer", ConstructorParameterDescription(peer)), ("media", ConstructorParameterDescription(media)), ("mediaAreas", ConstructorParameterDescription(mediaAreas)), ("caption", ConstructorParameterDescription(caption)), ("entities", ConstructorParameterDescription(entities)), ("privacyRules", ConstructorParameterDescription(privacyRules)), ("randomId", ConstructorParameterDescription(randomId)), ("period", ConstructorParameterDescription(period)), ("fwdFromId", ConstructorParameterDescription(fwdFromId)), ("fwdFromStory", ConstructorParameterDescription(fwdFromStory)), ("albums", ConstructorParameterDescription(albums))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+        if Int(flags) & Int(1 << 9) != 0 {
+            music!.serialize(buffer, true)
+        }
+        return (FunctionDescription(name: "stories.sendStory", parameters: [("flags", ConstructorParameterDescription(flags)), ("peer", ConstructorParameterDescription(peer)), ("media", ConstructorParameterDescription(media)), ("mediaAreas", ConstructorParameterDescription(mediaAreas)), ("caption", ConstructorParameterDescription(caption)), ("entities", ConstructorParameterDescription(entities)), ("privacyRules", ConstructorParameterDescription(privacyRules)), ("randomId", ConstructorParameterDescription(randomId)), ("period", ConstructorParameterDescription(period)), ("fwdFromId", ConstructorParameterDescription(fwdFromId)), ("fwdFromStory", ConstructorParameterDescription(fwdFromStory)), ("albums", ConstructorParameterDescription(albums)), ("music", ConstructorParameterDescription(music))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
             let reader = BufferReader(buffer)
             var result: Api.Updates?
             if let signature = reader.readInt32() {

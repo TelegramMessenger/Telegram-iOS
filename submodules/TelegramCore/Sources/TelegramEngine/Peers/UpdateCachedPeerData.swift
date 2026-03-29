@@ -299,6 +299,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let displayGiftButton = (userFullFlags2 & (1 << 16)) != 0
                                         let myCopyProtectionEnabled = (userFullFlags2 & (1 << 23)) != 0
                                         let copyProtectionEnabled = (userFullFlags2 & (1 << 24)) != 0
+                                        let unofficialSecurityRisk = (userFullFlags2 & (1 << 26)) != 0
                                     
                                         var flags: CachedUserFlags = previous.flags
                                         if premiumRequired {
@@ -345,6 +346,11 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             flags.insert(.copyProtectionEnabled)
                                         } else {
                                             flags.remove(.copyProtectionEnabled)
+                                        }
+                                        if unofficialSecurityRisk {
+                                            flags.insert(.unofficialSecurityRisk)
+                                        } else {
+                                            flags.remove(.unofficialSecurityRisk)
                                         }
                                     
                                         let callsPrivate = (userFullFlags & (1 << 5)) != 0

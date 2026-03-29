@@ -176,7 +176,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         }
     }
     
-    private let separatorNode: ASDisplayNode
+    public let separatorNode: ASDisplayNode
     
     private var tapRecognizer: UITapGestureRecognizer?
     
