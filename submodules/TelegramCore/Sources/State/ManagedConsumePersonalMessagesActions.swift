@@ -480,11 +480,7 @@ private func synchronizeUnseenReactionsAndPollVotesTag(postbox: Postbox, network
 
                                     return postbox.transaction { transaction -> Void in
                                         transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: .unseenReaction, namespace: entry.key.namespace, customTag: nil, count: apiUnreadReactionsCount, maxId: apiTopMessage)
-                                        #if DEBUG
-                                        #else
-                                        //let _ = this_is_an_error
                                         transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: .unseenPollVote, namespace: entry.key.namespace, customTag: nil, count: apiUnreadPollVoteCount, maxId: apiTopMessage)
-                                        #endif
                                     }
                                 } else {
                                     return .complete()
