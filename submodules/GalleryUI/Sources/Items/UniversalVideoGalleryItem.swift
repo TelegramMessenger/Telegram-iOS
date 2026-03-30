@@ -222,6 +222,8 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     private var context: AccountContext?
         
     private var adView = ComponentView<Empty>()
+    private var livePhotoButton: LivePhotoButton?
+    private var livePhotoButtonIsPlaying = false
     
     private var message: Message?
     private var adContext: AdMessagesHistoryContext?
@@ -234,7 +236,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     var presentPremiumDemo: (() -> Void)?
     var openMoreMenu: ((UIView, Message) -> Void)?
     
-    private var validLayout: (size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets)?
+    private var validLayout: (size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool)?
         
     deinit {
         self.adDisposable.dispose()
@@ -281,34 +283,61 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
             }
             
             if let validLayout = self.validLayout {
-                self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: false, transition: .immediate)
+                self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
             }
         }))
     }
     
+    func setLivePhotoButton(context: AccountContext, isVisible: Bool, isPlaying: Bool, pressed: @escaping () -> Void) {
+        self.livePhotoButtonIsPlaying = isPlaying
+
+        if isVisible {
+            let livePhotoButton: LivePhotoButton
+            if let current = self.livePhotoButton {
+                livePhotoButton = current
+            } else {
+                livePhotoButton = LivePhotoButton(context: context)
+                self.livePhotoButton = livePhotoButton
+            }
+            livePhotoButton.pressed = pressed
+
+            if let validLayout = self.validLayout {
+                self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
+            }
+        } else if let livePhotoButton = self.livePhotoButton {
+            self.livePhotoButton = nil
+            livePhotoButton.removeFromSuperview()
+        }
+    }
+
     var timer: SwiftSignalKit.Timer?
     var hiddenMessages = Set<MessageId>()
     var isAnimatingOut = false
     var reportedMessages = Set<Data>()
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, metrics, insets)
+        self.validLayout = (size, metrics, insets, isHidden)
         
-        if self.timer == nil {
+        if self.timer == nil && self.adState != nil {
             self.timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] progress in
                 guard let self else {
                     return
                 }
                 if let validLayout = self.validLayout {
-                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: false, transition: .immediate)
+                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
                 }
             }, queue: Queue.mainQueue())
             self.timer?.start()
         }
         
-        let isLandscape = size.width > size.height
-        let _ = isLandscape
-                
+        if let livePhotoButton = self.livePhotoButton {
+            let livePhotoButtonSize = livePhotoButton.update(isPlaying: self.livePhotoButtonIsPlaying)
+            if livePhotoButton.superview == nil {
+                self.view.addSubview(livePhotoButton)
+            }
+            transition.updateFrame(view: livePhotoButton, frame: CGRect(origin: CGPoint(x: 16.0, y: insets.top + 10.0), size: livePhotoButtonSize))
+        }
+
         let currentTime = Int32(CFAbsoluteTimeGetCurrent())
         var currentAd: (Int32, Message?)?
         
@@ -350,7 +379,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                             if available {
                                 self.hiddenMessages.insert(adMessage.id)
                                 if let validLayout = self.validLayout {
-                                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: false, transition: .immediate)
+                                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
                                 }
                             } else {
                                 self.presentPremiumDemo?()
@@ -360,7 +389,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
                             if let self, let ad = adMessage.adAttribute {
                                 self.hiddenMessages.insert(adMessage.id)
                                 if let validLayout = self.validLayout {
-                                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: false, transition: .immediate)
+                                    self.updateLayout(size: validLayout.size, metrics: validLayout.metrics, insets: validLayout.insets, isHidden: validLayout.isHidden, transition: .immediate)
                                 }
                                 context.engine.messages.markAdAction(opaqueId: ad.opaqueId, media: false, fullscreen: false)
                                 self.performAction?(.url(url: ad.url, concealed: false, forceExternal: true, dismiss: false))
@@ -399,7 +428,9 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
-
+        if let livePhotoButton = self.livePhotoButton {
+            livePhotoButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        }
     }
     
     override func animateOut(nextContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -407,6 +438,12 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let livePhotoButton = self.livePhotoButton {
+            let buttonPoint = self.view.convert(point, to: livePhotoButton)
+            if let result = livePhotoButton.hitTest(buttonPoint, with: event) {
+                return result
+            }
+        }
         if let adView = self.adView.view, adView.frame.contains(point) {
             return super.hitTest(point, with: event)
         }
@@ -894,7 +931,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusButtonNode: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private var statusNodeShouldBeHidden = true
-    private var livePhotoButton: LivePhotoButton?
     
     private let playbackControls = ComponentView<Empty>()
     
@@ -1279,14 +1315,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             transition.setFrame(view: playbackControlsView, frame: playbackControlsFrame)
         }
 
-        if let livePhotoButton = self.livePhotoButton {
-            let livePhotoButtonSize = livePhotoButton.update(isPlaying: self.isLivePhotoPlaybackActive)
-            if livePhotoButton.superview == nil {
-                self.view.addSubview(livePhotoButton)
-            }
-            transition.updateFrame(view: livePhotoButton, frame: CGRect(origin: CGPoint(x: 16.0, y: max(navigationBarHeight, layout.statusBarHeight ?? 0.0) + 10.0), size: livePhotoButtonSize))
-        }
-        
         if let pictureInPictureNode = self.pictureInPictureNode {
             if let item = self.item {
                 var placeholderSize = item.content.dimensions.fitted(layout.size)
@@ -2070,31 +2098,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } : nil)))
         }
         
-        if self.isLivePhoto {
-            let livePhotoButton: LivePhotoButton
-            if let current = self.livePhotoButton {
-                livePhotoButton = current
-            } else {
-                livePhotoButton = LivePhotoButton(context: self.context)
-                livePhotoButton.pressed = { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.updateLivePhotoPlayback(isActive: !self.isLivePhotoPlaybackActive, animated: true)
-                }
-                self.livePhotoButton = livePhotoButton
-                self.view.addSubview(livePhotoButton)
-            }
-//            if livePhotoButton.superview == nil {
-//                
-//            }
-//            if let validLayout = self.validLayout {
-//                self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .immediate)
-//            }
-        } else if let livePhotoButton = self.livePhotoButton {
-            self.livePhotoButton = nil
-            livePhotoButton.removeFromSuperview()
-        }
+        self.updateLivePhotoButton()
     }
     
     override func controlsVisibilityUpdated(isVisible: Bool, animated: Bool) {
@@ -2194,6 +2198,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     
         self.isLivePhotoPlaybackActive = isActive
+        self.updateLivePhotoButton()
         if isActive {
             self.setLivePhotoVideoVisible(true, animated: animated)
             videoNode.seek(0.0)
@@ -2213,6 +2218,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.updateLivePhotoPlayback(isActive: false, animated: false)
     }
     
+    private func updateLivePhotoButton() {
+        self.overlayContentNode.setLivePhotoButton(context: self.context, isVisible: self.isLivePhoto, isPlaying: self.isLivePhotoPlaybackActive, pressed: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.updateLivePhotoPlayback(isActive: !self.isLivePhotoPlaybackActive, animated: true)
+        })
+    }
+
     override func centralityUpdated(isCentral: Bool) {
         super.centralityUpdated(isCentral: isCentral)
         
