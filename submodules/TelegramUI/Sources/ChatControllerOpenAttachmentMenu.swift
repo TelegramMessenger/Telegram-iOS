@@ -188,26 +188,26 @@ extension ChatControllerImpl {
                     break
                 }
                 
-                if !isPaidMessages {
-                    for bot in attachMenuBots.reversed() {
-                        var peerType = peerType
-                        if bot.peer.id == peer.id {
-                            peerType.insert(.sameBot)
-                            peerType.remove(.bot)
-                        }
-                        let button: AttachmentButtonType = .app(bot)
-                        if !bot.peerTypes.intersection(peerType).isEmpty {
-                            buttons.insert(button, at: 1)
-                            
-                            if case let .bot(botId, _, _) = subject {
-                                if initialButton == nil && bot.peer.id == botId {
-                                    initialButton = button
-                                }
+                for bot in attachMenuBots.reversed() {
+                    var peerType = peerType
+                    if bot.peer.id == peer.id {
+                        peerType.insert(.sameBot)
+                        peerType.remove(.bot)
+                    }
+                    let button: AttachmentButtonType = .app(bot)
+                    if !bot.peerTypes.intersection(peerType).isEmpty {
+                        buttons.insert(button, at: 1)
+                        
+                        if case let .bot(botId, _, _) = subject {
+                            if initialButton == nil && bot.peer.id == botId {
+                                initialButton = button
                             }
                         }
-                        allButtons.insert(button, at: 1)
                     }
+                    allButtons.insert(button, at: 1)
+                }
                 
+                if !isPaidMessages {
                     if context.isPremium, shortcutMessageList.items.count > 0, let user = peer as? TelegramUser, user.botInfo == nil {
                         if let index = buttons.firstIndex(where: { $0 == .location }) {
                             buttons.insert(.quickReply, at: index + 1)
