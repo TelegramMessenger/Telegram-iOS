@@ -16166,3 +16166,5 @@ Error: %8$@";
 "Attachment.PublicMusic" = "PUBLIC CHATS";
 
 "PeerInfo.UnofficialSecurityRisk" = "%@ uses an unofficial Telegram client – messages to this user may be less secure.";
+
+"Gallery.Live" = "LIVE";

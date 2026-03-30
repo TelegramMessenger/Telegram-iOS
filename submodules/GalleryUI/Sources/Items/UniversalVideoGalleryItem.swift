@@ -38,6 +38,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import VideoPlaybackControlsComponent
 import PhotoResources
+import GlassBackgroundComponent
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, GalleryMediaSubject?)
@@ -893,7 +894,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusButtonNode: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private var statusNodeShouldBeHidden = true
-    private var livePhotoIconNode: ASImageNode?
+    private var livePhotoButton: LivePhotoButton?
     
     private let playbackControls = ComponentView<Empty>()
     
@@ -963,9 +964,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var activeEdgeRateIndicator: ComponentView<Empty>?
     
     private var isAnimatingOut: Bool = false
+    
     private var isLivePhoto = false
     private var didAutoplayLivePhotoOnce = false
-    private var isPlayingLivePhotoByHolding = false
+    private var isLivePhotoPlaybackActive = false
+    private var isLivePhotoGestureActive = false
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
@@ -1275,6 +1278,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transition = ComponentTransition(transition)
             transition.setFrame(view: playbackControlsView, frame: playbackControlsFrame)
         }
+
+        if let livePhotoButton = self.livePhotoButton {
+            let livePhotoButtonSize = livePhotoButton.update(isPlaying: self.isLivePhotoPlaybackActive)
+            if livePhotoButton.superview == nil {
+                self.view.addSubview(livePhotoButton)
+            }
+            transition.updateFrame(view: livePhotoButton, frame: CGRect(origin: CGPoint(x: 16.0, y: max(navigationBarHeight, layout.statusBarHeight ?? 0.0) + 10.0), size: livePhotoButtonSize))
+        }
         
         if let pictureInPictureNode = self.pictureInPictureNode {
             if let item = self.item {
@@ -1374,10 +1385,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.statusButtonNode.isHidden = true
             }
                         
+            self.resetLivePhotoPlayback()
             self.dismissOnOrientationChange = item.landscape
             self.isLivePhoto = false
             self.didAutoplayLivePhotoOnce = false
-            self.isPlayingLivePhotoByHolding = false
+            self.isLivePhotoPlaybackActive = false
             
             var hasLinkedStickers = false
             if let content = item.content as? NativeVideoContent {
@@ -1716,7 +1728,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     initialBuffering = true
                                 }
                                 isPaused = !whilePlaying
-                                if strongSelf.isPlayingLivePhotoByHolding {
+                                if strongSelf.isLivePhotoPlaybackActive {
                                     isPaused = false
                                 }
                                 var isStreaming = false
@@ -1961,7 +1973,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                         
                         if strongSelf.isLivePhoto {
-                            if !strongSelf.isPlayingLivePhotoByHolding {
+                            if !strongSelf.isLivePhotoPlaybackActive {
                                 strongSelf.setLivePhotoVideoVisible(false, animated: true)
                             }
                         } else if let snapshotView = videoNode?.view.snapshotView(afterScreenUpdates: false) {
@@ -1973,7 +1985,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         
                         if !strongSelf.isLivePhoto {
                             videoNode?.seek(0.0)
-                        } else if strongSelf.isPlayingLivePhotoByHolding {
+                        } else if strongSelf.isLivePhotoPlaybackActive {
                             videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .loop)
                         }
                         
@@ -2059,22 +2071,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if self.isLivePhoto {
-            let livePhotoIconNode: ASImageNode
-            if let current = self.livePhotoIconNode {
-                livePhotoIconNode = current
+            let livePhotoButton: LivePhotoButton
+            if let current = self.livePhotoButton {
+                livePhotoButton = current
             } else {
-                livePhotoIconNode = ASImageNode()
-                livePhotoIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LiveOn"), color: .white)
-                //self.addSubnode(livePhotoIconNode)
-                self.livePhotoIconNode = livePhotoIconNode
+                livePhotoButton = LivePhotoButton(context: self.context)
+                livePhotoButton.pressed = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.updateLivePhotoPlayback(isActive: !self.isLivePhotoPlaybackActive, animated: true)
+                }
+                self.livePhotoButton = livePhotoButton
+                self.view.addSubview(livePhotoButton)
             }
-            
-            if let icon = livePhotoIconNode.image {
-                livePhotoIconNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 8.0), size: icon.size)
-            }
-        } else if let livePhotoIconNode = self.livePhotoIconNode {
-            self.livePhotoIconNode = nil
-            livePhotoIconNode.removeFromSupernode()
+//            if livePhotoButton.superview == nil {
+//                
+//            }
+//            if let validLayout = self.validLayout {
+//                self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .immediate)
+//            }
+        } else if let livePhotoButton = self.livePhotoButton {
+            self.livePhotoButton = nil
+            livePhotoButton.removeFromSuperview()
         }
     }
     
@@ -2169,24 +2188,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    private func updateLivePhotoHoldPlayback(isActive: Bool, animated: Bool) {
-        guard self.isLivePhoto, let videoNode = self.videoNode else {
+    private func updateLivePhotoPlayback(isActive: Bool, animated: Bool) {
+        guard self.isLivePhoto, self.isLivePhotoPlaybackActive != isActive, let videoNode = self.videoNode else {
             return
         }
-        guard self.isPlayingLivePhotoByHolding != isActive else {
-            return
-        }
-        
-        self.isPlayingLivePhotoByHolding = isActive
+    
+        self.isLivePhotoPlaybackActive = isActive
         if isActive {
             self.setLivePhotoVideoVisible(true, animated: animated)
             videoNode.seek(0.0)
-            videoNode.playOnceWithSound(playAndRecord: false)
+            videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .loop)
         } else {
             videoNode.pause()
             videoNode.seek(0.0)
             self.setLivePhotoVideoVisible(false, animated: animated)
         }
+        
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
+        }
+    }
+
+    private func resetLivePhotoPlayback() {
+        self.updateLivePhotoPlayback(isActive: false, animated: false)
     }
     
     override func centralityUpdated(isCentral: Bool) {
@@ -2228,7 +2252,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                 } else {
-                    self.updateLivePhotoHoldPlayback(isActive: false, animated: false)
+                    self.resetLivePhotoPlayback()
                     self.isPlayingPromise.set(false)
                     self.isPlaying = false
                     
@@ -2265,17 +2289,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if self.skipInitialPause {
                             self.skipInitialPause = false
                         } else {
-                            self.updateLivePhotoHoldPlayback(isActive: false, animated: false)
+                            self.resetLivePhotoPlayback()
                             self.ignorePauseStatus = true
                             videoNode.pause()
                             videoNode.seek(0.0)
                         }
                     } else {
-                        self.updateLivePhotoHoldPlayback(isActive: false, animated: false)
+                        self.resetLivePhotoPlayback()
                         if let status = self.playerStatusValue {
                             self.maybeStorePlaybackStatus(status: status)
                         }
-                        videoNode.continuePlayingWithoutSound()
+                        if !self.isLivePhoto {
+                            videoNode.continuePlayingWithoutSound()
+                        }
                     }
                     self.updateDisplayPlaceholder()
                 } else if !item.fromPlayingVideo {
@@ -2382,7 +2408,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd {
         if self.isLivePhoto {
-            return self.isPlayingLivePhotoByHolding ? .loop : .stop
+            return self.isLivePhotoPlaybackActive ? .loop : .stop
         }
         if let item = self.item {
             if !item.isSecret, let content = item.content as? NativeVideoContent, content.duration <= 30 {
@@ -4082,7 +4108,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         if let edge, case .middle = edge {
-            self.updateLivePhotoHoldPlayback(isActive: true, animated: true)
+            guard self.isLivePhoto else {
+                return
+            }
+            if !self.isLivePhotoPlaybackActive {
+                self.updateLivePhotoPlayback(isActive: true, animated: true)
+            }
+            self.isLivePhotoGestureActive = true
         } else if let edge, case .right = edge {
             let effectiveRate: Double
             if let current = self.activeEdgeRateState {
@@ -4097,7 +4129,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             videoNode.setBaseRate(effectiveRate)
         } else {
-            self.updateLivePhotoHoldPlayback(isActive: false, animated: true)
+            if self.isLivePhotoGestureActive {
+                self.updateLivePhotoPlayback(isActive: false, animated: true)
+            }
+            self.isLivePhotoGestureActive = false
+            
             if let (initialRate, _) = self.activeEdgeRateState {
                 self.activeEdgeRateState = nil
                 videoNode.setBaseRate(initialRate)
@@ -4153,4 +4189,88 @@ final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
 
 private func normalizeValue(_ value: CGFloat) -> CGFloat {
     return round(value * 10.0) / 10.0
+}
+
+private final class LivePhotoButton: UIView {
+    private let context: AccountContext
+
+    private let backgroundView: GlassBackgroundView
+    private let icon = ComponentView<Empty>()
+    private let label = ComponentView<Empty>()
+    private let button = HighlightTrackingButton()
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        return self.bounds.insetBy(dx: -16.0, dy: -16.0).contains(point)
+    }
+
+    var pressed: () -> Void = {}
+
+    init(context: AccountContext) {
+        self.context = context
+
+        self.backgroundView = GlassBackgroundView()
+
+        super.init(frame: .zero)
+
+        self.addSubview(self.backgroundView)
+        self.backgroundView.contentView.addSubview(self.button)
+
+        self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+    }
+
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+
+    @objc private func buttonPressed() {
+        self.pressed()
+    }
+
+    func update(isPlaying: Bool = false) -> CGSize {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+
+        let iconName: String = isPlaying ? "Media Gallery/LivePhotoPlaying" : "Media Gallery/LivePhotoPlay"
+        let labelText: String = presentationData.strings.Gallery_Live
+
+        let iconSize = self.icon.update(
+            transition: .immediate,
+            component: AnyComponent(
+                BundleIconComponent(name: iconName, tintColor: .white)
+            ),
+            environment: {},
+            containerSize: CGSize(width: 18.0, height: 18.0)
+        )
+        let iconFrame = CGRect(origin: CGPoint(x: 8.0, y: floorToScreenPixels((30.0 - iconSize.height) / 2.0)), size: iconSize)
+        if let iconView = self.icon.view {
+            if iconView.superview == nil {
+                iconView.isUserInteractionEnabled = false
+                self.backgroundView.contentView.addSubview(iconView)
+            }
+            iconView.frame = iconFrame
+        }
+
+        let labelSize = self.label.update(
+            transition: .immediate,
+            component: AnyComponent(
+                Text(text: labelText.uppercased(), font: Font.regular(12.0), color: .white)
+            ),
+            environment: {},
+            containerSize: CGSize(width: 200.0, height: 18.0)
+        )
+        let labelFrame = CGRect(origin: CGPoint(x: 28.0, y: floorToScreenPixels((30.0 - labelSize.height) / 2.0)), size: labelSize)
+        if let labelView = self.label.view {
+            if labelView.superview == nil {
+                labelView.isUserInteractionEnabled = false
+                self.backgroundView.contentView.addSubview(labelView)
+            }
+            labelView.frame = labelFrame
+        }
+
+        let size = CGSize(width: 21.0 + labelSize.width + 18.0, height: 30.0)
+        self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: true, tintColor: .init(kind: .panel), isInteractive: true, transition: .immediate)
+        self.backgroundView.frame = CGRect(origin: .zero, size: size)
+        self.button.frame = CGRect(origin: .zero, size: size).insetBy(dx: -16.0, dy: -16.0)
+
+        return size
+    }
 }

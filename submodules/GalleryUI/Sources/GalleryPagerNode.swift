@@ -128,6 +128,20 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
     private var pagingEnabledDisposable: Disposable?
     
     private var edgeLongTapTimer: Foundation.Timer?
+
+    private func isInteractiveControlView(_ view: UIView?) -> Bool {
+        var currentView = view
+        while let view = currentView {
+            if view is UIControl {
+                return true
+            }
+            if let _ = view.asyncdisplaykit_node as? ASButtonNode {
+                return true
+            }
+            currentView = view.superview
+        }
+        return false
+    }
     
     public init(pageGap: CGFloat, disableTapNavigation: Bool) {
         self.pageGap = pageGap
@@ -220,7 +234,7 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
                 return .fail
             }
             
-            if let result = strongSelf.hitTest(point, with: nil), let _ = result.asyncdisplaykit_node as? ASButtonNode {
+            if strongSelf.isInteractiveControlView(strongSelf.hitTest(point, with: nil)) {
                 return .fail
             }
             

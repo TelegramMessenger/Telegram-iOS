@@ -217,7 +217,7 @@ final class LivePhotoButton: UIView, TGLivePhotoButton {
         let size = CGSize(width: 19.0 + labelSize.width + 16.0, height: 18.0)
         self.backgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: true, tintColor: .init(kind: .panel), isInteractive: true, transition: .immediate)
         self.backgroundView.frame = CGRect(origin: .zero, size: size)
-        self.button.frame = CGRect(origin: .zero, size: size)
+        self.button.frame = CGRect(origin: .zero, size: size).insetBy(dx: -16.0, dy: -16.0)
     }
 }
 
