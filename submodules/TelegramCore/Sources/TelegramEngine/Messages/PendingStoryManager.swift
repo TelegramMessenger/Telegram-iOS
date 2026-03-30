@@ -201,8 +201,11 @@ public extension Stories {
             
             self.folders = try container.decodeIfPresent([Int64].self, forKey: .folders) ?? []
             
-            let musicData = try container.decode(Data.self, forKey: .music)
-            self.music = PostboxDecoder(buffer: MemoryBuffer(data: musicData)).decodeRootObject() as? TelegramMediaFile
+            if let musicData = try container.decodeIfPresent(Data.self, forKey: .music) {
+                self.music = PostboxDecoder(buffer: MemoryBuffer(data: musicData)).decodeRootObject() as? TelegramMediaFile
+            } else {
+                self.music = nil
+            }
             
             self.uploadInfo = try container.decodeIfPresent(StoryUploadInfo.self, forKey: .uploadInfo)
         }

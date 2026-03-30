@@ -524,7 +524,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             }
             
             if isExtracted {
-                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.theme.list.plainBackgroundColor)
+                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.theme.list.itemModalBlocksBackgroundColor)
             }
             
             if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
@@ -1036,7 +1036,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 reorderInset = sizeAndApply.0
             }
             
-            let contentRightInset = rightInset + rightOffset + reorderInset
+            var contentRightInset = rightInset + rightOffset + reorderInset
+            if !item.isGlobalSearchResult {
+                contentRightInset += 16.0
+            }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.message?.timestamp ?? 0, relativeTo: timestamp, dateTimeFormat: item.presentationData.dateTimeFormat)

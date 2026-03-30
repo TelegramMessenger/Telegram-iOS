@@ -5163,7 +5163,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                 return
                             }
                             
-                            self.insertAudio(path: copyPath, fileName: fileName)
+                            self.insertAudio(path: copyPath, fileName: fileName, file: file.media as? TelegramMediaFile)
                         }
                     })
                 }
@@ -5224,7 +5224,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }), in: .window(.root))
         }
         
-        private func insertAudio(path: String, fileName: String, dispose: (() -> Void)? = nil) {
+        private func insertAudio(path: String, fileName: String, file: TelegramMediaFile? = nil, dispose: (() -> Void)? = nil) {
             guard let mediaEditor = self.mediaEditor else {
                 return
             }
@@ -5300,7 +5300,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         audioTrimRange = 0 ..< min(15, audioDuration)
                     }
                     
-                    mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration), trimRange: audioTrimRange, offset: audioOffset)
+                    var passFile = false
+                    if let file {
+                        for attribute in file.attributes {
+                            if case let .Audio(_, _, title, _, _) = attribute, let title, !title.isEmpty {
+                                passFile = true
+                            }
+                        }
+                    }
+                    mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration, file: passFile ? file : nil), trimRange: audioTrimRange, offset: audioOffset)
 
                     mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: true)
                     

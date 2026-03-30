@@ -206,3 +206,109 @@ public final class ForwardInfoPanelComponent: Component {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
+
+public final class MusicPanelComponent: Component {
+    public let context: AccountContext
+    public let file: TelegramMediaFile
+    
+    public init(
+        context: AccountContext,
+        file: TelegramMediaFile
+    ) {
+        self.context = context
+        self.file = file
+    }
+    
+    public static func ==(lhs: MusicPanelComponent, rhs: MusicPanelComponent) -> Bool {
+        if lhs.file != rhs.file {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: UIView {
+        public let backgroundView: UIImageView
+        private let blurBackgroundView: UIVisualEffectView
+        private var iconView = UIImageView()
+        private var title = ComponentView<Empty>()
+        private var text = ComponentView<Empty>()
+        
+        private var component: MusicPanelComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            if #available(iOS 13.0, *) {
+                self.blurBackgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
+            } else {
+                self.blurBackgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+            }
+            self.blurBackgroundView.clipsToBounds = true
+            
+            self.backgroundView = UIImageView()
+            self.backgroundView.image = generateStretchableFilledCircleImage(radius: 4.0, color: UIColor(white: 0.0, alpha: 0.4))
+                        
+            super.init(frame: frame)
+            
+            self.iconView.image = UIImage(bundleImageName: "Media Editor/SmallAudio")
+            self.addSubview(self.iconView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: MusicPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            var titleOffset: CGFloat = 0.0
+            if let image = self.iconView.image {
+                self.iconView.frame = CGRect(origin: CGPoint(x: 10.0, y: 5.0), size: image.size)
+            }
+            titleOffset += 29.0
+            
+            let text = NSMutableAttributedString()
+            for attribute in component.file.attributes {
+                if case let .Audio(_, _, title, performer, _) = attribute, let title, !title.isEmpty {
+                    text.append(NSAttributedString(string: title, font: Font.semibold(13.0), textColor: .white))
+                    if let performer, !performer.isEmpty {
+                        text.append(NSAttributedString(string: " • ", font: Font.semibold(13.0), textColor: .white.withAlphaComponent(0.28)))
+                        text.append(NSAttributedString(string: performer, font: Font.regular(13.0), textColor: .white))
+                    }
+                }
+            }
+            
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(text),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - titleOffset - 20.0, height: availableSize.height)
+            )
+            let titleFrame = CGRect(origin: CGPoint(x: titleOffset, y: 5.0 - UIScreenPixel), size: titleSize)
+            if let view = self.title.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                view.frame = titleFrame
+            }
+
+            let size = CGSize(width: titleSize.width + 39.0, height: 26.0)
+            self.blurBackgroundView.frame = CGRect(origin: .zero, size: size)
+            self.insertSubview(self.blurBackgroundView, at: 0)
+            self.blurBackgroundView.layer.cornerRadius = size.height / 2.0
+
+            return size
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}

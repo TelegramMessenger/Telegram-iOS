@@ -963,7 +963,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.updateHistoryContentOffset(self.historyNode.visibleContentOffset(), transition: transition)
         
         var layout = layout
-        layout.intrinsicInsets.bottom = controlsHeight + 8.0
+        layout.intrinsicInsets.bottom = controlsHeight + (self.historyNode.hasAnyMessages ? 0.0 : 8.0)
         self.getParentController()?.presentationContext.containerLayoutUpdated(layout, transition: transition)
     }
     

@@ -66,23 +66,27 @@ public struct MediaAudioTrack: Codable, Equatable {
         case artist
         case title
         case duration
+        case file
     }
     
     public let path: String
     public let artist: String?
     public let title: String?
     public let duration: Double
+    public let file: TelegramMediaFile?
     
     public init(
         path: String,
         artist: String?,
         title: String?,
-        duration: Double
+        duration: Double,
+        file: TelegramMediaFile? = nil
     ) {
         self.path = path
         self.artist = artist
         self.title = title
         self.duration = duration
+        self.file = file
     }
 }
 

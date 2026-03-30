@@ -280,12 +280,10 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         self.scrollNode.addSubnode(self.previousItemNode)
         self.scrollNode.addSubnode(self.nextItemNode)
         
-        self.addSubnode(self.closeButton)
         self.addSubnode(self.rateButton)
         self.addSubnode(self.accessibilityAreaNode)
         
         self.actionButton.addSubnode(self.playPauseIconNode)
-        self.addSubnode(self.actionButton)
         
         self.closeButton.addTarget(self, action: #selector(self.closeButtonPressed), forControlEvents: .touchUpInside)
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
@@ -296,6 +294,9 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         }
         
         self.addSubnode(self.scrubbingNode)
+        
+        self.addSubnode(self.actionButton)
+        self.addSubnode(self.closeButton)
         
         self.actionButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
