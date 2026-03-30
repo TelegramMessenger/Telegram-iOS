@@ -254,7 +254,8 @@ public final class MediaPlaybackHeaderPanelComponent: Component {
                                 }
                                 let playerController = component.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, chatLocation: .peer(id: id.messageId.peerId), type: component.data.kind, initialMessageId: id.messageId, initialOrder: component.data.playbackOrder, playlistLocation: playlistLocation, parentNavigationController: navigationController)
                                 self.window?.endEditing(true)
-                                controller.present(playerController, in: .window(.root))
+                                playerController.navigationPresentation = .flatModal
+                                controller.push(playerController)
                             case let .messages(chatLocation, _, _):
                                 let signal = component.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: .id(id.messageId)), count: 60, highlight: true, setupReply: false), id: 0), context: component.context, chatLocation: chatLocation, subject: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tag: .tag(MessageTags.music))
                                 
@@ -295,7 +296,8 @@ public final class MediaPlaybackHeaderPanelComponent: Component {
                                         }
                                         let playerController = component.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, chatLocation: chatLocation, type: component.data.kind, initialMessageId: id.messageId, initialOrder: component.data.playbackOrder, playlistLocation: nil, parentNavigationController: navigationController)
                                         self.window?.endEditing(true)
-                                        controller.present(playerController, in: .window(.root))
+                                        playerController.navigationPresentation = .flatModal
+                                        controller.push(playerController)
                                     } else if index.1 {
                                         if !progressStarted {
                                             progressStarted = true

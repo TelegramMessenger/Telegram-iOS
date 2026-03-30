@@ -293,7 +293,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         
         self.historyFrameTopMaskNode = ASImageNode()
         self.historyFrameTopMaskNode.displaysAsynchronously = false
-        self.historyFrameTopMaskNode.image = PresentationResourcesItemList.cornersImage(self.presentationData.theme.withModalBlocksBackground(), top: true, bottom: false, glass: true)
+        self.historyFrameTopMaskNode.image = generateCornersImage(theme: self.presentationData.theme)
         self.historyFrameTopMaskNode.isUserInteractionEnabled = false
         
         let tagMask: MessageTags
@@ -633,7 +633,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.historyFrameLeftOverlayNode.backgroundColor = self.hasAnyHistoryMessages == true ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.modalPlainBackgroundColor
         self.historyFrameRightOverlayNode.backgroundColor = self.hasAnyHistoryMessages == true ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.modalPlainBackgroundColor
         self.historyFrameTopOverlayNode.backgroundColor = self.hasAnyHistoryMessages == true ? self.presentationData.theme.list.modalBlocksBackgroundColor : self.presentationData.theme.list.modalPlainBackgroundColor
-        self.historyFrameTopMaskNode.image = PresentationResourcesItemList.cornersImage(self.presentationData.theme.withModalBlocksBackground(), top: true, bottom: false, glass: true)
+        self.historyFrameTopMaskNode.image = generateCornersImage(theme: self.presentationData.theme)
         
         self.collapseNode.setImage(generateCollapseIcon(theme: self.presentationData.theme), for: [])
         
@@ -1098,7 +1098,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         self.historyFrameLeftOverlayNode.frame = leftOverlayFrame
         self.historyFrameRightOverlayNode.frame = rightOverlayFrame
         if let image = self.historyFrameTopMaskNode.image {
-            self.historyFrameTopMaskNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topOverlayFrame.maxY - UIScreenPixel), size: CGSize(width: layout.size.width - sideInset * 2.0, height: image.size.height))
+            self.historyFrameTopMaskNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topOverlayFrame.maxY - 1.0), size: CGSize(width: layout.size.width - sideInset * 2.0, height: image.size.height))
         }
         self.historyFrameTopMaskNode.isHidden = self.controlsNode.hasPlainBackground
         
@@ -1561,4 +1561,23 @@ private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
         context.addPath(path.cgPath)
         context.fillPath()
     })
+}
+
+private func generateCornersImage(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 56.0, height: 56.0), rotatedContext: { (size, context) in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.setFillColor(theme.list.blocksBackgroundColor.cgColor)
+        context.fill(bounds)
+        
+        context.setBlendMode(.clear)
+        
+        var corners: UIRectCorner = []
+        corners.insert(.topLeft)
+        corners.insert(.topRight)
+        
+        let cornerRadius: CGFloat = 26.0
+        let path = UIBezierPath(roundedRect: bounds.offsetBy(dx: 0.0, dy: 1.0), byRoundingCorners: corners, cornerRadii: CGSize(width: cornerRadius, height: cornerRadius))
+        context.addPath(path.cgPath)
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: 28, topCapHeight: 28)
 }
