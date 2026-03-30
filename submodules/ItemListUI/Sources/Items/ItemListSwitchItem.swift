@@ -562,7 +562,14 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                             let iconOrigin: CGPoint
                             switch item.systemStyle {
                             case .glass:
-                                iconOrigin = CGPoint(x: item.value ? switchFrame.maxX - icon.size.width - 16.0 + UIScreenPixel : switchFrame.minX + 16.0 - UIScreenPixel, y: switchFrame.minY + 8.0)
+                                let offset: CGPoint
+                                if #available(iOS 26.0, *) {
+                                    offset = .zero
+                                } else {
+                                    offset = CGPoint(x: 5.0, y: 1.0)
+                                }
+                                
+                                iconOrigin = CGPoint(x: item.value ? switchFrame.maxX - icon.size.width - 16.0 + UIScreenPixel + offset.x : switchFrame.minX + 16.0 - UIScreenPixel - offset.x, y: switchFrame.minY + 8.0 + offset.y)
                             case .legacy:
                                 iconOrigin = CGPoint(x: item.value ? switchFrame.maxX - icon.size.width - 11.0 : switchFrame.minX + 11.0, y: switchFrame.minY + 9.0)
                             }

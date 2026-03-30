@@ -464,6 +464,10 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
         resultsContext.state
     )
     |> map { presentationData, state, resultsState -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        let updatedTheme = presentationData.theme.withModalBlocksBackground()
+        presentationData = presentationData.withUpdated(theme: updatedTheme)
+        
         var isEmpty = false
         for (_, optionState) in resultsState.options {
             if !optionState.hasLoadedOnce {

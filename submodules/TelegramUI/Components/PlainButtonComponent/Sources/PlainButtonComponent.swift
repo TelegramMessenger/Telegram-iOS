@@ -20,6 +20,7 @@ public final class PlainButtonComponent: Component {
     public let animateAlpha: Bool
     public let animateScale: Bool
     public let animateContents: Bool
+    public let rasterizeOnScaleAnimation: Bool
     public let tag: AnyObject?
     
     public init(
@@ -33,6 +34,7 @@ public final class PlainButtonComponent: Component {
         animateAlpha: Bool = true,
         animateScale: Bool = true,
         animateContents: Bool = true,
+        rasterizeOnScaleAnimation: Bool = true,
         tag: AnyObject? = nil
     ) {
         self.content = content
@@ -45,6 +47,7 @@ public final class PlainButtonComponent: Component {
         self.animateAlpha = animateAlpha
         self.animateScale = animateScale
         self.animateContents = animateContents
+        self.rasterizeOnScaleAnimation = rasterizeOnScaleAnimation
         self.tag = tag
     }
     
@@ -74,6 +77,9 @@ public final class PlainButtonComponent: Component {
             return false
         }
         if lhs.animateContents != rhs.animateContents {
+            return false
+        }
+        if lhs.rasterizeOnScaleAnimation != rhs.rasterizeOnScaleAnimation {
             return false
         }
         if lhs.tag !== rhs.tag {

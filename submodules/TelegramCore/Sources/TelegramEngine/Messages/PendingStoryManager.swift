@@ -112,8 +112,9 @@ public extension Stories {
             case period
             case randomId
             case forwardInfo
-            case uploadInfo
             case folders
+            case music
+            case uploadInfo
         }
         
         public let target: PendingTarget
@@ -131,6 +132,7 @@ public extension Stories {
         public let randomId: Int64
         public let forwardInfo: PendingForwardInfo?
         public let folders: [Int64]
+        public let music: TelegramMediaFile?
         public let uploadInfo: StoryUploadInfo?
         
         public init(
@@ -149,6 +151,7 @@ public extension Stories {
             randomId: Int64,
             forwardInfo: PendingForwardInfo?,
             folders: [Int64],
+            music: TelegramMediaFile?,
             uploadInfo: StoryUploadInfo?
         ) {
             self.target = target
@@ -166,6 +169,7 @@ public extension Stories {
             self.randomId = randomId
             self.forwardInfo = forwardInfo
             self.folders = folders
+            self.music = music
             self.uploadInfo = uploadInfo
         }
         
@@ -197,6 +201,12 @@ public extension Stories {
             
             self.folders = try container.decodeIfPresent([Int64].self, forKey: .folders) ?? []
             
+            if let musicData = try container.decodeIfPresent(Data.self, forKey: .music) {
+                self.music = PostboxDecoder(buffer: MemoryBuffer(data: musicData)).decodeRootObject() as? TelegramMediaFile
+            } else {
+                self.music = nil
+            }
+            
             self.uploadInfo = try container.decodeIfPresent(StoryUploadInfo.self, forKey: .uploadInfo)
         }
         
@@ -226,6 +236,13 @@ public extension Stories {
             try container.encode(self.period, forKey: .period)
             try container.encode(self.randomId, forKey: .randomId)
             try container.encodeIfPresent(self.forwardInfo, forKey: .forwardInfo)
+            
+            if let music = self.music {
+                let musicEncoder = PostboxEncoder()
+                musicEncoder.encodeRootObject(music)
+                try container.encode(musicEncoder.makeData(), forKey: .music)
+            }
+            
             try container.encode(self.folders, forKey: .folders)
             try container.encodeIfPresent(self.uploadInfo, forKey: .uploadInfo)
         }
@@ -268,6 +285,9 @@ public extension Stories {
                 return false
             }
             if lhs.folders != rhs.folders {
+                return false
+            }
+            if lhs.music != rhs.music {
                 return false
             }
             if lhs.uploadInfo != rhs.uploadInfo {
@@ -519,7 +539,7 @@ final class PendingStoryManager {
                         let partTotalProgress = 1.0 / Float(uploadInfo.total)
                         pendingItemContext.progress = Float(uploadInfo.index) * partTotalProgress
                     }
-                    pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), folders: firstItem.folders, randomId: firstItem.randomId, forwardInfo: firstItem.forwardInfo)
+                    pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), folders: firstItem.folders, music: firstItem.music, randomId: firstItem.randomId, forwardInfo: firstItem.forwardInfo)
                     |> deliverOn(self.queue)).start(next: { [weak self] event in
                         guard let `self` = self else {
                             return

@@ -85,10 +85,37 @@ public final class EngineStoryItem: Equatable {
     public let isMy: Bool
     public let myReaction: MessageReaction.Reaction?
     public let forwardInfo: ForwardInfo?
+    public let music: EngineMedia?
     public let author: EnginePeer?
     public let folderIds: [Int64]?
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, alternativeMediaList: [EngineMedia], mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, isMy: Bool, myReaction: MessageReaction.Reaction?, forwardInfo: ForwardInfo?, author: EnginePeer?, folderIds: [Int64]?) {
+    public init(
+        id: Int32,
+        timestamp: Int32,
+        expirationTimestamp: Int32,
+        media: EngineMedia,
+        alternativeMediaList: [EngineMedia],
+        mediaAreas: [MediaArea],
+        text: String,
+        entities: [MessageTextEntity],
+        views: Views?,
+        privacy: EngineStoryPrivacy?,
+        isPinned: Bool,
+        isExpired: Bool,
+        isPublic: Bool,
+        isPending: Bool,
+        isCloseFriends: Bool,
+        isContacts: Bool,
+        isSelectedContacts: Bool,
+        isForwardingDisabled: Bool,
+        isEdited: Bool,
+        isMy: Bool,
+        myReaction: MessageReaction.Reaction?,
+        forwardInfo: ForwardInfo?,
+        music: EngineMedia?,
+        author: EnginePeer?,
+        folderIds: [Int64]?
+    ) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -111,6 +138,7 @@ public final class EngineStoryItem: Equatable {
         self.isMy = isMy
         self.myReaction = myReaction
         self.forwardInfo = forwardInfo
+        self.music = music
         self.author = author
         self.folderIds = folderIds
     }
@@ -182,6 +210,9 @@ public final class EngineStoryItem: Equatable {
         if lhs.forwardInfo != rhs.forwardInfo {
             return false
         }
+        if lhs.music != rhs.music {
+            return false
+        }
         if lhs.author != rhs.author {
             return false
         }
@@ -239,9 +270,9 @@ public extension EngineStoryItem {
             isForwardingDisabled: self.isForwardingDisabled,
             isEdited: self.isEdited,
             isMy: self.isMy,
-            
             myReaction: self.myReaction,
             forwardInfo: self.forwardInfo?.storedForwardInfo,
+            music: self.music?._asMedia() as? TelegramMediaFile,
             authorId: self.author?.id,
             folderIds: self.folderIds
         )
@@ -744,6 +775,7 @@ public final class PeerStoryListContext: StoryListContext {
                             isMy: item.isMy,
                             myReaction: item.myReaction,
                             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                            music: item.music.flatMap(EngineMedia.init),
                             author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
                             folderIds: item.folderIds
                         )
@@ -966,6 +998,7 @@ public final class PeerStoryListContext: StoryListContext {
                                             isMy: item.isMy,
                                             myReaction: item.myReaction,
                                             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                            music: item.music.flatMap(EngineMedia.init),
                                             author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
                                             folderIds: item.folderIds
                                         )
@@ -1161,6 +1194,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                                 isMy: item.isMy,
                                                                 myReaction: item.myReaction,
                                                                 forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                                music: item.music.flatMap(EngineMedia.init),
                                                                 author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) },
                                                                 folderIds: item.folderIds
                                                             ), peer: nil)
@@ -1211,6 +1245,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                             isMy: item.isMy,
                                                             myReaction: item.myReaction,
                                                             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                            music: item.music.flatMap(EngineMedia.init),
                                                             author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) },
                                                             folderIds: item.folderIds
                                                         ), peer: nil)
@@ -1263,6 +1298,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                                 isMy: item.isMy,
                                                                 myReaction: item.myReaction,
                                                                 forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                                music: item.music.flatMap(EngineMedia.init),
                                                                 author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) },
                                                                 folderIds: item.folderIds
                                                             ), peer: nil))
@@ -1321,6 +1357,7 @@ public final class PeerStoryListContext: StoryListContext {
                                                             isMy: item.isMy,
                                                             myReaction: item.myReaction,
                                                             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                            music: item.music.flatMap(EngineMedia.init),
                                                             author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) },
                                                             folderIds: item.folderIds
                                                         ), peer: nil))
@@ -1656,6 +1693,7 @@ public final class PeerStoryListContext: StoryListContext {
                                 return .unknown(name: name, isModified: isModified)
                             }
                         },
+                        music: item.music?._asMedia() as? TelegramMediaFile,
                         authorId: item.author?.id,
                         folderIds: item.folderIds
                     )
@@ -2001,6 +2039,7 @@ public final class PeerStoryListContext: StoryListContext {
                             isMy: item.isMy,
                             myReaction: item.myReaction,
                             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                            music: item.music.flatMap(EngineMedia.init),
                             author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
                             folderIds: item.folderIds
                         )
@@ -2201,6 +2240,7 @@ public final class SearchStoryListContext: StoryListContext {
                                             isMy: item.isMy,
                                             myReaction: item.myReaction,
                                             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                            music: item.music.flatMap(EngineMedia.init),
                                             author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
                                             folderIds: item.folderIds
                                         )
@@ -2351,6 +2391,7 @@ public final class SearchStoryListContext: StoryListContext {
                                                     isMy: item.isMy,
                                                     myReaction: item.myReaction,
                                                     forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                    music: item.music.flatMap(EngineMedia.init),
                                                     author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) },
                                                     folderIds: item.folderIds
                                                 ),
@@ -2413,6 +2454,7 @@ public final class SearchStoryListContext: StoryListContext {
                                                 isMy: item.storyItem.isMy,
                                                 myReaction: reaction,
                                                 forwardInfo: item.storyItem.forwardInfo,
+                                                music: item.storyItem.music,
                                                 author: item.storyItem.author,
                                                 folderIds: item.storyItem.folderIds
                                             ),
@@ -2543,6 +2585,7 @@ public final class PeerExpiringStoryListContext {
                                         isMy: item.isMy,
                                         myReaction: item.myReaction,
                                         forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                        music: item.music.flatMap(EngineMedia.init),
                                         author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
                                         folderIds: item.folderIds
                                     )
@@ -3008,6 +3051,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                         isMy: false,
                                         myReaction: nil,
                                         forwardInfo: nil,
+                                        music: nil,
                                         author: nil,
                                         folderIds: nil
                                     ),
@@ -3058,6 +3102,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                     isMy: false,
                                     myReaction: nil,
                                     forwardInfo: nil,
+                                    music: nil,
                                     author: nil,
                                     folderIds: nil
                                 ),
@@ -3171,6 +3216,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                 isMy: false,
                                 myReaction: nil,
                                 forwardInfo: nil,
+                                music: nil,
                                 author: nil,
                                 folderIds: nil
                             ),
@@ -3249,6 +3295,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                     isMy: false,
                                     myReaction: nil,
                                     forwardInfo: nil,
+                                    music: nil,
                                     author: nil,
                                     folderIds: nil
                                 ),
@@ -3313,6 +3360,7 @@ public final class BotPreviewStoryListContext: StoryListContext {
                                     isMy: false,
                                     myReaction: nil,
                                     forwardInfo: nil,
+                                    music: nil,
                                     author: nil,
                                     folderIds: nil
                                 ),

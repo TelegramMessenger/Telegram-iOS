@@ -129,7 +129,7 @@ extension MediaEditorScreenImpl {
         if self.isEmbeddedEditor && !(hasAnyChanges || hasEntityChanges) {
             self.saveDraft(id: randomId, isEdit: true)
             
-            self.completion([MediaEditorScreenImpl.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
+            self.completion([MediaEditorScreenImpl.Result(media: nil, mediaAreas: [], caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: mediaEditor.values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()
                     Queue.mainQueue().justDispatch {
@@ -464,7 +464,7 @@ extension MediaEditorScreenImpl {
                                     return
                                 }
                                 Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
-                                self.completion([MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: values, duration: duration, dimensions: values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
+                                self.completion([MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: values, duration: duration, dimensions: values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, music: values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
                                     self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                         self?.dismiss()
                                         Queue.mainQueue().justDispatch {
@@ -506,7 +506,7 @@ extension MediaEditorScreenImpl {
                             return
                         }
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
-                        self.completion([MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId)], { [weak self] finished in
+                        self.completion([MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, music: values.audioTrack?.file, randomId: randomId)], { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {
@@ -636,7 +636,7 @@ extension MediaEditorScreenImpl {
             }
             guard let avAsset else {
                 Queue.mainQueue().async {
-                    completion(self.createEmptyResult(randomId: randomId))
+                    completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
                 }
                 return
             }
@@ -683,18 +683,19 @@ extension MediaEditorScreenImpl {
                                         coverTimestamp: itemMediaEditor.values.coverImageTimestamp,
                                         options: self.state.privacy,
                                         stickers: stickers,
+                                        music: itemMediaEditor.values.audioTrack?.file,
                                         randomId: randomId
                                     )
                                     completion(result)
                                 } else {
-                                    completion(self.createEmptyResult(randomId: randomId))
+                                    completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
                                 }
                             }
                         } else {
-                            completion(self.createEmptyResult(randomId: randomId))
+                            completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
                         }
                     } else {
-                        completion(self.createEmptyResult(randomId: randomId))
+                        completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
                     }
                 }
             }
@@ -736,7 +737,7 @@ extension MediaEditorScreenImpl {
                 return
             }
             guard let image else {
-                completion(self.createEmptyResult(randomId: randomId))
+                completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
                 return
             }
             itemMediaEditor.replaceSource(image, additionalImage: nil, time: .zero, mirror: false)
@@ -765,15 +766,16 @@ extension MediaEditorScreenImpl {
                             coverTimestamp: nil,
                             options: self.state.privacy,
                             stickers: stickers,
+                            music: itemMediaEditor.values.audioTrack?.file,
                             randomId: randomId
                         )
                         completion(result)
                     } else {
-                        completion(self.createEmptyResult(randomId: randomId))
+                        completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
                     }
                 }
             } else {
-                completion(self.createEmptyResult(randomId: randomId))
+                completion(self.createEmptyResult(randomId: randomId, music: itemMediaEditor.values.audioTrack?.file))
             }
         }
         
@@ -816,7 +818,6 @@ extension MediaEditorScreenImpl {
             mode: .default,
             subject: editorSubject,
             values: values,
-            hasHistogram: false,
             isStandalone: true
         )
     }
@@ -840,7 +841,7 @@ extension MediaEditorScreenImpl {
         }
     }
 
-    private func createEmptyResult(randomId: Int64) -> MediaEditorScreenImpl.Result {
+    private func createEmptyResult(randomId: Int64, music: TelegramMediaFile? = nil) -> MediaEditorScreenImpl.Result {
         let emptyImage = UIImage()
         return MediaEditorScreenImpl.Result(
             media: .image(
@@ -852,11 +853,10 @@ extension MediaEditorScreenImpl {
             coverTimestamp: nil,
             options: self.state.privacy,
             stickers: [],
+            music: music,
             randomId: randomId
         )
     }
-    
-    
     
     func updateMediaEditorEntities() {
         guard let mediaEditor = self.node.mediaEditor else {

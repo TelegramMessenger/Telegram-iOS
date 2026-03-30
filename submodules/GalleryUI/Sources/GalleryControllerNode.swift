@@ -537,12 +537,12 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
                 self.statusBar?.statusBarStyle = .White
             }
             self.navigationBar?.alpha = transition
-            self.footerNode.alpha = transition
             
             if let currentThumbnailContainerNode = self.currentThumbnailContainerNode, let layout = self.containerLayout?.1, layout.size.width < layout.size.height {
                 currentThumbnailContainerNode.alpha = transition
             }
         }
+        self.footerNode.alpha = transition
         
         self.updateDismissTransition(transition)
         self.updateDistanceFromEquilibrium(distanceFromEquilibrium)

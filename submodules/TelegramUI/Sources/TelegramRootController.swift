@@ -770,6 +770,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         randomId: result.randomId,
                         forwardInfo: forwardInfo,
                         folders: folders,
+                        music: result.music,
                         uploadInfo: results.count > 1 ? StoryUploadInfo(groupingId: groupingId, index: index, total: Int32(results.count)) : nil
                     )
                     |> deliverOnMainQueue).startStandalone(next: { stableId in

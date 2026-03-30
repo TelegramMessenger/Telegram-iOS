@@ -31,6 +31,9 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
                 copyOrMoveResourceData(from: fromLargestRepresentation.resource, to: toLargestRepresentation.resource, mediaBox: postbox.mediaBox)
             }
         }
+        if let fromVideo = fromImage.video, let toVideo = toImage.video {
+            applyMediaResourceChanges(from: fromVideo, to: toVideo, postbox: postbox, force: true)
+        }
     } else if let fromFile = from as? TelegramMediaFile, let toFile = to as? TelegramMediaFile {
         if !skipPreviews {
             if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {

@@ -4523,7 +4523,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if !isUnsupported, !component.slice.item.storyItem.text.isEmpty || component.slice.item.storyItem.forwardInfo != nil {
+            if !isUnsupported, !component.slice.item.storyItem.text.isEmpty || component.slice.item.storyItem.forwardInfo != nil || component.slice.item.storyItem.music != nil {
                 var captionItemTransition = transition
                 let captionItem: CaptionItem
                 if let current = self.captionItem {
@@ -4557,6 +4557,7 @@ public final class StoryItemSetContainerComponent: Component {
                         author: component.slice.effectivePeer,
                         forwardInfo: component.slice.item.storyItem.forwardInfo,
                         forwardInfoStory: forwardInfoStory,
+                        music: component.slice.item.storyItem.music,
                         entities: enableEntities ? component.slice.item.storyItem.entities : [],
                         entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
@@ -4708,6 +4709,12 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 }
                             }
+                        },
+                        openMusic: { [weak self] file, sourceView in
+                            guard let self else {
+                                return
+                            }
+                            self.performMusicAction(file: file, sourceView: sourceView, gesture: nil)
                         }
                     )),
                     environment: {},
@@ -7538,6 +7545,144 @@ public final class StoryItemSetContainerComponent: Component {
                 self.updateIsProgressPaused()
                 controller.present(contextController, in: .window(.root))
             })
+        }
+        
+        private func performMusicAction(file: FileMediaReference, sourceView: UIView, gesture: ContextGesture?) {
+            guard let component = self.component, let controller = component.controller() else {
+                return
+            }
+            
+            self.dismissAllTooltips()
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+            
+            let items = component.context.engine.peers.savedMusicIds()
+            |> take(1)
+            |> map { [weak self] savedIds -> ContextController.Items in
+                var items: [ContextMenuItem] = []
+                                    
+                items.append(
+                    .action(ContextMenuActionItem(text: presentationData.strings.MediaPlayer_ContextMenu_SaveTo, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DownloadTone"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                        if let self {
+                            var subActions: [ContextMenuItem] = []
+//                            subActions.append(
+//                                .action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor) }, iconPosition: .left, action: { c, _ in
+//                                    c?.popItems()
+//                                }))
+//                            )
+//                            subActions.append(.separator)
+                            
+                            subActions.append(
+                                .action(ContextMenuActionItem(text: presentationData.strings.MediaPlayer_ContextMenu_SaveTo_Profile, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                    
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                                        
+                                    let _ = component.context.engine.peers.addSavedMusic(file: file).start()
+                                    
+                                    guard let controller = component.controller() as? StoryContainerScreen else {
+                                        return
+                                    }
+                                    
+                                    let overlayController = UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .universalImage(
+                                            image: generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SavedMusic"), color: .white)!,
+                                            size: nil,
+                                            title: nil,
+                                            text: presentationData.strings.MediaPlayer_SavedMusic_AddedToProfile,
+                                            customUndoText: presentationData.strings.MediaPlayer_SavedMusic_AddedToProfile_View,
+                                            timeout: 3.0
+                                        ),
+                                        action: { [weak self] action in
+                                            guard let self, let component = self.component, case .undo = action else {
+                                                return false
+                                            }
+                                            let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId))
+                                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                                guard let self, let component = self.component, let peer else {
+                                                    return
+                                                }
+                                                guard let controller = component.controller() as? StoryContainerScreen else {
+                                                    return
+                                                }
+                                                guard let navigationController = controller.navigationController as? NavigationController else {
+                                                    return
+                                                }
+                                                if let controller = component.context.sharedContext.makePeerInfoController(
+                                                    context: component.context,
+                                                    updatedPresentationData: nil,
+                                                    peer: peer._asPeer(),
+                                                    mode: .myProfile,
+                                                    avatarInitiallyExpanded: false,
+                                                    fromChat: false,
+                                                    requestsContext: nil
+                                                ) {
+                                                    navigationController.pushViewController(controller)
+                                                }
+                                            })
+                                            return true
+                                        }
+                                    )
+                                    controller.present(overlayController, in: .current)
+                                }))
+                            )
+                            
+                            subActions.append(
+                                .action(ContextMenuActionItem(text: presentationData.strings.MediaPlayer_ContextMenu_SaveTo_SavedMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                    f(.default)
+                                    
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    
+                                    let _ = component.context.engine.messages.enqueueOutgoingMessage(to: component.context.account.peerId, replyTo: nil, content: .file(file)).start()
+                                    
+                                    guard let controller = component.controller() as? StoryContainerScreen else {
+                                        return
+                                    }
+                                    
+                                    let overlayController = UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .forward(savedMessages: true, text: presentationData.strings.MediaPlayer_AudioForwardedToSavedMesagesTooltip),
+                                        action: { _ in
+                                            return true
+                                        }
+                                    )
+                                    controller.present(overlayController, in: .current)
+                                }))
+                            )
+                            
+                            let noAction: ((ContextMenuActionItem.Action) -> Void)? = nil
+                            subActions.append(
+                                .action(ContextMenuActionItem(text: presentationData.strings.MediaPlayer_ContextMenu_SaveTo_Info, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: noAction))
+                            )
+
+                            c?.pushItems(items: .single(ContextController.Items(content: .list(subActions))))
+                        }
+                    }))
+                )
+                return ContextController.Items(content: .list(items))
+            }
+            
+            let contextController = makeContextController(
+                presentationData: presentationData,
+                source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .top)),
+                items: items,
+                gesture: gesture
+            )
+            contextController.dismissed = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.contextController = nil
+                self.updateIsProgressPaused()
+            }
+            self.contextController = contextController
+            self.updateIsProgressPaused()
+            controller.present(contextController, in: .window(.root))
         }
         
         private func beginPictureInPicture() {

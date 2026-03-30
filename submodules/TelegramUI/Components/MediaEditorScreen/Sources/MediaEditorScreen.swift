@@ -5163,7 +5163,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                 return
                             }
                             
-                            self.insertAudio(path: copyPath, fileName: fileName)
+                            self.insertAudio(path: copyPath, fileName: fileName, file: file.media as? TelegramMediaFile)
                         }
                     })
                 }
@@ -5224,7 +5224,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }), in: .window(.root))
         }
         
-        private func insertAudio(path: String, fileName: String, dispose: (() -> Void)? = nil) {
+        private func insertAudio(path: String, fileName: String, file: TelegramMediaFile? = nil, dispose: (() -> Void)? = nil) {
             guard let mediaEditor = self.mediaEditor else {
                 return
             }
@@ -5300,7 +5300,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         audioTrimRange = 0 ..< min(15, audioDuration)
                     }
                     
-                    mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration), trimRange: audioTrimRange, offset: audioOffset)
+                    var passFile = false
+                    if let file {
+                        for attribute in file.attributes {
+                            if case let .Audio(_, _, title, _, _) = attribute, let title, !title.isEmpty {
+                                passFile = true
+                            }
+                        }
+                    }
+                    mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration, file: passFile ? file : nil), trimRange: audioTrimRange, offset: audioOffset)
 
                     mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: true)
                     
@@ -6706,6 +6714,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         public let coverTimestamp: Double?
         public let options: MediaEditorResultPrivacy
         public let stickers: [TelegramMediaFile]
+        public let music: TelegramMediaFile?
         public let randomId: Int64
         
         init() {
@@ -6715,6 +6724,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.coverTimestamp = nil
             self.options = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: [])
             self.stickers = []
+            self.music = nil
             self.randomId = 0
         }
         
@@ -6725,6 +6735,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             coverTimestamp: Double? = nil,
             options: MediaEditorResultPrivacy = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: []),
             stickers: [TelegramMediaFile] = [],
+            music: TelegramMediaFile? = nil,
             randomId: Int64 = 0
         ) {
             self.media = media
@@ -6733,6 +6744,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.coverTimestamp = coverTimestamp
             self.options = options
             self.stickers = stickers
+            self.music = music
             self.randomId = randomId
         }
     }
@@ -7766,6 +7778,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     coverTimestamp: nil,
                                     options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false, folderIds: []),
                                     stickers: [],
+                                    music: nil,
                                     randomId: 0
                                 )], { [weak self] finished in
                                     self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in

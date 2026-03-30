@@ -175,6 +175,11 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
                 return representation.resource
             }
         }
+        if let video = image.video {
+            if let resource = findMediaResource(media: video, previousMedia: previousMedia, resource: resource) {
+                return resource
+            }
+        }
     } else if let file = media as? TelegramMediaFile {
         if areResourcesEqual(file.resource, resource) {
             return file.resource

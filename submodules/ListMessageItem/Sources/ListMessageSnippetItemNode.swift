@@ -672,7 +672,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             }
                         
             let authorText = NSAttributedString(string: authorString, font: authorFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
-            let (authorNodeLayout, authorNodeApply) = authorNodeMakeLayout(item.context, params.width - leftInset - leftOffset - contentRightInset - 30.0, item.presentationData.theme.theme, authorText, forumThreadTitle)
+            let (authorNodeLayout, authorNodeApply) = authorNodeMakeLayout(item.context, params.width - leftInset - leftOffset - contentRightInset - 30.0, item.presentationData.theme.theme, authorText, .middle, forumThreadTitle)
             
             var contentHeight = 9.0 + titleNodeLayout.size.height + 10.0 + descriptionNodeLayout.size.height + linkNodeLayout.size.height
             if !authorString.isEmpty {

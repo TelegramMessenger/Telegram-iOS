@@ -59,6 +59,74 @@ static TGMediaLivePhotoMode TGMediaAssetsResolvedLivePhotoMode(TGMediaEditingCon
     return editingContext.isForceLivePhotoEnabled ? TGMediaLivePhotoModeLive : TGMediaLivePhotoModeOff;
 }
 
+static TGMediaLivePhotoMode TGMediaAssetsEffectiveLivePhotoSendMode(TGMediaEditingContext *editingContext, NSObject<TGMediaEditableItem> *item, id<TGMediaEditAdjustments> adjustments)
+{
+    TGMediaLivePhotoMode livePhotoMode = TGMediaAssetsResolvedLivePhotoMode(editingContext, item);
+    if (livePhotoMode == TGMediaLivePhotoModeLive && adjustments.paintingData.hasAnimation)
+        return TGMediaLivePhotoModeLoop;
+
+    return livePhotoMode;
+}
+
+static NSString *TGMediaAssetsLivePhotoPaintingImagePath(TGPaintingData *paintingData)
+{
+    if (paintingData.imagePath.length > 0)
+        return paintingData.imagePath;
+
+    UIImage *paintingImage = paintingData.image;
+    if (paintingImage == nil)
+        return nil;
+
+    NSData *paintingImageData = UIImagePNGRepresentation(paintingImage);
+    if (paintingImageData == nil)
+        return nil;
+
+    int64_t randomId = 0;
+    arc4random_buf(&randomId, sizeof(randomId));
+    NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"livephoto_painting_%llx.png", randomId]];
+    [[NSFileManager defaultManager] removeItemAtPath:filePath error:nil];
+    if (![paintingImageData writeToFile:filePath atomically:true])
+        return nil;
+
+    return filePath;
+}
+
+static TGVideoEditAdjustments *TGMediaAssetsPatchedLivePhotoAdjustments(PGPhotoEditorValues *values, TGMediaVideoConversionPreset preset, bool bounce, bool sendAsGif)
+{
+    TGVideoEditAdjustments *videoAdjustments = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:values preset:preset bounce:bounce sendAsGif:sendAsGif];
+    TGPaintingData *paintingData = values.paintingData;
+    NSString *paintingImagePath = TGMediaAssetsLivePhotoPaintingImagePath(paintingData);
+    if (paintingImagePath.length == 0)
+        return videoAdjustments;
+
+    NSMutableDictionary *adjustmentsDictionary = [[videoAdjustments dictionary] mutableCopy];
+    if (adjustmentsDictionary == nil)
+        return videoAdjustments;
+
+    adjustmentsDictionary[@"paintingImagePath"] = paintingImagePath;
+    if (paintingData.stickers.count > 0)
+        adjustmentsDictionary[@"stickersData"] = paintingData.stickers;
+
+    TGVideoEditAdjustments *dictionaryAdjustments = [TGVideoEditAdjustments editAdjustmentsWithDictionary:adjustmentsDictionary];
+    TGPaintingData *patchedPaintingData = dictionaryAdjustments.paintingData;
+    if (patchedPaintingData == nil) {
+        if (paintingData.entitiesData != nil) {
+            patchedPaintingData = [TGPaintingData dataWithPaintingImagePath:paintingImagePath entitiesData:paintingData.entitiesData hasAnimation:paintingData.hasAnimation stickers:paintingData.stickers];
+        } else {
+            patchedPaintingData = [TGPaintingData dataWithPaintingImagePath:paintingImagePath];
+        }
+    }
+
+    TGVideoEditAdjustments *patchedAdjustments = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:videoAdjustments.originalSize cropRect:videoAdjustments.cropRect cropOrientation:videoAdjustments.cropOrientation cropRotation:videoAdjustments.cropRotation cropLockedAspectRatio:videoAdjustments.cropLockedAspectRatio cropMirrored:videoAdjustments.cropMirrored trimStartValue:videoAdjustments.trimStartValue trimEndValue:videoAdjustments.trimEndValue toolValues:videoAdjustments.toolValues paintingData:patchedPaintingData sendAsGif:videoAdjustments.sendAsGif preset:videoAdjustments.preset];
+    if (patchedAdjustments == nil)
+        return videoAdjustments;
+
+    if (videoAdjustments.bounce != patchedAdjustments.bounce)
+        [patchedAdjustments setValue:@(videoAdjustments.bounce) forKey:@"bounce"];
+
+    return patchedAdjustments;
+}
+
 @interface TGMediaPickerAccessView: UIView
 {
     TGMediaAssetsPallete *_pallete;
@@ -1022,7 +1090,6 @@ static TGMediaLivePhotoMode TGMediaAssetsResolvedLivePhotoMode(TGMediaEditingCon
         }
         
         NSAttributedString *caption = [editingContext captionForItem:asset];
-        TGMediaLivePhotoMode livePhotoMode = TGMediaAssetsResolvedLivePhotoMode(editingContext, asset);
         
         if (editingContext.isForcedCaption) {
             if (grouping && num > 0) {
@@ -1091,6 +1158,7 @@ static TGMediaLivePhotoMode TGMediaAssetsResolvedLivePhotoMode(TGMediaEditingCon
                 else
                 {
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
+                    TGMediaLivePhotoMode livePhotoMode = TGMediaAssetsEffectiveLivePhotoSendMode(editingContext, asset, adjustments);
                     NSNumber *timer = [editingContext timerForItem:asset];
                     
                     SSignal *inlineSignal = [inlineThumbnailSignal(asset) map:^id(UIImage *image)
@@ -1222,20 +1290,20 @@ static TGMediaLivePhotoMode TGMediaAssetsResolvedLivePhotoMode(TGMediaEditingCon
                                 
                                 if (livePhotoMode == TGMediaLivePhotoModeBounce) {
                                     if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
-                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedHigh bounce:true sendAsGif:true];
+                                        dict[@"adjustments"] = TGMediaAssetsPatchedLivePhotoAdjustments((PGPhotoEditorValues *)adjustments, TGMediaVideoConversionPresetCompressedHigh, true, true);
                                     } else {
                                         dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:true];
                                     }
                                 } else if (livePhotoMode == TGMediaLivePhotoModeLoop) {
                                     if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
-                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedHigh bounce:false sendAsGif:true];
+                                        dict[@"adjustments"] = TGMediaAssetsPatchedLivePhotoAdjustments((PGPhotoEditorValues *)adjustments, TGMediaVideoConversionPresetCompressedHigh, false, true);
                                     } else {
                                         dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithOriginalSize:dimensions preset:TGMediaVideoConversionPresetCompressedHigh bounce:false];
                                     }
                                 } else {
                                     dict[@"livePhoto"] = @true;
                                     if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
-                                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:adjustments preset:TGMediaVideoConversionPresetCompressedMedium bounce:false sendAsGif:false];
+                                        dict[@"adjustments"] = TGMediaAssetsPatchedLivePhotoAdjustments((PGPhotoEditorValues *)adjustments, TGMediaVideoConversionPresetCompressedMedium, false, false);
                                     }
                                 }
                                 

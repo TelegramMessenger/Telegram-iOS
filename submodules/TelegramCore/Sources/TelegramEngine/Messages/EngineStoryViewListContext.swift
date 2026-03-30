@@ -563,6 +563,7 @@ public final class EngineStoryViewListContext {
                                                         isMy: item.isMy,
                                                         myReaction: item.myReaction,
                                                         forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                                        music: item.music.flatMap(EngineMedia.init),
                                                         author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
                                                         folderIds: item.folderIds
                                                     ),
@@ -604,6 +605,7 @@ public final class EngineStoryViewListContext {
                                             isMy: item.isMy,
                                             myReaction: item.myReaction,
                                             forwardInfo: item.forwardInfo,
+                                            music: item.music,
                                             authorId: item.authorId,
                                             folderIds: item.folderIds
                                         ))
@@ -645,6 +647,7 @@ public final class EngineStoryViewListContext {
                                                     isMy: item.isMy,
                                                     myReaction: item.myReaction,
                                                     forwardInfo: item.forwardInfo,
+                                                    music: item.music,
                                                     authorId: item.authorId,
                                                     folderIds: item.folderIds
                                                 ))
@@ -767,6 +770,7 @@ public final class EngineStoryViewListContext {
                                                         isMy: item.isMy,
                                                         myReaction: item.myReaction,
                                                         forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                                        music: item.music.flatMap(EngineMedia.init),
                                                         author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) },
                                                         folderIds: item.folderIds
                                                     ),
