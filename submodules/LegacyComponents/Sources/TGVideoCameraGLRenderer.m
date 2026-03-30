@@ -396,24 +396,29 @@
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	
 	glBindTexture(CVOpenGLESTextureGetTarget(srcTexture), 0);
-    if (hasPreviousTexture)
+    if (hasPreviousTexture) {
         glBindTexture(CVOpenGLESTextureGetTarget(prevTexture), 0);
+    }
 	glBindTexture(CVOpenGLESTextureGetTarget(dstTexture), 0);
 	
 	glFlush();
 	
 bail:
-	if (oldContext != _context)
-		[EAGLContext setCurrentContext:oldContext];
+    if (oldContext != _context) {
+        [EAGLContext setCurrentContext:oldContext];
+    }
 	
-	if (srcTexture)
-		CFRelease(srcTexture);
+    if (srcTexture) {
+        CFRelease(srcTexture);
+    }
     
-    if (prevTexture)
+    if (prevTexture) {
         CFRelease(prevTexture);
+    }
 	
-	if (dstTexture)
-		CFRelease(dstTexture);
+    if (dstTexture) {
+        CFRelease(dstTexture);
+    }
 	
 	return dstPixelBuffer;
 }

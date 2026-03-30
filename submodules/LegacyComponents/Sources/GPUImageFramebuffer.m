@@ -381,11 +381,11 @@ void dataProviderUnlockCallback (void *info, __unused const void *data, __unused
         
         if ([GPUImageContext supportsFastTextureUpload])
         {
-            cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, CVPixelBufferGetBytesPerRow(renderTarget), defaultRGBColorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst, dataProvider, NULL, NO, kCGRenderingIntentDefault);
+            cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, CVPixelBufferGetBytesPerRow(renderTarget), defaultRGBColorSpace, ((uint32_t)kCGBitmapByteOrder32Little) | ((uint32_t)kCGImageAlphaPremultipliedFirst), dataProvider, NULL, NO, kCGRenderingIntentDefault);
         }
         else
         {
-            cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, 4 * (int)_size.width, defaultRGBColorSpace, kCGBitmapByteOrderDefault | kCGImageAlphaPremultipliedLast, dataProvider, NULL, NO, kCGRenderingIntentDefault);
+            cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, 4 * (int)_size.width, defaultRGBColorSpace, ((uint32_t)kCGBitmapByteOrderDefault) | ((uint32_t)kCGImageAlphaPremultipliedLast), dataProvider, NULL, NO, kCGRenderingIntentDefault);
         }
         
         // Capture image with current device orientation

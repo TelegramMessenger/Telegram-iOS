@@ -126,9 +126,10 @@
                     transitionView.alpha = 1.0;
                     dispatch_async(dispatch_get_main_queue(), ^
                     {
-                        if (completion != nil)
+                        if (completion != nil) {
                             completion();
-                            dismissed();
+                        }
+                        dismissed();
                     });
                 }];
             };
