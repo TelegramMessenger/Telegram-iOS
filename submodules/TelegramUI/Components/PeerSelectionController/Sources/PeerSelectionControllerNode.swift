@@ -1330,6 +1330,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     filter: self.filter,
                     requestPeerType: self.requestPeerType,
                     location: chatListLocation,
+                    folder: nil,
                     displaySearchFilters: false,
                     hasDownloads: false,
                     openPeer: { [weak self] peer, chatPeer, threadId, _ in

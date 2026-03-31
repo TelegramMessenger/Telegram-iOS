@@ -58,8 +58,8 @@ public extension TelegramEngine {
             return _internal_searchPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, query: query, scope: scope)
         }
 
-        public func searchLocalPeers(query: String, scope: TelegramSearchPeersScope = .everywhere) -> Signal<[EngineRenderedPeer], NoError> {
-            return self.account.postbox.searchPeers(query: query)
+        public func searchLocalPeers(query: String, scope: TelegramSearchPeersScope = .everywhere, predicate: ChatListFilterPredicate? = nil) -> Signal<[EngineRenderedPeer], NoError> {
+            return self.account.postbox.searchPeers(query: query, predicate: predicate)
             |> map { peers in
                 switch scope {
                 case .everywhere:

@@ -71,7 +71,7 @@ public final class TwoFactorDataInputScreen: ViewController {
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
         let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        let navigationBarTheme = NavigationBarTheme(overallDarkAppearance: defaultTheme.overallDarkAppearance, buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
+        let navigationBarTheme = NavigationBarTheme(overallDarkAppearance: defaultTheme.overallDarkAppearance, buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor, accentButtonColor: defaultTheme.accentButtonColor, accentForegroundColor: defaultTheme.accentForegroundColor)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
         

@@ -6,7 +6,7 @@ import MtProtoKit
 
 
 public enum SearchMessagesLocation: Equatable {
-    case general(scope: TelegramSearchPeersScope, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
+    case general(scope: TelegramSearchPeersScope, tags: MessageTags?, minDate: Int32?, maxDate: Int32?, folderId: Int32?)
     case group(groupId: PeerGroupId, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, reactions: [MessageReaction.Reaction]?, threadId: Int64?, minDate: Int32?, maxDate: Int32?)
     case sentMedia(tags: MessageTags?)
@@ -471,7 +471,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 }
                 return combineLatest(peerMessages, additionalPeerMessages)
             }
-        case let .general(_, tags, minDate, maxDate), let .group(_, tags, minDate, maxDate):
+        case let .general(_, tags, minDate, maxDate, _), let .group(_, tags, minDate, maxDate):
             var flags: Int32 = 0
             let folderId: Int32?
             if case let .group(groupId, _, _, _) = location {
@@ -481,7 +481,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 folderId = nil
             }
         
-            if case let .general(scope, _, _, _) = location, case let .globalPosts(allowPaidStars) = scope {
+            if case let .general(scope, _, _, _, _) = location, case let .globalPosts(allowPaidStars) = scope {
                 remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
                     var lowerBound: MessageIndex?
                     if let state = state, let message = state.main.messages.last {
@@ -508,7 +508,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     }
                 }
             } else {
-                if case let .general(scope, _, _, _) = location {
+                if case let .general(scope, _, _, _, _) = location {
                     switch scope {
                     case .everywhere:
                         break
@@ -567,9 +567,9 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
             
             if state?.additional == nil {
                 switch location {
-                    case let .general(_, tags, minDate, maxDate), let .group(_, tags, minDate, maxDate):
+                    case let .general(_, tags, minDate, maxDate, _), let .group(_, tags, minDate, maxDate):
                         let secretMessages: [Message]
-                        if case let .general(scope, _, _, _) = location, case .channels = scope {
+                        if case let .general(scope, _, _, _, _) = location, case .channels = scope {
                             secretMessages = []
                         } else {
                             secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)

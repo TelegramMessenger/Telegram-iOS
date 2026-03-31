@@ -815,7 +815,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                     
                     if let searchTerm = searchTerm {
                         if !searchTerm.isEmpty {
-                            for renderedPeer in transaction.searchPeers(query: searchTerm) {
+                            for renderedPeer in transaction.searchPeers(query: searchTerm, predicate: nil) {
                                 if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                     peers.append(peer)
                                 }
@@ -988,7 +988,7 @@ private final class WidgetIntentHandler {
                     
                     if let searchTerm = searchTerm {
                         if !searchTerm.isEmpty {
-                            for renderedPeer in transaction.searchPeers(query: searchTerm) {
+                            for renderedPeer in transaction.searchPeers(query: searchTerm, predicate: nil) {
                                 if let peer = renderedPeer.peer, !(peer is TelegramSecretChat), !peer.isDeleted {
                                     peers.append(peer)
                                 }

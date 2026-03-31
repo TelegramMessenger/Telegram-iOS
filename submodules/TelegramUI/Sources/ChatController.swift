@@ -3468,7 +3468,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch strongSelf.chatLocation {
             case let .peer(peerId):
                 if alreadyThere {
-                    strongSelf.openCalendarSearch(timestamp: timestamp)
+                    strongSelf.openCalendarSearch(timestamp: timestamp, isMedia: true)
                 } else {
                     strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, animated: true, completion: nil)
                 }

@@ -157,7 +157,8 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             self.environment = environment
             
             if self.component == nil {
-                if case .format = component.mode {
+                switch component.mode {
+                case .format, .search:
                     self.minDate = Date(timeIntervalSince1970: 0.0)
                     self.maxDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
                     if let currentTime = component.currentTime {
@@ -167,7 +168,7 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                     } else {
                         self.date = Date()
                     }
-                } else {
+                default:
                     self.updateMinimumDate(currentTime: component.currentTime, minimalTime: component.minimalTime)
                 }
                 self.repeatPeriod = component.currentRepeatPeriod
@@ -227,6 +228,9 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                 title = strings.Conversation_FormatDate_Title
             case .poll:
                 title = strings.CreatePoll_Deadline_Title
+            case .search:
+                //TODO:localize
+                title = "Search"
             }
             let titleSize = self.title.update(
                 transition: transition,
@@ -386,6 +390,8 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             var repeatValueFrame = CGRect()
             if case .format = component.mode {
                 contentHeight += 8.0
+            } else if case .search = component.mode {
+                contentHeight += 8.0
             } else if case .poll = component.mode {
                 contentHeight += 8.0
             } else {
@@ -497,6 +503,9 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
                 buttonTitle = component.currentTime != nil ? strings.Conversation_FormatDate_EditDate : strings.Conversation_FormatDate_AddDate
             case .poll:
                 buttonTitle = strings.CreatePoll_Deadline_SetDeadline
+            case .search:
+                //TODO:localize
+                buttonTitle = "Done"
             }
                 
             let buttonSideInset: CGFloat = 30.0
@@ -539,7 +548,13 @@ private final class ChatScheduleTimeSheetContentComponent: Component {
             }
             contentHeight += buttonSize.height
             
-            if case .format = component.mode, component.currentTime != nil {
+            var isFormatOrSearch = false
+            if case .format = component.mode {
+                isFormatOrSearch = true
+            } else if case .search = component.mode {
+                isFormatOrSearch = true
+            }
+            if isFormatOrSearch && component.currentTime != nil {
                 contentHeight += 8.0
                 
                 let buttonSize = self.secondaryButton.update(
@@ -947,6 +962,7 @@ public class ChatScheduleTimeScreen: ViewControllerComponentContainer {
         case reminders
         case format
         case poll
+        case search
     }
     
     public struct Result {

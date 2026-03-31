@@ -3800,7 +3800,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     separatorColor: UIColor(rgb: 0x000000, alpha: 0.25),
                     badgeBackgroundColor: .clear,
                     badgeStrokeColor: .clear,
-                    badgeTextColor: .clear
+                    badgeTextColor: .clear,
+                    accentButtonColor: self.presentationData.theme.list.itemCheckColors.fillColor,
+                    accentForegroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor
                 ),
                 strings: NavigationBarStrings(back: "", close: "")
             )

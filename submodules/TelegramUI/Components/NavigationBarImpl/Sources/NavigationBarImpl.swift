@@ -441,9 +441,7 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                 self.leftButtonNodeImpl.view.removeFromSuperview()
                 
                 var backTitle: String?
-                if case .glass = self.presentationData.theme.style {
-                    backTitle = ""
-                } else if let customBackButtonText = self.customBackButtonText {
+                if let customBackButtonText = self.customBackButtonText {
                     backTitle = customBackButtonText
                 } else if let leftBarButtonItem = item.leftBarButtonItem, leftBarButtonItem.backButtonAppearance {
                     backTitle = leftBarButtonItem.title
@@ -457,6 +455,12 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                             }
                         case .close:
                             backTitle = nil
+                    }
+                }
+                
+                if backTitle != nil {
+                    if case .glass = self.presentationData.theme.style {
+                        backTitle = ""
                     }
                 }
                 
@@ -631,10 +635,6 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
         
         self.backButtonNodeImpl.color = self.presentationData.theme.buttonColor
         self.backButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
-        self.leftButtonNodeImpl.color = self.presentationData.theme.buttonColor
-        self.leftButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
-        self.rightButtonNodeImpl.color = self.presentationData.theme.buttonColor
-        self.rightButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
         self.backButtonArrow.image = presentationData.theme.style == .glass ? generateTintedImage(image: glassBackArrowImage, color: self.presentationData.theme.buttonColor) : navigationBarBackArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
             self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBarImpl.titleFont, textColor: self.presentationData.theme.primaryTextColor)
@@ -753,10 +753,6 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
             
             self.backButtonNodeImpl.color = self.presentationData.theme.buttonColor
             self.backButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
-            self.leftButtonNodeImpl.color = self.presentationData.theme.buttonColor
-            self.leftButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
-            self.rightButtonNodeImpl.color = self.presentationData.theme.buttonColor
-            self.rightButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
             self.backButtonArrow.image = self.presentationData.theme.style == .glass ? generateTintedImage(image: glassBackArrowImage, color: self.presentationData.theme.buttonColor) : navigationBarBackArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBarImpl.titleFont, textColor: self.presentationData.theme.primaryTextColor)
@@ -906,6 +902,15 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                 self.badgeNode.alpha = 1.0
             }
         } else if self.leftButtonNodeImpl.view.superview != nil {
+            switch self.leftButtonNodeImpl.commonContentType {
+            case .accent:
+                self.leftButtonNodeImpl.color = self.presentationData.theme.accentForegroundColor
+                self.leftButtonNodeImpl.disabledColor = self.presentationData.theme.accentForegroundColor.withMultipliedAlpha(0.5)
+            case .generic:
+                self.leftButtonNodeImpl.color = self.presentationData.theme.buttonColor
+                self.leftButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
+            }
+            
             let leftButtonSize = self.leftButtonNodeImpl.updateLayout(constrainedSize: CGSize(width: size.width, height: 44.0), isLandscape: isLandscape, isLeftAligned: true)
             leftTitleInset = leftButtonSize.width + leftButtonInset + 1.0
             
@@ -937,6 +942,15 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
         
         var rightButtonsWidth: CGFloat = 0.0
         if self.rightButtonNodeImpl.view.superview != nil {
+            switch self.rightButtonNodeImpl.commonContentType {
+            case .accent:
+                self.rightButtonNodeImpl.color = self.presentationData.theme.accentForegroundColor
+                self.rightButtonNodeImpl.disabledColor = self.presentationData.theme.accentForegroundColor.withMultipliedAlpha(0.5)
+            case .generic:
+                self.rightButtonNodeImpl.color = self.presentationData.theme.buttonColor
+                self.rightButtonNodeImpl.disabledColor = self.presentationData.theme.disabledButtonColor
+            }
+            
             let rightButtonSize = self.rightButtonNodeImpl.updateLayout(constrainedSize: (CGSize(width: size.width, height: 44.0)), isLandscape: isLandscape, isLeftAligned: false)
             if !self.rightButtonNodeImpl.isEmpty {
                 rightButtonsWidth += rightButtonSize.width
@@ -975,7 +989,16 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
             leftButtonsBackgroundTransition.setBounds(view: leftButtonsBackgroundView.background, bounds: CGRect(origin: CGPoint(), size: leftButtonsBackgroundFrame.size))
             leftButtonsBackgroundTransition.setFrame(view: leftButtonsBackgroundView.container, frame: CGRect(origin: CGPoint(), size: leftButtonsBackgroundFrame.size))
             ComponentTransition(transition).setAlpha(view: leftButtonsBackgroundView.background, alpha: leftButtonsWidth == 0.0 ? 0.0 : 1.0)
-            leftButtonsBackgroundView.background.update(size: leftButtonsBackgroundFrame.size, cornerRadius: leftButtonsBackgroundFrame.height * 0.5, isDark: self.presentationData.theme.overallDarkAppearance, tintColor: .init(kind: self.presentationData.theme.glassStyle == .clear ? .clear : .panel), isInteractive: true, isVisible: leftButtonsWidth != 0.0, transition: leftButtonsBackgroundTransition)
+            
+            var leftButtonsColor: GlassBackgroundView.TintColor = .init(kind: self.presentationData.theme.glassStyle == .clear ? .clear : .panel)
+            switch self.leftButtonNodeImpl.commonContentType {
+            case .accent:
+                leftButtonsColor = .init(kind: .custom(style: self.presentationData.theme.glassStyle == .clear ? .clear : .default, color: self.presentationData.theme.accentButtonColor))
+            case .generic:
+                break
+            }
+            
+            leftButtonsBackgroundView.background.update(size: leftButtonsBackgroundFrame.size, cornerRadius: leftButtonsBackgroundFrame.height * 0.5, isDark: self.presentationData.theme.overallDarkAppearance, tintColor: leftButtonsColor, isInteractive: true, isVisible: leftButtonsWidth != 0.0, transition: leftButtonsBackgroundTransition)
         }
         
         if let rightButtonsBackgroundView = self.rightButtonsBackgroundView {
@@ -1001,8 +1024,16 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                     })
                 }
                 
+                var rightButtonsColor: GlassBackgroundView.TintColor = .init(kind: self.presentationData.theme.glassStyle == .clear ? .clear : .panel)
+                switch self.rightButtonNodeImpl.commonContentType {
+                case .accent:
+                    rightButtonsColor = .init(kind: .custom(style: self.presentationData.theme.glassStyle == .clear ? .clear : .default, color: self.presentationData.theme.accentButtonColor))
+                case .generic:
+                    break
+                }
+                
                 rightButtonsBackgroundView.background.isHidden = false
-                rightButtonsBackgroundView.background.update(size: rightButtonsBackgroundFrame.size, cornerRadius: rightButtonsBackgroundFrame.height * 0.5, isDark: self.presentationData.theme.overallDarkAppearance, tintColor: .init(kind: self.presentationData.theme.glassStyle == .clear ? .clear : .panel), isInteractive: true, transition: rightButtonsBackgroundTransition)
+                rightButtonsBackgroundView.background.update(size: rightButtonsBackgroundFrame.size, cornerRadius: rightButtonsBackgroundFrame.height * 0.5, isDark: self.presentationData.theme.overallDarkAppearance, tintColor: rightButtonsColor, isInteractive: true, transition: rightButtonsBackgroundTransition)
             } else {
                 rightButtonsBackgroundView.background.isHidden = true
             }
@@ -1038,7 +1069,7 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                     titleViewTransition = .immediate
                 }
                 
-                let titleSize = titleView.updateLayout(availableSize: CGSize(width: size.width - max(leftTitleInset, rightTitleInset) * 2.0, height: nominalHeight), transition: titleViewTransition)
+                let titleSize = titleView.updateLayout(availableSize: CGSize(width: size.width - leftTitleInset - rightTitleInset, height: nominalHeight), transition: titleViewTransition)
                 
                 var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) * 0.5), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
                 if titleFrame.origin.x + titleFrame.width > size.width - rightTitleInset {
@@ -1050,8 +1081,14 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                 
                 titleViewTransition.updateFrame(view: titleView, frame: titleFrame)
             } else {
-                let titleSize = CGSize(width: max(1.0, size.width - max(leftTitleInset, rightTitleInset) * 2.0), height: nominalHeight)
-                let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
+                let titleSize = CGSize(width: max(1.0, size.width - leftTitleInset - rightTitleInset), height: nominalHeight)
+                var titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
+                if titleFrame.origin.x + titleFrame.width > size.width - rightTitleInset {
+                    titleFrame.origin.x = size.width - rightTitleInset - titleFrame.width
+                }
+                if titleFrame.origin.x < leftTitleInset {
+                    titleFrame.origin.x = leftTitleInset + floorToScreenPixels((size.width - leftTitleInset - rightTitleInset - titleFrame.width) * 0.5)
+                }
                 var titleViewTransition = transition
                 if titleView.frame.isEmpty {
                     titleViewTransition = .immediate

@@ -1172,7 +1172,7 @@ extension ChatControllerImpl {
                     }
                     return updatedState
                 })
-                self.searchResult.set(.single((results, state, .general(scope: .channels, tags: nil, minDate: nil, maxDate: nil))))
+                self.searchResult.set(.single((results, state, .general(scope: .channels, tags: nil, minDate: nil, maxDate: nil, folderId: nil))))
             }
         }
         
@@ -2412,7 +2412,7 @@ extension ChatControllerImpl {
                 }
             }
         }, openCalendarSearch: { [weak self] in
-            self?.openCalendarSearch(timestamp: Int32(Date().timeIntervalSince1970))
+            self?.openCalendarSearch(timestamp: Int32(Date().timeIntervalSince1970), isMedia: false)
         }, toggleMembersSearch: { [weak self] value in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
