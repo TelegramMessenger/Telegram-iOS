@@ -543,7 +543,7 @@ final class ComposePollScreenComponent: Component {
             }
             
             var mappedSolution: (String, [MessageTextEntity], AnyMediaReference?)?
-            if self.isQuiz && self.quizAnswerTextInputState.text.length != 0 {
+            if self.isQuiz && (self.quizAnswerTextInputState.text.length != 0 || self.quizAnswerMedia != nil) {
                 var solutionTextEntities: [MessageTextEntity] = []
                 for entity in generateChatInputTextEntities(self.quizAnswerTextInputState.text) {
                     switch entity.type {
