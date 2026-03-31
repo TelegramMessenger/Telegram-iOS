@@ -18,24 +18,18 @@ import StickerPackPreviewUI
 
 extension ChatControllerImpl {
     func openPollMedia(message: Message, subject: ChatControllerInteraction.PollMediaSubject) -> Void {
-        var media: Media?
-        var text: String?
-        var entities: [MessageTextEntity] = []
         let mediaSubject: GalleryMediaSubject
+        var media: Media?
         switch subject {
         case let .option(option):
-            text = option.text
-            entities = option.entities
             media = option.media
             mediaSubject = .pollOption(option.opaqueIdentifier)
         case let .solution(solution):
-            text = solution.text
-            entities = solution.entities
             media = solution.media
             mediaSubject = .pollSolution
         }
         
-        guard let _ = text, let media else {
+        guard let media else {
             return
         }
         
@@ -112,13 +106,6 @@ extension ChatControllerImpl {
                 
             })
         } else {
-            var attributes = message.attributes
-            attributes.removeAll(where: { $0 is TextEntitiesMessageAttribute })
-            if !entities.isEmpty {
-                attributes.append(TextEntitiesMessageAttribute(entities: entities))
-            }
-            
-            let message = message //.withUpdatedText(text).withUpdatedAttributes(attributes)
             let _ = self.context.sharedContext.openChatMessage(OpenChatMessageParams(
                 context: self.context,
                 updatedPresentationData: self.controllerInteraction?.updatedPresentationData,

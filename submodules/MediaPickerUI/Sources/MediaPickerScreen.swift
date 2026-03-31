@@ -441,7 +441,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 
                 if case let .assets(_, mode) = controller.subject {
                     switch mode {
-                    case .default, .story, .poll:
+                    case .default, .poll:
                         self.containerNode.view.addSubview(self.bottomEdgeEffectView)
                     default:
                         break

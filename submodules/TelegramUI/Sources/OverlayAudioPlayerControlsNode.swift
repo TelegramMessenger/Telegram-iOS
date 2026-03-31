@@ -148,8 +148,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     
     private let backgroundNode: ASImageNode
     
-    private let albumArtNode: TransformImageNode
-    private var largeAlbumArtNode: TransformImageNode?
+    let albumArtNode: TransformImageNode
     private let titleNode: TextNode
     private let title: ComponentView<Empty>
     private let descriptionNode: TextNode
@@ -193,6 +192,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         
     var isExpanded = false
     var updateIsExpanded: (() -> Void)?
+    var requestAlbumArtDisplay: (((FileMediaReference, SharedMediaPlaybackAlbumArt)?) -> Void)?
     
     var requestCollapse: (() -> Void)?
     var requestShare: ((ShareControllerSubject) -> Void)?
@@ -222,7 +222,6 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    private var scrubbingDisposable: Disposable?
     private var leftDurationLabelPushed = false
     private var rightDurationLabelPushed = false
     private var infoNodePushed = false
@@ -356,33 +355,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         self.scrubberNode.status = mappedStatus
         self.leftDurationLabel.status = mappedStatus
         self.rightDurationLabel.status = mappedStatus
-        
-//        self.scrubbingDisposable = (self.scrubberNode.scrubbingPosition
-//        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
-//            guard let strongSelf = self else {
-//                return
-//            }
-//            let leftDurationLabelPushed: Bool
-//            let rightDurationLabelPushed: Bool
-//            let infoNodePushed: Bool
-//            if let value = value {
-//                leftDurationLabelPushed = value < 0.16
-//                rightDurationLabelPushed = value > (strongSelf.rateButton.isHidden ? 0.84 : 0.74)
-//                infoNodePushed = value >= 0.16 && value <= 0.84
-//            } else {
-//                leftDurationLabelPushed = false
-//                rightDurationLabelPushed = false
-//                infoNodePushed = false
-//            }
-//            if leftDurationLabelPushed != strongSelf.leftDurationLabelPushed || rightDurationLabelPushed != strongSelf.rightDurationLabelPushed || infoNodePushed != strongSelf.infoNodePushed {
-//                strongSelf.leftDurationLabelPushed = leftDurationLabelPushed
-//                strongSelf.rightDurationLabelPushed = rightDurationLabelPushed
-//                strongSelf.infoNodePushed = infoNodePushed
-//                
-//                strongSelf.requestLayout(transition: .animated(duration: 0.35, curve: .spring))
-//            }
-//        })
-        
+                
         self.statusDisposable = combineLatest(
             queue: Queue.mainQueue(),
             delayedStatus,
@@ -592,7 +565,6 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     deinit {
         self.statusDisposable?.dispose()
         self.chapterDisposable?.dispose()
-        self.scrubbingDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -788,9 +760,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
             self.currentAlbumArtInitialized = true
             self.currentAlbumArt = albumArt
             self.albumArtNode.setSignal(playerAlbumArt(postbox: self.account.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
-            if let largeAlbumArtNode = self.largeAlbumArtNode {
-                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.account.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
-            }
+            self.requestAlbumArtDisplay?(nil)
         }
     }
     
@@ -880,71 +850,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         let applyAlbumArt = makeAlbumArtLayout(TransformImageArguments(corners: ImageCorners(radius: 10.0), imageSize: albumArtSize, boundingSize: albumArtSize, intrinsicInsets: UIEdgeInsets()))
         applyAlbumArt()
         let albumArtFrame = CGRect(origin: CGPoint(x: leftInset + sideInset, y: infoVerticalOrigin - 3.0), size: albumArtSize)
-        let previousAlbumArtNodeFrame = self.albumArtNode.frame
         transition.updateFrame(node: self.albumArtNode, frame: albumArtFrame)
-        
-        if self.isExpanded {
-            let largeAlbumArtNode: TransformImageNode
-            var animateIn = false
-            if let current = self.largeAlbumArtNode {
-                largeAlbumArtNode = current
-            } else {
-                animateIn = true
-                largeAlbumArtNode = TransformImageNode()
-                self.largeAlbumArtNode = largeAlbumArtNode
-                self.addSubnode(largeAlbumArtNode)
-                if self.currentAlbumArtInitialized {
-                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.account.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
-                }
-            }
-            
-            let albumArtHeight = max(1.0, panelHeight - OverlayAudioPlayerControlsNode.basePanelHeight - 24.0)
-            
-            let largeAlbumArtSize = CGSize(width: albumArtHeight, height: albumArtHeight)
-            let makeLargeAlbumArtLayout = largeAlbumArtNode.asyncLayout()
-            let applyLargeAlbumArt = makeLargeAlbumArtLayout(TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: largeAlbumArtSize, boundingSize: largeAlbumArtSize, intrinsicInsets: UIEdgeInsets()))
-            applyLargeAlbumArt()
-            
-            let largeAlbumArtFrame = CGRect(origin: CGPoint(x: floor((width - largeAlbumArtSize.width) / 2.0), y: 34.0), size: largeAlbumArtSize)
-            
-            if animateIn && transition.isAnimated {
-                largeAlbumArtNode.frame = largeAlbumArtFrame
-                transition.animatePositionAdditive(node: largeAlbumArtNode, offset: CGPoint(x: previousAlbumArtNodeFrame.center.x - largeAlbumArtFrame.center.x, y: previousAlbumArtNodeFrame.center.y - largeAlbumArtFrame.center.y))
-                //largeAlbumArtNode.layer.animatePosition(from: CGPoint(x: -50.0, y: 0.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)
-                transition.animateTransformScale(node: largeAlbumArtNode, from: previousAlbumArtNodeFrame.size.height / largeAlbumArtFrame.size.height)
-                largeAlbumArtNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
-                if let copyView = self.albumArtNode.view.snapshotContentTree() {
-                    copyView.frame = previousAlbumArtNodeFrame
-                    copyView.center = largeAlbumArtFrame.center
-                    self.view.insertSubview(copyView, belowSubview: largeAlbumArtNode.view)
-                    transition.animatePositionAdditive(layer: copyView.layer, offset: CGPoint(x: previousAlbumArtNodeFrame.center.x - largeAlbumArtFrame.center.x, y: previousAlbumArtNodeFrame.center.y - largeAlbumArtFrame.center.y), completion: { [weak copyView] _ in
-                        copyView?.removeFromSuperview()
-                    })
-                    //copyView.layer.animatePosition(from: CGPoint(x: -50.0, y: 0.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)
-                    copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.28, removeOnCompletion: false)
-                    transition.updateTransformScale(layer: copyView.layer, scale: largeAlbumArtFrame.size.height / previousAlbumArtNodeFrame.size.height)
-                }
-            } else {
-                transition.updateFrame(node: largeAlbumArtNode, frame: largeAlbumArtFrame)
-            }
-            self.albumArtNode.isHidden = true
-        } else if let largeAlbumArtNode = self.largeAlbumArtNode {
-            self.largeAlbumArtNode = nil
-            self.albumArtNode.isHidden = false
-            if transition.isAnimated {
-                transition.animatePosition(node: self.albumArtNode, from: largeAlbumArtNode.frame.center)
-                transition.animateTransformScale(node: self.albumArtNode, from: largeAlbumArtNode.frame.height / self.albumArtNode.frame.height)
-                self.albumArtNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
-                
-                transition.updatePosition(node: largeAlbumArtNode, position: self.albumArtNode.frame.center, completion: { [weak largeAlbumArtNode] _ in
-                    largeAlbumArtNode?.removeFromSupernode()
-                })
-                largeAlbumArtNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.28, removeOnCompletion: false)
-                transition.updateTransformScale(node: largeAlbumArtNode, scale: self.albumArtNode.frame.height / largeAlbumArtNode.frame.height)
-            } else {
-                largeAlbumArtNode.removeFromSupernode()
-            }
-        }
         
         let scrubberVerticalOrigin: CGFloat = infoVerticalOrigin + 58.0
         let scrubberInset: CGFloat = 9.0
@@ -1283,15 +1189,16 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
     }
     
     @objc func albumArtTap(_ recognizer: UITapGestureRecognizer) {
-        if !"".isEmpty, case .ended = recognizer.state {
+        if case .ended = recognizer.state {
             if let supernode = self.supernode {
                 let bounds = supernode.bounds
                 if bounds.width > bounds.height {
                     return
                 }
             }
-            self.isExpanded = !self.isExpanded
-            self.updateIsExpanded?()
+            if let currentFileReference = self.currentFileReference, let currentAlbumArt = self.currentAlbumArt {
+                self.requestAlbumArtDisplay?((currentFileReference, currentAlbumArt))
+            }
         }
     }
     
