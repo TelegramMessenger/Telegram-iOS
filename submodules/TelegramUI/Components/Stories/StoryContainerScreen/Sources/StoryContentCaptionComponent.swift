@@ -70,7 +70,7 @@ final class StoryContentCaptionComponent: Component {
     let textSelectionAction: (NSAttributedString, TextSelectionAction) -> Void
     let controller: () -> ViewController?
     let openStory: (EnginePeer, EngineStoryItem?) -> Void
-    let openMusic: (FileMediaReference, UIView) -> Void
+    let openMusic: (TelegramMediaFile, UIView) -> Void
     
     init(
         externalState: ExternalState,
@@ -89,7 +89,7 @@ final class StoryContentCaptionComponent: Component {
         textSelectionAction: @escaping (NSAttributedString, TextSelectionAction) -> Void,
         controller: @escaping () -> ViewController?,
         openStory: @escaping (EnginePeer, EngineStoryItem?) -> Void,
-        openMusic: @escaping (FileMediaReference, UIView) -> Void
+        openMusic: @escaping (TelegramMediaFile, UIView) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -756,7 +756,7 @@ final class StoryContentCaptionComponent: Component {
                                     return
                                 }
                                 if let sourceView = self.musicPanel?.view {
-                                    self.component?.openMusic(.standalone(media: music), sourceView)
+                                    self.component?.openMusic(music, sourceView)
                                 }
                             },
                             animateScale: false

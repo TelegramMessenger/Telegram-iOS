@@ -1346,7 +1346,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         node.buttonNode.isAccessibilityElement = shouldHaveRadioNode
 
                         let previousResultBarWidth = minBarWidth + floor((width - leftInset - rightInset - minBarWidth) * (currentResult?.normalized ?? 0.0))
-                        let previousFrame = CGRect(origin: CGPoint(x: leftInset, y: contentLayoutHeight - 6.0 - 1.0), size: CGSize(width: previousResultBarWidth, height: 6.0))
+                        let previousFrame = CGRect(origin: CGPoint(x: leftInset, y: contentLayoutHeight - 6.0 - 1.0), size: CGSize(width: previousResultBarWidth, height: 4.0))
 
                         node.resultBarNode.layer.animateSpring(from: NSValue(cgPoint: previousFrame.center), to: NSValue(cgPoint: node.resultBarNode.frame.center), keyPath: "position", duration: 0.6, damping: 110.0)
                         node.resultBarNode.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: previousFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: node.resultBarNode.frame.size)), keyPath: "bounds", duration: 0.6, damping: 110.0)
