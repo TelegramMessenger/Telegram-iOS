@@ -129,11 +129,7 @@ public func chatMessageGalleryControllerData(
     for media in message.media {
         if let poll = media as? TelegramMediaPoll {
             standalone = true
-            if let attachedMedia = poll.attachedMedia as? TelegramMediaMap {
-                galleryMedia = attachedMedia
-            } else {
-                galleryMedia = poll
-            }
+            galleryMedia = poll
         } else if let paidContent = media as? TelegramMediaPaidContent, let extendedMedia = paidContent.extendedMedia.first, case .full = extendedMedia {
             standalone = true
             galleryMedia = paidContent
@@ -231,6 +227,29 @@ public func chatMessageGalleryControllerData(
         }, baseNavigationController: navigationController)
         return .instantPage(gallery, centralIndex, galleryMedia)
     } else if let galleryMedia = galleryMedia {
+        var galleryMedia = galleryMedia
+        if let poll = galleryMedia as? TelegramMediaPoll {
+            if mediaSubject == nil || mediaSubject == .pollDescription, let attachedMedia = poll.attachedMedia {
+                if let file = attachedMedia as? TelegramMediaFile, file.isMusic {
+                    galleryMedia = file
+                } else if let map = attachedMedia as? TelegramMediaMap {
+                    galleryMedia = map
+                }
+            } else if case let .pollOption(opaqueIdentifier) = mediaSubject, let optionMedia = poll.options.first(where: { $0.opaqueIdentifier == opaqueIdentifier })?.media {
+                if let file = optionMedia as? TelegramMediaFile, file.isMusic {
+                    galleryMedia = file
+                } else if let map = optionMedia as? TelegramMediaMap {
+                    galleryMedia = map
+                }
+            } else if case .pollSolution = mediaSubject, let solutionMedia = poll.results.solution?.media {
+                if let file = solutionMedia as? TelegramMediaFile, file.isMusic {
+                    galleryMedia = file
+                } else if let map = solutionMedia as? TelegramMediaMap {
+                    galleryMedia = map
+                }
+            }
+        }
+        
         if let mapMedia = galleryMedia as? TelegramMediaMap {
             return .map(mapMedia)
         } else if let file = galleryMedia as? TelegramMediaFile, (file.isSticker || file.isAnimatedSticker) {

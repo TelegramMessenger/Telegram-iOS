@@ -3288,7 +3288,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let (message, _, _) = self.contentInfo() else {
             return false
         }
-
         var canDelete = false
         if let peer = message.peers[message.id.peerId] {
             if peer is TelegramUser || peer is TelegramSecretChat {
@@ -3305,6 +3304,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 canDelete = false
             }
         } else {
+            canDelete = false
+        }
+        if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
             canDelete = false
         }
         return canDelete

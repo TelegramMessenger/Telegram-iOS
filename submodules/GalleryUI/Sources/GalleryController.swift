@@ -436,6 +436,7 @@ public func galleryItemForEntry(
                         context: context,
                         presentationData: presentationData,
                         message: message,
+                        mediaSubject: entry.mediaSubject,
                         location: location,
                         translateToLanguage: translateToLanguage,
                         peerIsCopyProtected: peerIsCopyProtected,
@@ -664,8 +665,16 @@ private func galleryEntriesForMessageHistoryEntries(_ entries: [MessageHistoryEn
                 case .pollOption:
                     if let poll = entry.message.media.first(where: { $0 is TelegramMediaPoll }) as? TelegramMediaPoll {
                         for option in poll.options {
-                            if let _ = option.media {
-                                results.append(GalleryEntry(entry: entry, mediaSubject: .pollOption(option.opaqueIdentifier)))
+                            if let optionMedia = option.media {
+                                var isGalleryMedia = false
+                                if optionMedia is TelegramMediaImage {
+                                    isGalleryMedia = true
+                                } else if let file = optionMedia as? TelegramMediaFile, file.isVideo || file.mimeType.hasPrefix("image/") {
+                                    isGalleryMedia = true
+                                }
+                                if isGalleryMedia {
+                                    results.append(GalleryEntry(entry: entry, mediaSubject: .pollOption(option.opaqueIdentifier)))
+                                }
                             }
                         }
                     }

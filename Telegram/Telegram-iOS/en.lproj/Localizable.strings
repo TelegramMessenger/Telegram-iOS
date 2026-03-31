@@ -8771,6 +8771,7 @@ Sorry for the inconvenience.";
 "Premium.CurrentPlan" = "your current plan";
 "Premium.UpgradeFor" = "Upgrade for %@ / month";
 "Premium.UpgradeForAnnual" = "Upgrade for %@ / year";
+"Premium.UpgradeForBiannual" = "Upgrade for %@ / 2 years";
 
 "ChatList.PremiumAnnualDiscountTitle" = "Telegram Premium with a discount of %@";
 "ChatList.PremiumAnnualDiscountText" = "Sign up for the annual payment plan for Telegram Premium now to get the discount.";
