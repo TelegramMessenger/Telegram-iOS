@@ -1056,7 +1056,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         if !self.bounds.contains(point) {
             return nil
         }
-        if point.y < self.historyFrameNode.frame.minY {
+        if self.albumArtBackground.superview == nil &&  point.y < self.historyFrameNode.frame.minY {
             return self.dimNode.view
         }
         return result
