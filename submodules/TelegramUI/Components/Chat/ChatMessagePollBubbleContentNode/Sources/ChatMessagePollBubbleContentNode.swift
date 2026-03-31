@@ -2781,7 +2781,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     if let data = item.context.currentAppConfiguration.with({ $0 }).data, let value = data["poll_answers_max"] as? Double {
                         maxPollOptions = Int(value)
                     }
-                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll && orderedPollOptions.count < maxPollOptions
+                    
+                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll && !Namespaces.Message.allScheduled.contains(item.message.id.namespace) && orderedPollOptions.count < maxPollOptions
                     if displayAddOption {
                         let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, item.controllerInteraction.focusedTextInputIsMedia, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, addOptionResult.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
