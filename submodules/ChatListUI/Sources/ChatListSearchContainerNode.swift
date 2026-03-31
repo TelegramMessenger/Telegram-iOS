@@ -829,6 +829,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         transition.updateFrame(node: self.filterContainerNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + filtersInsets.left, y: layout.size.height - filtersInsets.bottom - 40.0), size: CGSize(width: layout.size.width - (layout.safeInsets.left + filtersInsets.left) * 2.0, height: 40.0)))
         self.updateFilterContainerNode(layout: layout, transition: transition)
         
+        self.filterContainerNode.isHidden = !self.displaySearchFilters
+        
         if isFirstTime {
             self.filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.appearanceTimestamp = CACurrentMediaTime()
