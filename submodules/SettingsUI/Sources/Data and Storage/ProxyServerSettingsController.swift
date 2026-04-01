@@ -17,10 +17,10 @@ private func shareLink(for server: ProxyServerSettings) -> String {
     switch server.connection {
     case let .mtp(secret):
         let secret = MTProxySecret.parseData(secret)?.serializeToString() ?? ""
-        link = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
+        link = "tg://proxy?server=\(server.host)&port=\(server.port)"
         link += "&secret=\(secret.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
     case let .socks5(username, password):
-        link = "https://t.me/socks?server=\(server.host)&port=\(server.port)"
+        link = "tg://socks?server=\(server.host)&port=\(server.port)"
         link += "&user=\(username?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")&pass=\(password?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
     }
     return link
