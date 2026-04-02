@@ -3312,7 +3312,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     scheme = "https"
                 }
-                let url = URL(string: "\(scheme)://t.me/\(addressName)\(appName)?startapp&addToHomeScreen")!
+                let url = URL(string: "\(scheme)://t.me/\(addressName)\(appName)?startapp=addToHomeScreen")!
                 UIApplication.shared.open(url)
             })
         }
