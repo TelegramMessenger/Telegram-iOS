@@ -588,10 +588,11 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             guard let self else {
                 return false
             }
+            if self.historyFrameTopOverlayNode.bounds.contains(self.view.convert(point, to: self.historyFrameTopOverlayNode.view)) {
+                return true
+            }
             if self.controlsNode.bounds.contains(self.view.convert(point, to: self.controlsNode.view)) {
-                if self.controlsNode.frame.maxY <= self.historyNode.frame.minY {
-                    return true
-                }
+                return true
             }
             return false
         }

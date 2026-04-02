@@ -11,9 +11,6 @@ public func renderSettingsIcon(name: String, scaleFactor: CGFloat = 1.0, backgro
         context.clear(bounds)
         
         if let backgroundColors {
-            context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0).cgPath)
-            context.clip()
-            
             var locations: [CGFloat] = [0.0, 1.0]
             let colors: [CGColor] = backgroundColors.map(\.cgColor)
             
@@ -22,21 +19,17 @@ public func renderSettingsIcon(name: String, scaleFactor: CGFloat = 1.0, backgro
             
             context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: size.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
             
-            context.resetClip()
-            
             if let gradientImage, let cgImage = gradientImage.cgImage {
-                context.saveGState()
                 context.setBlendMode(.plusLighter)
                 context.draw(cgImage, in: CGRect(origin: .zero, size: size))
-                context.restoreGState()
             }
             
             if let backdropImage, let cgImage = backdropImage.cgImage {
-                context.saveGState()
                 context.setBlendMode(.overlay)
                 context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-                context.restoreGState()
             }
+                        
+            context.setBlendMode(.normal)
             
             if let image = UIImage(bundleImageName: name), let maskImage = image.cgImage {
                 let imageSize = CGSize(width: image.size.width * scaleFactor, height: image.size.height * scaleFactor)
@@ -48,6 +41,19 @@ public func renderSettingsIcon(name: String, scaleFactor: CGFloat = 1.0, backgro
                 context.fill(imageRect)
                 context.restoreGState()
             }
+            
+            let outerPath = UIBezierPath(rect: CGRect(origin: .zero, size: size))
+            let innerPath = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0)
+            outerPath.append(innerPath)
+
+            context.saveGState()
+            outerPath.usesEvenOddFillRule = true
+            context.addPath(outerPath.cgPath)
+            context.clip(using: .evenOdd)
+
+            context.setBlendMode(.clear)
+            context.fill(CGRect(origin: .zero, size: size))
+            context.restoreGState()
         } else {
             if let image = UIImage(bundleImageName: name), let cgImage = image.cgImage {
                 let imageSize: CGSize
@@ -66,16 +72,11 @@ public func renderAttachAppIcon(iconImage: UIImage?) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0).cgPath)
-        context.clip()
-        
+                
         if let iconImage, let cgImage = iconImage.cgImage {
             context.draw(cgImage, in: CGRect(origin: .zero, size: size))
         }
 
-        context.resetClip()
-        
         if let gradientImage, let cgImage = gradientImage.cgImage {
             context.saveGState()
             context.setBlendMode(.plusLighter)
@@ -89,6 +90,19 @@ public func renderAttachAppIcon(iconImage: UIImage?) -> UIImage? {
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
             context.restoreGState()
         }
+        
+        let outerPath = UIBezierPath(rect: CGRect(origin: .zero, size: size))
+        let innerPath = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0)
+        outerPath.append(innerPath)
+
+        context.saveGState()
+        outerPath.usesEvenOddFillRule = true
+        context.addPath(outerPath.cgPath)
+        context.clip(using: .evenOdd)
+
+        context.setBlendMode(.clear)
+        context.fill(CGRect(origin: .zero, size: size))
+        context.restoreGState()
     })
 }
 
@@ -156,11 +170,7 @@ public struct PresentationResourcesSettings {
     public static let premium = generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 8.0)
-        context.addPath(path.cgPath)
-        context.clip()
-        
+                
         let colorsArray: [CGColor] = [
             UIColor(rgb: 0x6b93ff).cgColor,
             UIColor(rgb: 0x6b93ff).cgColor,
@@ -173,61 +183,81 @@ public struct PresentationResourcesSettings {
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
         
         if let gradientImage, let cgImage = gradientImage.cgImage {
-            context.saveGState()
             context.setBlendMode(.plusLighter)
             context.draw(cgImage, in: CGRect(origin: .zero, size: size))
-            context.restoreGState()
         }
         
         if let backdropImage, let cgImage = backdropImage.cgImage {
-            context.saveGState()
             context.setBlendMode(.overlay)
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-            context.restoreGState()
         }
+        
+        context.setBlendMode(.normal)
         
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/Icons/Premium"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - image.size.width) / 2.0), y: floorToScreenPixels((bounds.height - image.size.height) / 2.0)), size: image.size))
         }
+        
+        let outerPath = UIBezierPath(rect: CGRect(origin: .zero, size: size))
+        let innerPath = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0)
+        outerPath.append(innerPath)
+
+        context.saveGState()
+        outerPath.usesEvenOddFillRule = true
+        context.addPath(outerPath.cgPath)
+        context.clip(using: .evenOdd)
+
+        context.setBlendMode(.clear)
+        context.fill(CGRect(origin: .zero, size: size))
+        context.restoreGState()
     })
     
-    public static let ton = generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 8.0)
-        context.addPath(path.cgPath)
-        context.clip()
-
-        context.setFillColor(UIColor(rgb: 0x32ade6).cgColor)
-        context.fill(bounds)
-        
-        if let gradientImage, let cgImage = gradientImage.cgImage {
-            context.saveGState()
-            context.setBlendMode(.plusLighter)
-            context.draw(cgImage, in: CGRect(origin: .zero, size: size))
-            context.restoreGState()
-        }
-        
-        if let backdropImage, let cgImage = backdropImage.cgImage {
-            context.saveGState()
-            context.setBlendMode(.overlay)
-            context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-            context.restoreGState()
-        }
-        
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonAbout"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
-            context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - image.size.width) / 2.0), y: floorToScreenPixels((bounds.height - image.size.height) / 2.0)), size: image.size))
-        }
-    })
+    public static let ton = renderSettingsIcon(name: "Ads/TonAbout", backgroundColors: [UIColor(rgb: 0x32ade6)])
+    
+//    generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+//        let bounds = CGRect(origin: CGPoint(), size: size)
+//        context.clear(bounds)
+//        
+//        context.setFillColor(UIColor(rgb: 0x32ade6).cgColor)
+//        context.fill(bounds)
+//        
+//        if let gradientImage, let cgImage = gradientImage.cgImage {
+//            context.saveGState()
+//            context.setBlendMode(.plusLighter)
+//            context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+//            context.restoreGState()
+//        }
+//        
+//        if let backdropImage, let cgImage = backdropImage.cgImage {
+//            context.saveGState()
+//            context.setBlendMode(.overlay)
+//            context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
+//            context.restoreGState()
+//        }
+//        
+//        context.setBlendMode(.normal)
+//        
+//        if let image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonAbout"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
+//            context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - image.size.width) / 2.0), y: floorToScreenPixels((bounds.height - image.size.height) / 2.0)), size: image.size))
+//        }
+//        
+//        let outerPath = UIBezierPath(rect: CGRect(origin: .zero, size: size))
+//        let innerPath = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0)
+//        outerPath.append(innerPath)
+//
+//        context.saveGState()
+//        outerPath.usesEvenOddFillRule = true
+//        context.addPath(outerPath.cgPath)
+//        context.clip(using: .evenOdd)
+//
+//        context.setBlendMode(.clear)
+//        context.fill(CGRect(origin: .zero, size: size))
+//        context.restoreGState()
+//    })
     
     public static let stars = generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 7.0)
-        context.addPath(path.cgPath)
-        context.clip()
         
         let colorsArray: [CGColor] = [
             UIColor(rgb: 0xfec80f).cgColor,
@@ -239,31 +269,38 @@ public struct PresentationResourcesSettings {
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
         
         if let gradientImage, let cgImage = gradientImage.cgImage {
-            context.saveGState()
             context.setBlendMode(.plusLighter)
             context.draw(cgImage, in: CGRect(origin: .zero, size: size))
-            context.restoreGState()
         }
         
         if let backdropImage, let cgImage = backdropImage.cgImage {
-            context.saveGState()
             context.setBlendMode(.overlay)
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-            context.restoreGState()
         }
+        
+        context.setBlendMode(.normal)
         
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/Icons/Stars"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - image.size.width) / 2.0), y: floorToScreenPixels((bounds.height - image.size.height) / 2.0)), size: image.size))
         }
+        
+        let outerPath = UIBezierPath(rect: CGRect(origin: .zero, size: size))
+        let innerPath = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0)
+        outerPath.append(innerPath)
+
+        context.saveGState()
+        outerPath.usesEvenOddFillRule = true
+        context.addPath(outerPath.cgPath)
+        context.clip(using: .evenOdd)
+
+        context.setBlendMode(.clear)
+        context.fill(CGRect(origin: .zero, size: size))
+        context.restoreGState()
     })
     
     public static let premiumGift = generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 8.0)
-        context.addPath(path.cgPath)
-        context.clip()
         
         let colorsArray: [CGColor] = [
             UIColor(rgb: 0x3ba1f2).cgColor,
@@ -277,22 +314,33 @@ public struct PresentationResourcesSettings {
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
         
         if let gradientImage, let cgImage = gradientImage.cgImage {
-            context.saveGState()
             context.setBlendMode(.plusLighter)
             context.draw(cgImage, in: CGRect(origin: .zero, size: size))
-            context.restoreGState()
         }
         
         if let backdropImage, let cgImage = backdropImage.cgImage {
-            context.saveGState()
             context.setBlendMode(.overlay)
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-            context.restoreGState()
         }
+        
+        context.setBlendMode(.normal)
         
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/Icons/Gift"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - image.size.width) / 2.0), y: floorToScreenPixels((bounds.height - image.size.height) / 2.0)), size: image.size))
         }
+        
+        let outerPath = UIBezierPath(rect: CGRect(origin: .zero, size: size))
+        let innerPath = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 8.0)
+        outerPath.append(innerPath)
+
+        context.saveGState()
+        outerPath.usesEvenOddFillRule = true
+        context.addPath(outerPath.cgPath)
+        context.clip(using: .evenOdd)
+
+        context.setBlendMode(.clear)
+        context.fill(CGRect(origin: .zero, size: size))
+        context.restoreGState()
     })
     
     public static let bot = renderSettingsIcon(name: "Item List/Icons/Bot", backgroundColors: [colorBlue])
