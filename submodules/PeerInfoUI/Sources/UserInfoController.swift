@@ -13,7 +13,6 @@ import TextFormat
 import OverlayStatusController
 import TelegramStringFormatting
 import AccountContext
-import ShareController
 import AlertUI
 import PresentationDataUtils
 import TelegramNotices

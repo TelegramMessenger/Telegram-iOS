@@ -18,7 +18,7 @@ import DeviceAccess
 import TelegramVoip
 import PresentationDataUtils
 import UndoUI
-import ShareController
+
 import AvatarNode
 import TelegramAudio
 import LegacyComponents
@@ -825,8 +825,13 @@ final class VideoChatScreenComponent: Component {
                             return formatSendTitle(environment.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
                         })]
                     }
-                    let shareController = ShareController(context: groupCall.accountContext, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink)
-                    shareController.completed = { [weak self] peerIds in
+                    let shareController = groupCall.accountContext.sharedContext.makeShareController(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
+                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
+                            return
+                        }
+                        let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                        self.presentToast(icon: .animation("anim_linkcopied"), text: presentationData.strings.VoiceChat_InviteLinkCopiedText, duration: 3)
+                    }, completed: { [weak self] peerIds in
                         guard let self, case let .group(groupCall) = self.currentCall else {
                             return
                         }
@@ -839,10 +844,10 @@ final class VideoChatScreenComponent: Component {
                             guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                 return
                             }
-                            
+
                             let peers = peerList.compactMap { $0 }
                             let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                            
+
                             let text: String
                             var isSavedMessages = false
                             if peers.count == 1, let peer = peers.first {
@@ -861,14 +866,7 @@ final class VideoChatScreenComponent: Component {
                             }
                             self.presentToast(icon: .animation(isSavedMessages ? "anim_savedmessages" : "anim_forward"), text: text, duration: 3)
                         })
-                    }
-                    shareController.actionCompleted = { [weak self] in
-                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
-                            return
-                        }
-                        let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                        self.presentToast(icon: .animation("anim_linkcopied"), text: presentationData.strings.VoiceChat_InviteLinkCopiedText, duration: 3)
-                    }
+                    }))
                     environment.controller()?.present(shareController, in: .window(.root))
                 })
             } else if groupCall.isConference {
@@ -876,8 +874,13 @@ final class VideoChatScreenComponent: Component {
                     return
                 }
                 
-                let shareController = ShareController(context: groupCall.accountContext, subject: .url(inviteLinks.listenerLink), forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink)
-                shareController.completed = { [weak self] peerIds in
+                let shareController = groupCall.accountContext.sharedContext.makeShareController(context: groupCall.accountContext, params: ShareControllerParams(subject: .url(inviteLinks.listenerLink), forceTheme: environment.theme, forcedActionTitle: environment.strings.VoiceChat_CopyInviteLink, actionCompleted: { [weak self] in
+                    guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
+                        return
+                    }
+                    let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                    self.presentToast(icon: .animation("anim_linkcopied"), text: presentationData.strings.VoiceChat_InviteLinkCopiedText, duration: 3)
+                }, completed: { [weak self] peerIds in
                     guard let self, case let .group(groupCall) = self.currentCall else {
                         return
                     }
@@ -890,10 +893,10 @@ final class VideoChatScreenComponent: Component {
                         guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                             return
                         }
-                        
+
                         let peers = peerList.compactMap { $0 }
                         let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                        
+
                         let text: String
                         var isSavedMessages = false
                         if peers.count == 1, let peer = peers.first {
@@ -912,14 +915,7 @@ final class VideoChatScreenComponent: Component {
                         }
                         self.presentToast(icon: .animation(isSavedMessages ? "anim_savedmessages" : "anim_forward"), text: text, duration: 3)
                     })
-                }
-                shareController.actionCompleted = { [weak self] in
-                    guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
-                        return
-                    }
-                    let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                    self.presentToast(icon: .animation("anim_linkcopied"), text: presentationData.strings.VoiceChat_InviteLinkCopiedText, duration: 3)
-                }
+                }))
                 environment.controller()?.present(shareController, in: .window(.root))
             }
         }

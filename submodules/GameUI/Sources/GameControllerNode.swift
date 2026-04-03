@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import ShareController
 import UndoUI
+import EmojiStatusComponent
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -144,7 +145,7 @@ final class GameControllerNode: ViewControllerTracingNode {
         if eventName == "share_game" || eventName == "share_score" {
             if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
                 if eventName == "share_score" {
-                    self.present(ShareController(context: self.context, subject: .fromExternal(1, { [weak self] peerIds, threadIds, requireStars, text, account, _ in
+                    self.present(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .fromExternal(1, { [weak self] peerIds, threadIds, requireStars, text, account, _ in
                         if let strongSelf = self, let message = strongSelf.message, let account = account as? ShareControllerAppAccountContext {
                             let signals = peerIds.map { TelegramEngine(account: account.context.account).messages.forwardGameWithScore(messageId: message.id, to: $0, threadId: threadIds[$0], as: nil) }
                             return .single(.preparing(false))
@@ -158,7 +159,7 @@ final class GameControllerNode: ViewControllerTracingNode {
                         } else {
                             return .single(.done)
                         }
-                    }), showInChat: nil, externalShare: false, immediateExternalShare: false), nil)
+                    }), showInChat: nil, externalShare: false, immediateExternalShare: false)), nil)
                 } else {
                     self.shareWithoutScore()
                 }
@@ -171,13 +172,12 @@ final class GameControllerNode: ViewControllerTracingNode {
             let url = "https://t.me/\(addressName)?game=\(gameName)"
             
             let context = self.context
-            let shareController = ShareController(context: context, subject: .url(url), showInChat: nil, externalShare: true)
-            shareController.actionCompleted = { [weak self] in
+            let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(url), showInChat: nil, externalShare: true, actionCompleted: { [weak self] in
                 if let strongSelf = self {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }
-            }
+            }))
             self.present(shareController, nil)
         }
     }

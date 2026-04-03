@@ -10,7 +10,6 @@ import ContextUI
 import TelegramPresentationData
 import NotificationPeerExceptionController
 import NotificationExceptionsScreen
-import ShareController
 import TranslateUI
 import TelegramNotices
 import AlertComponent
@@ -584,8 +583,7 @@ extension PeerInfoScreenNode {
                             
                             if let strongSelf = self {
                                 let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
-                                let shareController = ShareController(context: strongSelf.context, subject: .media(.standalone(media: contact), nil), updatedPresentationData: strongSelf.controller?.updatedPresentationData)
-                                shareController.completed = { [weak self] peerIds in
+                                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .media(.standalone(media: contact), nil), updatedPresentationData: strongSelf.controller?.updatedPresentationData, completed: { [weak self] peerIds in
                                     if let strongSelf = self {
                                         let _ = (strongSelf.context.engine.data.get(
                                             EngineDataList(
@@ -596,11 +594,11 @@ extension PeerInfoScreenNode {
                                             guard let strongSelf = self else {
                                                 return
                                             }
-                                            
+
                                             let peers = peerList.compactMap { $0 }
-                                            
+
                                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                            
+
                                             let text: String
                                             var savedMessages = false
                                             if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
@@ -621,7 +619,7 @@ extension PeerInfoScreenNode {
                                                     text = ""
                                                 }
                                             }
-                                            
+
                                             strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
                                                 if savedMessages, let self, action == .info {
                                                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
@@ -639,7 +637,7 @@ extension PeerInfoScreenNode {
                                             }), in: .current)
                                         })
                                     }
-                                }
+                                }))
                                 strongSelf.controller?.present(shareController, in: .window(.root))
                             }
                         })))

@@ -5,8 +5,8 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
-import ShareController
 import AppBundle
+import ShareController
 
 public final class ReportPeerDetailsActionSheetItem: ActionSheetItem {
     let context: AccountContext

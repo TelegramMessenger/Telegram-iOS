@@ -10,9 +10,9 @@ import TelegramUIPreferences
 import AccountContext
 import AlertUI
 import PresentationDataUtils
-import ShareController
 import AvatarNode
 import UndoUI
+import ShareController
 
 public final class VoiceChatJoinScreen: ViewController {
     private var controllerNode: Node {

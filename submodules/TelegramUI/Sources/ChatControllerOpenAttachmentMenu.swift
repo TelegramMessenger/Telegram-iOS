@@ -12,6 +12,7 @@ import PresentationDataUtils
 import TextFormat
 import UrlHandling
 import AccountContext
+import ShareController
 import ChatPresentationInterfaceState
 import LegacyComponents
 import LegacyUI
@@ -32,7 +33,6 @@ import TelegramCallsUI
 import AutomaticBusinessMessageSetupScreen
 import MediaEditorScreen
 import CameraScreen
-import ShareController
 import ComposeTodoScreen
 import ComposePollScreen
 import Photos

@@ -9,7 +9,6 @@ import Photos
 import TelegramPresentationData
 import TextFormat
 import AccountContext
-import ShareController
 import GalleryUI
 import AppBundle
 
@@ -147,7 +146,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func actionButtonPressed() {
         if let shareMedia = self.shareMedia {
-            self.controllerInteraction?.presentController(ShareController(context: self.context, subject: .media(shareMedia, nil), preferredAction: .saveToCameraRoll, showInChat: nil, externalShare: true, immediateExternalShare: false), nil)
+            self.controllerInteraction?.presentController(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .media(shareMedia, nil), preferredAction: .saveToCameraRoll, showInChat: nil, externalShare: true, immediateExternalShare: false)), nil)
         }
     }
 }

@@ -1562,11 +1562,10 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         guard let inviteLink = invite.link else {
             return
         }
-        let shareController = ShareController(context: context, subject: .url(inviteLink), updatedPresentationData: updatedPresentationData)
-        shareController.actionCompleted = {
+        let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(inviteLink), updatedPresentationData: updatedPresentationData, actionCompleted: {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-        }
+        }))
         presentControllerImpl?(shareController, nil)
     }, linkContextAction: { node, gesture in
         guard let node = node as? ContextReferenceContentNode, let controller = getControllerImpl?() else {

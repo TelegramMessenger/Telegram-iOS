@@ -9,6 +9,7 @@ import Lottie
 import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
+import ShareController
 import GalleryUI
 import InstantPageUI
 import LocationUI
@@ -18,7 +19,6 @@ import PeerInfoUI
 import SettingsUI
 import AlertUI
 import PresentationDataUtils
-import ShareController
 import UndoUI
 import WebsiteType
 import GalleryData
@@ -233,7 +233,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.dismissInput()
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                 if immediateShare {
-                    let controller = ShareController(context: params.context, subject: .media(.standalone(media: file), nil), immediateExternalShare: true)
+                    let controller = params.context.sharedContext.makeShareController(context: params.context, params: ShareControllerParams(subject: .media(.standalone(media: file), nil), immediateExternalShare: true))
                     params.present(controller, nil, .window(.root))
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {

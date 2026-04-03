@@ -9,7 +9,6 @@ import ComponentFlow
 import ViewControllerComponent
 import AccountContext
 import ContextUI
-import ShareController
 import UndoUI
 import BundleIconComponent
 import TelegramUIPreferences
@@ -576,8 +575,9 @@ public class BrowserScreen: ViewController, MinimizableController {
                     } else {
                         subject = .url(url)
                     }
-                    let shareController = ShareController(context: self.context, subject: subject)
-                    shareController.completed = { [weak self] peerIds in
+                    let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: subject, actionCompleted: { [weak self] in
+                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }, completed: { [weak self] peerIds in
                         guard let self else {
                             return
                         }
@@ -590,10 +590,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                             guard let self else {
                                 return
                             }
-                            
+
                             let peers = peerList.compactMap { $0 }
                             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                            
+
                             let text: String
                             var savedMessages = false
                             if peerIds.count == 1, let peerId = peerIds.first, peerId == self.context.account.peerId && !isDocument {
@@ -615,7 +615,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                                     text = ""
                                 }
                             }
-                            
+
                             self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
                                 if savedMessages, let self, action == .info {
                                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
@@ -633,10 +633,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                                 return false
                             }), in: .current)
                         })
-                    }
-                    shareController.actionCompleted = { [weak self] in
-                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                    }
+                    }))
                     self.controller?.present(shareController, in: .window(.root))
                 case .minimize:
                     self.minimize()

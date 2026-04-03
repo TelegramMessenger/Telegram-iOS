@@ -17,7 +17,6 @@ import ImageContentAnalysis
 import TextSelectionNode
 import Speak
 import TranslateUI
-import ShareController
 import UndoUI
 import ContextUI
 import SaveToCameraRoll
@@ -388,7 +387,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             }
                         case .share:
                             if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
-                                let shareController = ShareController(context: strongSelf.context, subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData))
+                                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData)))
                                 controller.present(shareController, in: .window(.root))
                             }
                         case .lookup:

@@ -4223,11 +4223,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func makeShareController(context: AccountContext, subject: ShareControllerSubject, forceExternal: Bool, shareStory: (() -> Void)?, enqueued: (([PeerId], [Int64]) -> Void)?, actionCompleted: (() -> Void)?) -> ViewController {
-        let controller = ShareController(context: context, subject: subject, externalShare: forceExternal)
-        controller.shareStory = shareStory
-        controller.enqueued = enqueued
-        controller.actionCompleted = actionCompleted
+    public func makeShareController(context: AccountContext, params: ShareControllerParams) -> ViewController {
+        let controller = ShareController(context: context, subject: params.subject, presetText: params.presetText, preferredAction: params.preferredAction, showInChat: params.showInChat, fromForeignApp: params.fromForeignApp, segmentedValues: params.segmentedValues, externalShare: params.externalShare, immediateExternalShare: params.immediateExternalShare, immediatePeerId: params.immediatePeerId, updatedPresentationData: params.updatedPresentationData, forceTheme: params.forceTheme, forcedActionTitle: params.forcedActionTitle, shareAsLink: params.shareAsLink, collectibleItemInfo: params.collectibleItemInfo)
+        controller.actionCompleted = params.actionCompleted
+        controller.dismissed = params.dismissed
+        controller.completed = params.completed
+        controller.enqueued = params.enqueued
+        controller.shareStory = params.shareStory
+        controller.debugAction = params.debugAction
+        controller.onMediaTimestampLinkCopied = params.onMediaTimestampLinkCopied
+        controller.parentNavigationController = params.parentNavigationController
+        controller.canSendInHighQuality = params.canSendInHighQuality
         return controller
     }
     

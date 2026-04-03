@@ -10,6 +10,7 @@ import ItemListUI
 import PresentationDataUtils
 import TelegramStringFormatting
 import AccountContext
+import ShareController
 import AlertUI
 import PresentationDataUtils
 import PhotoResources
@@ -24,7 +25,6 @@ import UndoUI
 import GalleryUI
 import PeerAvatarGalleryUI
 import Postbox
-import ShareController
 import ContextUI
 
 private enum DeviceContactInfoAction {
