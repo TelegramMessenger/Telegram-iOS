@@ -1346,7 +1346,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                         node.buttonNode.isAccessibilityElement = shouldHaveRadioNode
 
                         let previousResultBarWidth = minBarWidth + floor((width - leftInset - rightInset - minBarWidth) * (currentResult?.normalized ?? 0.0))
-                        let previousFrame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - 6.0 - 1.0), size: CGSize(width: previousResultBarWidth, height: 6.0))
+                        let previousFrame = CGRect(origin: CGPoint(x: leftInset, y: contentLayoutHeight - 6.0 - 1.0), size: CGSize(width: previousResultBarWidth, height: 4.0))
 
                         node.resultBarNode.layer.animateSpring(from: NSValue(cgPoint: previousFrame.center), to: NSValue(cgPoint: node.resultBarNode.frame.center), keyPath: "position", duration: 0.6, damping: 110.0)
                         node.resultBarNode.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: previousFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: node.resultBarNode.frame.size)), keyPath: "bounds", duration: 0.6, damping: 110.0)
@@ -2781,7 +2781,8 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     if let data = item.context.currentAppConfiguration.with({ $0 }).data, let value = data["poll_answers_max"] as? Double {
                         maxPollOptions = Int(value)
                     }
-                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll && orderedPollOptions.count < maxPollOptions
+                    
+                    let displayAddOption = poll.openAnswers && !isClosed && poll.pollId.namespace == Namespaces.Media.CloudPoll && !Namespaces.Message.allScheduled.contains(item.message.id.namespace) && item.message.forwardInfo == nil && orderedPollOptions.count < maxPollOptions
                     if displayAddOption {
                         let addOptionResult = makeAddOptionLayout(item.context, item.presentationData, item.presentationData.strings, incoming, item.controllerInteraction.focusedTextInputIsMedia, currentNewOptionText, currentNewOptionAttachment, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, addOptionResult.minimumWidth + layoutConstants.bubble.borderInset * 2.0)

@@ -953,6 +953,11 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
                 }
                 profileAudioTransition.updateFrame(view: profileAudioView, frame: profileAudioFrame)
             }
+        } else if let profileAudio = self.profileAudio {
+            self.profileAudio = nil
+            if let profileAudioView = profileAudio.view {
+                profileAudioView.removeFromSuperview()
+            }
         }
         
         return finalPanelHeight

@@ -7547,8 +7547,8 @@ public final class StoryItemSetContainerComponent: Component {
             })
         }
         
-        private func performMusicAction(file: FileMediaReference, sourceView: UIView, gesture: ContextGesture?) {
-            guard let component = self.component, let controller = component.controller() else {
+        private func performMusicAction(file: TelegramMediaFile, sourceView: UIView, gesture: ContextGesture?) {
+            guard let component = self.component, let controller = component.controller(), let peer = PeerReference(component.slice.peer._asPeer()) else {
                 return
             }
             
@@ -7556,6 +7556,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             
+            let fileReference: FileMediaReference = .story(peer: peer, id: component.slice.item.storyItem.id, media: file)
+
             let items = component.context.engine.peers.savedMusicIds()
             |> take(1)
             |> map { [weak self] savedIds -> ContextController.Items in
@@ -7580,7 +7582,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         return
                                     }
                                                         
-                                    let _ = component.context.engine.peers.addSavedMusic(file: file).start()
+                                    let _ = component.context.engine.peers.addSavedMusic(file: fileReference).start()
                                     
                                     guard let controller = component.controller() as? StoryContainerScreen else {
                                         return
@@ -7638,7 +7640,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         return
                                     }
                                     
-                                    let _ = component.context.engine.messages.enqueueOutgoingMessage(to: component.context.account.peerId, replyTo: nil, content: .file(file)).start()
+                                    let _ = component.context.engine.messages.enqueueOutgoingMessage(to: component.context.account.peerId, replyTo: nil, content: .file(fileReference)).start()
                                     
                                     guard let controller = component.controller() as? StoryContainerScreen else {
                                         return

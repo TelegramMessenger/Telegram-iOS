@@ -526,7 +526,10 @@ public final class PeerInfoCoverComponent: Component {
             let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -1000.0 + availableSize.height), size: CGSize(width: availableSize.width, height: 1000.0))
             transition.containedViewLayoutTransition.updateFrameAdditive(view: self.backgroundView, frame: backgroundFrame)
                         
-            let patternWidth: CGFloat = min(380.0, availableSize.width - 32.0)
+            var patternWidth: CGFloat = 380.0
+            if case .managedBot = component.subject {
+                patternWidth = min(380.0, availableSize.width - 32.0)
+            }
             let avatarPatternFrame = CGSize(width: patternWidth, height: floor(component.defaultHeight * 1.0)).centered(around: component.avatarCenter)
             transition.setFrame(layer: self.avatarBackgroundPatternContentsLayer, frame: avatarPatternFrame)
             

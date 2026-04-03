@@ -11,7 +11,7 @@ public struct PresentationResourcesDevices {
     public static let macbook = renderSettingsIcon(name: "Settings/Devices/Mac", backgroundColors: [colorBlue])
     public static let iOS = renderAttachAppIcon(iconImage: UIImage(bundleImageName: "Settings/Devices/iOS"))
     
-    public static let android = renderSettingsIcon(name: "Settings/Devices/Watch", backgroundColors: [colorGreen])
+    public static let android = renderSettingsIcon(name: "Settings/Devices/Android", backgroundColors: [colorGreen])
     
     public static let safari = renderAttachAppIcon(iconImage: UIImage(bundleImageName: "Settings/Devices/Safari"))
     public static let chrome = renderSettingsIcon(name: "Settings/Devices/Chrome", backgroundColors: [colorGreen])
