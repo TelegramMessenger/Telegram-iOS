@@ -31,17 +31,16 @@ jobs:
       - name: Build the App
         run: |
           set -x
-
           # source code paths are included in the final binary, so we need to make them stable across builds
           SOURCE_DIR=/Users/Shared/telegram-ios
 
-          # use canonical bazel root
+           # use canonical bazel root
           BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
 
           cd $SOURCE_DIR
 
           BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
-
+          
           export APP_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')
           export COMMIT_COUNT=$(git rev-list --count HEAD)
           export COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
@@ -58,20 +57,16 @@ jobs:
             --configuration=release_arm64 \
             --buildNumber="$BUILD_NUMBER"
 
-          # collect ipa
+          # Collect IPA
           OUTPUT_PATH="build/artifacts"
           rm -rf "$OUTPUT_PATH"
           mkdir -p "$OUTPUT_PATH"
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            cp "$f" $OUTPUT_PATH/
-          done
+          cp bazel-bin/Telegram/Telegram.ipa "$OUTPUT_PATH/"
 
-          # collect dsym
+          # Collect dSYM files
           mkdir -p build/DSYMs
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM; do
-            cp -R "$f" build/DSYMs/
-          done
-          zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
+          cp -R bazel-bin/Telegram/*.dSYM build/DSYMs/
+          zip -r "$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
 
       - name: Create Release
         id: create_release
