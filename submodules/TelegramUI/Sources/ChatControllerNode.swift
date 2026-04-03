@@ -888,7 +888,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self?.interfaceInteraction?.presentController(controller, nil)
         })
         if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_disable_ai_chat"] as? Double, value == 1.0 {
-        } else {
+        } else if let peerId = self.presentationInterfaceState.chatLocation.peerId, peerId.namespace != Namespaces.Peer.SecretChat {
             self.textInputPanelNode?.isAIEnabled = true
         }
         self.textInputPanelNode?.textInputAccessoryPanel = textInputAccessoryPanel
