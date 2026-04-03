@@ -74,6 +74,16 @@ public final class ChatInlineSearchResultsListComponent: Component {
         case monoforumChats(query: String)
     }
     
+    public final class ScrollingState {
+        fileprivate let entryId: Entry.Id
+        fileprivate let entryOffset: CGFloat
+        
+        fileprivate init(entryId: Entry.Id, entryOffset: CGFloat) {
+            self.entryId = entryId
+            self.entryOffset = entryOffset
+        }
+    }
+    
     public let context: AccountContext
     public let presentation: Presentation
     public let peerId: EnginePeer.Id?
@@ -81,6 +91,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
     public let insets: UIEdgeInsets
     public let inputHeight: CGFloat
     public let showEmptyResults: Bool
+    public let initialScrollingState: ScrollingState?
     public let messageSelected: (EngineMessage) -> Void
     public let peerSelected: (EnginePeer) -> Void
     public let loadTagMessages: (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?
@@ -97,6 +108,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         insets: UIEdgeInsets,
         inputHeight: CGFloat,
         showEmptyResults: Bool,
+        initialScrollingState: ScrollingState?,
         messageSelected: @escaping (EngineMessage) -> Void,
         peerSelected: @escaping (EnginePeer) -> Void,
         loadTagMessages: @escaping (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?,
@@ -112,6 +124,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         self.insets = insets
         self.inputHeight = inputHeight
         self.showEmptyResults = showEmptyResults
+        self.initialScrollingState = initialScrollingState
         self.messageSelected = messageSelected
         self.peerSelected = peerSelected
         self.loadTagMessages = loadTagMessages
@@ -146,7 +159,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         return true
     }
     
-    private enum Entry: Equatable, Comparable {
+    fileprivate enum Entry: Equatable, Comparable {
         enum Id: Hashable {
             case peer(EnginePeer.Id)
             case message(EngineMessage.Id)
@@ -371,6 +384,26 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 }
             }
             return result
+        }
+        
+        public func scrollingState() -> ScrollingState? {
+            var scrollingState: ScrollingState?
+            self.listNode.forEachVisibleItemNode { itemNode in
+                if scrollingState != nil {
+                    return
+                }
+                if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
+                    switch item.content {
+                    case let .peer(peerData):
+                        if let message = peerData.messages.first {
+                            scrollingState = ScrollingState(entryId: .message(message.id), entryOffset: itemNode.frame.minY - self.listNode.insets.top)
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+            return scrollingState
         }
         
         func update(component: ChatInlineSearchResultsListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -1126,6 +1159,22 @@ public final class ChatInlineSearchResultsListComponent: Component {
                     listTransactionOptions.insert(.AnimateInsertion)
                 }
                 self.hintAnimateListTransition = false
+                
+                if previousComponent == nil, let initialScrollingState = component.initialScrollingState {
+                    var index = 0
+                    for entry in contentsState.entries {
+                        if entry.id == initialScrollingState.entryId {
+                            scrollToItem = ListViewScrollToItem(
+                                index: index,
+                                position: .top(initialScrollingState.entryOffset),
+                                animated: false,
+                                curve: .Default(duration: nil),
+                                directionHint: .Up
+                            )
+                        }
+                        index += 1
+                    }
+                }
                 
                 self.listNode.transaction(
                     deleteIndices: deleteIndices.map { index in

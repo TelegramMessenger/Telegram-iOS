@@ -310,8 +310,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             }
         }
         didSet {
-             if let scrubberView = self.scrubberView {
+            if let scrubberView = self.scrubberView {
                 self.view.addSubview(scrubberView)
+                scrubberView.onRequestLayout = { [weak self] transition in
+                    guard let self else {
+                        return
+                    }
+                    if let requestLayout = self.requestLayout {
+                        requestLayout(transition)
+                    } else {
+                        if let validLayout = self.validLayout {
+                            let _ = self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, contentInset: validLayout.5, transition: transition)
+                        }
+                    }
+                }
                 scrubberView.updateScrubbingVisual = { [weak self] value in
                     guard let strongSelf = self else {
                         return
@@ -1296,7 +1308,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 panelHeight -= 44.0
             }
             
-            let scrubberFrame = CGRect(origin: CGPoint(x: buttonPanelInsets.left, y: scrubberY), size: CGSize(width: width - buttonPanelInsets.left - buttonPanelInsets.right, height: 44.0))
+            var scrubberFrame = CGRect(origin: CGPoint(x: buttonPanelInsets.left, y: scrubberY), size: CGSize(width: width - buttonPanelInsets.left - buttonPanelInsets.right, height: 44.0))
+            if scrubberView.hasVisibleInfo {
+                let infoHeight: CGFloat = 16.0
+                scrubberFrame.size.height += infoHeight
+                panelHeight += infoHeight
+            }
+            
             scrubberView.updateLayout(size: scrubberFrame.size, leftInset: 0.0, rightInset: 0.0, isCollapsed: self.visibilityAlpha < 1.0, transition: transition)
             transition.updateBounds(layer: scrubberView.layer, bounds: CGRect(origin: CGPoint(), size: scrubberFrame.size))
             transition.updatePosition(layer: scrubberView.layer, position: CGPoint(x: scrubberFrame.midX, y: scrubberFrame.midY))

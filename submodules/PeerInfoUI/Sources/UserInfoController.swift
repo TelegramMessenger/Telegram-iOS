@@ -61,6 +61,8 @@ public func openAddPersonContactImpl(context: AccountContext, updatedPresentatio
         let controller = context.sharedContext.makeNewContactScreen(
             context: context,
             peer: peer,
+            firstName: nil,
+            lastName: nil,
             phoneNumber: user.phone,
             shareViaException: shareViaException,
             completion: { peer, _, _ in

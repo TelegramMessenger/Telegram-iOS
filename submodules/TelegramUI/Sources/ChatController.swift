@@ -1405,14 +1405,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if case .current = i {
-                        c.presentationArguments = a
-                        c.statusBar.alphaUpdated = { [weak self] transition in
-                            guard let self else {
-                                return
+                        if c is UndoOverlayController {
+                            self.present(c, in: .current)
+                        } else {
+                            c.presentationArguments = a
+                            c.statusBar.alphaUpdated = { [weak self] transition in
+                                guard let self else {
+                                    return
+                                }
+                                self.updateStatusBarPresentation(animated: transition.isAnimated)
                             }
-                            self.updateStatusBarPresentation(animated: transition.isAnimated)
+                            self.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
                         }
-                        self.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
                     } else {
                         self.present(c, in: .window(.root), with: a, blockInteraction: true)
                     }
@@ -3617,7 +3621,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, addContact: { [weak self] phoneNumber in
             if let strongSelf = self {
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                    strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
+                    strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, peer: nil, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
                         self?.present(controller, in: .window(.root), with: arguments)
                     }, pushController: { [weak self] controller in
                         if let strongSelf = self {
@@ -9105,6 +9109,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let controller = self.context.sharedContext.makeNewContactScreen(
                 context: self.context,
                 peer: EnginePeer(peer),
+                firstName: nil,
+                lastName: nil,
                 phoneNumber: nil,
                 shareViaException: peerStatusSettings.contains(.addExceptionWhenAddingContact),
                 completion: { [weak self] peer, _, _ in

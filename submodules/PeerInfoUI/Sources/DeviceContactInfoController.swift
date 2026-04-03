@@ -1516,8 +1516,22 @@ public func pushContactContextOptionsController(context: AccountContext, context
         .action(ContextMenuActionItem(text: presentationData.strings.Chat_Context_Phone_CreateNewContact, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
             f(.default)
             
-            push(context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: context), environment: ShareControllerAppEnvironment(sharedContext: context.sharedContext), subject: .create(peer: peer?._asPeer(), contactData: contactData, isSharing: peer != nil, shareViaException: false, completion: { _, _, _ in
-            }), completed: nil, cancelled: nil))
+            context.sharedContext.openAddContact(
+                context: context,
+                peer: peer,
+                firstName: contactData.basicData.firstName,
+                lastName: contactData.basicData.lastName,
+                phoneNumber: contactData.basicData.phoneNumbers.first?.value ?? "",
+                label: contactData.basicData.phoneNumbers.first?.label ?? "mobile",
+                present: { [weak parentController] c, a in
+                    parentController?.present(c, in: .window(.root), with: a)
+                },
+                pushController: { c in
+                    push(c)
+                },
+                completed: {
+                }
+            )
         }))
     )
     items.append(

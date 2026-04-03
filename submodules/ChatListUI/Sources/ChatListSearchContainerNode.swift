@@ -1343,8 +1343,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     public override func searchTextClearTokens() {
+        self.folder = nil
         self.updateSearchOptions(nil)
-//        self.setQuery?(nil, [], self.searchQueryValue ?? "")
     }
     
     func deleteMessages(messageIds: Set<EngineMessage.Id>?) {

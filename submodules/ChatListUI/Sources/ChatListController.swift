@@ -1789,7 +1789,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.chatListDisplayNode.requestAddContact = { [weak self] phoneNumber in
             if let strongSelf = self {
                 strongSelf.view.endEditing(true)
-                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
+                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, peer: nil, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
                 }, pushController: { [weak self] controller in
                     (self?.navigationController as? NavigationController)?.pushViewController(controller)

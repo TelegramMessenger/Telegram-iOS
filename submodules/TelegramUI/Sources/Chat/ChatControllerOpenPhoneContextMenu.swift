@@ -79,7 +79,7 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
                     ])
                     let contactData = DeviceContactExtendedData(basicData: basicData, middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
                     
-                    pushContactContextOptionsController(context: self.context, contextController: c, presentationData: self.presentationData, peer: nil, contactData: contactData, parentController: self, push: { [weak self] c in
+                    pushContactContextOptionsController(context: self.context, contextController: c, presentationData: self.presentationData, peer: peer, contactData: contactData, parentController: self, push: { [weak self] c in
                         self?.push(c)
                     })
                 }))

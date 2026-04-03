@@ -202,6 +202,8 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                     let controller = strongSelf.context.sharedContext.makeNewContactScreen(
                         context: strongSelf.context,
                         peer: nil,
+                        firstName: nil,
+                        lastName: nil,
                         phoneNumber: nil,
                         shareViaException: false,
                         completion: { [weak self] peer, stableId, contactData in

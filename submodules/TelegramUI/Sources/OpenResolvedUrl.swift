@@ -765,6 +765,7 @@ func openResolvedUrlImpl(
             if case .new = section {
                 context.sharedContext.openAddContact(
                     context: context,
+                    peer: nil,
                     firstName: "",
                     lastName: "",
                     phoneNumber: "",
@@ -841,6 +842,7 @@ func openResolvedUrlImpl(
             case .contact:
                 context.sharedContext.openAddContact(
                     context: context,
+                    peer: nil,
                     firstName: "",
                     lastName: "",
                     phoneNumber: "",

@@ -141,7 +141,7 @@ extension ChatControllerImpl {
             openText = self.presentationData.strings.Conversation_FileOpenIn
         }
             
-        let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil// anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
+        let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = params.gesture
         let gesture: ContextGesture? = nil // anyRecognizer as? ContextGesture
         
         let source: ContextContentSource

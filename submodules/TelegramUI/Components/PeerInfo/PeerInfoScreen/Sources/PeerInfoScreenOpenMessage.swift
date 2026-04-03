@@ -76,7 +76,7 @@ extension PeerInfoScreenNode {
         }, openAd: { _ in
         }, addContact: { [weak self] phoneNumber in
             if let strongSelf = self {
-                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
+                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, peer: nil, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
                     self?.controller?.present(controller, in: .window(.root), with: arguments)
                 }, pushController: { [weak self] controller in
                     if let strongSelf = self {

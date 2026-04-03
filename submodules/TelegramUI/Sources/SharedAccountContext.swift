@@ -2323,8 +2323,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return LocalizationListController(context: context)
     }
     
-    public func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void) {
-        openAddContactImpl(context: context, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, label: label, present: present, pushController: pushController, completed: completed)
+    public func openAddContact(context: AccountContext, peer: EnginePeer?, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void) {
+        openAddContactImpl(context: context, peer: peer, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, label: label, present: present, pushController: pushController, completed: completed)
     }
     
     public func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
@@ -4341,8 +4341,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChannelMembersSearchControllerImpl(params: params)
     }
     
-    public func makeNewContactScreen(context: AccountContext, peer: EnginePeer?, phoneNumber: String?, shareViaException: Bool, completion: @escaping (EnginePeer?, DeviceContactStableId?, DeviceContactExtendedData?) -> Void) -> ViewController {
-        return NewContactScreen(context: context, initialData: NewContactScreen.initialData(peer: peer, phoneNumber: phoneNumber, shareViaException: shareViaException), completion: completion)
+    public func makeNewContactScreen(context: AccountContext, peer: EnginePeer?, firstName: String?, lastName: String?, phoneNumber: String?, shareViaException: Bool, completion: @escaping (EnginePeer?, DeviceContactStableId?, DeviceContactExtendedData?) -> Void) -> ViewController {
+        return NewContactScreen(context: context, initialData: NewContactScreen.initialData(peer: peer, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, shareViaException: shareViaException), completion: completion)
     }
     
     public func makeLoginEmailSetupController(context: AccountContext, blocking: Bool, emailPattern: String?, canAutoDismissIfNeeded: Bool, navigationController: NavigationController?, completion: @escaping () -> Void, dismiss: @escaping () -> Void) -> ViewController {

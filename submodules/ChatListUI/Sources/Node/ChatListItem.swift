@@ -1309,7 +1309,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    var item: ChatListItem?
+    public private(set) var item: ChatListItem?
     
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
