@@ -450,13 +450,16 @@ final class ComposePollScreenComponent: Component {
             }
         }
         
-        private var effectiveIsMultiAnswer: Bool {
+        fileprivate var effectiveIsMultiAnswer: Bool {
             return self.isMultiAnswer ?? false
         }
         
         enum ValidatedInput {
             case ready(ComposedPoll)
             case isUploading
+            case questionNeeded
+            case optionsNeeded
+            case quizCorrectOptionNeeded
         }
         
         var hasAnyData: Bool {
@@ -483,9 +486,9 @@ final class ComposePollScreenComponent: Component {
             return false
         }
         
-        func validatedInput() -> ValidatedInput? {
+        func validatedInput() -> ValidatedInput {
             if self.pollTextInputState.text.length == 0 {
-                return nil
+                return .questionNeeded
             }
             
             let mappedKind: TelegramMediaPollKind
@@ -530,7 +533,7 @@ final class ComposePollScreenComponent: Component {
             }
             
             if mappedOptions.count < 2 {
-                return nil
+                return .optionsNeeded
             }
             
             var mappedCorrectAnswers: [Data]?
@@ -538,7 +541,7 @@ final class ComposePollScreenComponent: Component {
                 if !selectedQuizOptions.isEmpty {
                     mappedCorrectAnswers = selectedQuizOptions
                 } else {
-                    return nil
+                    return .quizCorrectOptionNeeded
                 }
             }
             
@@ -1239,7 +1242,7 @@ final class ComposePollScreenComponent: Component {
             self.environment = environment
             
             let theme = environment.theme.withModalBlocksBackground()
-            
+                        
             var isChannel = false
             if case let .channel(channel) = component.peer, case .broadcast = channel.info {
                 isChannel = true
@@ -1414,6 +1417,10 @@ final class ComposePollScreenComponent: Component {
                 self.cachedDurationIcon = renderSettingsIcon(name: "Item List/Icons/Timer", backgroundColors: [UIColor(rgb: 0xFF453A)])
                 
                 self.cachedEmptyIcon = generateSingleColorImage(size: CGSize(width: 30.0, height: 30.0), color: .clear)
+                
+                if let isQuiz = component.isQuiz, isQuiz {
+                    self.bottomEdgeEffectView.isHidden = true
+                }
             }
             
             self.component = component
@@ -2581,31 +2588,6 @@ final class ComposePollScreenComponent: Component {
                 self.scrollView.verticalScrollIndicatorInsets = scrollInsets
             }
             
-            let title = self.isQuiz ? environment.strings.CreatePoll_QuizTitle : environment.strings.CreatePoll_Title
-            let titleSize = self.title.update(
-                transition: .immediate,
-                component: AnyComponent(
-                    MultilineTextComponent(
-                        text: .plain(
-                            NSAttributedString(
-                                string: title,
-                                font: Font.semibold(17.0),
-                                textColor: environment.theme.rootController.navigationBar.primaryTextColor
-                            )
-                        )
-                    )
-                ),
-                environment: {},
-                containerSize: CGSize(width: 200.0, height: 40.0)
-            )
-            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
-            if let titleView = self.title.view {
-                if titleView.superview == nil {
-                    component.overNavigationContainer.addSubview(titleView)
-                }
-                transition.setFrame(view: titleView, frame: titleFrame)
-            }
-            
             let barButtonSize = CGSize(width: 44.0, height: 44.0)
             let cancelButtonSize = self.cancelButton.update(
                 transition: transition,
@@ -2640,11 +2622,8 @@ final class ComposePollScreenComponent: Component {
             
             let validatedInput = self.validatedInput()
             var isValid = false
-            var isUploading = false
             if case .ready = validatedInput {
                 isValid = true
-            } else if case .isUploading = validatedInput {
-                isUploading = true
             }
             
             let doneButtonSize = self.doneButton.update(
@@ -2654,7 +2633,7 @@ final class ComposePollScreenComponent: Component {
                     backgroundColor: isValid ? environment.theme.list.itemCheckColors.fillColor : environment.theme.list.itemCheckColors.fillColor.desaturated().withMultipliedAlpha(0.5),
                     isDark: environment.theme.overallDarkAppearance,
                     state: .tintedGlass,
-                    isEnabled: isValid || isUploading,
+                    isEnabled: true,
                     component: AnyComponentWithIdentity(id: "done", component: AnyComponent(
                         Text(text: environment.strings.MediaPicker_Send, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
                     )),
@@ -2674,6 +2653,35 @@ final class ComposePollScreenComponent: Component {
                     component.overNavigationContainer.addSubview(doneButtonView)
                 }
                 transition.setFrame(view: doneButtonView, frame: doneButtonFrame)
+            }
+            
+            let title = self.isQuiz ? environment.strings.CreatePoll_QuizTitle : environment.strings.CreatePoll_Title
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: title,
+                                font: Font.semibold(17.0),
+                                textColor: environment.theme.rootController.navigationBar.primaryTextColor
+                            )
+                        )
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 40.0)
+            )
+            var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
+            if titleFrame.maxX > doneButtonFrame.minX - 16.0 {
+                titleFrame.origin.x = cancelButtonFrame.maxX + floorToScreenPixels((doneButtonFrame.minX - cancelButtonFrame.maxX) - titleSize.width) / 2.0
+            }
+                
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    component.overNavigationContainer.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: titleFrame)
             }
             
             if let recenterOnTag {
@@ -2884,22 +2892,46 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
         guard let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
             return
         }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let validatedInput = componentView.validatedInput()
-        if case let .ready(poll) = validatedInput {
+       
+        let title: String?
+        let text: String
+        
+        switch validatedInput {
+        case let .ready(poll):
             self.completion(poll)
             self.dismiss()
-        } else if case .isUploading = validatedInput {
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            let controller = UndoOverlayController(
-                presentationData: presentationData,
-                content: .info(title: presentationData.strings.CreatePoll_MediaUploading_Title, text: presentationData.strings.CreatePoll_MediaUploading_Text, timeout: nil, customUndoText: nil),
-                position: .top,
-                action: { _ in
-                    return false
-                }
-            )
-            self.present(controller, in: .current)
+            return
+        case .isUploading:
+            title = presentationData.strings.CreatePoll_MediaUploading_Title
+            text = presentationData.strings.CreatePoll_MediaUploading_Text
+        case .questionNeeded:
+            title = nil
+            text = presentationData.strings.CreatePoll_QuestionNeeded
+        case .optionsNeeded:
+            title = nil
+            text = presentationData.strings.CreatePoll_OptionsNeeded
+        case .quizCorrectOptionNeeded:
+            title = nil
+            if componentView.effectiveIsMultiAnswer {
+                text = presentationData.strings.CreatePoll_QuizCorrectOptionNeededMultiple
+            } else {
+                text = presentationData.strings.CreatePoll_QuizCorrectOptionNeeded
+            }
         }
+        
+        let controller = UndoOverlayController(
+            presentationData: presentationData,
+            content: .info(title: title, text: text, timeout: nil, customUndoText: nil),
+            position: .bottom,
+            action: { _ in
+                return false
+            }
+        )
+        self.present(controller, in: .current)
+        
+        HapticFeedback().error()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
