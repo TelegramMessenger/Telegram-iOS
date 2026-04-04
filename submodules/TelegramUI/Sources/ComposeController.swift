@@ -7,13 +7,13 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import ShareController
 import AlertUI
 import PresentationDataUtils
 import SearchUI
 import TelegramPermissionsUI
 import AppBundle
 import DeviceAccess
-import ShareController
 
 public class ComposeControllerImpl: ViewController, ComposeController {
     private let context: AccountContext
@@ -202,6 +202,8 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                     let controller = strongSelf.context.sharedContext.makeNewContactScreen(
                         context: strongSelf.context,
                         peer: nil,
+                        firstName: nil,
+                        lastName: nil,
                         phoneNumber: nil,
                         shareViaException: false,
                         completion: { [weak self] peer, stableId, contactData in

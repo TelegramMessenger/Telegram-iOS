@@ -9,8 +9,8 @@ import MtProtoKit
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
-import UrlEscaping
 import ShareController
+import UrlEscaping
 
 private final class ProxySettingsControllerArguments {
     let toggleEnabled: (Bool) -> Void

@@ -211,6 +211,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     var inlineSearchResults: ComponentView<Empty>?
     private var inlineSearchResultsReadyDisposable: Disposable?
     private var inlineSearchResultsReady: Bool = false
+    private var inlineSearchResultsScrollingState: (domain: ChatSearchDomain, query: String, state: ChatInlineSearchResultsListComponent.ScrollingState)?
     
     var isScrollingLockedAtTop: Bool = false
     
@@ -888,7 +889,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self?.interfaceInteraction?.presentController(controller, nil)
         })
         if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_disable_ai_chat"] as? Double, value == 1.0 {
-        } else {
+        } else if let peerId = self.chatPresentationInterfaceState.chatLocation.peerId, peerId.namespace != Namespaces.Peer.SecretChat {
             self.textInputPanelNode?.isAIEnabled = true
         }
         self.textInputPanelNode?.textInputAccessoryPanel = textInputAccessoryPanel
@@ -3050,6 +3051,16 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             showNavigateButtons = false
         }
         
+        if let inlineSearchResultsScrollingState = self.inlineSearchResultsScrollingState {
+            if let search = self.chatPresentationInterfaceState.search {
+                if search.domain != inlineSearchResultsScrollingState.domain || search.query != inlineSearchResultsScrollingState.query {
+                    self.inlineSearchResultsScrollingState = nil
+                }
+            } else {
+                self.inlineSearchResultsScrollingState = nil
+            }
+        }
+        
         if displayInlineSearch {
             let peerId = self.chatPresentationInterfaceState.chatLocation.peerId
             
@@ -3107,6 +3118,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     insets: childContentInsets,
                     inputHeight: layout.inputHeight ?? 0.0,
                     showEmptyResults: self.showListEmptyResults,
+                    initialScrollingState: self.inlineSearchResultsScrollingState?.state,
                     messageSelected: { [weak self] message in
                         guard let self else {
                             return
@@ -3385,6 +3397,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 environment: {},
                 containerSize: layout.size
             )
+            self.inlineSearchResultsScrollingState = nil
             if let inlineSearchResultsView = inlineSearchResults.view as? ChatInlineSearchResultsListComponent.View {
                 var animateIn = false
                 if inlineSearchResultsView.superview == nil {
@@ -3438,6 +3451,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             if let inlineSearchResults = self.inlineSearchResults {
                 self.inlineSearchResults = nil
                 if let inlineSearchResultsView = inlineSearchResults.view as? ChatInlineSearchResultsListComponent.View {
+                    
+                    if let search = self.chatPresentationInterfaceState.search, let scrollingState = inlineSearchResultsView.scrollingState() {
+                        self.inlineSearchResultsScrollingState = (search.domain, search.query, scrollingState)
+                    }
+                    
                     transition.updateAlpha(layer: inlineSearchResultsView.layer, alpha: 0.0, completion: { [weak inlineSearchResultsView] _ in
                         inlineSearchResultsView?.removeFromSuperview()
                     })

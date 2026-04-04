@@ -7,7 +7,6 @@ import AccountContext
 import SwiftSignalKit
 import AppBundle
 import MessageInputPanelComponent
-import ShareController
 import TelegramCore
 import Postbox
 import UndoUI

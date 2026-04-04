@@ -183,10 +183,10 @@ final class NewContactScreenComponent: Component {
             
         }
         
-        func updateCountryCode(code: Int32, name: String) {
+        func updateCountryCode(code: Int32, name: String, phoneNumber: String?) {
             if let view = self.phoneSection.findTaggedView(tag: self.phoneTag) as? ListItemComponentAdaptor.View {
                 if let itemNode = view.itemNode as? PhoneInputItemNode {
-                    itemNode.updateCountryCode(code: code, name: name)
+                    itemNode.updateCountryCode(code: code, name: name, phoneNumber: phoneNumber)
                 }
             }
         }
@@ -256,6 +256,7 @@ final class NewContactScreenComponent: Component {
             let strings = environment.strings
             
             var initialCountryCode: Int32?
+            var initialPhoneNumberWithoutCountryCode: String?
             var updateFocusTag: Any?
             if self.component == nil {
                 if let peer = component.initialData.peer {
@@ -278,6 +279,9 @@ final class NewContactScreenComponent: Component {
                     if let _ = component.initialData.peer {   
                     } else {
                         updateFocusTag = self.firstNameTag
+                    }
+                    if phone.hasPrefix("\(countryCode)") {
+                        initialPhoneNumberWithoutCountryCode = String(phone[phone.index(phone.startIndex, offsetBy: "\(countryCode)".count)...])
                     }
                 } else {
                     countryCode = AuthorizationSequenceCountrySelectionController.defaultCountryCode()
@@ -456,7 +460,7 @@ final class NewContactScreenComponent: Component {
                         itemGenerator: PhoneInputItem(
                             theme: theme,
                             strings: strings,
-                            value: (initialCountryCode, nil, ""),
+                            value: (initialCountryCode, nil, initialPhoneNumberWithoutCountryCode ?? ""),
                             accessory: phoneAccesory,
                             selectCountryCode: { [weak self] in
                                 guard let self, let environment = self.environment, let controller = environment.controller() else {
@@ -467,7 +471,7 @@ final class NewContactScreenComponent: Component {
                                     guard let self else {
                                         return
                                     }
-                                    self.updateCountryCode(code: Int32(code), name: name)
+                                    self.updateCountryCode(code: Int32(code), name: name, phoneNumber: nil)
                                     self.activateInput(tag: self.phoneTag)
                                 }
                                 self.deactivateInput()
@@ -616,9 +620,8 @@ final class NewContactScreenComponent: Component {
             contentHeight += sectionSpacing
             
             if let initialCountryCode {
-                self.updateCountryCode(code: initialCountryCode, name: "")
+                self.updateCountryCode(code: initialCountryCode, name: "", phoneNumber: initialPhoneNumberWithoutCountryCode)
             }
-            
 
             var optionsSectionItems: [AnyComponentWithIdentity<Empty>] = [
                 AnyComponentWithIdentity(id: "syncContact", component: AnyComponent(ListActionItemComponent(
@@ -1033,22 +1036,24 @@ public class NewContactScreen: ViewControllerComponentContainer {
     
     public static func initialData(
         peer: EnginePeer? = nil,
+        firstName: String? = nil,
+        lastName: String? = nil,
         phoneNumber: String? = nil,
         shareViaException: Bool = false
     ) -> InitialData {
         if case let .user(user) = peer {
             return InitialData(
                 peer: peer,
-                firstName: user.firstName,
-                lastName: user.lastName,
+                firstName: firstName ?? user.firstName,
+                lastName: lastName ?? user.lastName,
                 phoneNumber: user.phone ?? phoneNumber,
                 shareViaException: shareViaException
             )
         } else {
             return InitialData(
                 peer: nil,
-                firstName: nil,
-                lastName: nil,
+                firstName: firstName,
+                lastName: lastName,
                 phoneNumber: phoneNumber,
                 shareViaException: false
             )

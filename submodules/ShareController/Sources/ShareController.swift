@@ -25,36 +25,6 @@ import ChatMessagePaymentAlertController
 
 private var ObjCKey_DeinitWatcher: Int?
 
-public struct ShareControllerAction {
-    let title: String
-    let action: () -> Void
-    
-    public init(title: String, action: @escaping () -> Void) {
-        self.title = title
-        self.action = action
-    }
-}
-
-public enum ShareControllerPreferredAction {
-    case `default`
-    case saveToCameraRoll
-    case custom(action: ShareControllerAction)
-}
-
-public struct ShareControllerSegmentedValue {
-    let title: String
-    let subject: ShareControllerSubject
-    let actionTitle: String
-    let formatSendTitle: (Int) -> String
-    
-    public init(title: String, subject: ShareControllerSubject, actionTitle: String, formatSendTitle: @escaping (Int) -> String) {
-        self.title = title
-        self.subject = subject
-        self.actionTitle = actionTitle
-        self.formatSendTitle = formatSendTitle
-    }
-}
-
 private enum ExternalShareItem {
     case text(String)
     case url(URL)
@@ -324,43 +294,6 @@ public final class ShareControllerAppEnvironment: ShareControllerEnvironment {
         } else {
             assertionFailure()
         }
-    }
-}
-
-public final class ShareControllerAppAccountContext: ShareControllerAccountContext {
-    public let context: AccountContext
-    
-    public var accountId: AccountRecordId {
-        return self.context.account.id
-    }
-    public var accountPeerId: EnginePeer.Id {
-        return self.context.account.stateManager.accountPeerId
-    }
-    public var stateManager: AccountStateManager {
-        return self.context.account.stateManager
-    }
-    public var engineData: TelegramEngine.EngineData {
-        return self.context.engine.data
-    }
-    public var animationCache: AnimationCache {
-        return self.context.animationCache
-    }
-    public var animationRenderer: MultiAnimationRenderer {
-        return self.context.animationRenderer
-    }
-    public var contentSettings: ContentSettings {
-        return self.context.currentContentSettings.with { $0 }
-    }
-    public var appConfiguration: AppConfiguration {
-        return self.context.currentAppConfiguration.with { $0 }
-    }
-    
-    public init(context: AccountContext) {
-        self.context = context
-    }
-    
-    public func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
-        return self.context.engine.stickers.resolveInlineStickers(fileIds: fileIds)
     }
 }
 

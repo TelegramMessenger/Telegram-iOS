@@ -623,10 +623,12 @@ public final class ChatMessageAccessibilityData {
 public enum InternalBubbleTapAction {
     public struct Action {
         public var action: () -> Void
+        public var actionWithLongTapRecognizer: ((TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
         public var contextMenuOnLongPress: Bool
         
-        public init(_ action: @escaping () -> Void, contextMenuOnLongPress: Bool = false) {
+        public init(_ action: @escaping () -> Void, actionWithLongTapRecognizer: ((TapLongTapOrDoubleTapGestureRecognizer) -> Void)? = nil, contextMenuOnLongPress: Bool = false) {
             self.action = action
+            self.actionWithLongTapRecognizer = actionWithLongTapRecognizer
             self.contextMenuOnLongPress = contextMenuOnLongPress
         }
     }

@@ -7,7 +7,6 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
-import ShareController
 import UndoUI
 import InviteLinksUI
 import TextFormat
@@ -484,11 +483,10 @@ public func usernameSetupController(context: AccountContext, mode: UsernameSetup
                 }
                 if !currentAddressName.isEmpty {
                     dismissInputImpl?()
-                    let shareController = ShareController(context: context, subject: .url("https://t.me/\(currentAddressName)"))
-                    shareController.actionCompleted = {
+                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url("https://t.me/\(currentAddressName)"), actionCompleted: {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-                    }
+                    }))
                     presentControllerImpl?(shareController, nil)
                 }
             }

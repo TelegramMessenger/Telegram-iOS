@@ -13,7 +13,6 @@ import AccountContext
 import TelegramCore
 import SwiftSignalKit
 import UndoUI
-import ShareController
 import LegacyChatHeaderPanelComponent
 
 private final class ChatBusinessLinkTitlePanelComponent: Component {
@@ -184,7 +183,7 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
             return
         }
         
-        interfaceInteraction.presentController(ShareController(context: self.context, subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false), nil)
+        interfaceInteraction.presentController(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false)), nil)
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {

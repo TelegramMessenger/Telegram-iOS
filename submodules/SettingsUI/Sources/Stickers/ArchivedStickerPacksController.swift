@@ -13,7 +13,6 @@ import AccountContext
 import StickerPackPreviewUI
 import ItemListStickerPackItem
 import UndoUI
-import ShareController
 
 public enum ArchivedStickerPacksControllerMode {
     case stickers
@@ -565,7 +564,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                         }
                     }
                     let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
-                    let shareController = ShareController(context: context, subject: .text(text), externalShare: true)
+                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .text(text), externalShare: true))
                     presentControllerImpl?(shareController, nil)
                 })])
             } else {

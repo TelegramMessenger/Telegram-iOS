@@ -25,7 +25,7 @@ import ListItemComponentAdaptor
 import ButtonComponent
 import PlainButtonComponent
 import UndoUI
-import ShareController
+
 
 final class PostSuggestionsSettingsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -200,8 +200,10 @@ final class PostSuggestionsSettingsScreenComponent: Component {
             }
             
             let context = component.context
-            let shareController = ShareController(context: context, subject: .url(link), updatedPresentationData: nil)
-            shareController.completed = { [weak controller] peerIds in
+            let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(link), updatedPresentationData: nil, actionCompleted: {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+            }, completed: { [weak controller] peerIds in
                 let _ = (context.engine.data.get(
                     EngineDataList(
                         peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
@@ -210,7 +212,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                 |> deliverOnMainQueue).start(next: { [weak controller] peerList in
                     let peers = peerList.compactMap { $0 }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    
+
                     let text: String
                     var savedMessages = false
                     if peerIds.count == 1, let peerId = peerIds.first, peerId == context.account.peerId {
@@ -231,7 +233,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                             text = ""
                         }
                     }
-                    
+
                     controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
                         if savedMessages, action == .info {
                             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
@@ -248,11 +250,7 @@ final class PostSuggestionsSettingsScreenComponent: Component {
                         return false
                     }), in: .window(.root))
                 })
-            }
-            shareController.actionCompleted = {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-            }
+            }))
             controller.present(shareController, in: .window(.root))
         }
         

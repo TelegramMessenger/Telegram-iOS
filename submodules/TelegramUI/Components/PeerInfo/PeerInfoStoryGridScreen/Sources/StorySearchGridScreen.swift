@@ -16,7 +16,6 @@ import BottomButtonPanelComponent
 import UndoUI
 import MoreHeaderButton
 import SaveToCameraRoll
-import ShareController
 import OpenInExternalAppUI
 
 final class StorySearchGridScreenComponent: Component {
@@ -250,7 +249,7 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            self.present(ShareController(context: self.context, subject: .mapMedia(locationMap), externalShare: true), in: .window(.root), with: nil)
+            self.present(self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .mapMedia(locationMap), externalShare: true)), in: .window(.root), with: nil)
         })
         self.present(OpenInActionSheetController(context: self.context, updatedPresentationData: nil, item: .location(location: locationMap, directions: nil), additionalAction: shareAction, openUrl: { [weak self] url in
             guard let self else {

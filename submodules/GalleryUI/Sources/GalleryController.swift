@@ -927,8 +927,9 @@ public class GalleryController: ViewController, StandalonePresentableController,
         if case .custom = source {
             displayInfoOnTop = true
         }
-        
+
         let syncResult = Atomic<(Bool, (() -> Void)?)>(value: (false, nil))
+        var isFirstTime = true
         self.disposable.set(combineLatest(
             messageView,
             self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]) |> take(1),
@@ -1015,14 +1016,22 @@ public class GalleryController: ViewController, StandalonePresentableController,
                                     storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _, _ in },
                                     generateStoreAfterDownload: strongSelf.generateStoreAfterDownload,
                                     sendSticker: strongSelf.actionInteraction?.sendSticker,
-                                    present: { [weak self] c, a in
-                                        if let strongSelf = self {
+                                    present: { [weak strongSelf] c, a in
+                                        if let strongSelf {
                                             strongSelf.presentInGlobalOverlay(c, with: a)
                                         }
                                     }
                                 ) {
                                     if isCentral {
                                         centralItemIndex = items.count
+                                        
+                                        if isFirstTime {
+                                            isFirstTime = false
+                                            if item is UniversalVideoGalleryItem {
+                                            } else {
+                                                strongSelf.galleryNode.areControlsHidden = false
+                                            }
+                                        }
                                     }
                                     items.append(item)
                                 }

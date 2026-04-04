@@ -10,7 +10,6 @@ import PresentationDataUtils
 import AccountContext
 import UrlEscaping
 import UrlHandling
-import ShareController
 
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String

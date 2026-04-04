@@ -11,7 +11,7 @@ import AppBundle
 import CoreLocation
 import PresentationDataUtils
 import OpenInExternalAppUI
-import ShareController
+
 import DeviceAccess
 import UndoUI
 import MapKit
@@ -207,7 +207,7 @@ public final class LocationViewController: ViewController {
             }
             if let location = getLocation(from: strongSelf.subject) {
                 let shareAction = OpenInControllerAction(title: strongSelf.presentationData.strings.Conversation_ContextMenuShare, action: {
-                    strongSelf.present(ShareController(context: context, subject: .mapMedia(location), externalShare: true), in: .window(.root), with: nil)
+                    strongSelf.present(context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .mapMedia(location), externalShare: true)), in: .window(.root), with: nil)
                 })
                 strongSelf.present(OpenInActionSheetController(context: context, updatedPresentationData: updatedPresentationData, item: .location(location: location, directions: nil), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
             }

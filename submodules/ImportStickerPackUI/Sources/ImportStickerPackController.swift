@@ -6,7 +6,6 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
 import AccountContext
-import ShareController
 import StickerResources
 import AlertUI
 import PresentationDataUtils

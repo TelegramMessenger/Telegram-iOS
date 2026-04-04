@@ -255,7 +255,7 @@ public func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedM
                 nativeGenerator(_1, _2, _3, nil)
             })
             if let parentController = parentController {
-                parentController.present(ShareController(context: context, subject: .fromExternal(1, { peerIds, _, _, text, account, silently in
+                parentController.present(context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .fromExternal(1, { peerIds, _, _, text, account, silently in
                     guard let account = account as? ShareControllerAppAccountContext else {
                         return .single(.done)
                     }
@@ -277,7 +277,7 @@ public func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedM
                         }
                         |> then(.single(ShareControllerExternalStatus.done))
                     }
-                }), showInChat: nil, externalShare: false), in: .window(.root))
+                }), showInChat: nil, externalShare: false)), in: .window(.root))
             }
         }
     }
