@@ -306,13 +306,13 @@ static bool parseIntArgument(NSString *string, HelloParseState *state, int *outp
 }
 
 static NSMutableData *executeGenerationCode(id<EncryptionProvider> provider, NSData *domain) {
-    NSString *code = @"S \"\\x16\\x03\\x01\\x02\\x00\\x01\\x00\\x01\\xfc\\x03\\x03\"\n"
+    NSString *code = @"S \"\\x16\\x03\\x01\\x02\\x24\\x01\\x00\\x02\\x20\\x03\\x03\"\n"
                       "Z 32\n"
                       "S \"\\x20\"\n"
                       "R 32\n"
                       "S \"\\x00\\x2a\"\n"
                       "G 0\n"
-                      "S \"\\x13\\x01\\x13\\x02\\x13\\x03\\xc0\\x2c\\xc0\\x2b\\xcc\\xa9\\xc0\\x30\\xc0\\x2f\\xcc\\xa8\\xc0\\x0a\\xc0\\x09\\xc0\\x14\\xc0\\x13\\x00\\x9d\\x00\\x9c\\x00\\x35\\x00\\x2f\\xc0\\x08\\xc0\\x12\\x00\\x0a\\x01\\x00\\x01\\x89\"\n"
+                      "S \"\\x13\\x01\\x13\\x02\\x13\\x03\\xc0\\x2c\\xc0\\x2b\\xcc\\xa9\\xc0\\x30\\xc0\\x2f\\xcc\\xa8\\xc0\\x0a\\xc0\\x09\\xc0\\x14\\xc0\\x13\\x00\\x9d\\x00\\x9c\\x00\\x35\\x00\\x2f\\xc0\\x08\\xc0\\x12\\x00\\x0a\\x01\\x00\\x01\\xad\"\n"
                       "G 2\n"
                       "S \"\\x00\\x00\\x00\\x00\"\n"
                       "[\n"
@@ -332,6 +332,8 @@ static NSMutableData *executeGenerationCode(id<EncryptionProvider> provider, NSD
                       "S \"\\x00\\x2d\\x00\\x02\\x01\\x01\\x00\\x2b\\x00\\x0b\\x0a\"\n"
                       "G 6\n"
                       "S \"\\x03\\x04\\x03\\x03\\x03\\x02\\x03\\x01\\x00\\x1b\\x00\\x03\\x02\\x00\\x01\"\n"
+                      "S \"\\xfe\\x0d\\x00\\x20\"\n"
+                      "R 32\n"
                       "G 3\n"
                       "S \"\\x00\\x01\\x00\"\n";
 
