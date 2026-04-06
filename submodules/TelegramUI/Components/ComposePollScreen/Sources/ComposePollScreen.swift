@@ -532,7 +532,7 @@ final class ComposePollScreenComponent: Component {
                 ))
             }
             
-            if mappedOptions.count < 2 {
+            if self.isQuiz && mappedOptions.count < 2 {
                 return .optionsNeeded
             }
             
