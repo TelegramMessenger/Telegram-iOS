@@ -191,6 +191,8 @@ def remote_deploy_testflight(darwin_containers_path, darwin_containers_host, mac
         if configuration_dict['xcode'] is None:
             raise Exception('Missing xcode version in {}'.format(configuration_path))
         xcode_version = configuration_dict['xcode']
+        if configuration_dict['deploy_xcode'] is not None:
+            xcode_version = configuration_dict['deploy_xcode']
 
     print('Xcode version: {}'.format(xcode_version))
 
