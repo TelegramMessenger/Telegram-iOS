@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "AnimationCache",
-    module_name = "AnimationCache",
+    name = "DCTMultiAnimationRendererImpl",
+    module_name = "DCTMultiAnimationRendererImpl",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,6 +11,9 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/Display:Display",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
     ],
     visibility = [
         "//visibility:public",

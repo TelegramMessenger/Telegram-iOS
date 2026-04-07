@@ -27,6 +27,8 @@ import ManagedFile
 import TelegramUIDeclareEncodables
 import AnimationCache
 import MultiAnimationRenderer
+import DCTAnimationCacheImpl
+import DCTMultiAnimationRendererImpl
 import TelegramUIDeclareEncodables
 import TelegramAccountAuxiliaryMethods
 import PeerSelectionController
@@ -105,14 +107,14 @@ private final class ShareControllerAccountContextExtension: ShareControllerAccou
         self.stateManager = stateManager
         self.engineData = TelegramEngine.EngineData(accountPeerId: stateManager.accountPeerId, postbox: stateManager.postbox)
         let cacheStorageBox = stateManager.postbox.mediaBox.cacheStorageBox
-        self.animationCache = AnimationCacheImpl(basePath: stateManager.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+        self.animationCache = DCTAnimationCacheImpl(basePath: stateManager.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
         }, updateStorageStats: { path, size in
             if let pathData = path.data(using: .utf8) {
                 cacheStorageBox.update(id: pathData, size: size)
             }
         })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationRenderer = DCTMultiAnimationRendererImpl()
         self.contentSettings = contentSettings
         self.appConfiguration = appConfiguration
     }
