@@ -42,6 +42,8 @@ swift_library(
         "//submodules/AttachmentTextInputPanelNode",
         "//submodules/TelegramUI/Components/BatchVideoRendering",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/SubcodecAnimationCacheImpl:SubcodecAnimationCacheImpl",
+        "//submodules/TelegramUI/Components/SubcodecMultiAnimationRendererImpl:SubcodecMultiAnimationRendererImpl",
     ],
     visibility = [
         "//visibility:public",

@@ -65,8 +65,8 @@ private final class SurfaceGroup {
         if self.surface != nil {
             return true
         }
-        let sink: (NSData) -> Void = { [weak self] data in
-            self?.accumulatedNalData.append(data as Data)
+        let sink: (Data) -> Void = { [weak self] data in
+            self?.accumulatedNalData.append(data)
         }
         guard let surface = try? SCMuxSurface.create(
             withSpriteWidth: Int32(self.spriteWidth),
@@ -130,8 +130,8 @@ private final class SurfaceGroup {
 
         if self.lastDecodedFrame == nil {
             self.accumulatedNalData = Data()
-            guard let _ = try? surface.advanceFrame(withSink: { [weak self] data in
-                self?.accumulatedNalData.append(data as Data)
+            guard let _ = try? surface.advanceFrame(sink: { [weak self] data in
+                self?.accumulatedNalData.append(data)
             }) else {
                 return false
             }
@@ -165,7 +165,7 @@ private final class SurfaceGroup {
             strideCb: Int32(chromaWidth),
             strideCr: Int32(chromaWidth),
             withSink: { [weak self] data in
-                self?.accumulatedNalData.append(data as Data)
+                self?.accumulatedNalData.append(data)
             }
         ) else {
             return false
@@ -237,8 +237,8 @@ private final class SurfaceGroup {
         }
 
         self.accumulatedNalData = Data()
-        guard let _ = try? surface.emitFrameIfNeeded(withSink: { [weak self] data in
-            self?.accumulatedNalData.append(data as Data)
+        guard let _ = try? surface.emitFrameIfNeeded(sink: { [weak self] data in
+            self?.accumulatedNalData.append(data)
         }) else {
             return
         }

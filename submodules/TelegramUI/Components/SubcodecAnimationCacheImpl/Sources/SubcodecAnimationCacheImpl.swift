@@ -295,7 +295,7 @@ private func decodeSingleFrameFromMbs(mbsPath: String, metadata: MbsMetadata) ->
     guard mbsData[0] == 0x4D, mbsData[1] == 0x42, mbsData[2] == 0x53, mbsData[3] == 0x36 else {
         return nil
     }
-    let widthMbs = Int(mbsData[4]) | (Int(mbsData[5]) << 8)
+    let _ = Int(mbsData[4]) | (Int(mbsData[5]) << 8)
     let heightMbs = Int(mbsData[6]) | (Int(mbsData[7]) << 8)
     let qp = Int(mbsData[10])
 
@@ -305,11 +305,11 @@ private func decodeSingleFrameFromMbs(mbsPath: String, metadata: MbsMetadata) ->
     }
 
     var nalData: Data?
-    let sinkBlock: (NSData) -> Void = { data in
+    let sinkBlock: (Data) -> Void = { data in
         if nalData == nil {
-            nalData = data as Data
+            nalData = data
         } else {
-            nalData!.append(data as Data)
+            nalData!.append(data)
         }
     }
 
@@ -328,7 +328,7 @@ private func decodeSingleFrameFromMbs(mbsPath: String, metadata: MbsMetadata) ->
     }
 
     nalData = nil
-    guard let _ = try? surface.advanceFrame(withSink: sinkBlock) else {
+    guard let _ = try? surface.advanceFrame(sink: sinkBlock) else {
         return nil
     }
 
@@ -442,7 +442,7 @@ private func loadMbsMetadata(metaPath: String) -> MbsMetadata? {
         return nil
     }
     var frameCount: UInt32 = 0
-    _ = withUnsafeMutableBytes(of: &frameCount) { buf in
+    withUnsafeMutableBytes(of: &frameCount) { buf in
         data.copyBytes(to: buf.baseAddress!.assumingMemoryBound(to: UInt8.self), from: 0 ..< 4)
     }
     let expectedSize = 4 + Int(frameCount) * 4
@@ -453,7 +453,7 @@ private func loadMbsMetadata(metaPath: String) -> MbsMetadata? {
     for i in 0 ..< Int(frameCount) {
         var d: Float32 = 0
         let offset = 4 + i * 4
-        _ = withUnsafeMutableBytes(of: &d) { buf in
+        withUnsafeMutableBytes(of: &d) { buf in
             data.copyBytes(to: buf.baseAddress!.assumingMemoryBound(to: UInt8.self), from: offset ..< offset + 4)
         }
         durations.append(Double(d))
