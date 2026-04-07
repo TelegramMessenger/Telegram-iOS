@@ -44,7 +44,7 @@ namespace WelsCommon {
 
 #define  CTX_NA 0
 #define  WELS_CONTEXT_COUNT 460
-#define LEVEL_NUMBER 17
+#define LEVEL_NUMBER 20
 typedef struct TagLevelLimits {
   ELevelIdc uiLevelIdc;  // level idc
   uint32_t uiMaxMBPS; // Max macroblock processing rate(MB/s)
