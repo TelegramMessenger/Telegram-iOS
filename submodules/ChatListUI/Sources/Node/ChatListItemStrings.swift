@@ -287,7 +287,9 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         }
                         if !processed {
                             if !message.text.isEmpty {
-                                messageText = "📎 \(messageText)"
+                                if enableMediaEmoji {
+                                    messageText = "📎 \(messageText)"
+                                }
                             } else {
                                 if fileMedia.isAnimatedSticker {
                                     messageText = strings.Message_Sticker

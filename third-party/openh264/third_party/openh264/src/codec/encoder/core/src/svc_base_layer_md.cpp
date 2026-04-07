@@ -930,6 +930,11 @@ int32_t WelsMdIntraChroma (SWelsFuncPtrList* pFunc, SDqLayer* pCurDqLayer, SMbCa
   return iBestCost;
 }
 int32_t WelsMdIntraFinePartition (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SMB* pCurMb, SMbCache* pMbCache) {
+  // [subcodec] I_4x4 disabled for sprite compositing — only I_16x16 allowed.
+  if (pEncCtx->pSvcParam->bSubcodecMode) {
+    return pWelsMd->iCostLuma;
+  }
+
   int32_t iCosti4x4 = WelsMdI4x4 (pEncCtx, pWelsMd, pCurMb, pMbCache);
 
   if (iCosti4x4 < pWelsMd->iCostLuma) {
@@ -940,6 +945,10 @@ int32_t WelsMdIntraFinePartition (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SMB* p
 }
 
 int32_t WelsMdIntraFinePartitionVaa (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SMB* pCurMb, SMbCache* pMbCache) {
+  // [subcodec] I_4x4 disabled for sprite compositing — only I_16x16 allowed.
+  if (pEncCtx->pSvcParam->bSubcodecMode) {
+    return pWelsMd->iCostLuma;
+  }
 
   if (MdIntraAnalysisVaaInfo (pEncCtx, pMbCache->SPicData.pEncMb[0])) {
     int32_t iCosti4x4 = WelsMdI4x4Fast (pEncCtx, pWelsMd, pCurMb, pMbCache);
@@ -1236,6 +1245,11 @@ int32_t WelsMdP4x8 (SWelsFuncPtrList* pFunc, SDqLayer* pCurDqLayer, SWelsMD* pWe
 }
 
 void WelsMdInterFinePartition (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SSlice* pSlice, SMB* pCurMb, int32_t iBestCost) {
+  // [subcodec] No sub-partition modes for sprite compositing.
+  if (pEncCtx->pSvcParam->bSubcodecMode) {
+    return;
+  }
+
   SDqLayer* pCurDqLayer = pEncCtx->pCurDqLayer;
 //  SMbCache *pMbCache = &pSlice->sMbCacheInfo;
   int32_t iCost = 0;
@@ -1269,6 +1283,11 @@ void WelsMdInterFinePartition (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SSlice* p
 
 void WelsMdInterFinePartitionVaa (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SSlice* pSlice, SMB* pCurMb,
                                   int32_t iBestCost) {
+  // [subcodec] No sub-partition modes for sprite compositing.
+  if (pEncCtx->pSvcParam->bSubcodecMode) {
+    return;
+  }
+
   SDqLayer* pCurDqLayer = pEncCtx->pCurDqLayer;
 //  SMbCache *pMbCache = &pSlice->sMbCacheInfo;
   int32_t iCostP8x16, iCostP16x8, iCostP8x8;
@@ -1827,6 +1846,11 @@ void WelsMdInterMbRefinement (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SMB* pCurM
 
 }
 bool WelsMdFirstIntraMode (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SMB* pCurMb, SMbCache* pMbCache) {
+  // [subcodec] Never select intra MBs in P-frames for sprite compositing.
+  if (pEncCtx->pSvcParam->bSubcodecMode) {
+    return false;
+  }
+
   SWelsFuncPtrList* pFunc = pEncCtx->pFuncList;
 
   int32_t iCostI16x16 = WelsMdI16x16 (pFunc, pEncCtx->pCurDqLayer, pMbCache, pWelsMd->iLambda);

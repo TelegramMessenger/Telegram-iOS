@@ -829,6 +829,12 @@ const SLevelLimits* GetLevelLimits (int32_t iLevelIdx, bool bConstraint3) {
     return &g_ksLevelLimits[15];
   case 52:
     return &g_ksLevelLimits[16];
+  case 60:
+    return &g_ksLevelLimits[17];
+  case 61:
+    return &g_ksLevelLimits[18];
+  case 62:
+    return &g_ksLevelLimits[19];
   default:
     return NULL;
   }

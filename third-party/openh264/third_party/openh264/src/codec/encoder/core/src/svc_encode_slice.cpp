@@ -564,6 +564,33 @@ TRY_REENCODING:
     if (ENC_RETURN_SUCCESS != iEncReturn)
       return iEncReturn;
 
+    // [subcodec] For padding MBs, overwrite reconstruction buffer with exact black.
+    // This ensures content MBs' I_16x16 predictions are computed against exact-black
+    // neighbors, making their coefficients transplantable to the composite frame.
+    {
+      if (pEncCtx->pSvcParam->bSubcodecMode) {
+        const int32_t kiMbX = iCurMbIdx % pCurLayer->iMbWidth;
+        const int32_t kiMbY = iCurMbIdx / pCurLayer->iMbWidth;
+        if (kiMbX < 1 || kiMbX >= pCurLayer->iMbWidth - 1 ||
+            kiMbY < 1 || kiMbY >= pCurLayer->iMbHeight - 1) {
+          // Overwrite luma reconstruction to black (Y=0)
+          uint8_t* pCsY = pMbCache->SPicData.pCsMb[0];
+          const int32_t kiCsStrideY = pCurLayer->iCsStride[0];
+          for (int32_t r = 0; r < MB_WIDTH_LUMA; r++) {
+            memset(pCsY + r * kiCsStrideY, 0, MB_WIDTH_LUMA);
+          }
+          // Overwrite chroma reconstruction to neutral (Cb=128, Cr=128)
+          uint8_t* pCsCb = pMbCache->SPicData.pCsMb[1];
+          uint8_t* pCsCr = pMbCache->SPicData.pCsMb[2];
+          const int32_t kiCsStrideUV = pCurLayer->iCsStride[1];
+          for (int32_t r = 0; r < MB_WIDTH_CHROMA; r++) {
+            memset(pCsCb + r * kiCsStrideUV, 128, MB_WIDTH_CHROMA);
+            memset(pCsCr + r * kiCsStrideUV, 128, MB_WIDTH_CHROMA);
+          }
+        }
+      }
+    }
+
     pCurMb->uiSliceIdc = kiSliceIdx;
 
 #if defined(MB_TYPES_CHECK)

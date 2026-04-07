@@ -264,14 +264,11 @@ static NSData *base64_decode(NSString *str) {
 
 - (NSString * _Nonnull)serializeToString {
     NSData *data = [self serialize];
-    if ([data respondsToSelector:@selector(base64EncodedDataWithOptions:)]) {
-        return [[data base64EncodedStringWithOptions:kNilOptions] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]];
-    } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    return [self.serialize base64Encoding];
-#pragma clang diagnostic pop
-    }
+    NSString *result = [data base64EncodedStringWithOptions:kNilOptions];
+    result = [result stringByReplacingOccurrencesOfString:@"+" withString:@"-"];
+    result = [result stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+    result = [result stringByReplacingOccurrencesOfString:@"=" withString:@""];
+    return result;
 }
 
 - (BOOL)isEqual:(id)object {

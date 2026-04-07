@@ -1216,11 +1216,11 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
         public static let all: RenderContentTypes = [.text, .emoji]
     }
     
-    final class DrawingParameters: NSObject {
+    public final class DrawingParameters: NSObject {
         let cachedLayout: TextNodeLayout?
         let renderContentTypes: RenderContentTypes
         
-        init(cachedLayout: TextNodeLayout?, renderContentTypes: RenderContentTypes) {
+        public init(cachedLayout: TextNodeLayout?, renderContentTypes: RenderContentTypes) {
             self.cachedLayout = cachedLayout
             self.renderContentTypes = renderContentTypes
             
@@ -1295,7 +1295,7 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
         }
     }
     
-    private static func calculateLayoutV2(
+    public static func calculateLayoutV2(
         attributedString: NSAttributedString,
         minimumNumberOfLines: Int,
         maximumNumberOfLines: Int,
@@ -1685,7 +1685,7 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
         )
     }
     
-    static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textShadowBlur: CGFloat?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool, displayEmbeddedItemsUnderSpoilers: Bool, customTruncationToken: NSAttributedString?) -> TextNodeLayout {
+    public static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textShadowBlur: CGFloat?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool, displayEmbeddedItemsUnderSpoilers: Bool, customTruncationToken: NSAttributedString?) -> TextNodeLayout {
         guard let attributedString else {
             return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
         }

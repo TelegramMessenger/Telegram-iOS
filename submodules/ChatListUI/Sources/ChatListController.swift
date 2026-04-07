@@ -7177,9 +7177,6 @@ private final class ChatListLocationContext {
                 titleContent = NetworkStatusTitle(text: presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
             case let .connecting(proxy):
                 let text = presentationData.strings.State_Connecting
-                /*if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {*/
-                    //text = self.presentationData.strings.State_ConnectingToProxy
-                //}
                 if let proxy = proxy, proxy.hasConnectionIssues {
                     checkProxy = true
                 }

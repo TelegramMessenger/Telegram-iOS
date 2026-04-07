@@ -6,6 +6,7 @@ import sys
 import json
 import hashlib
 import base64
+import time
 import requests
 
 def sha256_file(path):
@@ -26,16 +27,55 @@ def init_build(host, token, files, channel):
     r.raise_for_status()
     return r.json()
 
+class ProgressFileReader:
+    def __init__(self, path, size):
+        self._file = open(path, 'rb')
+        self._size = size
+        self._sent = 0
+        self._start_time = time.time()
+        self._last_print = self._start_time
+
+    def __len__(self):
+        return self._size
+
+    def read(self, chunk_size=-1):
+        if chunk_size == -1:
+            chunk_size = self._size
+        data = self._file.read(chunk_size)
+        if not data:
+            elapsed = time.time() - self._start_time
+            speed = self._size / elapsed / 1024 / 1024 if elapsed > 0 else 0
+            print('  100% - all bytes sent in {:.1f}s ({:.2f} MB/s), waiting for server response...'.format(elapsed, speed))
+            return data
+        self._sent += len(data)
+        now = time.time()
+        if now - self._last_print >= 5:
+            elapsed = now - self._start_time
+            speed = self._sent / elapsed / 1024 / 1024 if elapsed > 0 else 0
+            print('  {:.1f}% ({:.1f} / {:.1f} MB) {:.2f} MB/s'.format(
+                self._sent * 100 / self._size, self._sent / 1024 / 1024, self._size / 1024 / 1024, speed))
+            self._last_print = now
+        return data
+
+    def close(self):
+        self._file.close()
+
 def upload_file(path, upload_info):
     url = upload_info.get('url')
     headers = dict(upload_info.get('headers', {}))
-    
+
     size = os.path.getsize(path)
     headers['Content-Length'] = str(size)
 
-    print('Uploading', path)
-    with open(path, 'rb') as f:
-        r = requests.put(url, data=f, headers=headers, timeout=900)
+    print('Uploading {} ({:.1f} MB)'.format(path, size / 1024 / 1024))
+    start_time = time.time()
+
+    body = ProgressFileReader(path, size)
+    try:
+        r = requests.put(url, data=body, headers=headers, timeout=900)
+    finally:
+        body.close()
+    print('  Server responded: {} ({:.1f}s total)'.format(r.status_code, time.time() - start_time))
     if r.status_code != 200:
         print('Upload failed', r.status_code)
         print(r.text[:500])
