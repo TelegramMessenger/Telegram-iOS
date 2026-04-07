@@ -9,7 +9,6 @@ import SafariServices
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
-import ShareController
 import SaveToCameraRoll
 import GalleryUI
 import OpenInExternalAppUI
@@ -142,14 +141,12 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.navigationBar.back = navigateBack
         self.navigationBar.share = { [weak self] in
             if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                let shareController = ShareController(context: context, subject: .url(content.url))
-                shareController.actionCompleted = { [weak self] in
+                let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(content.url), actionCompleted: { [weak self] in
                     if let strongSelf = self {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     }
-                }
-                shareController.completed = { [weak self] peerIds in
+                }, completed: { [weak self] peerIds in
                     let _ = (context.engine.data.get(
                         EngineDataList(
                             peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
@@ -159,7 +156,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         if let strongSelf = self {
                             let peers = peerList.compactMap { $0 }
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            
+
                             let text: String
                             var savedMessages = false
                             if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
@@ -201,7 +198,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             }), nil)
                         }
                     })
-                }
+                }))
                 strongSelf.present(shareController, nil)
             }
         }
@@ -1036,7 +1033,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .image(image) = media.media {
-                strongSelf.present(ShareController(context: strongSelf.context, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
+                strongSelf.present(strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) })))), nil)
             }
         })], catchTapsOutside: true)
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
@@ -1150,7 +1147,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                 }), ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuShare, accessibilityLabel: strings.Conversation_ContextMenuShare), action: { [weak self] in
                     if let strongSelf = self, let (webPage, _) = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                        strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
+                        strongSelf.present(strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .quote(text: text, url: content.url))), nil)
                     }
                 })]
                 

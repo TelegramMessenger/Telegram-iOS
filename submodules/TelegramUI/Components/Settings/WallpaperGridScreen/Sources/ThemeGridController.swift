@@ -10,7 +10,6 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import OverlayStatusController
 import AccountContext
-import ShareController
 import SearchUI
 import HexColor
 import PresentationDataUtils
@@ -466,7 +465,7 @@ public final class ThemeGridController: ViewController {
         } else {
             subject = .text(string)
         }
-        let shareController = ShareController(context: context, subject: subject)
+        let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: subject))
         self.present(shareController, in: .window(.root), blockInteraction: true)
         
         self.donePressed()

@@ -14,7 +14,7 @@ import SectionHeaderItem
 import TelegramStringFormatting
 import MergeLists
 import ContextUI
-import ShareController
+
 import OverlayStatusController
 import PresentationDataUtils
 import DirectionalPanGesture
@@ -610,8 +610,10 @@ public final class InviteLinkViewController: ViewController {
                 guard let inviteLink = invite.link else {
                     return
                 }
-                let shareController = ShareController(context: context, subject: .url(inviteLink))
-                shareController.completed = { [weak self] peerIds in
+                let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(inviteLink), actionCompleted: { [weak self] in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                }, completed: { [weak self] peerIds in
                     if let strongSelf = self {
                         let _ = (strongSelf.context.engine.data.get(
                             EngineDataList(
@@ -622,7 +624,7 @@ public final class InviteLinkViewController: ViewController {
                             if let strongSelf = self {
                                 let peers = peerList.compactMap { $0 }
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                
+
                                 let text: String
                                 var savedMessages = false
                                 if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
@@ -643,7 +645,7 @@ public final class InviteLinkViewController: ViewController {
                                         text = ""
                                     }
                                 }
-                                
+
                                 strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
                                     if savedMessages, let self, action == .info {
                                         let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
@@ -662,11 +664,7 @@ public final class InviteLinkViewController: ViewController {
                             }
                         })
                     }
-                }
-                shareController.actionCompleted = { [weak self] in
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                }
+                }))
                 self?.controller?.present(shareController, in: .window(.root))
             }, editLink: { [weak self] invite in
                 self?.editButtonPressed()

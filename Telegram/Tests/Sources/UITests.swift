@@ -31,7 +31,7 @@ class UITests: XCTestCase {
     }
 
     func testSignUp() throws {
-        deleteTestAccount(phone: "9996629999")
+        deleteTestAccount(phone: "9996625296")
         app.launch()
 
         // Welcome screen — tap Start Messaging

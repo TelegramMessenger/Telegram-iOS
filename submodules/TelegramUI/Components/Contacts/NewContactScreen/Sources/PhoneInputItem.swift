@@ -296,8 +296,8 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
         self.phoneInputNode.codeAndNumber = self.phoneInputNode.codeAndNumber
     }
     
-    func updateCountryCode(code: Int32, name: String) {
-        self.phoneInputNode.codeAndNumber = (code, name, self.phoneInputNode.codeAndNumber.2)
+    func updateCountryCode(code: Int32, name: String, phoneNumber: String? = nil) {
+        self.phoneInputNode.codeAndNumber = (code, name, phoneNumber ?? self.phoneInputNode.codeAndNumber.2)
         let _ = self.processNumberChange(self.phoneInputNode.number)
     }
     

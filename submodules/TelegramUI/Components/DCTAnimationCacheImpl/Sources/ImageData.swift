@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AnimationCache
 import ImageDCT
 import Accelerate
 

@@ -8,6 +8,7 @@ import Postbox
 import SwiftSignalKit
 import MultiAnimationRenderer
 import AnimationCache
+import DCTMultiAnimationRendererImpl
 import AccountContext
 import TelegramUIPreferences
 import GenerateStickerPlaceholderImage
@@ -277,7 +278,7 @@ public final class InlineFileIconLayer: MultiAnimationRenderTarget {
                 size: arguments.pixelSize,
                 fetch: animationCacheFetchFile(postbox: arguments.context.postbox, userLocation: arguments.userLocation, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: isTemplate ? .white : nil), completion: { [weak self] result, isFinal in
                 if !result {
-                    MultiAnimationRendererImpl.firstFrameQueue.async {
+                    DCTMultiAnimationRendererImpl.firstFrameQueue.async {
                         let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: pointSize, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor)
                         
                         DispatchQueue.main.async {

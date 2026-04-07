@@ -530,7 +530,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
             case .audio:
                 shared = .single(nil)
                 |> then(
-                    context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: [.music], minDate: nil, maxDate: nil), query: query, state: nil)
+                    context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: [.music], minDate: nil, maxDate: nil, folderId: nil), query: query, state: nil)
                     |> delay(0.6, queue: Queue.mainQueue())
                     |> map { result -> [Message]? in
                         return result.0.messages.filter { !$0.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) }

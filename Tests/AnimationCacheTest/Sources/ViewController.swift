@@ -3,6 +3,7 @@ import UIKit
 
 import Display
 import AnimationCache
+import DCTAnimationCacheImpl
 import SwiftSignalKit
 import VideoAnimationCache
 import LottieAnimationCache
@@ -50,7 +51,7 @@ public final class ViewController: UIViewController {
         let basePath = NSTemporaryDirectory() + "/animation-cache"
         let _ = try? FileManager.default.removeItem(atPath: basePath)
         let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: basePath), withIntermediateDirectories: true)
-        self.cache = AnimationCacheImpl(basePath: basePath, allocateTempFile: {
+        self.cache = DCTAnimationCacheImpl(basePath: basePath, allocateTempFile: {
             return basePath + "/\(Int64.random(in: 0 ... Int64.max))"
         })
         

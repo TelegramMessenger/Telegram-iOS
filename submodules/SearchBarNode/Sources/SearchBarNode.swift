@@ -928,6 +928,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         } set {
             self.textField.tokens = newValue
             self.updateIsEmpty(animated: true)
+            if let (boundingSize, leftInset, rightInset) = self.validLayout {
+                self.updateLayout(boundingSize: boundingSize, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+            }
         }
     }
     

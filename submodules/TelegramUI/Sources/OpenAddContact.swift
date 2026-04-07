@@ -4,12 +4,13 @@ import TelegramCore
 import Display
 import DeviceAccess
 import AccountContext
+import ShareController
 import AlertUI
 import PresentationDataUtils
 import PeerInfoUI
-import ShareController
+import PhoneNumberFormat
 
-func openAddContactImpl(context: AccountContext, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
+func openAddContactImpl(context: AccountContext, peer: EnginePeer?, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
     let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
     |> take(1)
     |> deliverOnMainQueue).startStandalone(next: { value in
@@ -17,8 +18,10 @@ func openAddContactImpl(context: AccountContext, firstName: String = "", lastNam
         case .allowed:
             let controller = context.sharedContext.makeNewContactScreen(
                 context: context,
-                peer: nil,
-                phoneNumber: phoneNumber,
+                peer: peer,
+                firstName: firstName.isEmpty ? nil : firstName,
+                lastName: lastName.isEmpty ? nil : lastName,
+                phoneNumber: cleanPhoneNumber(phoneNumber, removePlus: true),
                 shareViaException: false,
                 completion: { peer, stableId, contactData in
                     if let peer = peer {

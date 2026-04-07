@@ -18,7 +18,6 @@ import AccountContext
 import TelegramStringFormatting
 import OverlayStatusController
 import DeviceLocationManager
-import ShareController
 import UrlEscaping
 import ContextUI
 import AlertUI
@@ -1172,7 +1171,7 @@ extension ChatControllerImpl {
                     }
                     return updatedState
                 })
-                self.searchResult.set(.single((results, state, .general(scope: .channels, tags: nil, minDate: nil, maxDate: nil))))
+                self.searchResult.set(.single((results, state, .general(scope: .channels, tags: nil, minDate: nil, maxDate: nil, folderId: nil))))
             }
         }
         
@@ -2082,9 +2081,9 @@ extension ChatControllerImpl {
                     if let strongSelf = self, !messages.isEmpty {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                         
-                        let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
+                        let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .messages(messages.sorted(by: { lhs, rhs in
                             return lhs.index < rhs.index
-                        }).map { $0._asMessage() }), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.updatedPresentationData)
+                        }).map { $0._asMessage() }), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.updatedPresentationData))
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(shareController, in: .window(.root))
                     }
@@ -2412,7 +2411,7 @@ extension ChatControllerImpl {
                 }
             }
         }, openCalendarSearch: { [weak self] in
-            self?.openCalendarSearch(timestamp: Int32(Date().timeIntervalSince1970))
+            self?.openCalendarSearch(timestamp: Int32(Date().timeIntervalSince1970), isMedia: false)
         }, toggleMembersSearch: { [weak self] value in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in

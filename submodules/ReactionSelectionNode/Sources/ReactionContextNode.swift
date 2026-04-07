@@ -20,6 +20,7 @@ import EntityKeyboard
 import ComponentDisplayAdapters
 import AnimationCache
 import MultiAnimationRenderer
+import DCTMultiAnimationRendererImpl
 import EmojiTextAttachmentView
 import TextFormat
 import GZip
@@ -504,8 +505,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         self.reactionsLocked = reactionsLocked
         
         self.animationCache = animationCache
-        self.animationRenderer = MultiAnimationRendererImpl()
-        (self.animationRenderer as? MultiAnimationRendererImpl)?.useYuvA = context.sharedContext.immediateExperimentalUISettings.compressedEmojiCache
+        self.animationRenderer = DCTMultiAnimationRendererImpl()
+        (self.animationRenderer as? DCTMultiAnimationRendererImpl)?.useYuvA = context.sharedContext.immediateExperimentalUISettings.compressedEmojiCache
         
         self.backgroundMaskNode = ASDisplayNode()
         var backgroundGlassParams: ReactionContextBackgroundNode.GlassParams?
@@ -3341,7 +3342,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             if let currentItemNode = currentItemNode {
                 itemNode = currentItemNode
             } else {
-                let animationRenderer = MultiAnimationRendererImpl()
+                let animationRenderer = DCTMultiAnimationRendererImpl()
                 itemNode = ReactionNode(context: context, theme: theme, item: reaction, icon: .none, animationCache: animationCache, animationRenderer: animationRenderer, loopIdle: false, isLocked: false)
             }
             self.itemNode = itemNode

@@ -31,6 +31,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/DCTAnimationCacheImpl:DCTAnimationCacheImpl",
         "//submodules/TelegramUI/Components/VideoAnimationCache:VideoAnimationCache",
         "//submodules/TelegramUI/Components/LottieAnimationCache:LottieAnimationCache",
         "//submodules/rlottie:RLottieBinding",

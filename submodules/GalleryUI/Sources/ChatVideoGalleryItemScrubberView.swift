@@ -38,13 +38,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private var chapters: [MediaPlayerScrubbingChapter] = []
     
     private var fetchStatusDisposable = MetaDisposable()
-    private var scrubbingDisposable = MetaDisposable()
     private var chapterDisposable = MetaDisposable()
     private var loadingDisposable = MetaDisposable()
     
     private var leftTimestampNodePushed = false
     private var rightTimestampNodePushed = false
-    private var infoNodePushed = false
     
     private var currentChapter: MediaPlayerScrubbingChapter?
     
@@ -52,6 +50,14 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     
     private var currentLeftString: String?
     private var currentRightString: String?
+    
+    var hasVisibleInfo: Bool {
+        if let attributedText = self.infoNode.attributedText, !attributedText.string.isEmpty {
+            return true
+        } else {
+            return false
+        }
+    }
     
     var hideWhenDurationIsUnknown = false {
         didSet {
@@ -71,6 +77,8 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     var updateScrubbingVisual: (Double?) -> Void = { _ in }
     var updateScrubbingHandlePosition: (CGFloat) -> Void = { _ in }
     var seek: (Double) -> Void = { _ in }
+    
+    var onRequestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
     init(chapters: [MediaPlayerScrubbingChapter]) {
         self.backgroundContainer = GlassBackgroundContainerView()
@@ -131,7 +139,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.backgroundView.contentView.addSubview(self.leftTimestampNode.view)
         self.backgroundView.contentView.addSubview(self.rightTimestampNode.view)
         self.addSubview(self.scrubberNode.view)
-        //self.backgroundView.contentView.addSubview(self.infoNode.view)
+        self.backgroundView.contentView.addSubview(self.infoNode.view)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -139,7 +147,6 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     }
     
     deinit {
-        self.scrubbingDisposable.dispose()
         self.fetchStatusDisposable.dispose()
         self.chapterDisposable.dispose()
         self.loadingDisposable.dispose()
@@ -147,6 +154,16 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     
     var isLoading = false
     var isCollapsed: Bool?
+    
+    private func requestLayout(transition: ContainedViewLayoutTransition) {
+        if let onRequestLayout = self.onRequestLayout {
+            onRequestLayout(transition)
+        } else {
+            if let (size, leftInset, rightInset, isCollapsed) = self.containerLayout {
+                self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isCollapsed: isCollapsed, transition: .immediate)
+            }
+        }
+    }
     
     func updateTimestampsVisibility(animated: Bool) {
         if self.isAnimatedOut {
@@ -276,41 +293,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         }
                         strongSelf.infoNode.attributedText = NSAttributedString(string: chapter.title, font: textFont, textColor: .white)
                         
-                        if let (size, leftInset, rightInset, isCollapsed) = strongSelf.containerLayout {
-                            strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isCollapsed: isCollapsed, transition: .immediate)
-                        }
+                        strongSelf.requestLayout(transition: .immediate)
                     }
                 }
             }))
         }
-        
-        self.scrubbingDisposable.set((self.scrubberNode.scrubbingPosition
-        |> deliverOnMainQueue).start(next: { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            let leftTimestampNodePushed: Bool = false
-            let rightTimestampNodePushed: Bool = false
-            let infoNodePushed: Bool
-            if let value = value {
-                //leftTimestampNodePushed = value < 0.16
-                //rightTimestampNodePushed = value > 0.84
-                infoNodePushed = value >= 0.16 && value <= 0.84
-            } else {
-                //leftTimestampNodePushed = false
-                //rightTimestampNodePushed = false
-                infoNodePushed = false
-            }
-            if leftTimestampNodePushed != strongSelf.leftTimestampNodePushed || rightTimestampNodePushed != strongSelf.rightTimestampNodePushed || infoNodePushed != strongSelf.infoNodePushed {
-                strongSelf.leftTimestampNodePushed = leftTimestampNodePushed
-                strongSelf.rightTimestampNodePushed = rightTimestampNodePushed
-                strongSelf.infoNodePushed = infoNodePushed
-                
-                if let layout = strongSelf.containerLayout {
-                    strongSelf.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, isCollapsed: layout.3, transition: .animated(duration: 0.35, curve: .spring))
-                }
-            }
-        }))
     }
     
     func setBufferingStatusSignal(_ status: Signal<(RangeSet<Int64>, Int64)?, NoError>?) {
@@ -335,16 +322,16 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         }
                         strongSelf.infoNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
                         
-                        if let (size, leftInset, rightInset, isCollapsed) = strongSelf.containerLayout {
-                            strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isCollapsed: isCollapsed, transition: .immediate)
-                        }
+                        strongSelf.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }))
             } else if self.chapters.isEmpty {
                 self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, formatting: formatting), font: textFont, textColor: .white)
+                self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
             }
         } else if self.chapters.isEmpty {
             self.infoNode.attributedText = nil
+            self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
         }
     }
     
@@ -376,27 +363,32 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             }
         }
         
+        var yOffset: CGFloat = 0.0
+        if !isCollapsed {
+            yOffset = size.height - 44.0
+        }
+        
         leftTimestampOffset = 14.0
         rightTimestampOffset = 14.0
-        infoOffset = 0.0
+        infoOffset = -8.0
         
         if isCollapsed {
             scrubberLeftInset = 0.0
             scrubberRightInset = 0.0
         }
         
-        transition.setFrame(view: self.leftTimestampNode.view, frame: CGRect(origin: CGPoint(x: 16.0, y: leftTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
-        transition.setFrame(view: self.rightTimestampNode.view, frame: CGRect(origin: CGPoint(x: size.width - leftInset - rightInset - 60.0 - 16.0, y: rightTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
+        transition.setFrame(view: self.leftTimestampNode.view, frame: CGRect(origin: CGPoint(x: 16.0, y: yOffset + leftTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
+        transition.setFrame(view: self.rightTimestampNode.view, frame: CGRect(origin: CGPoint(x: size.width - leftInset - rightInset - 60.0 - 16.0, y: yOffset + rightTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
         
         var infoConstrainedSize = size
-        infoConstrainedSize.width = size.width - scrubberLeftInset - scrubberRightInset - 100.0
+        infoConstrainedSize.width = size.width - 20.0 * 2.0
         
         let infoSize = self.infoNode.measure(infoConstrainedSize)
         self.infoNode.bounds = CGRect(origin: CGPoint(), size: infoSize)
-        transition.setPosition(view: self.infoNode.view, position: CGPoint(x: size.width / 2.0, y: infoOffset + infoSize.height / 2.0))
-        self.infoNode.alpha = size.width < size.height && self.isCollapsed == false ? 1.0 : 0.0
+        transition.setPosition(view: self.infoNode.view, position: CGPoint(x: size.width / 2.0, y: yOffset + infoOffset + infoSize.height / 2.0))
+        self.infoNode.alpha = self.isCollapsed == false ? 1.0 : 0.0
         
-        var scrubberFrame = CGRect(origin: CGPoint(x: scrubberLeftInset, y: 15.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberLeftInset - scrubberRightInset, height: scrubberHeight))
+        var scrubberFrame = CGRect(origin: CGPoint(x: scrubberLeftInset, y: yOffset + 15.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberLeftInset - scrubberRightInset, height: scrubberHeight))
         if isCollapsed {
             scrubberFrame.origin.y = size.height - scrubberHeight
         }

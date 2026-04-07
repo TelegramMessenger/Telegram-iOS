@@ -18,7 +18,7 @@ import ContextUI
 import ItemListPeerItem
 import InviteLinksUI
 import UndoUI
-import ShareController
+
 import ItemListPeerActionItem
 import PremiumUI
 import StoryContainerScreen
@@ -1940,8 +1940,10 @@ public func channelStatsController(
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
     }, shareBoostLink: { link in        
-        let shareController = ShareController(context: context, subject: .url(link), updatedPresentationData: updatedPresentationData)
-        shareController.completed = {  peerIds in
+        let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url(link), updatedPresentationData: updatedPresentationData, actionCompleted: {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+        }, completed: { peerIds in
             let _ = (context.engine.data.get(
                 EngineDataList(
                     peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
@@ -1950,7 +1952,7 @@ public func channelStatsController(
             |> deliverOnMainQueue).start(next: { peerList in
                 let peers = peerList.compactMap { $0 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                
+
                 let text: String
                 var savedMessages = false
                 if peerIds.count == 1, let peerId = peerIds.first, peerId == context.account.peerId {
@@ -1971,7 +1973,7 @@ public func channelStatsController(
                         text = ""
                     }
                 }
-                
+
                 presentImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
                     if savedMessages, action == .info {
                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
@@ -1985,11 +1987,7 @@ public func channelStatsController(
                     return false
                 }))
             })
-        }
-        shareController.actionCompleted = {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
-        }
+        }))
         presentImpl?(shareController)
     },
     openBoost: { boost in

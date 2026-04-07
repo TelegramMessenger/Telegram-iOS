@@ -313,7 +313,10 @@ typedef enum {
   LEVEL_4_2 = 42,
   LEVEL_5_0 = 50,
   LEVEL_5_1 = 51,
-  LEVEL_5_2 = 52
+  LEVEL_5_2 = 52,
+  LEVEL_6_0 = 60,
+  LEVEL_6_1 = 61,
+  LEVEL_6_2 = 62
 } ELevelIdc;
 
 /**
@@ -592,6 +595,7 @@ typedef struct TagEncParamExt {
   bool    bIsLosslessLink;             ///< LTR advanced setting
   bool    bFixRCOverShoot;             ///< fix rate control overshooting
   int     iIdrBitrateRatio;            ///< the target bits of IDR is (idr_bitrate_ratio/100) * average target bit per frame.
+  bool    bSubcodecMode;               ///< enable subcodec sprite-compositing constraints (MV cap, no intra in P-frames, no sub-partitions, padding recon override, reduced log2_max_frame_num); default false
 } SEncParamExt;
 
 /**

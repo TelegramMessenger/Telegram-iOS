@@ -1949,7 +1949,21 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             //filter.insert(.excludeRecent)
         }
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, requestPeerType: nil, location: effectiveLocation, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
+        var folder: (Int32, String)?
+        if let folders = self.controller?.tabContainerData?.0 {
+            switch self.effectiveContainerNode.currentItemFilter {
+            case .all:
+                break
+            case let .filter(id):
+                if let value = folders.first(where: { $0.id == .filter(id) }) {
+                    if case let .filter(_, text, _) = value {
+                        folder = (id, text.text)
+                    }
+                }
+            }
+        }
+        
+        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, requestPeerType: nil, location: effectiveLocation, folder: folder, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, threadId, dismissSearch)
         }, openDisabledPeer: { _, _, _ in
         }, openRecentPeerOptions: { [weak self] peer in

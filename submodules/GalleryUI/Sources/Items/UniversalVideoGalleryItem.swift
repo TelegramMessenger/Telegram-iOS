@@ -3857,10 +3857,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 if let (message, _, _) = strongSelf.contentInfo(), let image = message.media.first(where: { $0 is TelegramMediaImage }) as? TelegramMediaImage, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {
                     let context = strongSelf.context
+                    var videoReference: AnyMediaReference?
+                    if let video = image.video {
+                        videoReference = .message(message: MessageReference(message), media: video)
+                    }
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveImage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
                         f(.default)
                         
-                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: image))
+                        let _ = (SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: image), video: videoReference)
                         |> deliverOnMainQueue).start(completed: { [weak self] in
                             guard let strongSelf = self else {
                                 return
@@ -3868,7 +3872,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             guard let controller = strongSelf.galleryController() else {
                                 return
                             }
-                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_ImageSaved), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                         })
                     })))
                 }

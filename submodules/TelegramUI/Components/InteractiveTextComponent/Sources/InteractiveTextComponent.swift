@@ -418,6 +418,7 @@ public final class InteractiveTextNodeLayout: NSObject {
     fileprivate let textStroke: (UIColor, CGFloat)?
     public let displayContentsUnderSpoilers: Bool
     fileprivate let expandedBlocks: Set<Int>
+    fileprivate var characterToGlyphMapping: [Int]?
     
     fileprivate init(
         attributedString: NSAttributedString?,
@@ -1045,9 +1046,22 @@ public final class InteractiveTextNodeLayout: NSObject {
         if !self.segments.isEmpty, let line = self.segments[0].lines.first {
             height = line.frame.maxY
         }
+        
+        var actualCount = 0
+        var itemCount = 0
+        for item in self.getCharacterToGlyphMapping() {
+            if itemCount >= glyphCount {
+                break
+            }
+            actualCount = item
+            itemCount += 1
+        }
+        let glyphCount = actualCount
+        
         var width: CGFloat = 0.0
         var count = 0
         var trailingLineWidth: CGFloat = 0.0
+        var lineCount = 0
         for segment in self.segments {
             for line in segment.lines {
                 if count >= glyphCount {
@@ -1094,19 +1108,80 @@ public final class InteractiveTextNodeLayout: NSObject {
                 }
                 
                 width = max(width, lineWidth)
-                trailingLineWidth = lineWidth
+                trailingLineWidth = lineWidth + self.insets.left + self.insets.right + 4.0
+                lineCount += 1
             }
         }
-        let _ = width
+        width = ceil(width) + self.insets.left + self.insets.right
+        if lineCount > 1 {
+            width = self.size.width
+        }
+        
         height += self.insets.top + self.insets.bottom + 2.0
         return TextNodeLayout.LayoutInfo(
-            size: CGSize(width: self.size.width, height: ceil(height)),
+            size: CGSize(width: width, height: ceil(height)),
             trailingLineWidth: trailingLineWidth
         )
     }
     
     public func sizeForGlyphCount(glyphCount: Int) -> CGSize {
         return self.layoutForGlyphCount(glyphCount: glyphCount).size
+    }
+    
+    public func getCharacterToGlyphMapping() -> [Int] {
+        guard let attributedString = self.attributedString else {
+            return []
+        }
+        if let value = self.characterToGlyphMapping {
+            return value
+        }
+
+        let nsString = attributedString.string as NSString
+        let fullLength = nsString.length
+
+        // Build a map from each composed character start index to its cumulative glyph count.
+        // Walk glyphs in reveal order and record the glyph count after processing each composed character.
+        var glyphCountByComposedStart: [Int: Int] = [:]
+        var cumulativeGlyphCount = 0
+
+        for segment in self.segments {
+            for line in segment.lines {
+                let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                for run in glyphRuns {
+                    let run = run as! CTRun
+                    let glyphCount = CTRunGetGlyphCount(run)
+
+                    var stringIndices = [CFIndex](repeating: 0, count: glyphCount)
+                    CTRunGetStringIndices(run, CFRangeMake(0, glyphCount), &stringIndices)
+
+                    for i in 0..<glyphCount {
+                        cumulativeGlyphCount += 1
+                        let stringIndex = stringIndices[i]
+                        let composedRange = nsString.rangeOfComposedCharacterSequence(at: stringIndex)
+                        glyphCountByComposedStart[composedRange.location] = cumulativeGlyphCount
+                    }
+                }
+            }
+        }
+
+        // Walk the source string by composed character sequences and emit an entry for each.
+        // Characters consumed by a ligature (no dedicated glyphs) get the same cumulative count
+        // as the preceding character, so the animation still steps through them.
+        var result: [Int] = []
+        var lastKnownGlyphCount = 0
+        var index = 0
+        while index < fullLength {
+            let composedRange = nsString.rangeOfComposedCharacterSequence(at: index)
+            if let count = glyphCountByComposedStart[composedRange.location] {
+                lastKnownGlyphCount = count
+            }
+            result.append(lastKnownGlyphCount)
+            index = composedRange.location + composedRange.length
+        }
+        
+        self.characterToGlyphMapping = result
+        
+        return result
     }
 }
 
@@ -2179,7 +2254,14 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         
         return count
     }
-    
+
+    public func getCharacterToGlyphMapping() -> [Int] {
+        guard let cachedLayout = self.cachedLayout else {
+            return []
+        }
+        return cachedLayout.getCharacterToGlyphMapping()
+    }
+
     public func updateRevealGlyphCount(count: Int?) {
         guard let cachedLayout = self.cachedLayout else {
             return
@@ -2187,7 +2269,18 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         
         self.revealGlyphCount = count
         
-        if let count {
+        if var count {
+            var actualCount = 0
+            var itemCount = 0
+            for item in self.getCharacterToGlyphMapping() {
+                if itemCount >= count {
+                    break
+                }
+                actualCount = item
+                itemCount += 1
+            }
+            count = actualCount
+            
             var nextItemId = 0
             var currentCount = 0
             for segment in cachedLayout.segments {

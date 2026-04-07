@@ -445,6 +445,22 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
         }
         
         if preload {
+            var channelMessage: Signal<Void, NoError> = .single(Void())
+            if case .channelPost = subject, let channelMessageId = replyThreadMessage.channelMessageId {
+                channelMessage = context.engine.messages.getMessagesLoadIfNecessary([channelMessageId], strategy: .cloud(skipLocal: false))
+                |> mapToSignal { result -> Signal<Void, GetMessagesError> in
+                    switch result {
+                    case .progress:
+                        return .never()
+                    case .result:
+                        return .single(Void())
+                    }
+                }
+                |> `catch` { _ -> Signal<Void, NoError> in
+                    return .single(Void())
+                }
+            }
+            
             let preloadSignal = preloadedChatHistoryViewForLocation(
                 input,
                 context: context,
@@ -455,8 +471,8 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
                 tag: nil,
                 additionalData: []
             )
-            return preloadSignal
-            |> map { historyView -> Bool? in
+            return combineLatest(preloadSignal, channelMessage)
+            |> map { historyView, _ -> Bool? in
                 switch historyView {
                 case .Loading:
                     return nil

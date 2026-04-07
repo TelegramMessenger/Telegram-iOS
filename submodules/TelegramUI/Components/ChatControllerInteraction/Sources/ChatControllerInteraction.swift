@@ -164,12 +164,14 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         public var contentNode: ContextExtractedContentContainingNode?
         public var messageNode: ASDisplayNode?
         public var progress: Promise<Bool>?
+        public var gesture: TapLongTapOrDoubleTapGestureRecognizer?
         
-        public init(message: Message? = nil, contentNode: ContextExtractedContentContainingNode? = nil, messageNode: ASDisplayNode? = nil, progress: Promise<Bool>? = nil) {
+        public init(message: Message? = nil, contentNode: ContextExtractedContentContainingNode? = nil, messageNode: ASDisplayNode? = nil, progress: Promise<Bool>? = nil, gesture: TapLongTapOrDoubleTapGestureRecognizer? = nil) {
             self.message = message
             self.contentNode = contentNode
             self.messageNode = messageNode
             self.progress = progress
+            self.gesture = gesture
         }
     }
     

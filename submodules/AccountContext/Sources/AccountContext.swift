@@ -1445,7 +1445,7 @@ public protocol SharedAccountContext: AnyObject {
     func resolveUrl(context: AccountContext, peerId: PeerId?, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError>
     func resolveUrlWithProgress(context: AccountContext, peerId: PeerId?, url: String, skipUrlAuth: Bool) -> Signal<ResolveUrlResult, NoError>
     func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, forceExternal: Bool, forceUpdate: Bool, openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, UIView?, CGRect?) -> Bool)?, sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?, progress: Promise<Bool>?, completion: (() -> Void)?)
-    func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
+    func openAddContact(context: AccountContext, peer: EnginePeer?, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
     func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void)
@@ -1519,7 +1519,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeGiftDemoScreen(context: AccountContext) -> ViewController
     func makeStorySharingScreen(context: AccountContext, subject: StorySharingSubject, parentController: ViewController) -> ViewController
     func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void, requestSelectMessages: ((String, Data, String?) -> Void)?)
-    func makeShareController(context: AccountContext, subject: ShareControllerSubject, forceExternal: Bool, shareStory: (() -> Void)?, enqueued: (([PeerId], [Int64]) -> Void)?, actionCompleted: (() -> Void)?) -> ViewController
+    func makeShareController(context: AccountContext, params: ShareControllerParams) -> ViewController
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
     func makeIncomingMessagePrivacyScreen(context: AccountContext, value: GlobalPrivacySettings.NonContactChatsPrivacy, exceptions: SelectivePrivacySettings, update: @escaping (GlobalPrivacySettings.NonContactChatsPrivacy) -> Void) -> ViewController
@@ -1550,7 +1550,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func openCreateGroupCallUI(context: AccountContext, peerIds: [EnginePeer.Id], parentController: ViewController)
     
-    func makeNewContactScreen(context: AccountContext, peer: EnginePeer?, phoneNumber: String?, shareViaException: Bool, completion: @escaping (EnginePeer?, DeviceContactStableId?, DeviceContactExtendedData?) -> Void) -> ViewController
+    func makeNewContactScreen(context: AccountContext, peer: EnginePeer?, firstName: String?, lastName: String?, phoneNumber: String?, shareViaException: Bool, completion: @escaping (EnginePeer?, DeviceContactStableId?, DeviceContactExtendedData?) -> Void) -> ViewController
     
     func makeLoginEmailSetupController(context: AccountContext, blocking: Bool, emailPattern: String?, canAutoDismissIfNeeded: Bool, navigationController: NavigationController?, completion: @escaping () -> Void, dismiss: @escaping () -> Void) -> ViewController
     func makePasskeySetupController(context: AccountContext, displaySkip: Bool, navigationController: NavigationController?, completion: @escaping () -> Void, dismiss: @escaping () -> Void) -> ViewController

@@ -492,7 +492,7 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
             defaultAlphaMemory = malloc(contextStride * contextHeight);
             
             CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-            CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+            CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
             CGContextRef targetContext = CGBitmapContextCreate(defaultContextMemory, contextWidth, contextHeight, 8, contextStride, colorSpace, bitmapInfo);
             CFRelease(colorSpace);
             
@@ -534,7 +534,7 @@ static void addAttachmentImageCorners(void *memory, const unsigned int width, co
         alphaMemory = malloc(contextStride * contextHeight);
         
         CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-        CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+        CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
         CGContextRef targetContext = CGBitmapContextCreate(contextMemory, contextWidth, contextHeight, 8, contextStride, colorSpace, bitmapInfo);
         CFRelease(colorSpace);
         
@@ -774,7 +774,7 @@ void TGAddImageCorners(void *memory, const unsigned int width, const unsigned in
         alphaMemory = malloc(contextStride * contextHeight);
         
         CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-        CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+        CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
         CGContextRef targetContext = CGBitmapContextCreate(contextMemory, contextWidth, contextHeight, 8, contextStride, colorSpace, bitmapInfo);
         CFRelease(colorSpace);
         
@@ -1053,7 +1053,7 @@ UIImage *TGAverageColorAttachmentWithCornerRadiusImage(UIColor *color, bool atta
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     
@@ -1180,7 +1180,7 @@ TGStaticBackdropAreaData *createImageBackdropArea(uint8_t *sourceImageMemory, in
     memset(memory, 0x00, (int)(bytesPerRow * contextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     CGContextRef context = CGBitmapContextCreate(memory, (int)contextSize.width, (int)contextSize.height, 8, bytesPerRow, colorSpace, bitmapInfo);
     CGColorSpaceRelease(colorSpace);
     UIGraphicsPushContext(context);
@@ -1284,7 +1284,7 @@ UIImage *TGBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, 
     void *actionCircleMemory = malloc(((int)(actionCircleBytesPerRow * actionCircleContextSize.height)));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef blurredContext = CGBitmapContextCreate(blurredMemory, (int)blurredContextSize.width, (int)blurredContextSize.height, 8, blurredBytesPerRow, colorSpace, bitmapInfo);
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
@@ -1416,7 +1416,7 @@ UIImage *TGSecretBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize 
     void *actionCircleMemory = malloc(((int)(actionCircleBytesPerRow * actionCircleContextSize.height)));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef blurredContext = CGBitmapContextCreate(blurredMemory, (int)blurredContextSize.width, (int)blurredContextSize.height, 8, blurredBytesPerRow, colorSpace, bitmapInfo);
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
@@ -1546,7 +1546,7 @@ UIImage *TGBlurredFileImage(UIImage *source, CGSize size, uint32_t *averageColor
     void *actionCircleMemory = malloc(((int)(actionCircleBytesPerRow * actionCircleContextSize.height)));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef blurredContext = CGBitmapContextCreate(blurredMemory, (int)blurredContextSize.width, (int)blurredContextSize.height, 8, blurredBytesPerRow, colorSpace, bitmapInfo);
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
@@ -1657,7 +1657,7 @@ UIImage *TGBlurredAlphaImage(UIImage *source, CGSize size)
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef blurredContext = CGBitmapContextCreate(blurredMemory, (int)blurredContextSize.width, (int)blurredContextSize.height, 8, blurredBytesPerRow, colorSpace, bitmapInfo);
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
@@ -1733,7 +1733,7 @@ UIImage *TGBlurredRectangularImage(UIImage *source, bool more, CGSize size, CGSi
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef blurredContext = CGBitmapContextCreate(blurredMemory, (int)blurredContextSize.width, (int)blurredContextSize.height, 8, blurredBytesPerRow, colorSpace, bitmapInfo);
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
@@ -1815,7 +1815,7 @@ UIImage *TGLoadedAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, u
     void *actionCircleMemory = malloc(((int)(actionCircleBytesPerRow * actionCircleContextSize.height)));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     CGContextRef actionCircleContext = CGBitmapContextCreate(actionCircleMemory, (int)actionCircleContextSize.width, (int)actionCircleContextSize.height, 8, actionCircleBytesPerRow, colorSpace, bitmapInfo);
@@ -1907,7 +1907,7 @@ UIImage *TGAnimationFrameAttachmentImage(UIImage *source, CGSize size, CGSize re
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     
@@ -1954,7 +1954,7 @@ UIImage *TGLoadedFileImage(UIImage *source, CGSize size, uint32_t *averageColor,
     memset(actionCircleMemory, 0xff, actionCircleBytesPerRow * actionCircleContextSize.height);
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     CGContextRef actionCircleContext = CGBitmapContextCreate(actionCircleMemory, (int)actionCircleContextSize.width, (int)actionCircleContextSize.height, 8, actionCircleBytesPerRow, colorSpace, bitmapInfo);
@@ -2048,7 +2048,7 @@ UIImage *TGReducedAttachmentWithCornerRadiusImage(UIImage *source, CGSize origin
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     CGColorSpaceRelease(colorSpace);
     
@@ -2137,7 +2137,7 @@ UIImage *TGBlurredBackgroundImage(UIImage *source, CGSize size)
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     
@@ -2173,7 +2173,7 @@ UIImage *TGRoundImage(UIImage *source, CGSize size)
     memset(targetMemory, 0, (int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     
@@ -2213,7 +2213,7 @@ void TGPlainImageAverageColor(UIImage *source, uint32_t *averageColor)
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     
@@ -2272,7 +2272,7 @@ UIImage *TGCropBackdropImage(UIImage *source, CGSize size)
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     
@@ -2320,7 +2320,7 @@ UIImage *TGScaleAndCropImageToPixelSize(UIImage *source, CGSize size, CGSize ren
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     
@@ -2365,7 +2365,7 @@ NSArray *TGBlurredBackgroundImages(UIImage *source, CGSize sourceSize)
     void *targetMemory = malloc((int)(targetBytesPerRow * targetContextSize.height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = ((uint32_t)kCGImageAlphaPremultipliedFirst) | ((uint32_t)kCGBitmapByteOrder32Host);
     
     CGContextRef targetContext = CGBitmapContextCreate(targetMemory, (int)targetContextSize.width, (int)targetContextSize.height, 8, targetBytesPerRow, colorSpace, bitmapInfo);
     

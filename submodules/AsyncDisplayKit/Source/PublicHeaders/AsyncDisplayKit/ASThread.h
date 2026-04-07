@@ -163,6 +163,8 @@ namespace AS {
       return success;
     }
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wthread-safety-analysis"
     void lock() {
       switch (_type) {
         case Plain:
@@ -184,7 +186,10 @@ namespace AS {
       }
       DidLock();
     }
+#pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wthread-safety-analysis"
     void unlock() {
       WillUnlock();
       switch (_type) {
@@ -206,6 +211,7 @@ namespace AS {
           break;
       }
     }
+#pragma clang diagnostic pop
 
     void AssertHeld() {
       ASDisplayNodeCAssert(_owner == std::this_thread::get_id(), @"Thread should hold lock");

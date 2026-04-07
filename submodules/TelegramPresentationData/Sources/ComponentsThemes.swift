@@ -69,7 +69,7 @@ public extension NavigationBarTheme {
             badgeTextColor = theme.badgeTextColor
         }
         
-        self.init(overallDarkAppearance: rootControllerTheme.overallDarkAppearance, buttonColor: buttonColor, disabledButtonColor: disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: hideBackground ? .clear : theme.blurredBackgroundColor, opaqueBackgroundColor: hideBackground ? .clear : theme.opaqueBackgroundColor, enableBackgroundBlur: enableBackgroundBlur, separatorColor: hideBackground || hideSeparator ? .clear : theme.separatorColor, badgeBackgroundColor: hideBadge ? .clear : badgeBackgroundColor, badgeStrokeColor: .clear, badgeTextColor: hideBadge ? .clear : badgeTextColor, edgeEffectColor: edgeEffectColor, style: style, glassStyle: glassStyle)
+        self.init(overallDarkAppearance: rootControllerTheme.overallDarkAppearance, buttonColor: buttonColor, disabledButtonColor: disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: hideBackground ? .clear : theme.blurredBackgroundColor, opaqueBackgroundColor: hideBackground ? .clear : theme.opaqueBackgroundColor, enableBackgroundBlur: enableBackgroundBlur, separatorColor: hideBackground || hideSeparator ? .clear : theme.separatorColor, badgeBackgroundColor: hideBadge ? .clear : badgeBackgroundColor, badgeStrokeColor: .clear, badgeTextColor: hideBadge ? .clear : badgeTextColor, edgeEffectColor: edgeEffectColor, accentButtonColor: rootControllerTheme.list.itemCheckColors.fillColor, accentForegroundColor: rootControllerTheme.list.itemCheckColors.foregroundColor, style: style, glassStyle: glassStyle)
     }
 }
 

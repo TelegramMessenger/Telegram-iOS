@@ -7,11 +7,11 @@ import TelegramPresentationData
 import AvatarNode
 import AccountContext
 import SelectablePeerNode
-import ShareController
 import SolidRoundedButtonNode
 import ActivityIndicator
 import ComponentFlow
 import EmojiStatusComponent
+import ShareController
 
 private let avatarFont = avatarPlaceholderFont(size: 42.0)
 

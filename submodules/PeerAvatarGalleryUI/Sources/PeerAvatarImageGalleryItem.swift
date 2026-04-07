@@ -7,7 +7,6 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
-import ShareController
 import PhotoResources
 import GalleryUI
 import TelegramUniversalVideoContent
@@ -201,12 +200,11 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     forceTheme = defaultDarkColorPresentationTheme
                 }
                 
-                let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: .saveToCameraRoll, forceTheme: forceTheme)
-                shareController.actionCompleted = {
+                let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: subject, preferredAction: .saveToCameraRoll, forceTheme: forceTheme, actionCompleted: {
                     if let actionCompletionText = actionCompletionText {
                         interaction.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
                     }
-                }
+                }))
                 interaction.presentController(shareController, nil)
             }
         }

@@ -27,7 +27,6 @@ import InstantPageUI
 import InstantPageCache
 import LocalAuth
 import OpenInExternalAppUI
-import ShareController
 import UndoUI
 import AvatarNode
 import OverlayStatusController
@@ -3800,7 +3799,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     separatorColor: UIColor(rgb: 0x000000, alpha: 0.25),
                     badgeBackgroundColor: .clear,
                     badgeStrokeColor: .clear,
-                    badgeTextColor: .clear
+                    badgeTextColor: .clear,
+                    accentButtonColor: self.presentationData.theme.list.itemCheckColors.fillColor,
+                    accentForegroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor
                 ),
                 strings: NavigationBarStrings(back: "", close: "")
             )
@@ -3938,11 +3939,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     guard let self else {
                         return
                     }
-                    let shareController = ShareController(context: context, subject: .url("https://t.me/\(addressName)?profile"))
-                    shareController.actionCompleted = { [weak self] in
+                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .url("https://t.me/\(addressName)?profile"), actionCompleted: { [weak self] in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                    }
+                    }))
                     self.present(shareController, in: .window(.root))
                 })))
             }

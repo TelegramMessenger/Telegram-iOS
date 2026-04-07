@@ -8,7 +8,6 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
-import ShareController
 import CounterControllerTitleView
 import WallpaperResources
 import OverlayStatusController
@@ -524,7 +523,7 @@ public final class ThemePreviewController: ViewController {
                 subject = .media(media, nil)
                 preferredAction = .default
         }
-        let controller = ShareController(context: self.context, subject: subject, preferredAction: preferredAction)
+        let controller = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: subject, preferredAction: preferredAction))
         self.present(controller, in: .window(.root), blockInteraction: true)
     }
 }

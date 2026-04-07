@@ -1122,8 +1122,8 @@ final class StorageUsageScreenComponent: Component {
             }
             
             var wasLockedAtPanels = false
-            if let panelContainerView = self.panelContainer.view, let navigationMetrics = self.navigationMetrics {
-                if self.scrollView.bounds.minY > 0.0 && abs(self.scrollView.bounds.minY - (panelContainerView.frame.minY - navigationMetrics.navigationHeight)) <= UIScreenPixel {
+            if let panelContainerView = self.panelContainer.view {
+                if self.scrollView.bounds.minY > 0.0 && abs(self.scrollView.bounds.minY - (panelContainerView.frame.minY - 0.0)) <= UIScreenPixel {
                     wasLockedAtPanels = true
                 }
             }
@@ -2214,7 +2214,7 @@ final class StorageUsageScreenComponent: Component {
                         theme: environment.theme,
                         strings: environment.strings,
                         dateTimeFormat: environment.dateTimeFormat,
-                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: bottomInset, right: environment.safeInsets.right),
+                        insets: UIEdgeInsets(top: environment.navigationHeight, left: environment.safeInsets.left, bottom: bottomInset, right: environment.safeInsets.right),
                         items: panelItems,
                         currentPanelUpdated: { [weak self] id, transition in
                             guard let self else {
@@ -2227,20 +2227,20 @@ final class StorageUsageScreenComponent: Component {
                     environment: {
                         StorageUsagePanelContainerEnvironment(isScrollable: wasLockedAtPanels)
                     },
-                    containerSize: CGSize(width: availableSize.width, height: availableSize.height - environment.navigationHeight)
+                    containerSize: CGSize(width: availableSize.width, height: availableSize.height)
                 )
                 if let panelContainerView = self.panelContainer.view {
                     if panelContainerView.superview == nil {
                         self.scrollContainerView.addSubview(panelContainerView)
                     }
-                    transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: panelContainerSize))
+                    transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight - environment.navigationHeight), size: panelContainerSize))
                     if self.topContentOverlayView.superview == nil {
                         self.scrollContainerView.insertSubview(self.topContentOverlayView, belowSubview: panelContainerView)
                     }
                     self.topContentOverlayView.backgroundColor = environment.theme.list.blocksBackgroundColor
                     transition.setFrame(view: self.topContentOverlayView, frame: CGRect(origin: CGPoint(x: 0.0, y: panelContainerView.frame.minY - availableSize.height), size: availableSize))
                 }
-                contentHeight += panelContainerSize.height
+                contentHeight += panelContainerSize.height - environment.navigationHeight
             } else {
                 self.panelContainer.view?.removeFromSuperview()
                 self.topContentOverlayView.removeFromSuperview()
@@ -2259,7 +2259,7 @@ final class StorageUsageScreenComponent: Component {
             var scrollViewBounds = self.scrollView.bounds
             scrollViewBounds.size = availableSize
             if wasLockedAtPanels, let panelContainerView = self.panelContainer.view {
-                scrollViewBounds.origin.y = panelContainerView.frame.minY - environment.navigationHeight
+                scrollViewBounds.origin.y = panelContainerView.frame.minY
             }
             transition.setBounds(view: self.scrollView, bounds: scrollViewBounds)
             

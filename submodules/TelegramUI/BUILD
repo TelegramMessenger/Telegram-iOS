@@ -283,6 +283,8 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieAnimationCache:LottieAnimationCache",
         "//submodules/TelegramUI/Components/VideoAnimationCache:VideoAnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/DCTAnimationCacheImpl:DCTAnimationCacheImpl",
+        "//submodules/TelegramUI/Components/DCTMultiAnimationRendererImpl:DCTMultiAnimationRendererImpl",
         "//submodules/TelegramUI/Components/ChatInputPanelContainer:ChatInputPanelContainer",
         "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent:EmojiSuggestionsComponent",

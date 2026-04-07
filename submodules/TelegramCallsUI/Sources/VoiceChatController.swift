@@ -15,7 +15,6 @@ import MergeLists
 import ItemListUI
 import AppBundle
 import ContextUI
-import ShareController
 import DeleteChatPeerActionSheetItem
 import UndoUI
 import AlertUI

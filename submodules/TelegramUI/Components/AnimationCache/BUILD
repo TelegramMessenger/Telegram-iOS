@@ -11,9 +11,6 @@ swift_library(
     ],
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/CryptoUtils:CryptoUtils",
-        "//submodules/ManagedFile:ManagedFile",
-        "//submodules/TelegramUI/Components/AnimationCache/ImageDCT:ImageDCT",
     ],
     visibility = [
         "//visibility:public",

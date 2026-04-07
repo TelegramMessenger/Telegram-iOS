@@ -756,7 +756,7 @@ public func makeAttachmentFileControllerImpl(
     case .audio:
         recentDocuments = .single(nil)
         |> then(
-            context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: [.music], minDate: nil, maxDate: nil), query: "", state: nil)
+            context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: [.music], minDate: nil, maxDate: nil, folderId: nil), query: "", state: nil)
             |> map { result -> [Message]? in
                 return result.0.messages
             }

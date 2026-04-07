@@ -47,7 +47,7 @@ public func cacheVideoAnimation(path: String, hintVP9: Bool, width: Int, height:
                         return frameDuration
                     }, proposedWidth: frame.width, proposedHeight: frame.height, insertKeyframe: false)
                     
-                    if firstFrameOnly {
+                    if firstFrameOnly || frameSource.frameCount == 1 {
                         break
                     }
                 } else {

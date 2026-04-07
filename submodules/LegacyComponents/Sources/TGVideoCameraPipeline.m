@@ -453,7 +453,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     
-    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, ((uint32_t)kCGBitmapByteOrder32Little) | ((uint32_t)kCGImageAlphaPremultipliedFirst));
     
     CGImageRef cgImage = CGBitmapContextCreateImage(context);
     CVPixelBufferUnlockBaseAddress(imageBuffer.buffer, 0);
@@ -633,7 +633,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     inBuff.data = baseAddress + startpos;
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreateWithData(NULL, outWidth, outHeight, 8, outWidth * 4, colorSpace, kCGImageByteOrder32Little | kCGImageAlphaPremultipliedFirst, NULL, nil);
+    CGContextRef context = CGBitmapContextCreateWithData(NULL, outWidth, outHeight, 8, outWidth * 4, colorSpace, ((uint32_t)kCGImageByteOrder32Little) | ((uint32_t)kCGImageAlphaPremultipliedFirst), NULL, nil);
     
     unsigned char *outImg = CGBitmapContextGetData(context);
     vImage_Buffer outBuff = {outImg, outHeight, outWidth, 4 * outWidth};

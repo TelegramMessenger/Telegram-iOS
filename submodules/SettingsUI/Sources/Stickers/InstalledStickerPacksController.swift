@@ -14,7 +14,7 @@ import StickerPackPreviewUI
 import ItemListStickerPackItem
 import ItemListPeerActionItem
 import UndoUI
-import ShareController
+
 import WebPBinding
 import ReactionImageComponent
 import FeaturedStickersScreen
@@ -1063,7 +1063,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                         }
                     }
                     let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
-                    let shareController = ShareController(context: context, subject: .text(text), externalShare: true)
+                    let shareController = context.sharedContext.makeShareController(context: context, params: ShareControllerParams(subject: .text(text), externalShare: true))
                     presentControllerImpl?(shareController, nil)
                 })])
             } else {

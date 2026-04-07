@@ -12,7 +12,6 @@ import AccountContext
 import AppBundle
 import PromptUI
 import SafariServices
-import ShareController
 import UndoUI
 import UrlEscaping
 import PDFKit
@@ -549,10 +548,9 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
     
     private func share(url: String) {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let shareController = ShareController(context: self.context, subject: .url(url))
-        shareController.actionCompleted = { [weak self] in
+        let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .url(url), actionCompleted: { [weak self] in
             self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-        }
+        }))
         self.present(shareController, nil)
     }
     

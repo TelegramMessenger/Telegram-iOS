@@ -94,7 +94,7 @@ static int32_t WelsGenerateNewSps (sWelsEncCtx* pCtx, const bool kbUseSubsetSps,
     iRet = WelsInitSps (pSps, pDlayerParam, &pParam->sDependencyLayers[iDlayerIndex], pParam->uiIntraPeriod,
                         pParam->iMaxNumRefFrame,
                         kiSpsId, pParam->bEnableFrameCroppingFlag, pParam->iRCMode != RC_OFF_MODE, iDlayerCount,
-                        bSVCBaselayer);
+                        bSVCBaselayer, pParam->bSubcodecMode);
   } else {
     iRet = WelsInitSubsetSps (pSubsetSps, pDlayerParam, &pParam->sDependencyLayers[iDlayerIndex], pParam->uiIntraPeriod,
                               pParam->iMaxNumRefFrame,
@@ -178,7 +178,7 @@ int32_t FindExistingSps (SWelsSvcCodingParam* pParam, const bool kbUseSubsetSps,
     WelsInitSps (&sTmpSps, pDlayerParam, &pParam->sDependencyLayers[iDlayerIndex], pParam->uiIntraPeriod,
                  pParam->iMaxNumRefFrame,
                  0, pParam->bEnableFrameCroppingFlag, pParam->iRCMode != RC_OFF_MODE, iDlayerCount,
-                 bSVCBaseLayer);
+                 bSVCBaseLayer, pParam->bSubcodecMode);
     for (int32_t iId = 0; iId < iSpsNumInUse; iId++) {
       if (CheckMatchedSps (&sTmpSps, &pSpsArray[iId])) {
         return iId;

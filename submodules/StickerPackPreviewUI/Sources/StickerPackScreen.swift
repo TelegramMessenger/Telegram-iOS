@@ -1110,16 +1110,16 @@ private final class StickerPackContainer: ASDisplayNode {
                 let parentNavigationController = strongSelf.controller?.parentNavigationController
                 let shareController = strongSelf.context.sharedContext.makeShareController(
                     context: strongSelf.context,
-                    subject: shareSubject,
-                    forceExternal: false,
-                    shareStory: nil,
-                    enqueued: nil,
-                    actionCompleted: { [weak parentNavigationController] in
-                        if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
-                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    params: ShareControllerParams(
+                        subject: shareSubject,
+                        externalShare: false,
+                        actionCompleted: { [weak parentNavigationController] in
+                            if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            }
                         }
-                    }
+                    )
                 )
                 strongSelf.controller?.present(shareController, in: .window(.root))
             }

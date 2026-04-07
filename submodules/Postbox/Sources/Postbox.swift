@@ -1213,9 +1213,9 @@ public final class Transaction {
         self.postbox?.reindexUnreadCounters(currentTransaction: self)
     }
     
-    public func searchPeers(query: String) -> [RenderedPeer] {
+    public func searchPeers(query: String, predicate: ChatListFilterPredicate?) -> [RenderedPeer] {
         assert(!self.disposed)
-        return self.postbox?.searchPeers(query: query) ?? []
+        return self.postbox?.searchPeers(transaction: self, query: query, predicate: predicate) ?? []
     }
 
     public func clearTimestampBasedAttribute(id: MessageId, tag: UInt16) {
@@ -3800,13 +3800,13 @@ final class PostboxImpl {
         } |> switchToLatest
     }
     
-    public func searchPeers(query: String) -> Signal<[RenderedPeer], NoError> {
+    public func searchPeers(query: String, predicate: ChatListFilterPredicate?) -> Signal<[RenderedPeer], NoError> {
         return self.transaction { transaction -> Signal<[RenderedPeer], NoError> in
-            return .single(transaction.searchPeers(query: query))
+            return .single(transaction.searchPeers(query: query, predicate: predicate))
         } |> switchToLatest
     }
     
-    fileprivate func searchPeers(query: String) -> [RenderedPeer] {
+    fileprivate func searchPeers(transaction: Transaction, query: String, predicate: ChatListFilterPredicate?) -> [RenderedPeer] {
         var peerIds = Set<PeerId>()
         var chatPeers: [RenderedPeer] = []
         
@@ -3822,6 +3822,30 @@ final class PostboxImpl {
             }
         }
         chatPeerIds.append(contentsOf: additionalChatPeerIds)
+        
+        if let predicate {
+            let globalNotificationSettings = self.getGlobalNotificationSettings(transaction: transaction)
+            
+            let filterImpl: (PeerId) -> Bool = { peerId in
+                guard let peer = self.peerTable.get(peerId) else {
+                    return false
+                }
+                let inclusion = self.chatListIndexTable.get(peerId: peerId)
+                let isUnread = self.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                let notificationsPeerId = peer.notificationSettingsPeerId ?? peerId
+                let isContact = self.contactsTable.isContact(peerId: notificationsPeerId)
+                let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: self.peerNotificationSettingsTable.getEffective(notificationsPeerId))
+                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: self, peerId: peer.id, threadId: nil, calculation: predicate.messageTagSummary)
+                if predicate.includes(peer: peer, groupId: inclusion.inclusion.groupId ?? .root, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: messageTagSummaryResult) {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            
+            chatPeerIds = chatPeerIds.filter(filterImpl)
+            contactPeerIds = contactPeerIds.filter(filterImpl)
+        }
         
         for peerId in chatPeerIds {
             if let peer = self.peerTable.get(peerId) {
@@ -4929,12 +4953,12 @@ public class Postbox {
         }
     }
 
-    public func searchPeers(query: String) -> Signal<[RenderedPeer], NoError> {
+    public func searchPeers(query: String, predicate: ChatListFilterPredicate? = nil) -> Signal<[RenderedPeer], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
 
             self.impl.with { impl in
-                disposable.set(impl.searchPeers(query: query).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+                disposable.set(impl.searchPeers(query: query, predicate: predicate).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
             return disposable

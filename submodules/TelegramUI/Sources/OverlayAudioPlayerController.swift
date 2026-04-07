@@ -6,7 +6,6 @@ import Display
 import SwiftSignalKit
 import TelegramUIPreferences
 import AccountContext
-import ShareController
 import UndoUI
 import AttachmentFileController
 import LegacyMediaPickerUI
@@ -82,13 +81,12 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                     if case .messages = subject {
                         canShowInChat = true
                     }
-                    let shareController = ShareController(context: strongSelf.context, subject: subject, showInChat: canShowInChat ? { message in
+                    let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: subject, showInChat: canShowInChat ? { message in
                         if let strongSelf = self {
                             strongSelf.context.sharedContext.navigateToChat(accountId: strongSelf.context.account.id, peerId: message.id.peerId, messageId: message.id)
                             strongSelf.dismiss()
                         }
-                    } : nil, externalShare: true)
-                    shareController.completed = { [weak self] peerIds in
+                    } : nil, externalShare: true, completed: { [weak self] peerIds in
                         if let strongSelf = self {
                             let _ = (strongSelf.context.engine.data.get(
                                 EngineDataList(
@@ -99,7 +97,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                                 if let strongSelf = self {
                                     let peers = peerList.compactMap { $0 }
                                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                    
+
                                     let text: String
                                     var savedMessages = false
                                     if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
@@ -124,7 +122,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                                             text = ""
                                         }
                                     }
-                                    
+
                                     strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
                                         if savedMessages, let self, action == .info {
                                             let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
@@ -143,7 +141,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                                 }
                             })
                         }
-                    }
+                    }))
                     strongSelf.controllerNode.view.endEditing(true)
                     strongSelf.present(shareController, in: .window(.root))
                 }

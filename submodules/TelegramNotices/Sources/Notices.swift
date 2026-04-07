@@ -208,6 +208,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case giftCraftingTips = 85
     case copyProtectionTips = 86
     case aiTextProcessingStyleSelectionTips = 87
+    case savedMessagesChatListView = 88
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -588,6 +589,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func aiTextProcessingStyleSelectionTips() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.aiTextProcessingStyleSelectionTips.key)
+    }
+    
+    static func savedMessagesChatListView() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.savedMessagesChatListView.key)
     }
 }
 
@@ -2605,6 +2610,33 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.aiTextProcessingStyleSelectionTips(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getSavedMessagesChatListView(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.savedMessagesChatListView())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementSavedMessagesChatListView(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.savedMessagesChatListView())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.savedMessagesChatListView(), entry)
             }
             
             return Int(previousValue)

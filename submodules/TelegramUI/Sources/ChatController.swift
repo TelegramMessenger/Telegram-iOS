@@ -18,7 +18,6 @@ import AccountContext
 import TelegramStringFormatting
 import OverlayStatusController
 import DeviceLocationManager
-import ShareController
 import UrlEscaping
 import ContextUI
 import AlertUI
@@ -1406,14 +1405,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if case .current = i {
-                        c.presentationArguments = a
-                        c.statusBar.alphaUpdated = { [weak self] transition in
-                            guard let self else {
-                                return
+                        if c is UndoOverlayController {
+                            self.present(c, in: .current)
+                        } else {
+                            c.presentationArguments = a
+                            c.statusBar.alphaUpdated = { [weak self] transition in
+                                guard let self else {
+                                    return
+                                }
+                                self.updateStatusBarPresentation(animated: transition.isAnimated)
                             }
-                            self.updateStatusBarPresentation(animated: transition.isAnimated)
+                            self.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
                         }
-                        self.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
                     } else {
                         self.present(c, in: .window(.root), with: a, blockInteraction: true)
                     }
@@ -3468,7 +3471,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch strongSelf.chatLocation {
             case let .peer(peerId):
                 if alreadyThere {
-                    strongSelf.openCalendarSearch(timestamp: timestamp)
+                    strongSelf.openCalendarSearch(timestamp: timestamp, isMedia: true)
                 } else {
                     strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, animated: true, completion: nil)
                 }
@@ -3618,7 +3621,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, addContact: { [weak self] phoneNumber in
             if let strongSelf = self {
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                    strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
+                    strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, peer: nil, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
                         self?.present(controller, in: .window(.root), with: arguments)
                     }, pushController: { [weak self] controller in
                         if let strongSelf = self {
@@ -3995,7 +3998,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let self else {
                         return
                     }
-                    let shareController = ShareController(context: self.context, subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: self.updatedPresentationData)
+                    let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: self.updatedPresentationData))
                     self.chatDisplayNode.dismissInput()
                     self.present(shareController, in: .window(.root))
                 }
@@ -4214,6 +4217,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             let _ = self.presentVoiceMessageDiscardAlert(action: {
                 if let controller = self.configurePollCreation(isQuiz: isQuiz) {
+                    controller.navigationPresentation = .modal
                     self.effectiveNavigationController?.pushViewController(controller)
                 }
             })
@@ -9106,6 +9110,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let controller = self.context.sharedContext.makeNewContactScreen(
                 context: self.context,
                 peer: EnginePeer(peer),
+                firstName: nil,
+                lastName: nil,
                 phoneNumber: nil,
                 shareViaException: peerStatusSettings.contains(.addExceptionWhenAddingContact),
                 completion: { [weak self] peer, _, _ in

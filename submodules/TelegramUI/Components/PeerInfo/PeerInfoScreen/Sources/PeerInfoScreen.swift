@@ -16,7 +16,6 @@ import PresentationDataUtils
 import NotificationMuteSettingsUI
 import NotificationSoundSelectionUI
 import OverlayStatusController
-import ShareController
 import PhotoResources
 import PeerAvatarGalleryUI
 import TelegramIntents
@@ -3603,8 +3602,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     func openShareLink(url: String) {
-        let shareController = ShareController(context: self.context, subject: .url(url), updatedPresentationData: self.controller?.updatedPresentationData)
-        shareController.completed = { [weak self] peerIds in
+        let shareController = self.context.sharedContext.makeShareController(context: self.context, params: ShareControllerParams(subject: .url(url), updatedPresentationData: self.controller?.updatedPresentationData, actionCompleted: { [weak self] in
+            if let strongSelf = self {
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            }
+        }, completed: { [weak self] peerIds in
             guard let strongSelf = self else {
                 return
             }
@@ -3617,10 +3620,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let strongSelf = self else {
                     return
                 }
-                
+
                 let peers = peerList.compactMap { $0 }
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                
+
                 let text: String
                 var savedMessages = false
                 if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
@@ -3641,7 +3644,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         text = ""
                     }
                 }
-                
+
                 strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
                     if savedMessages, let self, action == .info {
                         let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
@@ -3658,13 +3661,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return false
                 }), in: .current)
             })
-        }
-        shareController.actionCompleted = { [weak self] in
-            if let strongSelf = self {
-                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-            }
-        }
+        }))
         self.view.endEditing(true)
         self.controller?.present(shareController, in: .window(.root))
     }
@@ -4949,7 +4946,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.deactivateSearch()
             }, fieldStyle: .glass)
         } else if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .savedMessagesChats = currentPaneKey {
-            let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, filter: [.removeSearchHeader], requestPeerType: nil, location: .savedMessagesChats(peerId: self.context.account.peerId), displaySearchFilters: false, hasDownloads: false, initialFilter: .chats, openPeer: { [weak self] peer, _, _, _ in
+            let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, filter: [.removeSearchHeader], requestPeerType: nil, location: .savedMessagesChats(peerId: self.context.account.peerId), folder: nil, displaySearchFilters: false, hasDownloads: false, initialFilter: .chats, openPeer: { [weak self] peer, _, _, _ in
                 guard let self else {
                     return
                 }
@@ -5552,9 +5549,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         if let strongSelf = self, !messages.isEmpty {
                             strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                             
-                            let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
+                            let shareController = strongSelf.context.sharedContext.makeShareController(context: strongSelf.context, params: ShareControllerParams(subject: .messages(messages.sorted(by: { lhs, rhs in
                                 return lhs.index < rhs.index
-                            }).map({ $0._asMessage() })), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.controller?.updatedPresentationData)
+                            }).map({ $0._asMessage() })), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.controller?.updatedPresentationData))
                             strongSelf.view.endEditing(true)
                             strongSelf.controller?.present(shareController, in: .window(.root))
                         }
@@ -6460,7 +6457,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 separatorColor: .clear,
                 badgeBackgroundColor: baseNavigationBarPresentationData.theme.badgeBackgroundColor,
                 badgeStrokeColor: baseNavigationBarPresentationData.theme.badgeStrokeColor,
-                badgeTextColor: baseNavigationBarPresentationData.theme.badgeTextColor
+                badgeTextColor: baseNavigationBarPresentationData.theme.badgeTextColor,
+                accentButtonColor: baseNavigationBarPresentationData.theme.accentButtonColor,
+                accentForegroundColor: baseNavigationBarPresentationData.theme.accentForegroundColor
         ), strings: baseNavigationBarPresentationData.strings))
         
         self._hasGlassStyle = true

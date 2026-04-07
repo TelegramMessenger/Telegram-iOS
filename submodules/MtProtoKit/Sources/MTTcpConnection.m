@@ -113,6 +113,28 @@ static bool MTFillRandomBytes(uint8_t *buffer, size_t length) {
     return SecRandomCopyBytes(kSecRandomDefault, length, buffer) == errSecSuccess;
 }
 
+static bool generate_ml_kem_public_key(uint8_t key[1184]) {
+    for (int i = 0; i < 384; i++) {
+        uint32_t randA = 0;
+        uint32_t randB = 0;
+        if (SecRandomCopyBytes(kSecRandomDefault, 4, (uint8_t *)&randA) != errSecSuccess) {
+            return false;
+        }
+        if (SecRandomCopyBytes(kSecRandomDefault, 4, (uint8_t *)&randB) != errSecSuccess) {
+            return false;
+        }
+        uint32_t a = randA % 3329;
+        uint32_t b = randB % 3329;
+        key[i * 3 + 0] = (uint8_t)(a & 0xFF);
+        key[i * 3 + 1] = (uint8_t)((a >> 8) | ((b & 0x0F) << 4));
+        key[i * 3 + 2] = (uint8_t)(b >> 4);
+    }
+    if (SecRandomCopyBytes(kSecRandomDefault, 32, key + 1152) != errSecSuccess) {
+        return false;
+    }
+    return true;
+}
+
 static bool MTGenerateGreaseValues(uint8_t grease[8]) {
     if (!MTFillRandomBytes(grease, 8)) {
         return false;
@@ -137,7 +159,12 @@ typedef enum {
     HelloGenerationCommandGrease = 5,
     HelloGenerationCommandKey = 6,
     HelloGenerationCommandPushLengthPosition = 7,
-    HelloGenerationCommandPopLengthPosition = 8
+    HelloGenerationCommandPopLengthPosition = 8,
+    HelloGenerationCommandMlKemKey = 9,
+    HelloGenerationCommandBeginChoice = 10,
+    HelloGenerationCommandBeginAlternative = 11,
+    HelloGenerationCommandEndAlternative = 12,
+    HelloGenerationCommandEndChoice = 13
 } HelloGenerationCommand;
 
 typedef struct {
@@ -148,7 +175,7 @@ static HelloGenerationCommand parseCommand(NSString *string, HelloParseState *st
     while (state->position < string.length) {
         unichar c = [string characterAtIndex:state->position];
         state->position += 1;
-        if (c == '\n' || c == '\r') {
+        if (c == '\n' || c == '\r' || c == ' ') {
             continue;
         } else if (c == 'S') {
             return HelloGenerationCommandString;
@@ -162,10 +189,20 @@ static HelloGenerationCommand parseCommand(NSString *string, HelloParseState *st
             return HelloGenerationCommandGrease;
         } else if (c == 'K') {
             return HelloGenerationCommandKey;
+        } else if (c == 'M') {
+            return HelloGenerationCommandMlKemKey;
         } else if (c == '[') {
             return HelloGenerationCommandPushLengthPosition;
         } else if (c == ']') {
             return HelloGenerationCommandPopLengthPosition;
+        } else if (c == '<') {
+            return HelloGenerationCommandBeginChoice;
+        } else if (c == '(') {
+            return HelloGenerationCommandBeginAlternative;
+        } else if (c == ')') {
+            return HelloGenerationCommandEndAlternative;
+        } else if (c == '>') {
+            return HelloGenerationCommandEndChoice;
         } else {
             return HelloGenerationCommandInvalid;
         }
@@ -187,21 +224,6 @@ static bool parseSpace(NSString *string, HelloParseState *state) {
     return seenSpace;
 }
 
-static bool parseEndlineOrEnd(NSString *string, HelloParseState *state) {
-    while (state->position < string.length) {
-        unichar c = [string characterAtIndex:state->position];
-        if (c == '\n') {
-            state->position += 1;
-            return true;
-        } else if (c == ' ' || c == '\r') {
-            state->position += 1;
-            continue;
-        } else {
-            return false;
-        }
-    }
-    return true;
-}
 
 static bool parseHexByte(unichar c, uint8_t *output) {
     if (c >= '0' && c <= '9') {
@@ -284,13 +306,11 @@ static bool parseIntArgument(NSString *string, HelloParseState *state, int *outp
             value = value * 10 + (c - '0');
             hasDigit = true;
             state->position += 1;
-        } else if (c == ' ') {
-            state->position += 1;
         } else if (c == '\n') {
             state->position += 1;
             break;
         } else {
-            return false;
+            break;
         }
     }
 
@@ -305,14 +325,173 @@ static bool parseIntArgument(NSString *string, HelloParseState *state, int *outp
     return true;
 }
 
+static bool executeGenerationCodeRecursive(NSString *code, HelloParseState *state, uint8_t grease[8], NSData *domain, id<EncryptionProvider> provider, NSMutableData *resultData, NSMutableArray<NSNumber *> *lengthStack) {
+    while (true) {
+        HelloGenerationCommand command = parseCommand(code, state);
+        if (command == HelloGenerationCommandInvalid) {
+            break;
+        }
+
+        switch (command) {
+            case HelloGenerationCommandString: {
+                if (!parseSpace(code, state)) {
+                    return false;
+                }
+                NSData *data = parseHexStringArgument(code, state);
+                if (data == nil) {
+                    return false;
+                }
+                [resultData appendData:data];
+                break;
+            }
+            case HelloGenerationCommandZero: {
+                if (!parseSpace(code, state)) {
+                    return false;
+                }
+                int zeroLength = 0;
+                if (!parseIntArgument(code, state, &zeroLength)) {
+                    return false;
+                }
+                if (zeroLength < 0) {
+                    return false;
+                }
+                NSMutableData *zeros = [[NSMutableData alloc] initWithLength:(NSUInteger)zeroLength];
+                [resultData appendData:zeros];
+                break;
+            }
+            case HelloGenerationCommandRandom: {
+                if (!parseSpace(code, state)) {
+                    return false;
+                }
+                int randomLength = 0;
+                if (!parseIntArgument(code, state, &randomLength)) {
+                    return false;
+                }
+                if (randomLength < 0) {
+                    return false;
+                }
+                NSMutableData *randomData = [[NSMutableData alloc] initWithLength:(NSUInteger)randomLength];
+                if (!MTFillRandomBytes((uint8_t *)randomData.mutableBytes, randomData.length)) {
+                    return false;
+                }
+                [resultData appendData:randomData];
+                break;
+            }
+            case HelloGenerationCommandDomain: {
+                [resultData appendData:domain];
+                break;
+            }
+            case HelloGenerationCommandGrease: {
+                if (!parseSpace(code, state)) {
+                    return false;
+                }
+                int greaseIndex = 0;
+                if (!parseIntArgument(code, state, &greaseIndex)) {
+                    return false;
+                }
+                if (greaseIndex < 0 || greaseIndex >= 8) {
+                    return false;
+                }
+                uint8_t value = grease[greaseIndex];
+                [resultData appendBytes:&value length:1];
+                [resultData appendBytes:&value length:1];
+                break;
+            }
+            case HelloGenerationCommandKey: {
+                NSMutableData *key = [[NSMutableData alloc] initWithLength:32];
+                generate_public_key((unsigned char *)key.mutableBytes, provider);
+                [resultData appendData:key];
+                break;
+            }
+            case HelloGenerationCommandMlKemKey: {
+                NSMutableData *key = [[NSMutableData alloc] initWithLength:1184];
+                if (!generate_ml_kem_public_key((uint8_t *)key.mutableBytes)) {
+                    return false;
+                }
+                [resultData appendData:key];
+                break;
+            }
+            case HelloGenerationCommandPushLengthPosition: {
+                NSUInteger lengthPosition = resultData.length;
+                uint8_t zeroBytes[2] = { 0, 0 };
+                [resultData appendBytes:zeroBytes length:2];
+                [lengthStack addObject:@(lengthPosition)];
+                break;
+            }
+            case HelloGenerationCommandPopLengthPosition: {
+                if (lengthStack.count == 0) {
+                    return false;
+                }
+                NSUInteger position = (NSUInteger)[lengthStack.lastObject unsignedIntegerValue];
+                [lengthStack removeLastObject];
+                if (resultData.length < position + 2) {
+                    return false;
+                }
+                uint16_t blockLength = (uint16_t)(resultData.length - position - 2);
+                ((uint8_t *)resultData.mutableBytes)[position] = (uint8_t)((blockLength >> 8) & 0xff);
+                ((uint8_t *)resultData.mutableBytes)[position + 1] = (uint8_t)(blockLength & 0xff);
+                break;
+            }
+            case HelloGenerationCommandBeginChoice: {
+                NSMutableArray<NSMutableData *> *alternatives = [[NSMutableArray alloc] init];
+                while (true) {
+                    HelloGenerationCommand nextCommand = parseCommand(code, state);
+                    if (nextCommand == HelloGenerationCommandEndChoice) {
+                        break;
+                    }
+                    if (nextCommand != HelloGenerationCommandBeginAlternative) {
+                        return false;
+                    }
+                    NSMutableData *altData = [[NSMutableData alloc] init];
+                    NSMutableArray<NSNumber *> *altLengthStack = [[NSMutableArray alloc] init];
+                    if (!executeGenerationCodeRecursive(code, state, grease, domain, provider, altData, altLengthStack)) {
+                        return false;
+                    }
+                    if (altLengthStack.count != 0) {
+                        return false;
+                    }
+                    [alternatives addObject:altData];
+                }
+                if (alternatives.count == 0) {
+                    return false;
+                }
+                uint32_t choiceIndex = arc4random_uniform((uint32_t)alternatives.count);
+                [resultData appendData:alternatives[choiceIndex]];
+                break;
+            }
+            case HelloGenerationCommandEndAlternative: {
+                // signals end of current alternative — return to caller
+                return true;
+            }
+            case HelloGenerationCommandBeginAlternative:
+            case HelloGenerationCommandEndChoice: {
+                // should not be encountered directly at this level
+                return false;
+            }
+            default: {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 static NSMutableData *executeGenerationCode(id<EncryptionProvider> provider, NSData *domain) {
-    NSString *code = @"S \"\\x16\\x03\\x01\\x02\\x00\\x01\\x00\\x01\\xfc\\x03\\x03\"\n"
+    NSString *code = @"S \"\\x16\\x03\\x01\"\n"
+                      "[\n"
+                      "S \"\\x01\\x00\"\n"
+                      "[\n"
+                      "S \"\\x03\\x03\"\n"
                       "Z 32\n"
                       "S \"\\x20\"\n"
                       "R 32\n"
-                      "S \"\\x00\\x2a\"\n"
-                      "G 0\n"
-                      "S \"\\x13\\x01\\x13\\x02\\x13\\x03\\xc0\\x2c\\xc0\\x2b\\xcc\\xa9\\xc0\\x30\\xc0\\x2f\\xcc\\xa8\\xc0\\x0a\\xc0\\x09\\xc0\\x14\\xc0\\x13\\x00\\x9d\\x00\\x9c\\x00\\x35\\x00\\x2f\\xc0\\x08\\xc0\\x12\\x00\\x0a\\x01\\x00\\x01\\x89\"\n"
+                      "<\n"
+                      "( S \"\\x00\\x1c\" G 0 S \"\\x13\\x02\\x13\\x01\\x13\\x03\\xc0\\x2c\\xc0\\x30\\xc0\\x2b\\xcc\\xa9\\xc0\\x2f\\xcc\\xa8\\xc0\\x0a\\xc0\\x09\\xc0\\x14\\xc0\\x13\" )\n"
+                      "( S \"\\x00\\x2a\" G 0 S \"\\x13\\x02\\x13\\x03\\x13\\x01\\xc0\\x2c\\xc0\\x2b\\xcc\\xa9\\xc0\\x30\\xc0\\x2f\\xcc\\xa8\\xc0\\x0a\\xc0\\x09\\xc0\\x14\\xc0\\x13\\x00\\x9d\\x00\\x9c\\x00\\x35\\x00\\x2f\\xc0\\x08\\xc0\\x12\\x00\\x0a\" )\n"
+                      ">\n"
+                      "S \"\\x01\\x00\"\n"
+                      "[\n"
                       "G 2\n"
                       "S \"\\x00\\x00\\x00\\x00\"\n"
                       "[\n"
@@ -323,17 +502,28 @@ static NSMutableData *executeGenerationCode(id<EncryptionProvider> provider, NSD
                       "]\n"
                       "]\n"
                       "]\n"
-                      "S \"\\x00\\x17\\x00\\x00\\xff\\x01\\x00\\x01\\x00\\x00\\x0a\\x00\\x0c\\x00\\x0a\"\n"
+                      "S \"\\x00\\x17\\x00\\x00\\xff\\x01\\x00\\x01\\x00\\x00\\x0a\\x00\\x0e\\x00\\x0c\"\n"
                       "G 4\n"
-                      "S \"\\x00\\x1d\\x00\\x17\\x00\\x18\\x00\\x19\\x00\\x0b\\x00\\x02\\x01\\x00\\x00\\x10\\x00\\x0e\\x00\\x0c\\x02\\x68\\x32\\x08\\x68\\x74\\x74\\x70\\x2f\\x31\\x2e\\x31\\x00\\x05\\x00\\x05\\x01\\x00\\x00\\x00\\x00\\x00\\x0d\\x00\\x16\\x00\\x14\\x04\\x03\\x08\\x04\\x04\\x01\\x05\\x03\\x08\\x05\\x08\\x05\\x05\\x01\\x08\\x06\\x06\\x01\\x02\\x01\\x00\\x12\\x00\\x00\\x00\\x33\\x00\\x2b\\x00\\x29\"\n"
+                      "S \"\\x11\\xec\\x00\\x1d\\x00\\x17\\x00\\x18\\x00\\x19\\x00\\x0b\\x00\\x02\\x01\\x00\"\n"
+                      "<\n"
+                      "( S \"\\x00\\x10\\x00\\x0b\\x00\\x09\\x08\\x68\\x74\\x74\\x70\\x2f\\x31\\x2e\\x31\" )\n"
+                      "( S \"\\x00\\x10\\x00\\x0e\\x00\\x0c\\x02\\x68\\x32\\x08\\x68\\x74\\x74\\x70\\x2f\\x31\\x2e\\x31\" )\n"
+                      ">\n"
+                      "S \"\\x00\\x05\\x00\\x05\\x01\\x00\\x00\\x00\\x00\\x00\\x0d\\x00\\x16\\x00\\x14\\x04\\x03\\x08\\x04\\x04\\x01\\x05\\x03\\x08\\x05\\x08\\x05\\x05\\x01\\x08\\x06\\x06\\x01\\x02\\x01\\x00\\x12\\x00\\x00\\x00\\x33\\x04\\xef\\x04\\xed\"\n"
                       "G 4\n"
-                      "S \"\\x00\\x01\\x00\\x00\\x1d\\x00\\x20\"\n"
+                      "S \"\\x00\\x01\\x00\\x11\\xec\\x04\\xc0\"\n"
+                      "M\n"
                       "K\n"
-                      "S \"\\x00\\x2d\\x00\\x02\\x01\\x01\\x00\\x2b\\x00\\x0b\\x0a\"\n"
+                      "S \"\\x00\\x1d\\x00\\x20\"\n"
+                      "K\n"
+                      "S \"\\x00\\x2d\\x00\\x02\\x01\\x01\\x00\\x2b\\x00\\x07\\x06\"\n"
                       "G 6\n"
-                      "S \"\\x03\\x04\\x03\\x03\\x03\\x02\\x03\\x01\\x00\\x1b\\x00\\x03\\x02\\x00\\x01\"\n"
+                      "S \"\\x03\\x04\\x03\\x03\\x00\\x1b\\x00\\x03\\x02\\x00\\x01\"\n"
                       "G 3\n"
-                      "S \"\\x00\\x01\\x00\"\n";
+                      "S \"\\x00\\x01\\x00\"\n"
+                      "]\n"
+                      "]\n"
+                      "]\n";
 
     uint8_t grease[8];
     if (!MTGenerateGreaseValues(grease)) {
@@ -345,120 +535,8 @@ static NSMutableData *executeGenerationCode(id<EncryptionProvider> provider, NSD
 
     HelloParseState state = { .position = 0 };
 
-    while (true) {
-        HelloGenerationCommand command = parseCommand(code, &state);
-        if (command == HelloGenerationCommandInvalid) {
-            break;
-        }
-
-        switch (command) {
-            case HelloGenerationCommandString: {
-                if (!parseSpace(code, &state)) {
-                    return nil;
-                }
-                NSData *data = parseHexStringArgument(code, &state);
-                if (data == nil) {
-                    return nil;
-                }
-                [resultData appendData:data];
-                break;
-            }
-            case HelloGenerationCommandZero: {
-                if (!parseSpace(code, &state)) {
-                    return nil;
-                }
-                int zeroLength = 0;
-                if (!parseIntArgument(code, &state, &zeroLength)) {
-                    return nil;
-                }
-                if (zeroLength < 0) {
-                    return nil;
-                }
-                NSMutableData *zeros = [[NSMutableData alloc] initWithLength:(NSUInteger)zeroLength];
-                [resultData appendData:zeros];
-                break;
-            }
-            case HelloGenerationCommandRandom: {
-                if (!parseSpace(code, &state)) {
-                    return nil;
-                }
-                int randomLength = 0;
-                if (!parseIntArgument(code, &state, &randomLength)) {
-                    return nil;
-                }
-                if (randomLength < 0) {
-                    return nil;
-                }
-                NSMutableData *randomData = [[NSMutableData alloc] initWithLength:(NSUInteger)randomLength];
-                if (!MTFillRandomBytes((uint8_t *)randomData.mutableBytes, randomData.length)) {
-                    return nil;
-                }
-                [resultData appendData:randomData];
-                break;
-            }
-            case HelloGenerationCommandDomain: {
-                [resultData appendData:domain];
-                if (!parseEndlineOrEnd(code, &state)) {
-                    return nil;
-                }
-                break;
-            }
-            case HelloGenerationCommandGrease: {
-                if (!parseSpace(code, &state)) {
-                    return nil;
-                }
-                int greaseIndex = 0;
-                if (!parseIntArgument(code, &state, &greaseIndex)) {
-                    return nil;
-                }
-                if (greaseIndex < 0 || greaseIndex >= 8) {
-                    return nil;
-                }
-                uint8_t value = grease[greaseIndex];
-                [resultData appendBytes:&value length:1];
-                [resultData appendBytes:&value length:1];
-                break;
-            }
-            case HelloGenerationCommandKey: {
-                if (!parseEndlineOrEnd(code, &state)) {
-                    return nil;
-                }
-                NSMutableData *key = [[NSMutableData alloc] initWithLength:32];
-                generate_public_key((unsigned char *)key.mutableBytes, provider);
-                [resultData appendData:key];
-                break;
-            }
-            case HelloGenerationCommandPushLengthPosition: {
-                if (!parseEndlineOrEnd(code, &state)) {
-                    return nil;
-                }
-                NSUInteger lengthPosition = resultData.length;
-                uint8_t zeroBytes[2] = { 0, 0 };
-                [resultData appendBytes:zeroBytes length:2];
-                [lengthStack addObject:@(lengthPosition)];
-                break;
-            }
-            case HelloGenerationCommandPopLengthPosition: {
-                if (!parseEndlineOrEnd(code, &state)) {
-                    return nil;
-                }
-                if (lengthStack.count == 0) {
-                    return nil;
-                }
-                NSUInteger position = (NSUInteger)[lengthStack.lastObject unsignedIntegerValue];
-                [lengthStack removeLastObject];
-                if (resultData.length < position + 2) {
-                    return nil;
-                }
-                uint16_t blockLength = (uint16_t)(resultData.length - position - 2);
-                ((uint8_t *)resultData.mutableBytes)[position] = (uint8_t)((blockLength >> 8) & 0xff);
-                ((uint8_t *)resultData.mutableBytes)[position + 1] = (uint8_t)(blockLength & 0xff);
-                break;
-            }
-            default: {
-                return nil;
-            }
-        }
+    if (!executeGenerationCodeRecursive(code, &state, grease, domain, provider, resultData, lengthStack)) {
+        return nil;
     }
 
     if (lengthStack.count != 0) {

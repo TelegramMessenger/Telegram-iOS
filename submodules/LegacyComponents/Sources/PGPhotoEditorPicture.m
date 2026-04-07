@@ -114,7 +114,7 @@
         
         CGColorSpaceRef genericRGBColorspace = CGColorSpaceCreateDeviceRGB();
         
-        CGContextRef imageContext = CGBitmapContextCreate(imageData, (size_t)imageSize.width, (size_t)imageSize.height, 8, (size_t)imageSize.width * 4, genericRGBColorspace,  kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
+        CGContextRef imageContext = CGBitmapContextCreate(imageData, (size_t)imageSize.width, (size_t)imageSize.height, 8, (size_t)imageSize.width * 4, genericRGBColorspace,  ((uint32_t)kCGBitmapByteOrder32Little) | ((uint32_t)kCGImageAlphaPremultipliedFirst));
 
         CGSize imageDrawSize = CGSizeMake(imageSize.width, imageSize.height);
         if (orientation == UIImageOrientationLeft || orientation == UIImageOrientationRight)

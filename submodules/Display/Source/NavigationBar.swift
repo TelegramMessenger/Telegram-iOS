@@ -28,10 +28,12 @@ public final class NavigationBarTheme {
     public let badgeStrokeColor: UIColor
     public let badgeTextColor: UIColor
     public let edgeEffectColor: UIColor?
+    public let accentButtonColor: UIColor
+    public let accentForegroundColor: UIColor
     public let style: NavigationBar.Style
     public let glassStyle: NavigationBar.GlassStyle
     
-    public init(overallDarkAppearance: Bool, buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, opaqueBackgroundColor: UIColor? = nil, enableBackgroundBlur: Bool, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor, edgeEffectColor: UIColor? = nil, style: NavigationBar.Style = .legacy, glassStyle: NavigationBar.GlassStyle = .default) {
+    public init(overallDarkAppearance: Bool, buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, opaqueBackgroundColor: UIColor? = nil, enableBackgroundBlur: Bool, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor, edgeEffectColor: UIColor? = nil, accentButtonColor: UIColor, accentForegroundColor: UIColor, style: NavigationBar.Style = .legacy, glassStyle: NavigationBar.GlassStyle = .default) {
         self.overallDarkAppearance = overallDarkAppearance
         self.buttonColor = buttonColor
         self.disabledButtonColor = disabledButtonColor
@@ -44,16 +46,18 @@ public final class NavigationBarTheme {
         self.badgeStrokeColor = badgeStrokeColor
         self.badgeTextColor = badgeTextColor
         self.edgeEffectColor = edgeEffectColor
+        self.accentButtonColor = accentButtonColor
+        self.accentForegroundColor = accentForegroundColor
         self.style = style
         self.glassStyle = glassStyle
     }
     
     public func withUpdatedBackgroundColor(_ color: UIColor) -> NavigationBarTheme {
-        return NavigationBarTheme(overallDarkAppearance: self.overallDarkAppearance, buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: color, opaqueBackgroundColor: self.opaqueBackgroundColor, enableBackgroundBlur: false, separatorColor: self.separatorColor, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor, edgeEffectColor: self.edgeEffectColor, style: self.style, glassStyle: self.glassStyle)
+        return NavigationBarTheme(overallDarkAppearance: self.overallDarkAppearance, buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: color, opaqueBackgroundColor: self.opaqueBackgroundColor, enableBackgroundBlur: false, separatorColor: self.separatorColor, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor, edgeEffectColor: self.edgeEffectColor, accentButtonColor: self.accentButtonColor, accentForegroundColor: self.accentForegroundColor, style: self.style, glassStyle: self.glassStyle)
     }
     
     public func withUpdatedSeparatorColor(_ color: UIColor) -> NavigationBarTheme {
-        return NavigationBarTheme(overallDarkAppearance: self.overallDarkAppearance, buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, opaqueBackgroundColor: self.opaqueBackgroundColor, enableBackgroundBlur: self.enableBackgroundBlur, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor, edgeEffectColor: self.edgeEffectColor, style: self.style, glassStyle: self.glassStyle)
+        return NavigationBarTheme(overallDarkAppearance: self.overallDarkAppearance, buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, opaqueBackgroundColor: self.opaqueBackgroundColor, enableBackgroundBlur: self.enableBackgroundBlur, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor, edgeEffectColor: self.edgeEffectColor, accentButtonColor: self.accentButtonColor, accentForegroundColor: self.accentForegroundColor, style: self.style, glassStyle: self.glassStyle)
     }
 }
 

@@ -10,14 +10,13 @@ import PresentationDataUtils
 import AccountContext
 import UrlEscaping
 import UrlHandling
-import ShareController
 
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String
     switch server.connection {
     case let .mtp(secret):
         let secret = MTProxySecret.parseData(secret)?.serializeToString() ?? ""
-        link = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
+        link = "tg://proxy?server=\(server.host)&port=\(server.port)"
         link += "&secret=\(secret.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
     case let .socks5(username, password):
         link = "https://t.me/socks?server=\(server.host)&port=\(server.port)"
@@ -333,10 +332,10 @@ func proxyServerSettingsController(sharedContext: SharedAccountContext, context:
     let signal = combineLatest(updatedPresentationData, statePromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+        let leftNavigationButton = ItemListNavigationButton(content: .text("___close"), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
-        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
+        let rightNavigationButton = ItemListNavigationButton(content: .text("___done"), style: .bold, enabled: state.isComplete, action: {
             if let proxyServerSettings = proxyServerSettings(with: state) {
                 let _ = (updateProxySettingsInteractively(accountManager: accountManager, { settings in
                     var settings = settings
