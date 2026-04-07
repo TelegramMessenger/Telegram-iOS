@@ -14,6 +14,7 @@ swift_library(
         "//submodules/CryptoUtils:CryptoUtils",
         "//submodules/ManagedFile:ManagedFile",
         "//submodules/TelegramUI/Components/AnimationCache/ImageDCT:ImageDCT",
+        "//third-party/subcodec:SubcodecObjC",
     ],
     visibility = [
         "//visibility:public",
