@@ -6,6 +6,7 @@ import sys
 import json
 import hashlib
 import base64
+import time
 import requests
 
 def sha256_file(path):
@@ -29,13 +30,36 @@ def init_build(host, token, files, channel):
 def upload_file(path, upload_info):
     url = upload_info.get('url')
     headers = dict(upload_info.get('headers', {}))
-    
+
     size = os.path.getsize(path)
     headers['Content-Length'] = str(size)
 
-    print('Uploading', path)
-    with open(path, 'rb') as f:
-        r = requests.put(url, data=f, headers=headers, timeout=900)
+    print('Uploading {} ({:.1f} MB)'.format(path, size / 1024 / 1024))
+    start_time = time.time()
+
+    def reader():
+        sent = 0
+        last_print = time.time()
+        with open(path, 'rb') as f:
+            while True:
+                chunk = f.read(256 * 1024)
+                if not chunk:
+                    break
+                sent += len(chunk)
+                now = time.time()
+                if now - last_print >= 5:
+                    elapsed = now - start_time
+                    speed = sent / elapsed / 1024 / 1024 if elapsed > 0 else 0
+                    print('  {:.1f}% ({:.1f} / {:.1f} MB) {:.2f} MB/s'.format(
+                        sent * 100 / size, sent / 1024 / 1024, size / 1024 / 1024, speed))
+                    last_print = now
+                yield chunk
+        elapsed = time.time() - start_time
+        speed = size / elapsed / 1024 / 1024 if elapsed > 0 else 0
+        print('  100% - all bytes sent in {:.1f}s ({:.2f} MB/s), waiting for server response...'.format(elapsed, speed))
+
+    r = requests.put(url, data=reader(), headers=headers, timeout=900)
+    print('  Server responded: {} ({:.1f}s total)'.format(r.status_code, time.time() - start_time))
     if r.status_code != 200:
         print('Upload failed', r.status_code)
         print(r.text[:500])
