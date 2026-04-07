@@ -1526,6 +1526,13 @@ void GetMvMvdRange (SWelsSvcCodingParam* pParam, int32_t& iMvRange, int32_t& iMv
 
   iMvRange = WELS_MIN (iMvRange, iFixMvRange);
 
+  // [subcodec] Limit MV range to 16 pixels for sprite compositing.
+  // Sprites use a 16px padded canvas; tighter MV range prevents referencing
+  // pixels outside the padding that will differ in the composite frame.
+  if (pParam->bSubcodecMode) {
+    iMvRange = WELS_MIN (iMvRange, 16);
+  }
+
   iMvdRange = (iMvRange + 1) << 1;
 
   iMvdRange = WELS_MIN (iMvdRange, iFixMvdRange);
