@@ -345,6 +345,7 @@ typedef struct TagWelsSvcCodingParam: SEncParamExt {
     bIsLosslessLink = pCodingParam.bIsLosslessLink;
     bFixRCOverShoot = pCodingParam.bFixRCOverShoot;
     iIdrBitrateRatio = pCodingParam.iIdrBitrateRatio;
+    bSubcodecMode = pCodingParam.bSubcodecMode;
     if (iUsageType == SCREEN_CONTENT_REAL_TIME && !bIsLosslessLink && bEnableLongTermReference) {
       bEnableLongTermReference = false;
     }
