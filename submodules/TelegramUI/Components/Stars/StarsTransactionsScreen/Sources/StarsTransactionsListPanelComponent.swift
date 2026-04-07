@@ -378,6 +378,8 @@ final class StarsTransactionsListPanelComponent: Component {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
                             } else if let _ = item.subscriptionPeriod {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_SubscriptionFee_Title
+                            } else if let permille = item.starrefCommissionPermille {
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_Commission_Title("\(formatPermille(permille))%").string
                             } else {
                                 itemSubtitle = nil
                             }

@@ -160,6 +160,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 return ChatMessageBubbleContentTapAction(content: .none)
             }
             
+            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            if incoming && item.associatedData.isSuspiciousPeer {
+                return ChatMessageBubbleContentTapAction(content: .none)
+            }
+            
             if let file = content.file {
                 if !file.isVideo, !file.isVideoSticker, !file.isAnimated, !file.isAnimatedSticker, !file.isSticker, !file.isMusic {
                     return ChatMessageBubbleContentTapAction(content: .openMessage)

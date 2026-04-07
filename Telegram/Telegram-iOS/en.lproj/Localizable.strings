@@ -16174,3 +16174,5 @@ Error: %8$@";
 "CreatePoll.OptionsNeeded" = "Add at least two options";
 "CreatePoll.QuizCorrectOptionNeeded" = "Select a correct option";
 "CreatePoll.QuizCorrectOptionNeededMultiple" = "Select at least one correct option";
+
+"Stars.Intro.Transaction.Commission.Title" = "%@ commission";
