@@ -600,9 +600,12 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                     return .peer(.name(pathComponents[1]), .boost)
                 } else if pathComponents[0] == "giftcode", pathComponents.count == 2 {
                     return .premiumGiftCode(slug: pathComponents[1])
-                } else if pathComponents.count >= 3 && pathComponents[0] == "newbot" {
+                } else if pathComponents.count >= 2 && pathComponents[0] == "newbot" {
                     let parentBot = pathComponents[1]
-                    let username = pathComponents[2]
+                    var username: String?
+                    if pathComponents.count >= 3 {
+                        username = pathComponents[2]
+                    }
                     var title: String?
                     for queryItem in components.queryItems ?? [] {
                         if let value = queryItem.value {
