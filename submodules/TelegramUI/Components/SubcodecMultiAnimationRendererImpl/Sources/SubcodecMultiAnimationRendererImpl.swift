@@ -10,6 +10,13 @@ import Accelerate
 
 private let maxSlotsLimit: Int = 882
 
+private func roundUp(_ numToRound: Int, multiple: Int) -> Int {
+    if multiple == 0 { return numToRound }
+    let remainder = numToRound % multiple
+    if remainder == 0 { return numToRound }
+    return numToRound + multiple - remainder
+}
+
 private final class SpriteContext {
     let mbsPath: String
     let region: SCSpriteRegion
@@ -378,4 +385,269 @@ private func extractCGImage(
         shouldInterpolate: false,
         intent: .defaultIntent
     )
+}
+
+public final class SubcodecMultiAnimationRendererImpl: MultiAnimationRenderer {
+    private struct SizeKey: Hashable {
+        let width: Int
+        let height: Int
+    }
+
+    private var surfaceGroups: [SizeKey: SurfaceGroup] = [:]
+    private var frameSkip: Int
+    private var displayTimer: Foundation.Timer?
+
+    private(set) var isPlaying: Bool = false {
+        didSet {
+            if self.isPlaying != oldValue {
+                if self.isPlaying {
+                    if self.displayTimer == nil {
+                        final class TimerTarget: NSObject {
+                            private let f: () -> Void
+                            init(_ f: @escaping () -> Void) {
+                                self.f = f
+                            }
+                            @objc func timerEvent() {
+                                self.f()
+                            }
+                        }
+                        let frameInterval = Double(self.frameSkip) / 60.0
+                        let displayTimer = Foundation.Timer(timeInterval: frameInterval, target: TimerTarget { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.animationTick(frameInterval: frameInterval)
+                        }, selector: #selector(TimerTarget.timerEvent), userInfo: nil, repeats: true)
+                        self.displayTimer = displayTimer
+                        RunLoop.main.add(displayTimer, forMode: .common)
+                    }
+                } else {
+                    if let displayTimer = self.displayTimer {
+                        self.displayTimer = nil
+                        displayTimer.invalidate()
+                    }
+                }
+            }
+        }
+    }
+
+    public init() {
+        if !ProcessInfo.processInfo.isLowPowerModeEnabled && ProcessInfo.processInfo.processorCount > 2 {
+            self.frameSkip = 1
+        } else {
+            self.frameSkip = 2
+        }
+    }
+
+    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
+        guard let subcodecCache = cache as? SubcodecAnimationCacheImpl else {
+            return EmptyDisposable
+        }
+
+        let spriteWidth = roundUp(Int(size.width), multiple: 16)
+        let spriteHeight = roundUp(Int(size.height), multiple: 16)
+        let sizeKey = SizeKey(width: spriteWidth, height: spriteHeight)
+
+        let fetchDisposable = MetaDisposable()
+
+        fetchDisposable.set(subcodecCache.fetchIfNeeded(sourceId: itemId, size: size, fetch: fetch, completion: { [weak self, weak target] mbsPath in
+            Queue.mainQueue().async {
+                guard let strongSelf = self, let target = target, let mbsPath = mbsPath else {
+                    return
+                }
+
+                guard let metadata = subcodecCache.loadMetadata(sourceId: itemId, size: size) else {
+                    return
+                }
+
+                let surfaceGroup: SurfaceGroup
+                if let existing = strongSelf.surfaceGroups[sizeKey] {
+                    surfaceGroup = existing
+                } else {
+                    surfaceGroup = SurfaceGroup(spriteWidth: spriteWidth, spriteHeight: spriteHeight)
+                    strongSelf.surfaceGroups[sizeKey] = surfaceGroup
+                }
+
+                guard let spriteContext = surfaceGroup.addSprite(mbsPath: mbsPath, metadata: metadata) else {
+                    return
+                }
+
+                let targetIndex = spriteContext.targets.add(Weak(target))
+                target.numFrames = metadata.frameCount
+
+                let slot = Int(spriteContext.region.slot)
+
+                let deinitIndex = target.deinitCallbacks.add { [weak self, weak surfaceGroup] in
+                    Queue.mainQueue().async {
+                        guard let strongSelf = self, let surfaceGroup = surfaceGroup else {
+                            return
+                        }
+                        spriteContext.targets.remove(targetIndex)
+                        if spriteContext.targets.isEmpty {
+                            surfaceGroup.removeSprite(slot: slot)
+                            if surfaceGroup.isEmpty {
+                                strongSelf.surfaceGroups.removeValue(forKey: sizeKey)
+                            }
+                            strongSelf.updateIsPlaying()
+                        }
+                    }
+                }
+
+                let updateStateIndex = target.updateStateCallbacks.add { [weak self] in
+                    self?.updateIsPlaying()
+                }
+
+                fetchDisposable.set(ActionDisposable { [weak self, weak surfaceGroup, weak target] in
+                    guard let strongSelf = self, let surfaceGroup = surfaceGroup else {
+                        return
+                    }
+                    if let target = target {
+                        target.deinitCallbacks.remove(deinitIndex)
+                        target.updateStateCallbacks.remove(updateStateIndex)
+                    }
+                    spriteContext.targets.remove(targetIndex)
+                    if spriteContext.targets.isEmpty {
+                        surfaceGroup.removeSprite(slot: slot)
+                        if surfaceGroup.isEmpty {
+                            strongSelf.surfaceGroups.removeValue(forKey: sizeKey)
+                        }
+                        strongSelf.updateIsPlaying()
+                    }
+                })
+
+                strongSelf.updateIsPlaying()
+            }
+        }))
+
+        return ActionDisposable {
+            fetchDisposable.dispose()
+        }.strict()
+    }
+
+    public func loadFirstFrameSynchronously(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool {
+        if let item = cache.getFirstFrameSynchronously(sourceId: itemId, size: size) {
+            guard let frame = item.advance(advance: .frames(1), requestedFormat: .rgba) else {
+                return false
+            }
+            switch frame.frame.format {
+            case let .rgba(data, width, height, bytesPerRow):
+                guard let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow) else {
+                    return false
+                }
+                data.withUnsafeBytes { bytes -> Void in
+                    memcpy(context.bytes, bytes.baseAddress!, height * bytesPerRow)
+                }
+                guard let image = context.generateImage() else {
+                    return false
+                }
+                target.contents = image.cgImage
+                target.numFrames = item.numFrames
+                return true
+            default:
+                return false
+            }
+        }
+        return false
+    }
+
+    public func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (Bool, Bool) -> Void) -> Disposable {
+        return cache.getFirstFrame(queue: .mainQueue(), sourceId: itemId, size: size, fetch: fetch, completion: { [weak target] result in
+            guard let item = result.item else {
+                Queue.mainQueue().async {
+                    completion(false, result.isFinal)
+                }
+                return
+            }
+
+            let loaded: Bool
+            if let frame = item.advance(advance: .frames(1), requestedFormat: .rgba) {
+                switch frame.frame.format {
+                case let .rgba(data, width, height, bytesPerRow):
+                    Queue.mainQueue().async {
+                        guard let target = target else {
+                            completion(false, true)
+                            return
+                        }
+                        target.numFrames = item.numFrames
+                        if let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow) {
+                            data.withUnsafeBytes { bytes -> Void in
+                                memcpy(context.bytes, bytes.baseAddress!, height * bytesPerRow)
+                            }
+                            if let image = context.generateImage() {
+                                target.contents = image.cgImage
+                                completion(true, true)
+                                return
+                            }
+                        }
+                        completion(false, true)
+                    }
+                    return
+                default:
+                    loaded = false
+                }
+            } else {
+                loaded = false
+            }
+
+            Queue.mainQueue().async {
+                completion(loaded, true)
+            }
+        }).strict()
+    }
+
+    public func loadFirstFrameAsImage(cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (CGImage?) -> Void) -> Disposable {
+        return cache.getFirstFrame(queue: .mainQueue(), sourceId: itemId, size: size, fetch: fetch, completion: { result in
+            guard let item = result.item else {
+                Queue.mainQueue().async {
+                    completion(nil)
+                }
+                return
+            }
+
+            if let frame = item.advance(advance: .frames(1), requestedFormat: .rgba) {
+                switch frame.frame.format {
+                case let .rgba(data, width, height, bytesPerRow):
+                    Queue.mainQueue().async {
+                        if let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow) {
+                            data.withUnsafeBytes { bytes -> Void in
+                                memcpy(context.bytes, bytes.baseAddress!, height * bytesPerRow)
+                            }
+                            completion(context.generateImage()?.cgImage)
+                        } else {
+                            completion(nil)
+                        }
+                    }
+                    return
+                default:
+                    break
+                }
+            }
+
+            Queue.mainQueue().async {
+                completion(nil)
+            }
+        }).strict()
+    }
+
+    public func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage) {
+    }
+
+    private func updateIsPlaying() {
+        var isPlaying = false
+        for (_, group) in self.surfaceGroups {
+            if group.hasPlayingSprites {
+                isPlaying = true
+                break
+            }
+        }
+        self.isPlaying = isPlaying
+    }
+
+    private func animationTick(frameInterval: Double) {
+        for (_, group) in self.surfaceGroups {
+            if group.hasPlayingSprites {
+                group.tick(advanceTimestamp: frameInterval)
+            }
+        }
+    }
 }
