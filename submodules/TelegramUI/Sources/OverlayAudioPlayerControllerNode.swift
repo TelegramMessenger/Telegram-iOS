@@ -310,12 +310,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             case .file:
                 tagMask = .file
         }
-        
-        var isMusicPlaylist = true
-        if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case .savedMusic = playlistLocation {
-            isMusicPlaylist = false
-        }
-        
+                
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         self.historyNode = ChatHistoryListNodeImpl(
             context: context,
@@ -329,7 +324,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             subject: .message(id: .id(initialMessageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false),
             controllerInteraction: self.controllerInteraction,
             selectedMessages: .single(nil),
-            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch, isMusicPlaylist: isMusicPlaylist),
+            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch, isMusicPlaylist: true),
             isChatPreview: false,
             messageTransitionNode: { return nil
             }
@@ -1204,11 +1199,6 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
                 tagMask = .file
         }
         
-        var isMusicPlaylist = true
-        if let playlistLocation = self.playlistLocation as? PeerMessagesPlaylistLocation, case .savedMusic = playlistLocation {
-            isMusicPlaylist = false
-        }
-        
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         let historyNode = ChatHistoryListNodeImpl(
             context: self.context,
@@ -1222,7 +1212,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
             subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false),
             controllerInteraction: self.controllerInteraction,
             selectedMessages: .single(nil),
-            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch, isMusicPlaylist: isMusicPlaylist),
+            mode: .list(reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch, isMusicPlaylist: true),
             isChatPreview: false,
             messageTransitionNode: { return nil
             }

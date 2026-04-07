@@ -4217,6 +4217,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             let _ = self.presentVoiceMessageDiscardAlert(action: {
                 if let controller = self.configurePollCreation(isQuiz: isQuiz) {
+                    controller.navigationPresentation = .modal
                     self.effectiveNavigationController?.pushViewController(controller)
                 }
             })
