@@ -611,6 +611,11 @@ bool TryModeMerge (SMbCache* pMbCache, SWelsMD* pWelsMd, SMB* pCurMb) {
 
 void WelsMdInterFinePartitionVaaOnScreen (sWelsEncCtx* pEncCtx, SWelsMD* pWelsMd, SSlice* pSlice, SMB* pCurMb,
     int32_t iBestCost) {
+  // [subcodec] No sub-partition modes for sprite compositing.
+  if (pEncCtx->pSvcParam->bSubcodecMode) {
+    return;
+  }
+
   SMbCache* pMbCache = &pSlice->sMbCacheInfo;
   SDqLayer* pCurDqLayer = pEncCtx->pCurDqLayer;
   int32_t iCostP8x8;
