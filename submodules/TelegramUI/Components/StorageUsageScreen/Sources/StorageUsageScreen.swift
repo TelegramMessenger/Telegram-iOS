@@ -1712,6 +1712,8 @@ final class StorageUsageScreenComponent: Component {
                     }
                     let totalLabelFrame = CGRect(origin: CGPoint(x: pieChartFrame.minX + floor((pieChartFrame.width - chartTotalLabelSize.width) / 2.0), y: pieChartFrame.minY + floor((pieChartFrame.height - chartTotalLabelSize.height) / 2.0)), size: chartTotalLabelSize)
                     transition.setFrame(view: chartTotalLabelView, frame: totalLabelFrame)
+                    // Hide the size label when storage is cleared to avoid overlap with checkmark
+                    chartTotalLabelView.isHidden = listCategories.isEmpty
                     transition.setAlpha(view: chartTotalLabelView, alpha: listCategories.isEmpty ? 0.0 : 1.0)
                 }
             }
