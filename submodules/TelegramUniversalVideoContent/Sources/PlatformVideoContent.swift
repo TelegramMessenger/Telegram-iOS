@@ -186,6 +186,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
         self.imageNode = TransformImageNode()
         
         let player = AVPlayer(playerItem: nil)
+        player.allowsExternalPlayback = true
         self.player = player
         
         self.playerNode = ASDisplayNode()

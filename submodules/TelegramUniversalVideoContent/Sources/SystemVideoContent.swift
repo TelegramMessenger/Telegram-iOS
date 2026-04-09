@@ -100,6 +100,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         self.playerItem = AVPlayerItem(url: URL(string: url)!)
         let player = AVPlayer(playerItem: self.playerItem)
+        player.allowsExternalPlayback = true
         self.player = player
         
         self.playerNode = ASDisplayNode()
