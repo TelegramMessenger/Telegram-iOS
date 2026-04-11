@@ -309,6 +309,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
     
     let galleryPresentationContext = PresentationContext()
+    public var onGalleryPresentationInContextChanged: ((Bool) -> Void)?
 
     let chatBackgroundNode: WallpaperBackgroundNode
     public private(set) var controllerInteraction: ChatControllerInteraction?
@@ -7095,11 +7096,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func loadDisplayNode() {
         self.loadDisplayNodeImpl()
         self.galleryPresentationContext.view = self.view
-        self.galleryPresentationContext.controllersUpdated = { [weak self] _ in
+        self.galleryPresentationContext.controllersUpdated = { [weak self] controllers in
             guard let self else {
                 return
             }
             self.updateStatusBarPresentation()
+            self.onGalleryPresentationInContextChanged?(!controllers.isEmpty)
         }
     }
     

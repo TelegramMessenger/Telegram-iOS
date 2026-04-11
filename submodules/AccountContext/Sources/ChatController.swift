@@ -1095,6 +1095,8 @@ public protocol ChatController: ViewController {
     var isSendButtonVisible: Bool { get }
     
     var isSelectingMessagesUpdated: ((Bool) -> Void)? { get set }
+    var onGalleryPresentationInContextChanged: ((Bool) -> Void)? { get set }
+
     func cancelSelectingMessages()
     func activateSearch(domain: ChatSearchDomain, query: String)
     func activateInput(type: ChatControllerActivateInput)
