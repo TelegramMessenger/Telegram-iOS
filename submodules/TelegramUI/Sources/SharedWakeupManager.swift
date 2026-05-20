@@ -70,6 +70,7 @@ public final class SharedWakeupManager {
     
     private var enableBackgroundTasks: Bool = false
     private let presentationData: () -> PresentationData?
+    private let getGhostHideOnline: () -> Bool
     
     private var inForeground: Bool = false
     private var hasActiveAudioSession: Bool = false
@@ -112,7 +113,7 @@ public final class SharedWakeupManager {
     private var backgroundStoryProcessingTaskCancellationRequestedByApp: Bool = false
     private var pendingBackgroundStoryProcessingTaskTimer: SwiftSignalKit.Timer?
 
-    public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>, presentationData: @escaping () -> PresentationData?) {
+    public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>, presentationData: @escaping () -> PresentationData?, getGhostHideOnline: @escaping () -> Bool = { false }) {
         assert(Queue.mainQueue().isCurrent())
         
         self.beginBackgroundTask = beginBackgroundTask
@@ -120,6 +121,7 @@ public final class SharedWakeupManager {
         self.backgroundTimeRemaining = backgroundTimeRemaining
         self.acquireIdleExtension = acquireIdleExtension
         self.presentationData = presentationData
+        self.getGhostHideOnline = getGhostHideOnline
         
         self.accountSettingsDisposable = (activeAccounts
         |> mapToSignal { activeAccounts -> Signal<Bool, NoError> in
@@ -1146,7 +1148,8 @@ public final class SharedWakeupManager {
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                 }
                 account.shouldExplicitelyKeepWorkerConnections.set(.single(tasks.backgroundAudio || tasks.importantTasks.pendingStoryCount != 0 || tasks.importantTasks.pendingMessageCount != 0))
-                account.shouldKeepOnlinePresence.set(.single(primary && self.inForeground))
+                let ghostHideOnline = self.getGhostHideOnline()
+                account.shouldKeepOnlinePresence.set(.single(primary && self.inForeground && !ghostHideOnline))
                 account.shouldKeepBackgroundDownloadConnections.set(.single(tasks.backgroundDownloads))
             }
             

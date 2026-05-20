@@ -6289,13 +6289,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let activitySpace: PeerActivitySpace?
-        switch self.chatLocation {
-        case let .peer(peerId):
-            activitySpace = PeerActivitySpace(peerId: peerId, category: .global)
-        case let .replyThread(replyThreadMessage):
-            activitySpace = PeerActivitySpace(peerId: replyThreadMessage.peerId, category: .thread(replyThreadMessage.threadId))
-        case .customChatContents:
+        if self.context.sharedContext.immediateWataGramSettings.ghostModeTypingIndicator {
+            // WataGram Ghost Mode: suppress typing/recording/sticker activity broadcasts
             activitySpace = nil
+        } else {
+            switch self.chatLocation {
+            case let .peer(peerId):
+                activitySpace = PeerActivitySpace(peerId: peerId, category: .global)
+            case let .replyThread(replyThreadMessage):
+                activitySpace = PeerActivitySpace(peerId: replyThreadMessage.peerId, category: .thread(replyThreadMessage.threadId))
+            case .customChatContents:
+                activitySpace = nil
+            }
         }
         
         if let activitySpace = activitySpace {

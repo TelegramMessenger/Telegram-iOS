@@ -1187,6 +1187,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 return sharedContext.accountUserInterfaceInUse(id)
             }, presentationData: {
                 return sharedContext.currentPresentationData.with({ $0 })
+            }, getGhostHideOnline: { [weak sharedContext] in
+                return sharedContext?.immediateWataGramSettings.ghostModeOnlineStatus ?? false
             })
             let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
             sharedApplicationContext.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(sharedApplicationContext.overlayMediaController)
