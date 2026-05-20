@@ -989,7 +989,7 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+            if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.context.sharedContext.immediateWataGramSettings.ghostModeReadReceipts {
                 strongSelf.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
             } else {
                 strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
@@ -2509,7 +2509,7 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
             if apply {
                 switch strongSelf.chatLocation {
                 case .peer, .replyThread:
-                    if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.context.account.isSupportUser {
+                    if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.context.account.isSupportUser && !strongSelf.context.sharedContext.immediateWataGramSettings.ghostModeReadReceipts {
                         strongSelf.context.applyMaxReadIndex(for: strongSelf.chatLocation, contextHolder: strongSelf.chatLocationContextHolder, messageIndex: messageIndex)
                     }
                 case .customChatContents:
@@ -2584,7 +2584,7 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
     }
     
     private func attemptReadingReactions() {
-        if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
+        if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.sharedContext.immediateWataGramSettings.ghostModeReadReceipts && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
             let messageIds = self.messageIdsWithReactionsScheduledForMarkAsSeen
             
             let _ = self.displayUnseenReactionAnimations(messageIds: Array(messageIds))
@@ -3240,7 +3240,7 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
             if !messageIdsWithUnseenReactions.isEmpty {
                 self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                 
-                if self.canReadHistoryValue && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                if self.canReadHistoryValue && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.sharedContext.immediateWataGramSettings.ghostModeReadReceipts {
                     let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
                 }
             }
@@ -4601,7 +4601,7 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
                     self.interactiveReadActionDisposable = nil
                 }
             } else if self.interactiveReadActionDisposable == nil {
-                if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.account.isSupportUser {
+                if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.account.isSupportUser && !self.context.sharedContext.immediateWataGramSettings.ghostModeReadReceipts {
                     if case let .peer(peerId) = self.chatLocation {
                         self.interactiveReadActionDisposable = self.context.engine.messages.installInteractiveReadMessagesAction(peerId: peerId, threadId: nil)
                     } else if case let .replyThread(replyThread) = self.chatLocation, (replyThread.isForumPost || replyThread.isMonoforumPost) {
@@ -4619,7 +4619,7 @@ public final class ChatHistoryListNodeImpl: ListViewImpl, ChatHistoryNode, ChatH
                 }
             } else if self.interactiveReadReactionsDisposable == nil {
                 if case let .peer(peerId) = self.chatLocation {
-                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.sharedContext.immediateWataGramSettings.ghostModeReadReceipts {
                         let visibleMessageRange = self.visibleMessageRange
                         self.interactiveReadReactionsDisposable = context.engine.messages.installInteractiveReadReactionsAction(peerId: peerId, getVisibleRange: {
                             return visibleMessageRange.with { $0 }

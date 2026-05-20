@@ -279,6 +279,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     private var experimentalUISettingsDisposable: Disposable?
     
+    private var immediateWataGramSettingsValue = Atomic<WataGramSettings>(value: WataGramSettings.defaultSettings)
+    public var immediateWataGramSettings: WataGramSettings {
+        return self.immediateWataGramSettingsValue.with { $0 }
+    }
+    private var wataGramSettingsDisposable: Disposable?
+    
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
@@ -521,6 +527,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 
                 flatBuffers_checkedGet = settings.checkSerializedData
                 GlassBackgroundView.useCustomGlassImpl = settings.fakeGlass
+            }
+        })
+        
+        let immediateWataGramSettingsValue = self.immediateWataGramSettingsValue
+        self.wataGramSettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.wataGramSettings])
+        |> deliverOnMainQueue).start(next: { sharedData in
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.wataGramSettings]?.get(WataGramSettings.self) {
+                let _ = immediateWataGramSettingsValue.swap(settings)
             }
         })
         

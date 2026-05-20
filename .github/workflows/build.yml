@@ -2,16 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, feat/ghost-mode ]
 
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-26
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
           fetch-depth: '0'
@@ -73,37 +73,29 @@ jobs:
           done
           zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
 
+      - name: Upload IPA as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: WataGram-${{ env.BUILD_NUMBER }}-ghost-mode
+          path: |
+            /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
+            /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ env.BUILD_NUMBER }}
-          release_name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+          tag_name: ghost-mode-build-${{ env.BUILD_NUMBER }}
+          name: WataGram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }}) Ghost Mode
           body: |
-            An unsigned build of Telegram for iOS ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+            Unsigned WataGram (Telegram-iOS fork) build with Ghost Mode feature.
+            Version ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+            Sideload via Sideloadly / AltStore / TrollStore.
           draft: false
           prerelease: false
-
-      - name: Upload Release IPA
-        id: upload-release-ipa 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
-          asset_name: Telegram.ipa
-          asset_content_type: application/zip
-
-      - name: Upload Release DSYM
-        id: upload-release-dsym 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
-          asset_name: Telegram.DSYMs.zip
-          asset_content_type: application/zip
+          files: |
+            /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
+            /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
