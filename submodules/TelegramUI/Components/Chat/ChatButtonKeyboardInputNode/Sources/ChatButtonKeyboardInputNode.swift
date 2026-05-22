@@ -164,9 +164,9 @@ private final class ChatButtonKeyboardInputButtonNode: HighlightTrackingButtonNo
                         size: iconSize,
                         placeholderColor: theme.overallDarkAppearance ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1),
                         themeColor: theme.list.itemPrimaryTextColor,
-                        loopMode: .count(0)
+                        loopMode: .forever
                     ),
-                    isVisibleForAnimations: true,
+                    isVisibleForAnimations: context.sharedContext.energyUsageSettings.loopEmoji,
                     action: nil
                 )),
                 environment: {},

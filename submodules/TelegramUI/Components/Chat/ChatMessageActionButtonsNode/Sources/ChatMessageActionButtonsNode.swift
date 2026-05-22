@@ -558,9 +558,9 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                                     size: emojiIconSize,
                                     placeholderColor: theme.theme.overallDarkAppearance ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1),
                                     themeColor: titleColor,
-                                    loopMode: .count(0)
+                                    loopMode: .forever
                                 ),
-                                isVisibleForAnimations: true,
+                                isVisibleForAnimations: context.sharedContext.energyUsageSettings.loopEmoji,
                                 action: nil
                             )),
                             environment: {},
