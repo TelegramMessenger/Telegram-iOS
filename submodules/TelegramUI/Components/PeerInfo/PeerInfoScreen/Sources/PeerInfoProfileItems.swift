@@ -1067,8 +1067,11 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                 let ItemPeerAutoTranslate = 15
                 
                 let isCreator = channel.flags.contains(.isCreator)
+                let canEditChannelInfo = channel.hasPermission(.changeInfo)
+                let canViewAdminSections = isCreator || channel.adminRights != nil
+                let canManageMembers = canViewAdminSections && channel.hasPermission(.banMembers)
                 
-                if isCreator {
+                if canEditChannelInfo {
                     let linkText: String
                     if let _ = channel.addressName {
                         linkText = presentationData.strings.Channel_Setup_TypePublic
@@ -1092,7 +1095,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if canEditChannelInfo {
                     let discussionGroupTitle: String
                     if let _ = data.cachedData as? CachedChannelData {
                         if let peer = data.linkedDiscussionPeer {
@@ -1113,7 +1116,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if canEditChannelInfo {
                     let label: String
                     if let cachedData = data.cachedData as? CachedChannelData, case let .known(reactionSettings) = cachedData.reactionSettings {
                         switch reactionSettings.allowedReactions {
@@ -1141,7 +1144,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if canEditChannelInfo {
                     var colors: [PeerNameColors.Colors] = []
                     if let nameColor = channel.nameColor.flatMap({ context.peerNameColors.get($0, dark: presentationData.theme.overallDarkAppearance) }) {
                         colors.append(nameColor)
@@ -1191,7 +1194,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if canEditChannelInfo {
                     let labelString: NSAttributedString
                     if channel.linkedMonoforumId != nil {
                         if case let .channel(monoforumPeer) = data.linkedMonoforumPeer {
@@ -1246,12 +1249,8 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                         }))
                     }
                 }
-                
-                var canEditMembers = false
-                if channel.hasPermission(.banMembers) && (channel.adminRights != nil || channel.flags.contains(.isCreator)) {
-                    canEditMembers = true
-                }
-                if canEditMembers {
+
+                if canViewAdminSections {
                     let adminCount: Int32
                     let memberCount: Int32
                     if let cachedData = data.cachedData as? CachedChannelData {
@@ -1282,7 +1281,7 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     }))
                 }
                 
-                if canEditMembers {
+                if canManageMembers {
                     let bannedCount: Int32
                     if let cachedData = data.cachedData as? CachedChannelData {
                         bannedCount = cachedData.participantsSummary.kickedCount ?? 0
@@ -1292,13 +1291,15 @@ func editingItems(data: PeerInfoScreenData?, boostStatus: ChannelBoostStatus?, s
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: PresentationResourcesSettings.block, action: {
                         interaction.openParticipantsSection(.banned)
                     }))
-                    
+                }
+
+                if canViewAdminSections {
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: PresentationResourcesSettings.recentActions, action: {
                         interaction.openRecentActions()
                     }))
                 }
                 
-                if channel.hasPermission(.changeInfo) {
+                if canEditChannelInfo {
                     var canJoinRefProgram = false
                     if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
                         if let value = value as? Double {
