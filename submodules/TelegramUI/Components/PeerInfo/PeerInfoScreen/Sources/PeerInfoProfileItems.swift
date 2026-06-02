@@ -694,27 +694,21 @@ func infoItems(
                 }
                 
                 if case .broadcast = channel.info {
-                    var canEditMembers = false
-                    if channel.hasPermission(.banMembers) {
-                        canEditMembers = true
-                    }
-                    if canEditMembers {
-                        if channel.adminRights != nil || channel.flags.contains(.isCreator) {
-                            let adminCount = cachedData.participantsSummary.adminCount ?? 0
-                            let memberCount = cachedData.participantsSummary.memberCount ?? 0
-                            
-                            items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: PresentationResourcesSettings.admins, action: {
-                                interaction.openParticipantsSection(.admins)
+                    if channel.adminRights != nil || channel.flags.contains(.isCreator) {
+                        let adminCount = cachedData.participantsSummary.adminCount ?? 0
+                        let memberCount = cachedData.participantsSummary.memberCount ?? 0
+
+                        items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: PresentationResourcesSettings.admins, action: {
+                            interaction.openParticipantsSection(.admins)
+                        }))
+                        items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: PresentationResourcesSettings.subscribers, action: {
+                            interaction.openParticipantsSection(.members)
+                        }))
+
+                        if let count = data.requests?.count, count > 0 {
+                            items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: PresentationResourcesSettings.groupRequests, action: {
+                                interaction.openParticipantsSection(.memberRequests)
                             }))
-                            items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: PresentationResourcesSettings.subscribers, action: {
-                                interaction.openParticipantsSection(.members)
-                            }))
-                            
-                            if let count = data.requests?.count, count > 0 {
-                                items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: PresentationResourcesSettings.groupRequests, action: {
-                                    interaction.openParticipantsSection(.memberRequests)
-                                }))
-                            }
                         }
                     }
                 }
