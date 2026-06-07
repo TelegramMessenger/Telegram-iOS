@@ -2343,8 +2343,16 @@ extension ChatControllerImpl {
         text += "🕒 \(dateStr) · \(timeFmt.string(from: event.startDate))–\(timeFmt.string(from: event.endDate))"
         if let loc = event.location, !loc.isEmpty { text += "\n📍 \(loc)" }
 
+        // TGEventAttribute stores event data invisibly so other fork devices can discover it.
+        let eventAttr = TGEventAttribute(
+            eventId: event.id.uuidString, title: event.title,
+            startTimestamp: event.startDate.timeIntervalSince1970,
+            endTimestamp: event.endDate.timeIntervalSince1970,
+            location: event.location.flatMap { $0.isEmpty ? nil : $0 }
+        )
+
         let message: EnqueueMessage = .message(
-            text: text, attributes: [], inlineStickers: [:], mediaReference: nil,
+            text: text, attributes: [eventAttr], inlineStickers: [:], mediaReference: nil,
             threadId: chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil,
             localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []
         )
@@ -2355,7 +2363,7 @@ extension ChatControllerImpl {
             id: event.id, title: event.title,
             startDate: event.startDate, endDate: event.endDate,
             participants: event.participants, location: event.location,
-            chatId: chatId
+            chatId: chatId, chatIsGroup: true
         )
         var stored = (try? JSONDecoder().decode([TGEvent].self,
             from: UserDefaults.standard.data(forKey: TGEventStorage.eventsKey) ?? Data())) ?? []

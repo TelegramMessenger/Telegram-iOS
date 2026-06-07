@@ -25,6 +25,7 @@ public struct TGEvent: Codable {
     public let participants: [String]
     public let location: String?
     public var chatId: Int64?
+    public var chatIsGroup: Bool?   // nil = personal, true = group, false = DM
 }
 
 // MARK: - Mock data
@@ -125,13 +126,14 @@ private final class CalendarDayCell: UICollectionViewCell {
 // MARK: - Event list cell
 
 private final class EventCell: UITableViewCell {
-    private let startLbl  = UILabel()   // "10:00" orange
-    private let timeline  = UIView()    // vertical line
-    private let endLbl    = UILabel()   // "11:00" gray
-    private let titleLbl  = UILabel()   // event name
-    private let peopleLbl = UILabel()   // participants
-    private let pinIcon   = UIImageView()
-    private let locLbl    = UILabel()   // location
+    private let startLbl    = UILabel()
+    private let timeline    = UIView()
+    private let endLbl      = UILabel()
+    private let titleLbl    = UILabel()
+    private let peopleLbl   = UILabel()
+    private let pinIcon     = UIImageView()
+    private let locLbl      = UILabel()
+    private let sourceIcon  = UIImageView()   // group vs DM badge
 
     private static let tf: DateFormatter = {
         let f = DateFormatter(); f.locale = Locale(identifier: "ru_RU")
@@ -184,6 +186,11 @@ private final class EventCell: UITableViewCell {
         locLbl.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(locLbl)
 
+        sourceIcon.contentMode = .scaleAspectFit
+        sourceIcon.tintColor = .tertiaryLabel
+        sourceIcon.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(sourceIcon)
+
         let timeW: CGFloat = 46
         NSLayoutConstraint.activate([
             startLbl.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -217,6 +224,11 @@ private final class EventCell: UITableViewCell {
             locLbl.centerYAnchor.constraint(equalTo: pinIcon.centerYAnchor),
             locLbl.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             locLbl.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -14),
+
+            sourceIcon.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            sourceIcon.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            sourceIcon.widthAnchor.constraint(equalToConstant: 14),
+            sourceIcon.heightAnchor.constraint(equalToConstant: 14),
         ])
     }
 
@@ -235,6 +247,15 @@ private final class EventCell: UITableViewCell {
             pinIcon.isHidden = false; locLbl.isHidden = false; locLbl.text = loc
         } else {
             pinIcon.isHidden = true; locLbl.isHidden = true
+        }
+
+        let srcCfg = UIImage.SymbolConfiguration(pointSize: 10, weight: .light)
+        if let isGroup = event.chatIsGroup {
+            let name = isGroup ? "person.2" : "person"
+            sourceIcon.image = UIImage(systemName: name, withConfiguration: srcCfg)
+            sourceIcon.isHidden = false
+        } else {
+            sourceIcon.isHidden = true
         }
     }
 }
@@ -297,6 +318,9 @@ public final class EventsController: TelegramBaseController {
         return UICollectionView(frame: .zero, collectionViewLayout: fl)
     }()
 
+    private let searchBar        = UISearchBar()
+    private var searchText: String = ""
+
     private let divider          = UIView()
     private let dateHeaderLabel  = UILabel()
     private let tableView        = UITableView(frame: .zero, style: .insetGrouped)
@@ -321,11 +345,20 @@ public final class EventsController: TelegramBaseController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
 
         self.tabBarItem.title = "События"
-        self.tabBarItem.image = UIImage(systemName: "calendar")
-        self.tabBarItem.selectedImage = UIImage(systemName: "calendar")
+        let tabIcon: UIImage? = UIImage(bundleImageName: "Chat List/Tabs/IconEvents").flatMap { icon in
+            let size = CGSize(width: 18, height: 18)
+            return UIGraphicsImageRenderer(size: size).image { _ in
+                icon.draw(in: CGRect(origin: .zero, size: size))
+            }.withRenderingMode(.alwaysTemplate)
+        }
+        self.tabBarItem.image = tabIcon
+        self.tabBarItem.selectedImage = tabIcon
+        if !self.presentationData.reduceMotion {
+            self.tabBarItem.animationName = "TabEvents"
+        }
         self.navigationItem.title = "События"
 
-        let addBtn = UIBarButtonItem(image: UIImage(systemName: "plus"),
+        let addBtn = UIBarButtonItem(image: UIImage(systemName: "plus.circle.fill"),
                                      style: .plain, target: self,
                                      action: #selector(addEventTapped))
         addBtn.tintColor = .systemOrange
@@ -336,6 +369,7 @@ public final class EventsController: TelegramBaseController {
             guard let self else { return }
             self.presentationData = pd
             self.statusBar.statusBarStyle = pd.theme.rootController.statusBarStyle.style
+            self.tabBarItem.animationName = pd.reduceMotion ? nil : "TabEvents"
         })
 
         allEvents = loadEvents()
@@ -421,6 +455,12 @@ public final class EventsController: TelegramBaseController {
         emptyView.isHidden = true
         root.addSubview(emptyView)
 
+        // Search bar — always visible
+        searchBar.placeholder = "Поиск событий"
+        searchBar.searchBarStyle = .minimal
+        searchBar.delegate = self
+        root.addSubview(searchBar)
+
         refreshMonthLabel()
         updateEventsList()
     }
@@ -441,6 +481,7 @@ public final class EventsController: TelegramBaseController {
         let calW = w - calPad * 2
         let cellW = calW / 7
         let cellH: CGFloat = 48
+        let isSearching = !searchText.isEmpty
 
         // Nav bar bottom — safe fallback
         let navBottom: CGFloat
@@ -450,42 +491,59 @@ public final class EventsController: TelegramBaseController {
             navBottom = (layout.statusBarHeight ?? 20) + 44
         }
 
-        // Month header
-        let headerH: CGFloat = 44
-        monthHeaderView.frame = CGRect(x: 0, y: navBottom, width: w, height: headerH)
-        prevButton.frame  = CGRect(x: 4,       y: 0, width: 48, height: headerH)
-        nextButton.frame  = CGRect(x: w - 52,  y: 0, width: 48, height: headerH)
-        monthLabel.frame  = CGRect(x: 56,      y: 0, width: w - 112, height: headerH)
+        // Search bar — always pinned below nav bar
+        let searchBarH: CGFloat = 52
+        searchBar.frame = CGRect(x: 0, y: navBottom, width: w, height: searchBarH)
 
-        // Weekday labels
-        weekdayRow.frame = CGRect(x: calPad, y: monthHeaderView.frame.maxY,
-                                  width: calW, height: 28)
+        let tableTop: CGFloat
+        if isSearching {
+            // Hide calendar components during search
+            monthHeaderView.isHidden = true
+            weekdayRow.isHidden = true
+            collectionView.isHidden = true
+            divider.isHidden = true
+            dateHeaderLabel.isHidden = true
+            tableTop = searchBar.frame.maxY
+        } else {
+            monthHeaderView.isHidden = false
+            weekdayRow.isHidden = false
+            collectionView.isHidden = false
+            divider.isHidden = false
+            dateHeaderLabel.isHidden = false
 
-        // Calendar grid
-        let rows = calendarRowCount()
-        let gridH = cellH * CGFloat(rows)
-        let fl = collectionView.collectionViewLayout as! UICollectionViewFlowLayout
-        let newItemSize = CGSize(width: cellW, height: cellH)
-        if fl.itemSize != newItemSize {
-            fl.itemSize = newItemSize
+            // Month header
+            let headerH: CGFloat = 44
+            monthHeaderView.frame = CGRect(x: 0, y: searchBar.frame.maxY, width: w, height: headerH)
+            prevButton.frame  = CGRect(x: 4,       y: 0, width: 48, height: headerH)
+            nextButton.frame  = CGRect(x: w - 52,  y: 0, width: 48, height: headerH)
+            monthLabel.frame  = CGRect(x: 56,      y: 0, width: w - 112, height: headerH)
+
+            // Weekday labels
+            weekdayRow.frame = CGRect(x: calPad, y: monthHeaderView.frame.maxY,
+                                      width: calW, height: 28)
+
+            // Calendar grid
+            let rows = calendarRowCount()
+            let gridH = cellH * CGFloat(rows)
+            let fl = collectionView.collectionViewLayout as! UICollectionViewFlowLayout
+            let newItemSize = CGSize(width: cellW, height: cellH)
+            if fl.itemSize != newItemSize { fl.itemSize = newItemSize }
+            collectionView.frame = CGRect(x: calPad, y: weekdayRow.frame.maxY,
+                                          width: calW, height: gridH)
+
+            // Divider
+            divider.frame = CGRect(x: 0, y: collectionView.frame.maxY + 4, width: w, height: 0.5)
+
+            // Date header label
+            let dateHeaderH: CGFloat = 36
+            dateHeaderLabel.frame = CGRect(x: 20, y: divider.frame.maxY,
+                                           width: w - 40, height: dateHeaderH)
+            tableTop = dateHeaderLabel.frame.maxY
         }
-        collectionView.frame = CGRect(x: calPad, y: weekdayRow.frame.maxY,
-                                      width: calW, height: gridH)
-
-        // Divider
-        divider.frame = CGRect(x: 0, y: collectionView.frame.maxY + 4, width: w, height: 0.5)
-
-        // Date header label
-        let dateHeaderH: CGFloat = 36
-        dateHeaderLabel.frame = CGRect(x: 20, y: divider.frame.maxY,
-                                       width: w - 40, height: dateHeaderH)
 
         // Table
-        let tableTop = dateHeaderLabel.frame.maxY
         let tableH = layout.size.height - tableTop - bottomInset
         tableView.frame = CGRect(x: 0, y: tableTop, width: w, height: tableH)
-
-        // Empty state
         emptyView.frame = tableView.frame
     }
 
@@ -531,9 +589,18 @@ public final class EventsController: TelegramBaseController {
     }
 
     private func reloadEvents() {
-        displayedEvents = allEvents
-            .filter { cal.isDate($0.startDate, inSameDayAs: selectedDate) }
-            .sorted { $0.startDate < $1.startDate }
+        if searchText.isEmpty {
+            displayedEvents = allEvents
+                .filter { cal.isDate($0.startDate, inSameDayAs: selectedDate) }
+                .sorted { $0.startDate < $1.startDate }
+        } else {
+            let q = searchText.lowercased()
+            displayedEvents = allEvents.filter {
+                $0.title.lowercased().contains(q) ||
+                $0.location?.lowercased().contains(q) == true ||
+                $0.participants.joined(separator: " ").lowercased().contains(q)
+            }.sorted { $0.startDate < $1.startDate }
+        }
     }
 
     private static let dateHeaderFmt: DateFormatter = {
@@ -546,10 +613,14 @@ public final class EventsController: TelegramBaseController {
         tableView.reloadData()
         emptyView.isHidden = !displayedEvents.isEmpty
 
-        var text = Self.dateHeaderFmt.string(from: selectedDate)
-        if let first = text.first { text = first.uppercased() + text.dropFirst() }
-        if cal.isDateInToday(selectedDate) { text = "Сегодня, " + text.components(separatedBy: ", ").dropFirst().joined(separator: ", ") }
-        dateHeaderLabel.text = text
+        if searchText.isEmpty {
+            var text = Self.dateHeaderFmt.string(from: selectedDate)
+            if let first = text.first { text = first.uppercased() + text.dropFirst() }
+            if cal.isDateInToday(selectedDate) { text = "Сегодня, " + text.components(separatedBy: ", ").dropFirst().joined(separator: ", ") }
+            dateHeaderLabel.text = text
+        } else {
+            dateHeaderLabel.text = "Результаты поиска"
+        }
     }
 
     private func refreshMonthLabel() {
@@ -700,5 +771,37 @@ extension EventsController: UITableViewDataSource, UITableViewDelegate {
         }
         action.image = UIImage(systemName: "trash")
         return UISwipeActionsConfiguration(actions: [action])
+    }
+}
+
+// MARK: - UISearchBarDelegate
+
+extension EventsController: UISearchBarDelegate {
+    public func searchBar(_ searchBar: UISearchBar, textDidChange text: String) {
+        searchText = text
+        updateEventsList()
+        if let layout = validLayout { applyLayout(layout) }
+    }
+
+    public func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+
+    public func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.text = ""
+        searchBar.resignFirstResponder()
+        searchText = ""
+        updateEventsList()
+        if let layout = validLayout { applyLayout(layout) }
+    }
+
+    public func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(true, animated: true)
+    }
+
+    public func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
+        if searchText.isEmpty {
+            searchBar.setShowsCancelButton(false, animated: true)
+        }
     }
 }

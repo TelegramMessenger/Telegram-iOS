@@ -19,16 +19,11 @@ final class EventFloatingButton: UIView {
     required init?(coder: NSCoder) { fatalError() }
 
     private func setupUI() {
-        layer.cornerRadius = 26
-        backgroundColor = UIColor.systemOrange.withAlphaComponent(0.88)
-        alpha = 0.65
-        layer.shadowColor = UIColor.black.cgColor
-        layer.shadowOffset = CGSize(width: 0, height: 3)
-        layer.shadowOpacity = 0.25
-        layer.shadowRadius = 6
+        backgroundColor = .clear
+        alpha = 0.8
 
         iconLabel.text = "📅"
-        iconLabel.font = .systemFont(ofSize: 22)
+        iconLabel.font = .systemFont(ofSize: 34)
         iconLabel.textAlignment = .center
         iconLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(iconLabel)
@@ -81,7 +76,7 @@ final class EventFloatingButton: UIView {
         switch gesture.state {
         case .began:
             lastTouchWasDrag = false
-            UIView.animate(withDuration: 0.15) { self.alpha = 0.85 }
+            UIView.animate(withDuration: 0.15) { self.alpha = 0.4 }
         case .changed:
             let t = gesture.translation(in: superview)
             if abs(t.x) > 4 || abs(t.y) > 4 { lastTouchWasDrag = true }
@@ -90,7 +85,7 @@ final class EventFloatingButton: UIView {
             clampToSuperview(superview)
         case .ended, .cancelled:
             snapToEdge(superview)
-            UIView.animate(withDuration: 0.2) { self.alpha = 0.65 }
+            UIView.animate(withDuration: 0.2) { self.alpha = 0.8 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.lastTouchWasDrag = false }
         default:
             break
@@ -152,7 +147,7 @@ extension ChatControllerImpl {
 
         let button = EventFloatingButton { [weak self] in
             guard let self else { return }
-            let nav = UINavigationController(rootViewController: EventCardNavigatorController(chatId: chatId))
+            let nav = UINavigationController(rootViewController: EventCardNavigatorController(chatId: chatId, context: self.context))
             nav.modalPresentationStyle = .pageSheet
             if #available(iOS 15.0, *) {
                 if let sheet = nav.sheetPresentationController {
