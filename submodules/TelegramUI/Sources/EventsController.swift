@@ -8,6 +8,13 @@ import TelegramPresentationData
 import AccountContext
 import TelegramBaseController
 
+// MARK: - Shared storage keys
+
+enum TGEventStorage {
+    static let eventsKey = "tg_events_v1"
+    static let votesKey  = "tg_event_votes_v1"
+}
+
 // MARK: - Model
 
 public struct TGEvent: Codable {
@@ -343,14 +350,12 @@ public final class EventsController: TelegramBaseController {
 
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // Reload in case events were created from a chat (without going through our delegate)
-        let fresh = loadEvents()
-        if fresh.map(\.id) != allEvents.map(\.id) {
-            allEvents = fresh
-            if isNodeLoaded {
-                collectionView.reloadData()
-                updateEventsList()
-            }
+        // Always reload: events may be added from chat without touching our delegate,
+        // or an existing event's chatId may be stamped after creation.
+        allEvents = loadEvents()
+        if isNodeLoaded {
+            collectionView.reloadData()
+            updateEventsList()
         }
     }
 
@@ -511,10 +516,8 @@ public final class EventsController: TelegramBaseController {
 
     // MARK: Persistence
 
-    private static let storageKey = "tg_events_v1"
-
     private func loadEvents() -> [TGEvent] {
-        guard let data = UserDefaults.standard.data(forKey: Self.storageKey),
+        guard let data = UserDefaults.standard.data(forKey: TGEventStorage.eventsKey),
               let events = try? JSONDecoder().decode([TGEvent].self, from: data) else {
             return seedEvents
         }
@@ -523,7 +526,7 @@ public final class EventsController: TelegramBaseController {
 
     private func saveEvents() {
         if let data = try? JSONEncoder().encode(allEvents) {
-            UserDefaults.standard.set(data, forKey: Self.storageKey)
+            UserDefaults.standard.set(data, forKey: TGEventStorage.eventsKey)
         }
     }
 

@@ -91,7 +91,7 @@ final class EventFloatingButton: UIView {
         case .ended, .cancelled:
             snapToEdge(superview)
             UIView.animate(withDuration: 0.2) { self.alpha = 0.65 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { self.lastTouchWasDrag = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.lastTouchWasDrag = false }
         default:
             break
         }
@@ -101,8 +101,9 @@ final class EventFloatingButton: UIView {
         let pad: CGFloat = 8
         let halfW = bounds.width / 2
         let halfH = bounds.height / 2
-        let safeTop = (sv as? UIWindow)?.safeAreaInsets.top ?? 44
-        let safeBottom = (sv as? UIWindow)?.safeAreaInsets.bottom ?? 34
+        // Use the view's own safe area insets (propagated from the window through the hierarchy).
+        let safeTop = sv.safeAreaInsets.top
+        let safeBottom = sv.safeAreaInsets.bottom
         center = CGPoint(
             x: max(halfW + pad, min(sv.bounds.width - halfW - pad, center.x)),
             y: max(halfH + safeTop + 8, min(sv.bounds.height - halfH - safeBottom - 80, center.y))
@@ -147,7 +148,7 @@ extension ChatControllerImpl {
         if view.viewWithTag(Self.floatingEventButtonTag) != nil { return }
 
         guard let peerId = chatLocation.peerId else { return }
-        let chatId = peerId.id._internalGetInt64Value()
+        let chatId = peerId.localStorageId
 
         let button = EventFloatingButton { [weak self] in
             guard let self else { return }
@@ -162,6 +163,8 @@ extension ChatControllerImpl {
             self.present(nav, animated: true)
         }
         button.tag = Self.floatingEventButtonTag
+        // Keep button on the right edge when the view resizes (rotation).
+        button.autoresizingMask = [.flexibleLeftMargin, .flexibleTopMargin, .flexibleBottomMargin]
 
         // Initial position: right edge, vertically centered.
         let bw: CGFloat = 52
@@ -177,11 +180,10 @@ extension ChatControllerImpl {
 
     func refreshEventFloatingButtonBadge(chatId: Int64) {
         guard let button = view.viewWithTag(Self.floatingEventButtonTag) as? EventFloatingButton else { return }
-        let key = "tg_events_v1"
         let stored = (try? JSONDecoder().decode([TGEvent].self,
-            from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? []
+            from: UserDefaults.standard.data(forKey: TGEventStorage.eventsKey) ?? Data())) ?? []
         let votes = (try? JSONDecoder().decode([String: String].self,
-            from: UserDefaults.standard.data(forKey: "tg_event_votes_v1") ?? Data())) ?? [:]
+            from: UserDefaults.standard.data(forKey: TGEventStorage.votesKey) ?? Data())) ?? [:]
         let unvotedCount = stored
             .filter { $0.chatId == chatId }
             .filter { votes[$0.id.uuidString] == nil }

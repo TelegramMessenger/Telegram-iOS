@@ -77,7 +77,8 @@ spm-files
 xcode-files
 .bsp/**
 .sourcekit-lsp/**
-/.claude/
-**/.claude/settings.local.json
+**/.claude/
 **/.vscode/launch.json
 /buildbox/*
+/tg-events/
+/sync-tg-events.sh

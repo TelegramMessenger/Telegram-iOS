@@ -4,29 +4,27 @@ import AccountContext
 
 // MARK: - Vote storage helpers
 
-private let votesKey = "tg_event_votes_v1"
-
 private func loadVotes() -> [String: String] {
-    guard let data = UserDefaults.standard.data(forKey: votesKey),
+    guard let data = UserDefaults.standard.data(forKey: TGEventStorage.votesKey),
           let dict = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
     return dict
 }
 
 private func saveVotes(_ dict: [String: String]) {
     if let data = try? JSONEncoder().encode(dict) {
-        UserDefaults.standard.set(data, forKey: votesKey)
+        UserDefaults.standard.set(data, forKey: TGEventStorage.votesKey)
     }
 }
 
 private func loadStoredEvents() -> [TGEvent] {
-    guard let data = UserDefaults.standard.data(forKey: "tg_events_v1"),
+    guard let data = UserDefaults.standard.data(forKey: TGEventStorage.eventsKey),
           let events = try? JSONDecoder().decode([TGEvent].self, from: data) else { return [] }
     return events
 }
 
 private func saveStoredEvents(_ events: [TGEvent]) {
     if let data = try? JSONEncoder().encode(events) {
-        UserDefaults.standard.set(data, forKey: "tg_events_v1")
+        UserDefaults.standard.set(data, forKey: TGEventStorage.eventsKey)
     }
 }
 
@@ -135,13 +133,18 @@ private final class EventCardView: UIView {
         ])
     }
 
+    private static let dateFmt: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "ru_RU")
+        f.dateFormat = "EEEE, d MMMM"; return f
+    }()
+    private static let timeFmt: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "ru_RU")
+        f.dateFormat = "HH:mm"; return f
+    }()
+
     func configure(event: TGEvent, vote: String?) {
-        let dateFmt = DateFormatter()
-        dateFmt.locale = Locale(identifier: "ru_RU")
-        dateFmt.dateFormat = "EEEE, d MMMM"
-        let timeFmt = DateFormatter()
-        timeFmt.locale = Locale(identifier: "ru_RU")
-        timeFmt.dateFormat = "HH:mm"
+        let dateFmt = Self.dateFmt
+        let timeFmt = Self.timeFmt
 
         var dateStr = dateFmt.string(from: event.startDate)
         if let first = dateStr.first { dateStr = first.uppercased() + dateStr.dropFirst() }
@@ -275,10 +278,13 @@ public final class EventCardNavigatorController: UIViewController {
 
     private func reload() {
         let all = loadStoredEvents()
-        // Show events for this group, newest first.
-        events = all.filter { $0.chatId == chatId }
+        let newEvents = all.filter { $0.chatId == chatId }
             .sorted { $0.startDate > $1.startDate }
-        currentIndex = 0
+        // Preserve current position if the event list hasn't changed.
+        if newEvents.map(\.id) != events.map(\.id) {
+            currentIndex = 0
+        }
+        events = newEvents
         updateUI()
     }
 
@@ -321,10 +327,15 @@ public final class EventCardNavigatorController: UIViewController {
     private func addEventToPersonalCalendar(_ event: TGEvent) {
         var stored = loadStoredEvents()
         // Only add if not already there as a personal (chatId-less) copy.
-        let alreadyExists = stored.contains { $0.id == event.id && $0.chatId == nil }
+        // Match by title+date to avoid duplicates even across different UUID instances.
+        let alreadyExists = stored.contains {
+            $0.chatId == nil && $0.title == event.title && $0.startDate == event.startDate
+        }
         guard !alreadyExists else { return }
+        // Use a fresh UUID so the personal copy is independent from the group event —
+        // deleting one will not accidentally delete the other.
         let personal = TGEvent(
-            id: event.id, title: event.title,
+            id: UUID(), title: event.title,
             startDate: event.startDate, endDate: event.endDate,
             participants: event.participants, location: event.location,
             chatId: nil
@@ -336,18 +347,20 @@ public final class EventCardNavigatorController: UIViewController {
     @objc private func prevTapped() {
         guard currentIndex < events.count - 1 else { return }
         currentIndex += 1
-        animateTransition(direction: -1)
         updateUI()
+        animateTransition(direction: -1)
     }
 
     @objc private func nextTapped() {
         guard currentIndex > 0 else { return }
         currentIndex -= 1
-        animateTransition(direction: 1)
         updateUI()
+        animateTransition(direction: 1)
     }
 
     private func animateTransition(direction: CGFloat) {
+        // Set start position off-screen, then animate to identity —
+        // updateUI() has already updated labels so new content slides in.
         let offset = direction * view.bounds.width * 0.4
         cardView.transform = CGAffineTransform(translationX: offset, y: 0)
         cardView.alpha = 0.4

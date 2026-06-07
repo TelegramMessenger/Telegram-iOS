@@ -38,6 +38,13 @@ import ComposePollScreen
 import Photos
 import AttachmentFileController
 
+// Stable Int64 encoding of a peer ID for on-device event storage only.
+// Uses the same namespace|id packing as Postbox — not for network use.
+// Internal (not private) so ChatControllerEventButton in the same module can use it.
+extension PeerId {
+    var localStorageId: Int64 { id._internalGetInt64Value() }
+}
+
 extension ChatControllerImpl {
     enum AttachMenuSubject {
         case `default`
@@ -134,9 +141,6 @@ extension ChatControllerImpl {
 
         availableButtons.append(.event)
 
-        if "".isEmpty {
-            availableButtons.insert(.audio, at: max(0, availableButtons.count - 1))
-        }
 
         let presentationData = self.presentationData
 
@@ -2314,16 +2318,23 @@ extension ChatControllerImpl {
         self.push(controller)
     }
 
+    // MARK: - Event helpers
+
+    private static let eventDateFmt: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "ru_RU")
+        f.dateFormat = "EEEE, d MMMM"; return f
+    }()
+    private static let eventTimeFmt: DateFormatter = {
+        let f = DateFormatter(); f.locale = Locale(identifier: "ru_RU")
+        f.dateFormat = "HH:mm"; return f
+    }()
+
     func sendEventToGroup(event: TGEvent) {
         guard let peerId = chatLocation.peerId else { return }
-        let chatId = peerId.id._internalGetInt64Value()
+        let chatId = peerId.localStorageId
 
-        let dateFmt = DateFormatter()
-        dateFmt.locale = Locale(identifier: "ru_RU")
-        dateFmt.dateFormat = "EEEE, d MMMM"
-        let timeFmt = DateFormatter()
-        timeFmt.locale = Locale(identifier: "ru_RU")
-        timeFmt.dateFormat = "HH:mm"
+        let dateFmt = Self.eventDateFmt
+        let timeFmt = Self.eventTimeFmt
 
         var dateStr = dateFmt.string(from: event.startDate)
         if let first = dateStr.first { dateStr = first.uppercased() + dateStr.dropFirst() }
@@ -2346,12 +2357,11 @@ extension ChatControllerImpl {
             participants: event.participants, location: event.location,
             chatId: chatId
         )
-        let key = "tg_events_v1"
         var stored = (try? JSONDecoder().decode([TGEvent].self,
-            from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? []
+            from: UserDefaults.standard.data(forKey: TGEventStorage.eventsKey) ?? Data())) ?? []
         stored = stored.map { $0.id == event.id ? eventWithChat : $0 }
         if let data = try? JSONEncoder().encode(stored) {
-            UserDefaults.standard.set(data, forKey: key)
+            UserDefaults.standard.set(data, forKey: TGEventStorage.eventsKey)
         }
     }
 }

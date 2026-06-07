@@ -190,15 +190,15 @@ final class CreateEventController: UIViewController {
                             location: eventLocation.isEmpty ? nil : eventLocation)
 
         // Always persist directly so events created from any context (chat, events tab) are saved
-        let key = "tg_events_v1"
-        var stored = (try? JSONDecoder().decode([TGEvent].self, from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? []
+        var stored = (try? JSONDecoder().decode([TGEvent].self,
+            from: UserDefaults.standard.data(forKey: TGEventStorage.eventsKey) ?? Data())) ?? []
         if editingEvent != nil {
             stored = stored.map { $0.id == event.id ? event : $0 }
         } else {
             stored.append(event)
         }
         if let data = try? JSONEncoder().encode(stored) {
-            UserDefaults.standard.set(data, forKey: key)
+            UserDefaults.standard.set(data, forKey: TGEventStorage.eventsKey)
         }
 
         onSave?(event)
@@ -432,6 +432,8 @@ extension CreateEventController: UITableViewDelegate {
         if editingStyle == .delete {
             participants.remove(at: ip.row)
             tv.deleteRows(at: [ip], with: .automatic)
+            // Reload remaining rows to reset button tags after index shift.
+            tv.reloadSections(IndexSet(integer: 2), with: .none)
         }
     }
 }
