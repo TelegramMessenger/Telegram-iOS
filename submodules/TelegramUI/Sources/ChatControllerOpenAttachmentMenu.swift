@@ -132,6 +132,8 @@ extension ChatControllerImpl {
             availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
         }
 
+        availableButtons.append(.event)
+
         if "".isEmpty {
             availableButtons.insert(.audio, at: max(0, availableButtons.count - 1))
         }
@@ -747,6 +749,50 @@ extension ChatControllerImpl {
                         strongSelf.push(demoController)
                         return false
                     }
+                case .event:
+                    strongSelf.controllerNavigationDisposable.set(nil)
+                    let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer
+
+                    let isGroupChat: Bool
+                    if peer is TelegramGroup {
+                        isGroupChat = true
+                    } else if let channel = peer as? TelegramChannel, case .group = channel.info {
+                        isGroupChat = true
+                    } else {
+                        isGroupChat = false
+                    }
+
+                    // For groups don't pre-fill — participants decide via the card.
+                    // For DMs pre-fill the other person's name.
+                    let initialParticipants: [String]
+                    if !isGroupChat, let peer = peer {
+                        let pd = strongSelf.presentationData
+                        let name = EnginePeer(peer).displayTitle(strings: pd.strings, displayOrder: pd.nameDisplayOrder)
+                        initialParticipants = name.isEmpty ? [] : [name]
+                    } else {
+                        initialParticipants = []
+                    }
+
+                    let eventController = CreateEventController(context: context, initialParticipants: initialParticipants)
+                    if isGroupChat {
+                        eventController.onSave = { [weak strongSelf] event in
+                            strongSelf?.sendEventToGroup(event: event)
+                        }
+                    }
+
+                    attachmentController?.dismiss(animated: true, completion: { [weak strongSelf] in
+                        guard let strongSelf = strongSelf else { return }
+                        let nav = UINavigationController(rootViewController: eventController)
+                        nav.modalPresentationStyle = .pageSheet
+                        if #available(iOS 15.0, *) {
+                            if let sheet = nav.sheetPresentationController {
+                                sheet.detents = [.large()]
+                                sheet.prefersGrabberVisible = true
+                            }
+                        }
+                        strongSelf.present(nav, animated: true)
+                    })
+                    return true
                 case .gift:
                     if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let starsContext = context.starsContext {
                         let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
@@ -2266,5 +2312,46 @@ extension ChatControllerImpl {
         )
         controller.navigationPresentation = .modal
         self.push(controller)
+    }
+
+    func sendEventToGroup(event: TGEvent) {
+        guard let peerId = chatLocation.peerId else { return }
+        let chatId = peerId.id._internalGetInt64Value()
+
+        let dateFmt = DateFormatter()
+        dateFmt.locale = Locale(identifier: "ru_RU")
+        dateFmt.dateFormat = "EEEE, d MMMM"
+        let timeFmt = DateFormatter()
+        timeFmt.locale = Locale(identifier: "ru_RU")
+        timeFmt.dateFormat = "HH:mm"
+
+        var dateStr = dateFmt.string(from: event.startDate)
+        if let first = dateStr.first { dateStr = first.uppercased() + dateStr.dropFirst() }
+
+        var text = "📅 \(event.title)\n"
+        text += "🕒 \(dateStr) · \(timeFmt.string(from: event.startDate))–\(timeFmt.string(from: event.endDate))"
+        if let loc = event.location, !loc.isEmpty { text += "\n📍 \(loc)" }
+
+        let message: EnqueueMessage = .message(
+            text: text, attributes: [], inlineStickers: [:], mediaReference: nil,
+            threadId: chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil,
+            localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []
+        )
+        sendMessages([message])
+
+        // Persist event with the group chat identifier so the floating button can find it.
+        let eventWithChat = TGEvent(
+            id: event.id, title: event.title,
+            startDate: event.startDate, endDate: event.endDate,
+            participants: event.participants, location: event.location,
+            chatId: chatId
+        )
+        let key = "tg_events_v1"
+        var stored = (try? JSONDecoder().decode([TGEvent].self,
+            from: UserDefaults.standard.data(forKey: key) ?? Data())) ?? []
+        stored = stored.map { $0.id == event.id ? eventWithChat : $0 }
+        if let data = try? JSONEncoder().encode(stored) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
     }
 }

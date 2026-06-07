@@ -28,6 +28,7 @@ public enum AttachmentButtonType: Equatable {
     case quickReply
     case contact
     case poll
+    case event
     case app(AttachMenuBot)
     case gift
     case sticker
@@ -51,6 +52,8 @@ public enum AttachmentButtonType: Equatable {
             return "contact"
         case .poll:
             return "poll"
+        case .event:
+            return "event"
         case let .app(bot):
             return "app_\(bot.shortName)"
         case .gift:
@@ -106,6 +109,12 @@ public enum AttachmentButtonType: Equatable {
             }
         case .poll:
             if case .poll = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .event:
+            if case .event = rhs {
                 return true
             } else {
                 return false

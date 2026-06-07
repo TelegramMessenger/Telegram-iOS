@@ -232,6 +232,9 @@ private final class AttachButtonComponent: CombinedComponent {
             case .poll:
                 name = strings.Attachment_Poll
                 imageName = "Chat/Attach Menu/Poll"
+            case .event:
+                name = "Событие"
+                imageName = "Chat/Attach Menu/Event"
             case .gift:
                 name = strings.Attachment_Gift
                 imageName = "Chat/Attach Menu/Gift"
@@ -2163,6 +2166,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
                 accessibilityTitle = self.presentationData.strings.Attachment_Contact
             case .poll:
                 accessibilityTitle = self.presentationData.strings.Attachment_Poll
+            case .event:
+                accessibilityTitle = "Событие"
             case .gift:
                 accessibilityTitle = self.presentationData.strings.Attachment_Gift
             case .sticker:

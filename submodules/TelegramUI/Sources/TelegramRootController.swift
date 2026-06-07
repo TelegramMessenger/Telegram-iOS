@@ -78,6 +78,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     public var contactsController: ContactsController?
     public var callListController: CallListController?
+    public var eventsController: EventsController?
     public var chatListController: ChatListController?
     public var accountSettingsController: PeerInfoScreen?
     
@@ -219,6 +220,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         if showCallsTab {
             controllers.append(callListController)
         }
+        let eventsController = EventsController(context: self.context)
+        controllers.append(eventsController)
         controllers.append(chatListController)
         
         var restoreSettignsController: (ViewController & SettingsController)?
@@ -244,6 +247,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         
         self.contactsController = contactsController
         self.callListController = callListController
+        self.eventsController = eventsController
         self.chatListController = chatListController
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
@@ -259,6 +263,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         if showCallsTab {
             controllers.append(self.callListController!)
         }
+        controllers.append(self.eventsController!)
         controllers.append(self.chatListController!)
         controllers.append(self.accountSettingsController!)
         
