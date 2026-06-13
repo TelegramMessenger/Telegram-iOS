@@ -1645,8 +1645,12 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             ))
         }
         
+        let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
+        
         var effectiveStorySubscriptions: EngineStorySubscriptions?
-        if let controller = self.controller, case .forum = controller.location {
+        if isDesktopLikeCompactSidebar {
+            effectiveStorySubscriptions = EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil)
+        } else if let controller = self.controller, case .forum = controller.location {
             effectiveStorySubscriptions = nil
         } else {
             if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
@@ -1656,7 +1660,6 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
         }
         
-        let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
         if isDesktopLikeCompactSidebar {
             if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                 navigationBarComponentView.isHidden = true
