@@ -1063,12 +1063,14 @@ public final class StoryPeerListItemComponent: Component {
             }
             
             let titleContainerSize = CGSize(width: totalTitleWidth, height: titleSize.height)
-            let titleContainerFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleContainerSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 2.0) * effectiveScale), size: titleContainerSize)
+            let isOwnEmptyStoryItem = component.peer.id == component.context.account.peerId && !component.hasItems && component.ringAnimation == nil
+            let titleScale: CGFloat = isOwnEmptyStoryItem ? 1.0 : effectiveScale
+            let titleOffsetX: CGFloat = isOwnEmptyStoryItem ? 0.0 : (effectiveWidth - availableSize.width) * 0.5
+            let titleContainerFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleContainerSize.width) * 0.5) + titleOffsetX, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 2.0) * titleScale), size: titleContainerSize)
             
             titleTransition.setPosition(view: self.titleContainer, position: titleContainerFrame.center)
             self.titleContainer.bounds = CGRect(origin: CGPoint(), size: titleContainerFrame.size)
-            titleTransition.setScale(view: self.titleContainer, scale: effectiveScale)
-            let isOwnEmptyStoryItem = component.peer.id == component.context.account.peerId && !component.hasItems && component.ringAnimation == nil
+            titleTransition.setScale(view: self.titleContainer, scale: titleScale)
             titleTransition.setAlpha(view: self.titleContainer, alpha: isOwnEmptyStoryItem ? 1.0 : component.expandedAlphaFraction)
             
             if let ringAnimation = component.ringAnimation {
