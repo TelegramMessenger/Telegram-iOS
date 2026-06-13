@@ -227,6 +227,7 @@ final class TabBarControllerNode: ASDisplayNode {
         if self.tabBarView.view == nil {
             tabBarTransition = .immediate
         }
+        let isCompactMasterController = params.layout.deviceMetrics.type == .tablet && params.layout.size.width <= 1133.0 && !UserDefaults.standard.bool(forKey: "NavigationSplitContainer.forceRegularMasterWidth")
         let tabBarSize = self.tabBarView.update(
             transition: tabBarTransition,
             component: AnyComponent(TabBarComponent(
@@ -265,7 +266,7 @@ final class TabBarControllerNode: ASDisplayNode {
                         }
                     )
                 },
-                search: self.currentController?.tabBarSearchState.flatMap { tabBarSearchState in
+                search: isCompactMasterController ? nil : self.currentController?.tabBarSearchState.flatMap { tabBarSearchState in
                     return TabBarComponent.Search(
                         isActive: tabBarSearchState.isActive,
                         activate: { [weak self] in
@@ -295,7 +296,8 @@ final class TabBarControllerNode: ASDisplayNode {
                 self.view.addSubview(tabBarComponentView)
             }
             transition.updateFrame(view: tabBarComponentView, frame: tabBarFrame)
-            transition.updateAlpha(layer: tabBarComponentView.layer, alpha: params.toolbar == nil ? 1.0 : 0.0)
+            transition.updateAlpha(layer: tabBarComponentView.layer, alpha: (params.toolbar == nil && !isCompactMasterController) ? 1.0 : 0.0)
+            tabBarComponentView.isUserInteractionEnabled = !isCompactMasterController
         }
         
         transition.updateFrame(node: self.disabledOverlayNode, frame: tabBarFrame)

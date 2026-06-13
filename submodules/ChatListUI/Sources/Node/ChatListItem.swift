@@ -2475,6 +2475,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             let currentAvatarBadgeCleanBackgroundImage: UIImage? = PresentationResourcesChatList.badgeBackgroundBorder(item.presentationData.theme, diameter: avatarBadgeDiameter + 4.0)
             
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
+            let avatarRailMode = useChatListLayout && params.width <= 120.0 && !item.editing && !item.interaction.isInlineMode
             
             enum ContentData {
                 case chat(itemPeer: EngineRenderedPeer, threadInfo: ChatListItemContent.ThreadInfo?, peer: EnginePeer?, hideAuthor: Bool, messageText: String, messageEntities: [MessageTextEntity], spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?)
@@ -3518,7 +3519,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let layoutOffset: CGFloat = 0.0
             
-            let rawContentWidth = params.width - leftInset - params.rightInset - 18.0 - editingOffset
+            let rawContentWidth = max(1.0, params.width - leftInset - params.rightInset - 18.0 - editingOffset)
             
             let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -3647,12 +3648,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 textCutout = TextNodeCutout(topLeft: textLeftCutout.isZero ? nil : CGSize(width: textLeftCutout, height: 10.0), topRight: nil, bottomRight: textBottomRightCutout.isZero ? nil : CGSize(width: textBottomRightCutout, height: 10.0))
             }
             
-            var textMaxWidth = rawContentWidth - badgeSize
+            var textMaxWidth = max(1.0, rawContentWidth - badgeSize)
             
             var textArrowImage: UIImage?
             if isFirstForumThreadSelectable {
                 textArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
-                textMaxWidth -= 18.0
+                textMaxWidth = max(1.0, textMaxWidth - 18.0)
             }
             
             let textLineSpacing: CGFloat = min(0.2, item.presentationData.fontSize.itemListBaseFontSize * 0.2 / 17.0)
@@ -3685,7 +3686,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 titleAttributedString = NSAttributedString(string: " ", font: titleFont, textColor: theme.titleColor)
             }
                         
-            var titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
+            var titleRectWidth = max(1.0, rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth)
             var titleCutout: TextNodeCutout?
             if !titleLeftCutout.isZero {
                 titleCutout = TextNodeCutout(topLeft: CGSize(width: titleLeftCutout, height: 10.0), topRight: nil, bottomRight: nil)
@@ -3695,7 +3696,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             if let titleBadgeText {
                 let titleBadgeLayoutAndApplyValue = titleBadgeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleBadgeText, font: Font.semibold(11.0), textColor: theme.titleColor.withMultipliedAlpha(0.4)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 titleBadgeLayoutAndApply = titleBadgeLayoutAndApplyValue
-                titleRectWidth = max(10.0, titleRectWidth - titleBadgeLayoutAndApplyValue.0.size.width - 8.0)
+                titleRectWidth = max(1.0, titleRectWidth - titleBadgeLayoutAndApplyValue.0.size.width - 8.0)
             }
             
             let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: maxTitleLines, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: titleCutout, insets: UIEdgeInsets()))
@@ -3709,11 +3710,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 chatPeerId = peerId
             }
             if let inputActivities = inputActivities, !inputActivities.isEmpty, let chatPeerId {
-                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, chatPeerId, inputActivities)
+                let (size, apply) = inputActivitiesLayout(CGSize(width: max(1.0, rawContentWidth - badgeSize), height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, chatPeerId, inputActivities)
                 inputActivitiesSize = size
                 inputActivitiesApply = apply
             } else {
-                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, nil, [])
+                let (size, apply) = inputActivitiesLayout(CGSize(width: max(1.0, rawContentWidth - badgeSize), height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, nil, [])
                 inputActivitiesSize = size
                 inputActivitiesApply = apply
             }
@@ -3941,6 +3942,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if useChatListLayout {
                         mainContentFrame = CGRect(origin: CGPoint(x: leftInset - 2.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
                         mainContentBoundsOffset = mainContentFrame.origin.x
+                        if avatarRailMode {
+                            mainContentAlpha = 0.0
+                        }
                         
                         if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
                             mainContentAlpha = 1.0 - inlineNavigationLocation.progress
@@ -4025,7 +4029,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     
-                    let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + 6.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                    let avatarFrame: CGRect
+                    if avatarRailMode {
+                        avatarFrame = CGRect(origin: CGPoint(x: floor((params.width - avatarDiameter) / 2.0) + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                    } else {
+                        avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + 6.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                    }
                     var avatarScaleOffset: CGFloat = 0.0
                     var avatarScale: CGFloat = 1.0
                     if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
@@ -4077,7 +4086,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                     
+                    let avatarBadgeProgress: CGFloat?
                     if let inlineNavigationLocation = item.interaction.inlineNavigationLocation, badgeContent != .none {
+                        avatarBadgeProgress = inlineNavigationLocation.progress
+                    } else if avatarRailMode, badgeContent != .none {
+                        avatarBadgeProgress = 1.0
+                    } else {
+                        avatarBadgeProgress = nil
+                    }
+                    if let avatarBadgeProgress = avatarBadgeProgress {
                         var animateIn = false
                         
                         let avatarBadgeBackground: ASImageNode
@@ -4117,8 +4134,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.00001)
                             ContainedViewLayoutTransition.immediate.updateTransformScale(layer: avatarBadgeBackground.layer, scale: 0.00001)
                         }
-                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: max(0.00001, inlineNavigationLocation.progress))
-                        transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: max(0.00001, inlineNavigationLocation.progress))
+                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: max(0.00001, avatarBadgeProgress))
+                        transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: max(0.00001, avatarBadgeProgress))
                     } else if let avatarBadgeNode = strongSelf.avatarBadgeNode {
                         strongSelf.avatarBadgeNode = nil
                         transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.00001, completion: { [weak avatarBadgeNode] _ in

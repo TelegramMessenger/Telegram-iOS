@@ -1009,7 +1009,6 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
     
     public func update(layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset)
-        
         self._validLayoutReady.set(.single(true))
         
         transition.updateAlpha(node: self, alpha: isReorderingFilters ? 0.5 : 1.0)
@@ -1024,7 +1023,6 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         self.panRecognizer?.isEnabled = !isEditing
         
         transition.updateFrame(layer: self.leftSeparatorLayer, frame: CGRect(origin: CGPoint(x: -UIScreenPixel, y: 0.0), size: CGSize(width: UIScreenPixel, height: layout.size.height)))
-        
         if let selectedIndex = self.availableFilters.firstIndex(where: { $0.id == self.selectedId }) {
             var validNodeIds: [ChatListFilterTabEntryId] = []
             for i in max(0, selectedIndex - 1) ... min(self.availableFilters.count - 1, selectedIndex + 1) {
@@ -1229,7 +1227,6 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         
         self.addSubnode(self.debugListView)
-        
         filterBecameEmpty = { [weak self] _ in
             guard let strongSelf = self else {
                 return
@@ -1504,7 +1501,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var navigationHeaderPanels: AnyComponent<Empty>?
         if self.controller?.tabContainerData != nil || !panels.isEmpty {
             var tabs: AnyComponent<Empty>?
-            if let tabContainerData = self.controller?.tabContainerData, tabContainerData.0.count > 1 {
+            let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
+            if let tabContainerData = self.controller?.tabContainerData, tabContainerData.0.count > 1, !isDesktopLikeCompactSidebar {
                 let folderFilterIndex: (ChatListFilterTabEntryId, [ChatListFilterTabEntry]) -> Int? = { id, entries in
                     var index = 0
                     for entry in entries {
@@ -1658,6 +1656,15 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
         }
         
+        let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
+        if isDesktopLikeCompactSidebar {
+            if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+                navigationBarComponentView.isHidden = true
+                navigationBarComponentView.isUserInteractionEnabled = false
+            }
+            return (0.0, 0.0)
+        }
+        
         let navigationBarSize = self.navigationBarView.update(
             transition: transition,
             component: AnyComponent(ChatListNavigationBar(
@@ -1715,6 +1722,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             containerSize: layout.size
         )
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+            navigationBarComponentView.isHidden = false
+            navigationBarComponentView.isUserInteractionEnabled = true
             if deferScrollApplication {
                 navigationBarComponentView.deferScrollApplication = true
             }
@@ -1950,7 +1959,6 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             mainInsets.top = visualNavigationHeight
         }
         self.mainContainerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location, inlineNavigationTransitionFraction: self.inlineStackContainerTransitionFraction, storiesInset: storiesInset, transition: transition)
-        
         if let inlineStackContainerNode = self.inlineStackContainerNode {
             var inlineStackContainerNodeTransition = transition
             var animateIn = false
@@ -2004,6 +2012,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     @MainActor
     func activateSearch(placeholderNode: SearchBarPlaceholderNode?, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter, navigationController: NavigationController?, searchBarIsExternal: Bool) async -> ((Bool) -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight, _) = self.containerLayout, self.searchDisplayController == nil else {
+            return nil
+        }
+        if containerLayout.deviceMetrics.type == .tablet && containerLayout.size.width <= 160.0 {
             return nil
         }
         
