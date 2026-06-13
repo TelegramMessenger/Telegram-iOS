@@ -1724,7 +1724,8 @@ public final class StoryPeerListComponent: Component {
             
             self.sortedItems.removeAll(keepingCapacity: true)
             if let storySubscriptions = component.storySubscriptions {
-                if !component.useHiddenList, let accountItem = storySubscriptions.accountItem {
+                let isCompactAvatarRail = availableSize.width <= 120.0
+                if !component.useHiddenList, !isCompactAvatarRail, let accountItem = storySubscriptions.accountItem {
                     self.sortedItems.append(accountItem)
                 }
                 
