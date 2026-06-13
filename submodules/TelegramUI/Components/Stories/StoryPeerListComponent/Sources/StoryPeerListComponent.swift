@@ -1723,8 +1723,7 @@ public final class StoryPeerListComponent: Component {
             
             self.sortedItems.removeAll(keepingCapacity: true)
             if let storySubscriptions = component.storySubscriptions {
-                let isCompactAvatarRail = availableSize.width <= 120.0
-                if !component.useHiddenList, let accountItem = storySubscriptions.accountItem, !isCompactAvatarRail || accountItem.storyCount != 0 || accountItem.hasPending {
+                if !component.useHiddenList, let accountItem = storySubscriptions.accountItem {
                     self.sortedItems.append(accountItem)
                 }
                 
