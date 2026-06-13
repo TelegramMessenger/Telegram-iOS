@@ -249,7 +249,8 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                 return
             }
             
-            if !self.isInlineMode, itemNode.listNode.isTracking && !self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset == 0.0 {
+            let isCompactAvatarRail = self.validLayout?.layout.deviceMetrics.type == .tablet && (self.validLayout?.layout.size.width ?? .greatestFiniteMagnitude) <= 160.0
+            if !isCompactAvatarRail && !self.isInlineMode, itemNode.listNode.isTracking && !self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset == 0.0 {
                 if case let .known(value) = offset {
                     if value < -1.0 {
                         if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
@@ -293,7 +294,10 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
             }
             
             let tempTopInset: CGFloat
-            if validLayout.inlineNavigationLocation != nil {
+            let isCompactAvatarRail = validLayout.layout.deviceMetrics.type == .tablet && validLayout.layout.size.width <= 160.0
+            if isCompactAvatarRail {
+                tempTopInset = 0.0
+            } else if validLayout.inlineNavigationLocation != nil {
                 tempTopInset = 0.0
             } else if self.currentItemNode.startedScrollingAtUpperBound && !self.isInlineMode {
                 if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
@@ -534,7 +538,12 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         self.applyItemNodeAsCurrent(id: .all, itemNode: itemNode)
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
-            guard let self, self.availableFilters.count > 1 || (self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false)) else {
+            guard let self else {
+                return []
+            }
+            let isCompactAvatarRail = self.validLayout?.layout.deviceMetrics.type == .tablet && (self.validLayout?.layout.size.width ?? .greatestFiniteMagnitude) <= 160.0
+            let isStoryPostingAvailable = !isCompactAvatarRail && (self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false))
+            guard self.availableFilters.count > 1 || isStoryPostingAvailable else {
                 return []
             }
             guard case .chatList(.root) = self.location else {
@@ -639,7 +648,8 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
                     hasLiveStream = true
                 }
                      
-                if case .compact = layout.metrics.widthClass, self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false) {
+                let isCompactAvatarRail = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
+                if !isCompactAvatarRail, case .compact = layout.metrics.widthClass, self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false) {
                     if hasLiveStream {
                         if translation.x >= 30.0 {
                             self.panRecognizer?.cancel()
