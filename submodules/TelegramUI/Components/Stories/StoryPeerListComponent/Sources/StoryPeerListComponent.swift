@@ -1145,7 +1145,8 @@ public final class StoryPeerListComponent: Component {
                 unseenCount = itemSet.unseenCount
                 
                 var composeContentOffset: CGFloat?
-                if peer.id == component.context.account.peerId && collapsedState.sideAlphaFraction == 1.0 && self.scrollView.contentOffset.x < 0.0 {
+                let isCompactAvatarRail = itemLayout.containerSize.width <= 120.0
+                if !isCompactAvatarRail && peer.id == component.context.account.peerId && collapsedState.sideAlphaFraction == 1.0 && self.scrollView.contentOffset.x < 0.0 {
                     composeContentOffset = self.scrollView.contentOffset.x * -1.0
                 }
                 

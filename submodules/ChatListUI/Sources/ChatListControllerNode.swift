@@ -1501,8 +1501,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var navigationHeaderPanels: AnyComponent<Empty>?
         if self.controller?.tabContainerData != nil || !panels.isEmpty {
             var tabs: AnyComponent<Empty>?
-            let hasFolderTabs = (self.controller?.tabContainerData?.0.count ?? 0) > 1
-            let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0 && !hasFolderTabs
+            let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
             if let tabContainerData = self.controller?.tabContainerData, tabContainerData.0.count > 1, !isDesktopLikeCompactSidebar {
                 let folderFilterIndex: (ChatListFilterTabEntryId, [ChatListFilterTabEntry]) -> Int? = { id, entries in
                     var index = 0
@@ -1657,9 +1656,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
         }
         
-        let hasFolderTabs = (self.controller?.tabContainerData?.0.count ?? 0) > 1
-        let isCompactAvatarRail = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
-        let isDesktopLikeCompactSidebar = isCompactAvatarRail && !hasFolderTabs
+        let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
         if isDesktopLikeCompactSidebar {
             if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                 navigationBarComponentView.isHidden = true
@@ -1676,7 +1673,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 strings: self.presentationData.strings,
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 sideInset: layout.safeInsets.left,
-                search: ChatListNavigationBar.Search(isEnabled: !isCompactAvatarRail),
+                search: ChatListNavigationBar.Search(isEnabled: true),
                 activeSearch: self.isSearchDisplayControllerActive,
                 primaryContent: headerContent?.primaryContent,
                 secondaryContent: headerContent?.secondaryContent,
