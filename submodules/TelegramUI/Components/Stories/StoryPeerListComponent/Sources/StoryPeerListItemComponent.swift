@@ -1068,7 +1068,8 @@ public final class StoryPeerListItemComponent: Component {
             titleTransition.setPosition(view: self.titleContainer, position: titleContainerFrame.center)
             self.titleContainer.bounds = CGRect(origin: CGPoint(), size: titleContainerFrame.size)
             titleTransition.setScale(view: self.titleContainer, scale: effectiveScale)
-            titleTransition.setAlpha(view: self.titleContainer, alpha: component.expandedAlphaFraction)
+            let isOwnEmptyStoryItem = component.peer.id == component.context.account.peerId && !component.hasItems && component.ringAnimation == nil
+            titleTransition.setAlpha(view: self.titleContainer, alpha: isOwnEmptyStoryItem ? 1.0 : component.expandedAlphaFraction)
             
             if let ringAnimation = component.ringAnimation {
                 var progressTransition = transition
