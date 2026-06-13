@@ -1658,7 +1658,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         
         let hasFolderTabs = (self.controller?.tabContainerData?.0.count ?? 0) > 1
-        let isDesktopLikeCompactSidebar = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0 && !hasFolderTabs
+        let isCompactAvatarRail = layout.deviceMetrics.type == .tablet && layout.size.width <= 160.0
+        let isDesktopLikeCompactSidebar = isCompactAvatarRail && !hasFolderTabs
         if isDesktopLikeCompactSidebar {
             if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                 navigationBarComponentView.isHidden = true
@@ -1675,7 +1676,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 strings: self.presentationData.strings,
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 sideInset: layout.safeInsets.left,
-                search: ChatListNavigationBar.Search(isEnabled: true),
+                search: ChatListNavigationBar.Search(isEnabled: !isCompactAvatarRail),
                 activeSearch: self.isSearchDisplayControllerActive,
                 primaryContent: headerContent?.primaryContent,
                 secondaryContent: headerContent?.secondaryContent,
