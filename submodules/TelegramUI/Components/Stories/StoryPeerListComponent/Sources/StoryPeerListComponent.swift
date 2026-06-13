@@ -1093,6 +1093,7 @@ public final class StoryPeerListComponent: Component {
                 } else if peer.id == self.loadingItemId {
                     itemRingAnimation = .loading
                 }
+                let isOwnEmptyStoryItem = peer.id == component.context.account.peerId && !hasItems && itemRingAnimation == nil
                 
                 let measuredItem = calculateItem(i)
                 
@@ -1125,6 +1126,9 @@ public final class StoryPeerListComponent: Component {
                     } else {
                         itemAlpha = collapsedState.sideAlphaFraction
                     }
+                }
+                if isOwnEmptyStoryItem {
+                    itemAlpha = 1.0
                 }
                 
                 var leftNeighborDistance: CGPoint?
@@ -1251,6 +1255,7 @@ public final class StoryPeerListComponent: Component {
                 } else if let uploadProgress = component.uploadProgress[peer.id] {
                     itemRingAnimation = .progress(uploadProgress)
                 }
+                let isOwnEmptyStoryItem = peer.id == component.context.account.peerId && !hasItems && itemRingAnimation == nil
                 
                 let collapseIndex = i + effectiveFirstVisibleIndex
                 let measuredItem = calculateItem(collapseIndex)
@@ -1275,6 +1280,9 @@ public final class StoryPeerListComponent: Component {
                     itemAlpha = (1.0 - collapsedState.sideAlphaFraction) * (1.0 - collapsedState.activityFraction)
                 } else {
                     itemAlpha = collapsedState.sideAlphaFraction
+                }
+                if isOwnEmptyStoryItem {
+                    itemAlpha = 1.0
                 }
                 
                 var leftNeighborDistance: CGPoint?
