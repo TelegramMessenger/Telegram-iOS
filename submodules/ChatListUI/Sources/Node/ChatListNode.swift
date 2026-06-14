@@ -1395,7 +1395,7 @@ public final class ChatListNode: ListViewImpl {
         self.keepMinimalScrollHeightWithTopInset = self.scrollHeightTopInset
         
         let nodeInteraction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: { [weak self] in
-            if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
+            if let strongSelf = self, strongSelf.bounds.width > 120.0, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
             }
         }, peerSelected: { [weak self] peer, _, threadId, promoInfo, _ in
