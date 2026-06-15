@@ -1706,6 +1706,9 @@ public class GalleryController: ViewController, StandalonePresentableController,
         }
         
         self.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+        if let centralItemIndex = centralItemIndex, centralItemIndex < self.entries.count {
+            self.currentBoundaryId = galleryEntryBoundaryId(self.entries[centralItemIndex])
+        }
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {
