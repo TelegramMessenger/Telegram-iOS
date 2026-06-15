@@ -654,6 +654,19 @@ public struct GalleryEntry {
     }
 }
 
+private enum GalleryEntryBoundaryId: Equatable {
+    case message(UInt32)
+    case group(UInt32)
+}
+
+private func galleryEntryBoundaryId(_ entry: GalleryEntry) -> GalleryEntryBoundaryId {
+    if let groupId = entry.entry.message.groupInfo?.stableId {
+        return .group(groupId)
+    } else {
+        return .message(entry.entry.message.stableId)
+    }
+}
+
 private func galleryEntriesForMessageHistoryEntries(_ entries: [MessageHistoryEntry], mediaSubject: GalleryMediaSubject?) -> [GalleryEntry] {
     var results: [GalleryEntry] = []
     for entry in entries {
@@ -749,6 +762,8 @@ public class GalleryController: ViewController, StandalonePresentableController,
     private let baseNavigationController: NavigationController?
     
     private var hiddenMediaManagerIndex: Int?
+    private let boundaryHaptic = HapticFeedback()
+    private var currentBoundaryId: GalleryEntryBoundaryId?
     
     private let actionInteraction: GalleryControllerActionInteraction?
     private var performAction: (GalleryControllerInteractionTapAction) -> Void
@@ -816,6 +831,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
         }
         
         self.titleView = GalleryTitleView(context: context, presentationData: self.presentationData)
+        self.boundaryHaptic.prepareTap()
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -1697,7 +1713,13 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 if let index = index {
                     let entry = strongSelf.entries[index]
                     let message = strongSelf.entries[index].entry.message
-                                        
+                    let boundaryId = galleryEntryBoundaryId(entry)
+                    if let currentBoundaryId = strongSelf.currentBoundaryId, currentBoundaryId != boundaryId {
+                        strongSelf.boundaryHaptic.tap()
+                    }
+                    strongSelf.currentBoundaryId = boundaryId
+                    strongSelf.boundaryHaptic.prepareTap()
+                                         
                     strongSelf.centralEntryStableId = entry.stableId
                     if let selectedMedia = selectedMediaForMessage(message: message, mediaSubject: entry.mediaSubject) {
                         hiddenItem = (message.id, selectedMedia)
