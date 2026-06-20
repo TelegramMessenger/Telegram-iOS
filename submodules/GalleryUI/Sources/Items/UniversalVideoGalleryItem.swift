@@ -2411,13 +2411,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         shouldStorePlaybacksState = status.duration >= 20.0
         
         if shouldStorePlaybacksState {
-            var timestamp: Double?
             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
-                timestamp = status.timestamp
-            } else {
-                timestamp = 0.0
+                item.storeMediaPlaybackState(message.id, status.timestamp, status.baseRate)
+            } else if status.timestamp >= status.duration - 5.0 {
+                item.storeMediaPlaybackState(message.id, 0.0, status.baseRate)
             }
-            item.storeMediaPlaybackState(message.id, timestamp, status.baseRate)
         } else {
             item.storeMediaPlaybackState(message.id, nil, status.baseRate)
         }
