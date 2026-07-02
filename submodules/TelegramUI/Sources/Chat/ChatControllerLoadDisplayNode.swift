@@ -683,12 +683,22 @@ extension ChatControllerImpl {
             }
         }
         
-        if #available(iOS 18.0, *) {
-            if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
-                let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
-                engineExperimentalInternalTranslationService = translationService
-            }
-        }
+        // Disabled: ExperimentalInternalTranslationServiceImpl.init constructs a
+        // UIHostingController(rootView: TranslationViewImpl(...)) that fatal-traps
+        // inside SwiftUI/Translation-framework internals on device (SIGABRT, no
+        // application-code frames at the trap site — confirmed on iOS 26.5,
+        // reproducible on the first chat opened per app session). A trap inside
+        // Apple's own framework code cannot be guarded or caught from Swift, so
+        // the only available mitigation is not calling into it. Re-enable once
+        // the underlying SwiftUI + .translationTask interop bug is understood
+        // or fixed by an OS update.
+        //
+        // if #available(iOS 18.0, *) {
+        //     if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
+        //         let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
+        //         engineExperimentalInternalTranslationService = translationService
+        //     }
+        // }
         
         self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, statusBar: self.statusBar, backgroundNode: self.chatBackgroundNode, controller: self)
         
