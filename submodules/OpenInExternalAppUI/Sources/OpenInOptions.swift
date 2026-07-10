@@ -305,6 +305,10 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                     return .openUrl(url: "dgis://2gis.ru/geo/\(coordinates)")
                 }
             }))
+
+            options.append(OpenInOption(identifier: "casva", application: .other(title: "CASVA", identifier: 1603197837, scheme: "casva", store: "uz"), action: {
+                return .openUrl(url: "casva://location?lat=\(lat)&lon=\(lon)")
+            }))
             
             options.append(OpenInOption(identifier: "moovit", application: .other(title: "Moovit", identifier: 498477945, scheme: "moovit", store: nil), action: {
                 if let _ = directions {
