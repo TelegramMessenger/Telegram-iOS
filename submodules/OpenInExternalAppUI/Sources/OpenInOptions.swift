@@ -306,6 +306,10 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 }
             }))
             
+            options.append(OpenInOption(identifier: "hamroh", application: .other(title: "Hamroh", identifier: 6745878978, scheme: "hamroh", store: "uz"), action: {
+                return .openUrl(url: "hamroh://location?lat=\(lat)&lon=\(lon)")
+            }))
+            
             options.append(OpenInOption(identifier: "moovit", application: .other(title: "Moovit", identifier: 498477945, scheme: "moovit", store: nil), action: {
                 if let _ = directions {
                     let destName: String
