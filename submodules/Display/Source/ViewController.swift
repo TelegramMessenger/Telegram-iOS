@@ -234,6 +234,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     private weak var activeInputView: UIResponder?
     
     open var hasActiveInput: Bool = false
+    public internal(set) var isBeingInteractivelyPopped: Bool = false
     
     open var overlayWantsToBeBelowKeyboard: Bool {
         return false
@@ -657,6 +658,10 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open func viewWillLeaveNavigation() {
     }
     
+    open func cancelInteractiveKeyboardGestures() {
+        self.view.windowHost?.cancelInteractiveKeyboardGestures()
+    }
+
     open override func viewDidAppear(_ animated: Bool) {
         self.activeInputView = nil
         

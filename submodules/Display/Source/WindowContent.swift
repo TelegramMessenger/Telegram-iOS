@@ -293,6 +293,7 @@ public class Window1 {
     private var statusBarHidden = false
         
     private var shouldNotAnimateLikelyKeyboardAutocorrectionSwitch: Bool = false
+    private var suppressNextKeyboardHideAnimationUntil: Double?
     
     public private(set) var forceInCallStatusBarText: String? = nil
     public var inCallNavigate: (() -> Void)?
@@ -477,6 +478,10 @@ public class Window1 {
         self.topPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         
+        self.keyboardViewManager?.willDismissEditingWithoutAnimation = { [weak self] in
+            self?.suppressNextKeyboardHideAnimationUntil = CACurrentMediaTime() + 1.0
+        }
+
         //TODO:release check old iOS
         /*self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: UIApplication.willChangeStatusBarFrameNotification, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self, strongSelf.statusBarHost != nil {
@@ -648,6 +653,9 @@ public class Window1 {
                         transition = .immediate
                     }
                 }
+                if strongSelf.shouldSuppressNextKeyboardHideAnimation(keyboardHeight: keyboardHeight) {
+                    transition = .immediate
+                }
                 
                 strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: transition, overrideTransition: false) }
             }
@@ -716,6 +724,21 @@ public class Window1 {
         self.windowPanRecognizer = recognizer
         self.hostView.containerView.addGestureRecognizer(recognizer)
         self.hostView.containerView.addSubview(self.badgeView)
+    }
+
+    private func shouldSuppressNextKeyboardHideAnimation(keyboardHeight: CGFloat) -> Bool {
+        guard let suppressNextKeyboardHideAnimationUntil = self.suppressNextKeyboardHideAnimationUntil else {
+            return false
+        }
+        if suppressNextKeyboardHideAnimationUntil < CACurrentMediaTime() {
+            self.suppressNextKeyboardHideAnimationUntil = nil
+            return false
+        }
+        if keyboardHeight.isLessThanOrEqualTo(0.0) {
+            self.suppressNextKeyboardHideAnimationUntil = nil
+            return true
+        }
+        return false
     }
             
     public required init(coder aDecoder: NSCoder) {

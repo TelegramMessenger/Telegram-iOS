@@ -8145,12 +8145,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        if #available(iOS 18.0, *) {
-        } else {
-            //TODO:release
-        }
-        UIView.performWithoutAnimation {
-            self.view.endEditing(true)
+        if !self.isBeingInteractivelyPopped {
+            UIView.performWithoutAnimation {
+                self.view.endEditing(true)
+            }
         }
         
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
@@ -8226,6 +8224,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.willNavigateAway()
     }
     
+    override public func cancelInteractiveKeyboardGestures() {
+        super.cancelInteractiveKeyboardGestures()
+        self.chatDisplayNode.cancelInteractiveKeyboardGestures()
+    }
+
     override public func inFocusUpdated(isInFocus: Bool) {
         self.disableStickerAnimationsPromise.set(!isInFocus)
         self.chatDisplayNode.inFocusUpdated(isInFocus: isInFocus)
