@@ -2501,17 +2501,20 @@ static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
         
         if ([badMsgNotification isKindOfClass:[MTBadServerSaltNotificationMessage class]])
         {
+            // The server delivers a valid salt (nextServerSalt) inside the authenticated AES-IGE
+            // envelope, so it is equally trustworthy whether it rejects an ordinary request or the
+            // dedicated time-fix ping. Apply it directly. Previously a salt that rejected a normal
+            // request was discarded and the session entered MTProtoStateAwaitingTimeFixAndSalts
+            // (which gates every outgoing transaction); if the follow-up time-fix ping was then
+            // lost, nothing re-applied the salt or re-armed a transaction, so the session wedged
+            // until the DC closed the socket (~90-120s, surfaced to the user as a stuck "Updating").
             if (_timeFixContext != nil && badMessageId == _timeFixContext.messageId)
-            {
                 _timeFixContext = nil;
-                
-                int64_t validSalt = ((MTBadServerSaltNotificationMessage *)badMsgNotification).nextServerSalt;
-                NSTimeInterval timeDifference = incomingMessage.messageId / 4294967296.0 - [[NSDate date] timeIntervalSince1970];
-                [self completeTimeSync];
-                [self timeSyncInfoChanged:timeDifference saltList:@[[[MTDatacenterSaltInfo alloc] initWithSalt:validSalt firstValidMessageId:incomingMessage.messageId lastValidMessageId:incomingMessage.messageId + (4294967296 * 30 * 60)]] authInfoSelector:authInfoSelector];
-            }
-            else
-                [self initiateTimeSync];
+
+            int64_t validSalt = ((MTBadServerSaltNotificationMessage *)badMsgNotification).nextServerSalt;
+            NSTimeInterval timeDifference = incomingMessage.messageId / 4294967296.0 - [[NSDate date] timeIntervalSince1970];
+            [self completeTimeSync];
+            [self timeSyncInfoChanged:timeDifference saltList:@[[[MTDatacenterSaltInfo alloc] initWithSalt:validSalt firstValidMessageId:incomingMessage.messageId lastValidMessageId:incomingMessage.messageId + (4294967296 * 30 * 60)]] authInfoSelector:authInfoSelector];
         }
         else
         {
