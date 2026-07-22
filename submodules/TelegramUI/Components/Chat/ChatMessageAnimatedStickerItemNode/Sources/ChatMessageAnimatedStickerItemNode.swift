@@ -801,19 +801,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     override public func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
-        super.updateAccessibilityData(accessibilityData)
-        
-        self.messageAccessibilityArea.accessibilityLabel = accessibilityData.label
-        self.messageAccessibilityArea.accessibilityValue = accessibilityData.value
-        self.messageAccessibilityArea.accessibilityHint = accessibilityData.hint
-        self.messageAccessibilityArea.accessibilityTraits = accessibilityData.traits
-        if let customActions = accessibilityData.customActions {
-            self.messageAccessibilityArea.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
-                return ChatMessageAccessibilityCustomAction(name: action.name, target: self, selector: #selector(self.performLocalAccessibilityCustomAction(_:)), action: action.action)
-            })
-        } else {
-            self.messageAccessibilityArea.accessibilityCustomActions = nil
-        }
+        super.updateAccessibilityData(accessibilityData, accessibilityNode: self.messageAccessibilityArea, customActionTarget: self, customActionSelector: #selector(self.performLocalAccessibilityCustomAction(_:)))
     }
     
     @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {

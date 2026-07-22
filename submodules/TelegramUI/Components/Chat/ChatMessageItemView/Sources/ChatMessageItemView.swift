@@ -604,12 +604,18 @@ public final class ChatMessageAccessibilityData {
         }
         
         if let replyValue {
-            value = "\(value). \(item.presentationData.strings.VoiceOver_Chat_ReplyingToMessage(replyValue).string)"
+            let replyHint = item.presentationData.strings.VoiceOver_Chat_ReplyingToMessage(replyValue).string
+            if let hint, !hint.isEmpty {
+                self.hint = "\(hint). \(replyHint)"
+            } else {
+                self.hint = replyHint
+            }
+        } else {
+            self.hint = hint
         }
         
         self.label = label
         self.value = value
-        self.hint = hint
         self.traits = traits
         self.customActions = customActions.isEmpty ? nil : customActions
         self.singleUrl = singleUrl
@@ -656,6 +662,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     open var item: ChatMessageItem?
     open var accessibilityData: ChatMessageAccessibilityData?
+    private weak var messageAccessibilityNode: AccessibilityAreaNode?
     open var safeInsets = UIEdgeInsets()
     
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
@@ -693,6 +700,31 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     open func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
         self.accessibilityData = accessibilityData
+    }
+
+    public func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData, accessibilityNode: AccessibilityAreaNode, customActionTarget: Any, customActionSelector: Selector) {
+        self.accessibilityData = accessibilityData
+        self.messageAccessibilityNode = accessibilityNode
+
+        accessibilityNode.accessibilityLabel = accessibilityData.label
+        accessibilityNode.accessibilityValue = accessibilityData.value
+        accessibilityNode.accessibilityHint = accessibilityData.hint
+        accessibilityNode.accessibilityTraits = accessibilityData.traits
+        if let customActions = accessibilityData.customActions {
+            accessibilityNode.accessibilityCustomActions = customActions.map { action in
+                return ChatMessageAccessibilityCustomAction(name: action.name, target: customActionTarget, selector: customActionSelector, action: action.action)
+            }
+        } else {
+            accessibilityNode.accessibilityCustomActions = nil
+        }
+    }
+
+    public func accessibilityContainsFocus() -> Bool {
+        return self.messageAccessibilityNode?.view.accessibilityElementIsFocused() == true || self.view.accessibilityElementIsFocused()
+    }
+
+    public func restoreAccessibilityFocus() {
+        UIAccessibility.post(notification: .layoutChanged, argument: self.messageAccessibilityNode?.view ?? self.view)
     }
     
     override open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

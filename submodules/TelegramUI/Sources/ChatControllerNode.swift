@@ -811,8 +811,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         self.inputPanelBackgroundNode.isUserInteractionEnabled = false
         
-        self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, preferClearGlass: self.chatPresentationInterfaceState.preferredGlassType == .clear, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, backgroundNode: self.backgroundNode, isChatRotated: historyNodeRotated)
-        self.navigateButtons.accessibilityElementsHidden = true
+        self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, preferClearGlass: self.chatPresentationInterfaceState.preferredGlassType == .clear, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, backgroundNode: self.backgroundNode, isChatRotated: historyNodeRotated)
         
         super.init()
 
