@@ -92,6 +92,21 @@ ERROR: Skipping '@rules_xcodeproj_generated//generator/Telegram/Telegram_xcodepr
 
 If you encounter this issue, re-run the project generation steps in the README.
 
+## XCode build issues with frameworks: permission denied, no such directory or file
+
+On MacOS 15.4 and newer you might encounter a Xcode build failure accompainded by this errors:
+
+```
+.../SSignalKit/SwiftSignalKit/SwiftSignalKitFramework.framework/Modules/SwiftSignalKit.swiftmodule/arm64-apple-ios.swiftdoc: No such file or directory
+.../MtProtoKit/MtProtoKitFramework.framework/Info.plist': Permission denied (13)
+```
+
+If you encounter this issue, install rsync with following command:
+```
+brew install rsync
+```
+
+After installing rsync, clear build folder and rebuild the project.
 
 # Tips
 
