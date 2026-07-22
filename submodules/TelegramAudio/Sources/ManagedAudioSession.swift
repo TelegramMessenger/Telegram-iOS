@@ -866,12 +866,14 @@ public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
                     if mixWithOthers {
                         options.insert(.mixWithOthers)
                     }
+                    options.insert(.allowAirPlay)
                 case .ambient:
                     options.insert(.mixWithOthers)
                 case .playWithPossiblePortOverride:
                     if case .playAndRecord = nativeCategory {
                         options.insert(.allowBluetoothA2DP)
                     }
+                    options.insert(.allowAirPlay)
                 case .voiceCall, .videoCall:
                     #if canImport(AlarmKit) //Xcode 26
                     options.insert(.allowBluetoothHFP)
