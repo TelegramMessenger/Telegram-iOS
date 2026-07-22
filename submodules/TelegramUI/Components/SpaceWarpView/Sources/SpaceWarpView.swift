@@ -215,7 +215,9 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
     private var link: SharedDisplayLinkDriver.Link?
     
     private var shockwaves: [Shockwave] = []
-    
+
+    private var hasCompletedFirstInARowShockwave: Bool = false
+
     private var resolution: (x: Int, y: Int)?
     private var layoutParams: (size: CGSize, cornerRadius: CGFloat)?
     private var cornerOverlayImageRadius: CGFloat?
@@ -284,7 +286,11 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         if !SpaceWarpNodeImpl.supportsHierarchy(layer: self.contentNodeSource.view.layer) {
             return
         }
-        
+
+        if self.shockwaves.isEmpty {
+            self.hasCompletedFirstInARowShockwave = false
+        }
+
         self.shockwaves.append(Shockwave(startPoint: point))
         if self.shockwaves.count > 8 {
             self.shockwaves.removeFirst()
@@ -765,6 +771,10 @@ open class SpaceWarpNodeImpl: ASDisplayNode, SpaceWarpNode {
         for i in (0 ..< self.shockwaves.count).reversed() {
             if self.shockwaves[i].timeValue >= maxDelay {
                 self.shockwaves.remove(at: i)
+
+                if i == 0 {
+                    self.hasCompletedFirstInARowShockwave = true
+                }
             }
         }
         
