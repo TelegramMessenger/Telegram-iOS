@@ -638,6 +638,15 @@ public class DrawingContext {
         self.length = self.bytesPerRow * Int(scaledSize.height)
 
         self.imageBuffer = ASCGImageBuffer(length: UInt(self.length))
+        if Int(bitPattern: self.imageBuffer.mutableBytes) == 0 {
+            // malloc(length) failed (e.g. an oversized allocation from a bad
+            // drawingSize). CGContext(data: nil, ...) below would silently
+            // succeed using CG's own internal buffer, masking the failure
+            // until the later memset(self.bytes, ...) writes through this
+            // null pointer and segfaults. Fail the init instead, matching
+            // the other guarded failure paths in this initializer.
+            return nil
+        }
 
         if opaque {
             self.bitmapInfo = DeviceGraphicsContextSettings.shared.opaqueBitmapInfo
