@@ -1071,6 +1071,17 @@ public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
             switch updatedType {
                 case .record(false, _, _):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                    // overrideOutputAudioPort(.speaker) forces both output AND input
+                    // to built-in devices. If an external input device (e.g. USB-C
+                    // microphone) is connected, restore it as the preferred input.
+                    if let routes = AVAudioSession.sharedInstance().availableInputs {
+                        for route in routes {
+                            if route.portType != .builtInMic && !bluetoothPortTypes.contains(route.portType) && route.portType != .headphones {
+                                let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                break
+                            }
+                        }
+                    }
                 case .voiceCall, .playWithPossiblePortOverride, .record(true, _, _):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
