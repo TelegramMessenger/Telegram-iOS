@@ -1221,6 +1221,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         old.resignInputFirstResponder()
         old.asNode.removeFromSupernode()
+        if wasFirstResponder && UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(notification: .layoutChanged, argument: new.inputView)
+        }
     }
 
     private func loadTextInputNode(useNative: Bool = false) {
@@ -3413,6 +3416,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             // `.immediate` because the panel is already animating that height — animating the offset
             // inside it would animate the text twice.
             richTextInputNode.updateLayout(size: textFieldFrame.size, caretReveal: .ifNeeded(.immediate))
+            let accessibilityBounds = richTextInputNode.inputView.bounds.inset(by: richTextInputNode.inputHitTestSlop)
+            richTextInputNode.inputView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(accessibilityBounds, in: richTextInputNode.inputView)
             self.updateInputField(textInputFrame: textFieldFrame, transition: ComponentTransition(transition))
             if shouldUpdateLayout {
                 richTextInputNode.layoutInputField()
