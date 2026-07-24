@@ -4,6 +4,8 @@
 
 #import "TGBridgeStickerPack.h"
 #import "TGBridgeClient.h"
+#import "TGBridgeMediaSignals.h"
+#import "TGWatchCommon.h"
 
 @implementation TGBridgeStickersSignals
 
@@ -16,18 +18,17 @@ static NSArray *cachedStickers = nil;
 
 + (SSignal *)recentStickersWithLimit:(NSUInteger)limit
 {
-    return [[TGBridgeClient instance] requestSignalWithSubscription:[[TGBridgeRecentStickersSubscription alloc] initWithLimit:limit]];
-//    return [[self cachedRecentStickers] mapToSignal:^SSignal *(NSArray *stickers) {
-//        SSignal *remote = [[TGBridgeClient instance] requestSignalWithSubscription:[[TGBridgeRecentStickersSubscription alloc] initWithLimit:limit]];
-//        remote = [remote onNext:^(NSArray *stickers) {
-//            cachedStickers = stickers;
-//        }];
-//        if (stickers != nil) {
-//            return [[SSignal single:stickers] then:remote];
-//        } else {
-//            return remote;
-//        }
-//    }];
+    return [[self cachedRecentStickers] mapToSignal:^SSignal *(NSArray *stickers) {
+        SSignal *remote = [[TGBridgeClient instance] requestSignalWithSubscription:[[TGBridgeRecentStickersSubscription alloc] initWithLimit:limit]];
+        remote = [remote onNext:^(NSArray *stickers) {
+            cachedStickers = stickers;
+        }];
+        if (stickers != nil) {
+            return [[SSignal single:stickers] then:remote];
+        } else {
+            return remote;
+        }
+    }];
 }
 
 + (SSignal *)stickerPacks
@@ -45,6 +46,19 @@ static NSArray *cachedStickers = nil;
         stickerPacksURL = [[NSURL alloc] initFileURLWithPath:[documentsPath stringByAppendingPathComponent:@"stickers.data"]];
     });
     return stickerPacksURL;
+}
+
++ (void)prefetchRecentStickersWithLimit:(NSUInteger)limit
+{
+    [[[self recentStickersWithLimit:limit] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *stickers)
+    {
+        for (TGBridgeDocumentMediaAttachment *sticker in stickers)
+        {
+            CGSize stickerSize = TGWatchStickerSizeForScreen(TGWatchScreenType());
+            NSString *imageUrl = [NSString stringWithFormat:@"sticker_%lld_%dx%d_0", sticker.documentId, (int)stickerSize.width, (int)stickerSize.height];
+            [[[TGBridgeMediaSignals stickerWithDocumentId:sticker.documentId packId:sticker.stickerPackId accessHash:sticker.stickerPackAccessHash type:TGMediaStickerImageTypeNormal] deliverOn:[SQueue mainQueue]] startWithNext:^(id next) {}];
+        }
+    }];
 }
 
 @end
