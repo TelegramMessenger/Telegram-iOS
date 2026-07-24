@@ -972,6 +972,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     func setActionNodesHidden(_ hidden: Bool, inputField: Bool = false, actions: Bool = false, animated: Bool = true) {
         func updateActionNodesAlpha(_ nodes: [ASDisplayNode], alpha: CGFloat) {
             for node in nodes {
+                node.accessibilityElementsHidden = alpha.isZero
                 if !node.alpha.isEqual(to: alpha) {
                     let previousAlpha = node.alpha
                     node.alpha = alpha
@@ -1007,6 +1008,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             if let previous = previous {
                 previous.setDidBeginDragging(nil)
                 previous.setContentOffsetUpdated(nil)
+                previous.accessibilityElementsHidden = true
                 if animated {
                     transition = .animated(duration: 0.4, curve: .spring)
                     self.previousContentNode = previous
@@ -1034,6 +1036,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             if let (layout, navigationBarHeight, bottomGridInset) = self.containerLayout {
                 if let contentNode = contentNode, let previous = previous {
                     contentNode.frame = previous.frame
+                    contentNode.accessibilityElementsHidden = false
                     contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                     
                     contentNode.setDidBeginDragging({ [weak self] in
@@ -1067,6 +1070,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     }
                 } else {
                     if let contentNode = self.contentNode {
+                        contentNode.accessibilityElementsHidden = false
                         contentNode.setDidBeginDragging({ [weak self] in
                             self?.contentNodeDidBeginDragging()
                         })
@@ -1079,6 +1083,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
                 }
             } else if let contentNode = contentNode {
+                contentNode.accessibilityElementsHidden = false
                 contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                     self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
                 })
@@ -1205,7 +1210,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 statusBarHeight: nil,
                 inputHeight: nil,
                 inputHeightIsInteractivellyChanging: false,
-                inVoiceOver: false,
+                inVoiceOver: layout.inVoiceOver,
                 presentedInFormSheet: false
             )
             controller.presentationContext.containerLayoutUpdated(subLayout, transition: transition)
@@ -1416,19 +1421,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
         
         self.inputFieldNode.deactivateInput()
-        let transition: ContainedViewLayoutTransition
-        if peerId == nil {
-            transition = .animated(duration: 0.12, curve: .easeInOut)
-        } else {
-            transition = .immediate
-        }
-        transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
-        transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
-        if let startAtTimestampNode = self.startAtTimestampNode {
-            transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-        }
+        self.setActionNodesHidden(true, inputField: true, actions: true, animated: peerId == nil)
         
         let peerIds: [PeerId]
         var topicIds: [PeerId: Int64] = [:]
@@ -1506,7 +1499,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     if long {
                         strongSelf.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true, environment: strongSelf.environment), fastOut: true)
                     } else {
-                        strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+                        strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true), fastOut: true)
                     }
                 }
                 
@@ -1721,15 +1714,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                         case .preparing:
                             if loadingTimestamp == nil {
                                 strongSelf.inputFieldNode.deactivateInput()
-                                let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-                                transition.updateAlpha(node: strongSelf.actionButtonNode, alpha: 0.0)
-                                transition.updateAlpha(node: strongSelf.inputFieldNode, alpha: 0.0)
-                                transition.updateAlpha(node: strongSelf.actionSeparatorNode, alpha: 0.0)
-                                transition.updateAlpha(node: strongSelf.actionsBackgroundNode, alpha: 0.0)
-                                if let startAtTimestampNode = strongSelf.startAtTimestampNode {
-                                    transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-                                }
-                                strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+                                strongSelf.setActionNodesHidden(true, inputField: true, actions: true)
+                                strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true), fastOut: true)
                                 loadingTimestamp = CACurrentMediaTime()
                                 if reportReady {
                                     strongSelf.ready.set(.single(true))
@@ -1883,14 +1869,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     
     func transitionToProgress(signal: Signal<Void, NoError>) {
         self.inputFieldNode.deactivateInput()
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-        transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
-        transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
-        if let startAtTimestampNode = self.startAtTimestampNode {
-            transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-        }
+        self.setActionNodesHidden(true, inputField: true, actions: true)
         
         self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true, environment: self.environment), fastOut: true)
         let timestamp = CACurrentMediaTime()
@@ -1924,16 +1903,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 completion()
             }))
         } else {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-            transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
-            transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
-            transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
-            transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
-            if let startAtTimestampNode = self.startAtTimestampNode {
-                transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-            }
+            self.setActionNodesHidden(true, inputField: true, actions: true)
             
-            self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+            self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true), fastOut: true)
             
             let timestamp = CACurrentMediaTime()
             var wasDone = false

@@ -95,6 +95,8 @@ private class CancelButtonNode: ASDisplayNode {
         self.strings = strings
         
         self.buttonNode = HighlightTrackingButtonNode()
+        self.buttonNode.accessibilityLabel = strings.Common_Back
+        self.buttonNode.accessibilityTraits = [.button]
         
         self.arrowNode = ASImageNode()
         self.arrowNode.displaysAsynchronously = false
@@ -237,6 +239,8 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.backNode = CancelButtonNode(theme: theme, strings: strings)
         
         super.init()
+
+        self.contentTitleNode.accessibilityTraits = [.header]
         
         self.addSubnode(self.contentGridNode)
         self.addSubnode(self.headerNode)

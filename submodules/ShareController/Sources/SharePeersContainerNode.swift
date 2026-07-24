@@ -236,15 +236,24 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 emptyColor: nil,
                 synchronousLoad: false
             )
+            self.contentTitleAccountNode.isAccessibilityElement = true
+            self.contentTitleAccountNode.accessibilityLabel = strings.Shortcut_SwitchAccount
+            self.contentTitleAccountNode.accessibilityValue = info.peer.compactDisplayTitle
+            self.contentTitleAccountNode.accessibilityTraits = [.button]
         } else {
             self.contentTitleAccountNode.isHidden = true
+            self.contentTitleAccountNode.isAccessibilityElement = false
         }
         
         self.searchButtonNode = HighlightableButtonNode()
         self.searchButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/SearchIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
+        self.searchButtonNode.accessibilityLabel = strings.Common_Search
+        self.searchButtonNode.accessibilityTraits = [.button]
         
         self.shareButtonNode = HighlightableButtonNode()
         self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
+        self.shareButtonNode.accessibilityLabel = strings.ShareMenu_ShareTo
+        self.shareButtonNode.accessibilityTraits = [.button]
                  
         self.shareReferenceNode = ContextReferenceContentNode()
         self.shareContainerNode = ContextControllerSourceNode()
@@ -272,6 +281,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
         
         super.init()
+
+        self.contentTitleNode.accessibilityTraits = [.header]
         
         self.addSubnode(self.contentGridNode)
         self.addSubnode(self.headerNode)

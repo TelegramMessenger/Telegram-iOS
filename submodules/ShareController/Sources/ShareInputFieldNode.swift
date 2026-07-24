@@ -135,6 +135,9 @@ private final class ShareInputCopyComponent: Component {
                     textView.mask = self.textMask
                 }
                 textView.frame = textFrame
+                textView.isAccessibilityElement = true
+                textView.accessibilityLabel = component.text
+                textView.accessibilityTraits = [.staticText]
             }
             
             let buttonSize = self.button.update(
@@ -159,6 +162,9 @@ private final class ShareInputCopyComponent: Component {
                     self.addSubview(buttonView)
                 }
                 buttonView.frame = buttonFrame
+                buttonView.isAccessibilityElement = true
+                buttonView.accessibilityLabel = component.strings.Conversation_LinkDialogCopy
+                buttonView.accessibilityTraits = [.button]
             }
             
             if self.textMask.image == nil {
@@ -224,6 +230,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
     public var placeholder: String = "" {
         didSet {
             self.placeholderNode.attributedText = NSAttributedString(string: self.placeholder, font: Font.regular(17.0), textColor: self.theme.placeholderColor)
+            self.textInputNode.textView.accessibilityLabel = self.placeholder
         }
     }
     
@@ -245,7 +252,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
         self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
         self.textInputNode.keyboardAppearance = theme.keyboard.keyboardAppearance
         self.textInputNode.tintColor = theme.accentColor
-        self.textInputNode.textView.accessibilityHint = placeholder
+        self.textInputNode.textView.accessibilityLabel = placeholder
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
