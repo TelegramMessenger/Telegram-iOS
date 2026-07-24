@@ -7,6 +7,16 @@ import TextNodeWithEntities
 
 private let alertWidth: CGFloat = 270.0
 
+private final class TextAlertWithEntitiesAccessibilityCustomAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 final class TextAlertWithEntitiesContentNode: AlertContentNode {
     private var theme: AlertControllerTheme
     private let actionLayout: TextAlertContentActionLayout
@@ -25,6 +35,10 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
         return self._dismissOnOutsideTap
     }
     
+    override public var accessibilityInitialFocusNode: ASDisplayNode? {
+        return self.titleNode ?? self.textNode
+    }
+
     private var highlightedItemIndex: Int? = nil
     
     var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {
@@ -47,6 +61,7 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
                 self.textNode.highlightAttributeAction = nil
                 self.textNode.tapAttributeAction = nil
             }
+            self.updateTextAccessibilityActions()
         }
     }
     
@@ -59,10 +74,11 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
             titleNode.attributedText = title
             titleNode.displaysAsynchronously = false
             titleNode.isUserInteractionEnabled = false
-            titleNode.maximumNumberOfLines = 4
+            titleNode.maximumNumberOfLines = 0
             titleNode.truncationType = .end
             titleNode.isAccessibilityElement = true
             titleNode.accessibilityLabel = title.string
+            titleNode.accessibilityTraits = [.header]
             self.titleNode = titleNode
         } else {
             self.titleNode = nil
@@ -127,6 +143,38 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
         }
+
+        self.updateTextAccessibilityActions()
+    }
+
+    private func updateTextAccessibilityActions() {
+        guard let attributedText = self.textNode.attributedText, let (attribute, textAttributeAction) = self.textAttributeAction, attributedText.length != 0 else {
+            self.textNode.accessibilityCustomActions = nil
+            return
+        }
+
+        var accessibilityActions: [UIAccessibilityCustomAction] = []
+        attributedText.enumerateAttribute(attribute, in: NSRange(location: 0, length: attributedText.length), options: []) { [weak self] value, range, _ in
+            guard let self, let value else {
+                return
+            }
+            let actionName = attributedText.attributedSubstring(from: range).string.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !actionName.isEmpty else {
+                return
+            }
+            accessibilityActions.append(TextAlertWithEntitiesAccessibilityCustomAction(name: actionName, target: self, selector: #selector(self.performTextAccessibilityAction(_:)), perform: {
+                textAttributeAction(value)
+            }))
+        }
+        self.textNode.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
+    }
+
+    @objc private func performTextAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? TextAlertWithEntitiesAccessibilityCustomAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     func setHighlightedItemIndex(_ index: Int?, update: Bool = false) {
@@ -199,6 +247,13 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
             _ = self.updateLayout(size: size, transition: .immediate)
         }
     }
+
+    override func contentSizeCategoryUpdated() {
+        for actionNode in self.actionNodes {
+            actionNode.updateTheme(self.theme)
+        }
+        self.requestLayout?(.immediate)
+    }
     
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         self.validLayout = size
@@ -214,23 +269,20 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
         }
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
         
-        let actionButtonHeight: CGFloat = 44.0
-        
-        var minActionsWidth: CGFloat = 0.0
-        let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
-        let actionTitleInsets: CGFloat = 8.0
+        let minimumActionButtonHeight: CGFloat = 44.0
+        let maxActionWidth: CGFloat = self.actionNodes.isEmpty ? size.width : floor(size.width / CGFloat(self.actionNodes.count))
         
         var effectiveActionLayout = self.actionLayout
+        if self.traitCollection.preferredContentSizeCategory.isAccessibilityCategory {
+            effectiveActionLayout = .vertical
+        }
+        var actionHeights: [CGFloat] = []
         for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
-            if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
+            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: max(1.0, maxActionWidth - 16.0), height: CGFloat.greatestFiniteMagnitude))
+            let actionHeight = max(minimumActionButtonHeight, actionTitleSize.height + 20.0)
+            actionHeights.append(actionHeight)
+            if case .horizontal = effectiveActionLayout, actionHeight > minimumActionButtonHeight {
                 effectiveActionLayout = .vertical
-            }
-            switch effectiveActionLayout {
-                case .horizontal:
-                    minActionsWidth += actionTitleSize.width + actionTitleInsets
-                case .vertical:
-                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
             }
         }
         
@@ -239,9 +291,9 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
         var actionsHeight: CGFloat = 0.0
         switch effectiveActionLayout {
             case .horizontal:
-                actionsHeight = actionButtonHeight
+                actionsHeight = actionHeights.max() ?? minimumActionButtonHeight
             case .vertical:
-                actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
+                actionsHeight = actionHeights.reduce(0.0, +)
         }
         
         let contentWidth = alertWidth - insets.left - insets.right
@@ -261,10 +313,11 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: textSize.height + actionsHeight + insets.top + insets.bottom)
         }
         
+        self.actionNodesSeparator.isHidden = self.actionNodes.isEmpty
         self.actionNodesSeparator.frame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel))
         
         var actionOffset: CGFloat = 0.0
-        let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
+        let actionWidth: CGFloat = self.actionNodes.isEmpty ? resultSize.width : floor(resultSize.width / CGFloat(self.actionNodes.count))
         var separatorIndex = -1
         var nodeIndex = 0
         for actionNode in self.actionNodes {
@@ -294,11 +347,12 @@ final class TextAlertWithEntitiesContentNode: AlertContentNode {
             let actionNodeFrame: CGRect
             switch effectiveActionLayout {
                 case .horizontal:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
+                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionsHeight))
                     actionOffset += currentActionWidth
                 case .vertical:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += actionButtonHeight
+                    let actionHeight = actionHeights[nodeIndex]
+                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionHeight))
+                    actionOffset += actionHeight
             }
             
             transition.updateFrame(node: actionNode, frame: actionNodeFrame)

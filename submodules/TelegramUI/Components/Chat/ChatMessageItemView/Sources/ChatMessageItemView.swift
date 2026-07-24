@@ -89,6 +89,7 @@ public final class ChatMessageAccessibilityData {
     public let traits: UIAccessibilityTraits
     public let customActions: [ChatMessageAccessibilityCustomAction]?
     public let singleUrl: String?
+    public let respondsToUserInteraction: Bool
     
     public init(item: ChatMessageItem, isSelected: Bool?) {
         var hint: String?
@@ -635,6 +636,7 @@ public final class ChatMessageAccessibilityData {
         self.traits = traits
         self.customActions = customActions.isEmpty ? nil : customActions
         self.singleUrl = singleUrl
+        self.respondsToUserInteraction = singleUrl != nil || !item.message.media.isEmpty
     }
     
     @objc private func noop() {
@@ -740,6 +742,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         accessibilityNode.accessibilityValue = accessibilityData.value
         accessibilityNode.accessibilityHint = accessibilityData.hint
         accessibilityNode.accessibilityTraits = accessibilityData.traits
+        accessibilityNode.view.accessibilityRespondsToUserInteraction = accessibilityData.respondsToUserInteraction
         if let customActions = accessibilityData.customActions {
             accessibilityNode.accessibilityCustomActions = customActions.map { action in
                 return ChatMessageAccessibilityCustomAction(name: action.name, target: customActionTarget, selector: customActionSelector, action: action.action)

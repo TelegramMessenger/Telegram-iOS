@@ -78,6 +78,19 @@ private let minInputFontSize = chatTextInputMinFontSize
 /// recognizer must then stay off: it conflicts with the Apple Intelligence gestures.
 func textInputTapRecognizerIsEnabled(isInputNodeLoaded: Bool, sendingTextDisabled: Bool) -> Bool {
     return !isInputNodeLoaded || sendingTextDisabled
+}`r`n`r`nprivate func accessibilityTextInputView(in view: UIView) -> UIView {
+    if view is UITextInput {
+        return view
+    }
+    for subview in view.subviews {
+        if !subview.isHidden && subview.alpha > 0.0 {
+            let result = accessibilityTextInputView(in: subview)
+            if result is UITextInput {
+                return result
+            }
+        }
+    }
+    return view
 }
 
 private func calclulateTextFieldMinHeight(_ presentationInterfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
@@ -3416,8 +3429,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             // `.immediate` because the panel is already animating that height — animating the offset
             // inside it would animate the text twice.
             richTextInputNode.updateLayout(size: textFieldFrame.size, caretReveal: .ifNeeded(.immediate))
-            let accessibilityBounds = richTextInputNode.inputView.bounds.inset(by: richTextInputNode.inputHitTestSlop)
-            richTextInputNode.inputView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(accessibilityBounds, in: richTextInputNode.inputView)
+            let accessibilityInputView = accessibilityTextInputView(in: richTextInputNode.inputView)`r`n            let accessibilityBounds = richTextInputNode.inputView.bounds.inset(by: richTextInputNode.inputHitTestSlop)
+            accessibilityInputView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(accessibilityBounds, in: richTextInputNode.inputView)
+            accessibilityInputView.accessibilityRespondsToUserInteraction = true
             self.updateInputField(textInputFrame: textFieldFrame, transition: ComponentTransition(transition))
             if shouldUpdateLayout {
                 richTextInputNode.layoutInputField()
