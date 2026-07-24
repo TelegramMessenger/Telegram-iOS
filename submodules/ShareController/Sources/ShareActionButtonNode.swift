@@ -28,6 +28,7 @@ public final class ShareActionButtonNode: HighlightTrackingButtonNode {
     public var badge: String? {
         didSet {
             if self.badge != oldValue {
+                self.accessibilityValue = self.badge
                 if let badge = self.badge {
                     self.badgeText = NSAttributedString(string: badge, font: Font.regular(14.0), textColor: self.badgeTextColor, paragraphAlignment: .center)
                     self.badgeLabel.isHidden = false
@@ -68,6 +69,9 @@ public final class ShareActionButtonNode: HighlightTrackingButtonNode {
         self.badgeBackground.image = generateStretchableFilledCircleImage(diameter: 22.0, color: badgeBackgroundColor)
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
         
         self.containerNode.addSubnode(self.referenceNode)
         self.addSubnode(self.containerNode)
@@ -147,6 +151,10 @@ public final class ShareStartAtTimestampNode: HighlightTrackingButtonNode {
         self.titleTextNode.displaysAsynchronously = false
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = titleText
+        self.accessibilityTraits = .button
         
         self.addSubnode(self.checkNode)
         self.addSubnode(self.titleTextNode)
@@ -156,6 +164,11 @@ public final class ShareStartAtTimestampNode: HighlightTrackingButtonNode {
     
     @objc private func pressed() {
         self.checkNode.setSelected(!self.checkNode.selected, animated: true)
+        if self.checkNode.selected {
+            self.accessibilityTraits.insert(.selected)
+        } else {
+            self.accessibilityTraits.remove(.selected)
+        }
         self.updated?()
     }
     

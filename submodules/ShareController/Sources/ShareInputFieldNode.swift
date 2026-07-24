@@ -217,6 +217,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
             self.textInputNode.attributedText = NSAttributedString(string: newValue, font: Font.regular(17.0), textColor: self.theme.textColor)
             self.placeholderNode.isHidden = !newValue.isEmpty || self.inputCopyText != nil
             self.clearButton.isHidden = newValue.isEmpty
+            self.clearButton.isAccessibilityElement = !newValue.isEmpty
         }
     }
     
@@ -244,6 +245,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
         self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
         self.textInputNode.keyboardAppearance = theme.keyboard.keyboardAppearance
         self.textInputNode.tintColor = theme.accentColor
+        self.textInputNode.textView.accessibilityHint = placeholder
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
@@ -256,6 +258,9 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
         self.clearButton.displaysAsynchronously = false
         self.clearButton.setImage(generateClearIcon(color: theme.clearButtonColor), for: [])
         self.clearButton.isHidden = true
+        self.clearButton.isAccessibilityElement = false
+        self.clearButton.accessibilityLabel = strings.WebSearch_RecentSectionClear
+        self.clearButton.accessibilityTraits = .button
         
         super.init()
         
@@ -352,6 +357,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
     
     public func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
         self.clearButton.isHidden = false
+        self.clearButton.isAccessibilityElement = true
         
         if self.selectTextOnce {
             self.selectTextOnce = false
@@ -364,6 +370,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
     public func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
         self.placeholderNode.isHidden = !(editableTextNode.textView.text ?? "").isEmpty || self.inputCopyText != nil
         self.clearButton.isHidden = true
+        self.clearButton.isAccessibilityElement = false
     }
     
     private func calculateTextFieldMetrics(width: CGFloat) -> CGFloat {
