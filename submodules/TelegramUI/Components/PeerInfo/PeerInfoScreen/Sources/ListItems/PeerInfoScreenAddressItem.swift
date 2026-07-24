@@ -177,6 +177,17 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.item = item
         self.presentationData = presentationData
+
+        if let action = item.action {
+            self.activateArea.accessibilityTraits = [.button]
+            self.activateArea.activate = {
+                action()
+                return true
+            }
+        } else {
+            self.activateArea.accessibilityTraits = [.staticText]
+            self.activateArea.activate = nil
+        }
         
         self.containerNode.isGestureEnabled = item.contextAction != nil
                 
@@ -231,6 +242,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
         self.activateArea.accessibilityLabel = item.label
+        self.activateArea.accessibilityValue = item.text
         
         let contentSize = CGSize(width: width, height: height)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)

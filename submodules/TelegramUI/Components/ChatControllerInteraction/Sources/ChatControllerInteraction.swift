@@ -281,6 +281,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let accessibilityForwardMessage: (EngineRawMessage) -> Void
     public let accessibilityDeleteMessage: (EngineRawMessage) -> Void
     public let canPerformAccessibilityMessageActions: Bool
+    public var accessibilityNavigationTargetMessageId: EngineMessage.Id?
     public let displayUndo: (UndoOverlayContent) -> Void
     public let isAnimatingMessage: (UInt32) -> Bool
     public let getMessageTransitionNode: () -> ChatMessageTransitionProtocol?

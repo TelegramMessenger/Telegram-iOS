@@ -3874,6 +3874,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         self.hasActiveTransition = true
         let transition = self.enqueuedHistoryViewTransitions.removeFirst()
 
+        let accessibilityNavigationTargetMessageId = UIAccessibility.isVoiceOverRunning ? self.controllerInteraction.accessibilityNavigationTargetMessageId : nil
         var accessibilityFocusedMessageId: MessageId?
         if UIAccessibility.isVoiceOverRunning {
             self.forEachVisibleMessageItemNode { itemNode in
@@ -4439,7 +4440,25 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 
                 strongSelf.hasActiveTransition = false
 
-                if let accessibilityFocusedMessageId {
+                if let accessibilityNavigationTargetMessageId {
+                    var didRestoreAccessibilityNavigationTarget = false
+                    strongSelf.forEachVisibleMessageItemNode { itemNode in
+                        if let item = itemNode.item, item.content.contains(where: { $0.0.id == accessibilityNavigationTargetMessageId }) {
+                            didRestoreAccessibilityNavigationTarget = true
+                            if strongSelf.controllerInteraction.accessibilityNavigationTargetMessageId == accessibilityNavigationTargetMessageId {
+                                strongSelf.controllerInteraction.accessibilityNavigationTargetMessageId = nil
+                            }
+                            itemNode.restoreAccessibilityFocus()
+                        }
+                    }
+                    if !didRestoreAccessibilityNavigationTarget, let accessibilityFocusedMessageId {
+                        strongSelf.forEachVisibleMessageItemNode { itemNode in
+                            if let item = itemNode.item, item.content.contains(where: { $0.0.id == accessibilityFocusedMessageId }) {
+                                itemNode.restoreAccessibilityFocus()
+                            }
+                        }
+                    }
+                } else if let accessibilityFocusedMessageId {
                     strongSelf.forEachVisibleMessageItemNode { itemNode in
                         if let item = itemNode.item, item.content.contains(where: { $0.0.id == accessibilityFocusedMessageId }) {
                             itemNode.restoreAccessibilityFocus()
