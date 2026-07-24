@@ -56,6 +56,7 @@ public final class ArchiveInfoContentComponent: Component {
         
         private let title = ComponentView<Empty>()
         private let mainText = ComponentView<Empty>()
+        private let settingsButton: UIButton
         
         private var chevronImage: UIImage?
         
@@ -68,6 +69,7 @@ public final class ArchiveInfoContentComponent: Component {
             
             self.iconBackground = UIImageView()
             self.iconForeground = UIImageView()
+            self.settingsButton = UIButton(type: .custom)
             
             super.init(frame: frame)
             
@@ -86,6 +88,15 @@ public final class ArchiveInfoContentComponent: Component {
             
             self.scrollView.addSubview(self.iconBackground)
             self.scrollView.addSubview(self.iconForeground)
+            self.scrollView.addSubview(self.settingsButton)
+
+            self.iconBackground.isAccessibilityElement = false
+            self.iconBackground.accessibilityElementsHidden = true
+            self.iconForeground.isAccessibilityElement = false
+            self.iconForeground.accessibilityElementsHidden = true
+
+            self.settingsButton.accessibilityTraits = [.button, .link]
+            self.settingsButton.addTarget(self, action: #selector(self.openSettingsPressed), for: .touchUpInside)
         }
         
         required init(coder: NSCoder) {
@@ -105,6 +116,8 @@ public final class ArchiveInfoContentComponent: Component {
             
             let sideInset: CGFloat = 16.0
             let sideIconInset: CGFloat = 40.0
+            let titleFontSize = UIFontMetrics(forTextStyle: .headline).scaledValue(for: 19.0)
+            let bodyFontSize = UIFontMetrics(forTextStyle: .body).scaledValue(for: 15.0)
             
             var contentHeight: CGFloat = 0.0
             
@@ -128,7 +141,7 @@ public final class ArchiveInfoContentComponent: Component {
             contentHeight += 15.0
             
             let titleString = NSMutableAttributedString()
-            titleString.append(NSAttributedString(string: component.strings.ArchiveInfo_Title, font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
+            titleString.append(NSAttributedString(string: component.strings.ArchiveInfo_Title, font: Font.semibold(titleFontSize), textColor: component.theme.list.itemPrimaryTextColor))
             let imageAttachment = NSTextAttachment()
             imageAttachment.image = self.iconBackground.image
             titleString.append(NSAttributedString(attachment: imageAttachment))
@@ -137,7 +150,8 @@ public final class ArchiveInfoContentComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(titleString),
-                    maximumNumberOfLines: 1
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -146,6 +160,9 @@ public final class ArchiveInfoContentComponent: Component {
                 if titleView.superview == nil {
                     self.scrollView.addSubview(titleView)
                 }
+                titleView.isAccessibilityElement = true
+                titleView.accessibilityLabel = component.strings.ArchiveInfo_Title
+                titleView.accessibilityTraits.insert(.header)
                 transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: contentHeight), size: titleSize))
             }
             contentHeight += titleSize.height
@@ -161,15 +178,15 @@ public final class ArchiveInfoContentComponent: Component {
             let mainText = NSMutableAttributedString()
             mainText.append(parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(
-                    font: Font.regular(15.0),
+                    font: Font.regular(bodyFontSize),
                     textColor: component.theme.list.itemSecondaryTextColor
                 ),
                 bold: MarkdownAttributeSet(
-                    font: Font.semibold(15.0),
+                    font: Font.semibold(bodyFontSize),
                     textColor: component.theme.list.itemSecondaryTextColor
                 ),
                 link: MarkdownAttributeSet(
-                    font: Font.regular(15.0),
+                    font: Font.regular(bodyFontSize),
                     textColor: component.theme.list.itemAccentColor,
                     additionalAttributes: [:]
                 ),
@@ -214,7 +231,12 @@ public final class ArchiveInfoContentComponent: Component {
                 if mainTextView.superview == nil {
                     self.scrollView.addSubview(mainTextView)
                 }
-                transition.setFrame(view: mainTextView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - mainTextSize.width) * 0.5), y: contentHeight), size: mainTextSize))
+                mainTextView.accessibilityElementsHidden = true
+                let mainTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - mainTextSize.width) * 0.5), y: contentHeight), size: mainTextSize)
+                transition.setFrame(view: mainTextView, frame: mainTextFrame)
+                self.settingsButton.accessibilityLabel = mainText.string
+                transition.setFrame(view: self.settingsButton, frame: mainTextFrame)
+                self.scrollView.bringSubviewToFront(self.settingsButton)
             }
             contentHeight += mainTextSize.height
             
@@ -269,7 +291,7 @@ public final class ArchiveInfoContentComponent: Component {
                 let titleSize = item.title.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: itemDesc.title, font: Font.semibold(15.0), textColor: component.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: itemDesc.title, font: Font.semibold(bodyFontSize), textColor: component.theme.list.itemPrimaryTextColor)),
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2
                     )),
@@ -279,7 +301,7 @@ public final class ArchiveInfoContentComponent: Component {
                 let textSize = item.text.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: itemDesc.text, font: Font.regular(15.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                        text: .plain(NSAttributedString(string: itemDesc.text, font: Font.regular(bodyFontSize), textColor: component.theme.list.itemSecondaryTextColor)),
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.18
                     )),
@@ -291,6 +313,8 @@ public final class ArchiveInfoContentComponent: Component {
                     if iconView.superview == nil {
                         self.scrollView.addSubview(iconView)
                     }
+                    iconView.isAccessibilityElement = false
+                    iconView.accessibilityElementsHidden = true
                     transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight + 4.0), size: iconSize))
                 }
                 
@@ -298,7 +322,10 @@ public final class ArchiveInfoContentComponent: Component {
                     if titleView.superview == nil {
                         self.scrollView.addSubview(titleView)
                     }
-                    transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: sideInset + sideIconInset, y: contentHeight), size: titleSize))
+                    titleView.isAccessibilityElement = true
+                    titleView.accessibilityLabel = "\(itemDesc.title). \(itemDesc.text)"
+                    let titleFrame = CGRect(origin: CGPoint(x: sideInset + sideIconInset, y: contentHeight), size: titleSize)
+                    transition.setFrame(view: titleView, frame: titleFrame)
                 }
                 contentHeight += titleSize.height
                 contentHeight += 2.0
@@ -307,7 +334,15 @@ public final class ArchiveInfoContentComponent: Component {
                     if textView.superview == nil {
                         self.scrollView.addSubview(textView)
                     }
-                    transition.setFrame(view: textView, frame: CGRect(origin: CGPoint(x: sideInset + sideIconInset, y: contentHeight), size: textSize))
+                    textView.accessibilityElementsHidden = true
+                    let textFrame = CGRect(origin: CGPoint(x: sideInset + sideIconInset, y: contentHeight), size: textSize)
+                    transition.setFrame(view: textView, frame: textFrame)
+                    item.title.view?.accessibilityFrameInContainerSpace = CGRect(
+                        x: sideInset,
+                        y: textFrame.minY - titleSize.height - 2.0,
+                        width: availableSize.width - sideInset * 2.0,
+                        height: titleSize.height + 2.0 + textSize.height
+                    )
                 }
                 contentHeight += textSize.height
             }
@@ -320,6 +355,10 @@ public final class ArchiveInfoContentComponent: Component {
             }
             
             return size
+        }
+
+        @objc private func openSettingsPressed() {
+            self.component?.openSettings()
         }
     }
     

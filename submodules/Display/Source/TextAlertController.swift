@@ -134,7 +134,11 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         
         self.setAttributedTitle(attributedString, for: [])
         self.accessibilityLabel = self.action.title
-        self.accessibilityTraits = [.button]
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
+        if !self.actionEnabled {
+            accessibilityTraits.insert(.notEnabled)
+        }
+        self.accessibilityTraits = accessibilityTraits
     }
     
     @objc func pressed() {
@@ -257,6 +261,10 @@ public final class TextAlertContentNode: AlertContentNode {
         return self._dismissOnOutsideTap
     }
     
+    override public var accessibilityInitialFocusNode: ASDisplayNode? {
+        return self.titleNode ?? self.textNode
+    }
+
     private var highlightedItemIndex: Int? = nil
     
     public var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {

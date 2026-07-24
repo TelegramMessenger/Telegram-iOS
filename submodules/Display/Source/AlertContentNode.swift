@@ -4,6 +4,10 @@ import AsyncDisplayKit
 
 open class AlertContentNode: ASDisplayNode {
     open var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
+
+    open var accessibilityInitialFocusNode: ASDisplayNode? {
+        return nil
+    }
     
     open var dismissOnOutsideTap: Bool {
         return true
