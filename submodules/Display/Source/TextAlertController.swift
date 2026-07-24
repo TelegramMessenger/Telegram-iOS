@@ -158,6 +158,16 @@ public enum TextAlertContentActionLayout {
     case vertical
 }
 
+private final class TextAlertAccessibilityCustomAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 public final class TextAlertContentNode: AlertContentNode {
     private var theme: AlertControllerTheme
     private let actionLayout: TextAlertContentActionLayout
@@ -171,6 +181,7 @@ public final class TextAlertContentNode: AlertContentNode {
     private let dynamicTypeTitle: String?
     private let dynamicTypeText: String?
     private let dynamicTypeParseMarkdown: Bool
+    private let linkAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     
     private var validLayout: CGSize?
     
@@ -205,6 +216,7 @@ public final class TextAlertContentNode: AlertContentNode {
                 self.textNode.highlightAttributeAction = nil
                 self.textNode.tapAttributeAction = nil
             }
+            self.updateTextAccessibilityActions()
         }
     }
     
@@ -215,6 +227,7 @@ public final class TextAlertContentNode: AlertContentNode {
         self.dynamicTypeTitle = dynamicTypeTitle
         self.dynamicTypeText = dynamicTypeText
         self.dynamicTypeParseMarkdown = dynamicTypeParseMarkdown
+        self.linkAction = linkAction
         if let title = title {
             let titleNode = ImmediateTextNode()
             titleNode.attributedText = title
@@ -297,6 +310,46 @@ public final class TextAlertContentNode: AlertContentNode {
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
         }
+
+        self.updateTextAccessibilityActions()
+    }
+
+    private func updateTextAccessibilityActions() {
+        guard let attributedText = self.textNode.attributedText, attributedText.length != 0 else {
+            self.textNode.accessibilityCustomActions = nil
+            return
+        }
+
+        var accessibilityActions: [UIAccessibilityCustomAction] = []
+        attributedText.enumerateAttributes(in: NSRange(location: 0, length: attributedText.length), options: []) { [weak self] attributes, range, _ in
+            guard let self else {
+                return
+            }
+            let actionName = attributedText.attributedSubstring(from: range).string.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !actionName.isEmpty else {
+                return
+            }
+
+            if self.textAttributeAction == nil, attributes[NSAttributedString.Key(rawValue: "URL")] != nil, let linkAction = self.linkAction {
+                accessibilityActions.append(TextAlertAccessibilityCustomAction(name: actionName, target: self, selector: #selector(self.performTextAccessibilityAction(_:)), perform: {
+                    linkAction(attributes, range.location)
+                }))
+            }
+            if let (attribute, textAttributeAction) = self.textAttributeAction, let value = attributes[attribute] {
+                accessibilityActions.append(TextAlertAccessibilityCustomAction(name: actionName, target: self, selector: #selector(self.performTextAccessibilityAction(_:)), perform: {
+                    textAttributeAction(value)
+                }))
+            }
+        }
+        self.textNode.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
+    }
+
+    @objc private func performTextAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? TextAlertAccessibilityCustomAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     func setHighlightedItemIndex(_ index: Int?, update: Bool = false) {
@@ -377,6 +430,7 @@ public final class TextAlertContentNode: AlertContentNode {
             let attributedStrings = standardTextAlertAttributedStrings(theme: self.theme, title: self.dynamicTypeTitle, text: dynamicTypeText, parseMarkdown: self.dynamicTypeParseMarkdown)
             self.titleNode?.attributedText = attributedStrings.title
             self.textNode.attributedText = attributedStrings.text
+            self.updateTextAccessibilityActions()
         }
         self.requestLayout?(.immediate)
     }

@@ -157,7 +157,10 @@ open class AlertController: ViewController, StandalonePresentableController, Key
         self.existingAlertController = nil
         
         self.controllerNode.animateIn()
-        UIAccessibility.post(notification: .screenChanged, argument: self.contentNode.accessibilityInitialFocusNode?.view ?? self.contentNode.view)
+        UIAccessibility.post(
+            notification: .screenChanged,
+            argument: self.contentNode.accessibilityInitialFocusNode?.view ?? firstAccessibilityElement(in: self.contentNode.view) ?? self.contentNode.view
+        )
     }
 
     override open func viewWillAppear(_ animated: Bool) {
