@@ -65,6 +65,7 @@ private let fileSizeFormatter: ByteCountFormatter = {
 
 public enum ChatMessageAccessibilityCustomActionType {
     case reply
+    case navigateToReply(EngineMessage.Id)
     case react
     case options
     case copy
@@ -513,6 +514,7 @@ public final class ChatMessageAccessibilityData {
         
         var (label, value) = dataForMessage(item.message, false)
         var replyValue: String?
+        var replyMessageId: EngineMessage.Id?
         
         for attribute in item.message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -541,7 +543,11 @@ public final class ChatMessageAccessibilityData {
                             break
                     }
                 }
-            } else if let attribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[attribute.messageId] {
+            } else if let attribute = attribute as? ReplyMessageAttribute {
+                replyMessageId = attribute.messageId
+                guard let replyMessage = item.message.associatedMessages[attribute.messageId] else {
+                    continue
+                }
                 var replyLabel: String
                 if replyMessage.flags.contains(.Incoming) {
                     if let author = replyMessage.author {
@@ -606,6 +612,9 @@ public final class ChatMessageAccessibilityData {
             
             if canReply {
                 customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextReply, target: nil, selector: #selector(self.noop), action: .reply))
+            }
+            if let replyMessageId {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_Chat_GoToOriginalMessage, target: nil, selector: #selector(self.noop), action: .navigateToReply(replyMessageId)))
             }
             if canAddMessageReactions(message: EngineMessage(item.message)) {
                 customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.MediaEditor_Shortcut_Reaction, target: nil, selector: #selector(self.noop), action: .react))
@@ -768,6 +777,9 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         switch action.action {
         case .reply:
             item.controllerInteraction.setupReply(item.message.id)
+        case let .navigateToReply(messageId):
+            item.controllerInteraction.accessibilityNavigationTargetMessageId = messageId
+            item.controllerInteraction.navigateToMessage(item.message.id, messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
         case .react:
             item.controllerInteraction.updateMessageReaction(item.message, .default, false, nil)
         case .options:

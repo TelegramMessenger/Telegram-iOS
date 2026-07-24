@@ -177,6 +177,17 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.item = item
         self.presentationData = presentationData
+
+        if let action = item.action {
+            self.activateArea.accessibilityTraits = [.button]
+            self.activateArea.activate = {
+                action()
+                return true
+            }
+        } else {
+            self.activateArea.accessibilityTraits = [.staticText]
+            self.activateArea.activate = nil
+        }
         
         self.containerNode.isGestureEnabled = item.contextAction != nil
                 
