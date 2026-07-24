@@ -299,16 +299,22 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                rightNavigationButton.accessibilityLabel = self.presentationData.strings.Common_Done
                 self.rightNavigationButton = rightNavigationButton
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                let closeButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                closeButtonItem.accessibilityLabel = self.presentationData.strings.Common_Close
+                self.navigationItem.leftBarButtonItem = closeButtonItem
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         case let .chatSelection(chatSelection):
             self.titleView.title = CounterControllerTitle(title: self.params.title ?? chatSelection.title, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                rightNavigationButton.accessibilityLabel = self.presentationData.strings.Common_Done
                 self.rightNavigationButton = rightNavigationButton
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                let closeButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                closeButtonItem.accessibilityLabel = self.presentationData.strings.Common_Close
+                self.navigationItem.leftBarButtonItem = closeButtonItem
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         }

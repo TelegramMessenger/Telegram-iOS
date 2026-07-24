@@ -200,11 +200,15 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
         
         self.listNode = ListViewImpl()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
-        self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
-        }
         
         super.init()
+
+        self.listNode.accessibilityPageScrolledString = { [weak self] row, count in
+            guard let self else {
+                return ""
+            }
+            return self.presentationData.strings.VoiceOver_ScrollStatus(row, count).string
+        }
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.isOpaque = false
