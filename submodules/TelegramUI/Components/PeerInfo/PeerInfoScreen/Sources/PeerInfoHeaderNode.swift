@@ -1547,6 +1547,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: subtitleStates, mainState: subtitleMainState)
         }
+        self.subtitleNode.accessibilityLabel = subtitleStringText
+        self.subtitleNode.isAccessibilityElement = !subtitleIsButton
         
         var subtitleButtonHorizontalOffset: CGFloat = 0.0
         if subtitleIsButton {
@@ -1566,6 +1568,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleBackgroundButton = HighlightTrackingButtonNode()
                 self.subtitleBackgroundButton = subtitleBackgroundButton
                 self.subtitleNode.addSubnode(subtitleBackgroundButton)
+                subtitleBackgroundButton.isAccessibilityElement = true
+                subtitleBackgroundButton.accessibilityTraits = [.button]
                 
                 subtitleBackgroundButton.addTarget(self, action: #selector(self.subtitleBackgroundPressed), forControlEvents: .touchUpInside)
                 subtitleBackgroundButton.highligthedChanged = { [weak self] highlighted in
@@ -1581,6 +1585,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 }
             }
+            subtitleBackgroundButton.accessibilityLabel = subtitleStringText
             
             let subtitleArrowNode: ASImageNode
             if let current = self.subtitleArrowNode {
