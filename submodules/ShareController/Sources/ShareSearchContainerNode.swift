@@ -246,6 +246,8 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.cancelButtonNode = HighlightableButtonNode()
         self.cancelButtonNode.setTitle(strings.Common_Cancel, with: cancelFont, with: theme.actionSheet.controlAccentColor, for: [])
         self.cancelButtonNode.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
+        self.cancelButtonNode.accessibilityLabel = strings.Common_Cancel
+        self.cancelButtonNode.accessibilityTraits = [.button]
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true

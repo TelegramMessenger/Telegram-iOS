@@ -747,6 +747,7 @@ final class GiftsListView: UIView {
             if !validIds.contains(id) {
                 removeIds.append(id)
                 if let itemView = item.1.view {
+                    itemView.accessibilityElementsHidden = true
                     if !transition.animation.isImmediate {
                         itemView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
                         itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
@@ -859,6 +860,9 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_EmptyCollection_Title
+                view.accessibilityTraits = [.header]
             }
             if let view = self.emptyResultsText.view {
                 if view.superview == nil {
@@ -868,6 +872,9 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsTextFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsTextFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_EmptyCollection_Text
+                view.accessibilityTraits = [.staticText]
             }
             if let view = self.emptyResultsAction.view {
                 if view.superview == nil {
@@ -877,6 +884,12 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsActionFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_EmptyCollection_Action
+                view.accessibilityTraits = [.button]
+                for subview in view.subviews {
+                    subview.accessibilityElementsHidden = true
+                }
             }
         } else if self.filteredResultsAreEmpty {
             let sideInset: CGFloat = 44.0
@@ -951,6 +964,7 @@ final class GiftsListView: UIView {
                     self.emptyResultsClippingView.addSubview(view)
                     view.playOnce()
                 }
+                view.accessibilityElementsHidden = true
                 view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
             }
@@ -962,6 +976,9 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_NoResults
+                view.accessibilityTraits = [.header]
             }
             if let view = self.emptyResultsAction.view {
                 if view.superview == nil {
@@ -971,8 +988,15 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsActionFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_NoResults_ViewAll
+                view.accessibilityTraits = [.button]
+                for subview in view.subviews {
+                    subview.accessibilityElementsHidden = true
+                }
             }
         } else {
+            self.emptyResultsClippingView.accessibilityElementsHidden = true
             if let view = self.emptyResultsAnimation.view {
                 fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
                     view.removeFromSuperview()
@@ -997,6 +1021,7 @@ final class GiftsListView: UIView {
         }
         
         fadeTransition.setAlpha(view: self.emptyResultsClippingView, alpha: visibleHeight < 300.0 ? 0.0 : 1.0)
+        self.emptyResultsClippingView.accessibilityElementsHidden = (!self.resultsAreEmpty && !self.filteredResultsAreEmpty) || self.emptyResultsClippingView.isHidden || visibleHeight < 300.0
         
         if self.peerId == self.context.account.peerId, !self.canSelect && !self.filteredResultsAreEmpty && self.profileGifts.collectionId == nil && self.emptyResultsClippingView.isHidden {
             let footerText: ComponentView<Empty>

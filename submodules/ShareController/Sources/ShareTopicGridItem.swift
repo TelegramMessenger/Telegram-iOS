@@ -72,6 +72,10 @@ final class ShareTopicGridItemNode: GridItemNode {
         self.textNode.textAlignment = .center
         
         super.init()
+
+        self.isAccessibilityElement = false
+        self.accessibilityTraits = [.button]
+        self.textNode.isAccessibilityElement = false
         
         self.addSubnode(self.textNode)
     }
@@ -91,6 +95,14 @@ final class ShareTopicGridItemNode: GridItemNode {
             }
         }
     }
+
+    override func accessibilityActivate() -> Bool {
+        guard self.currentItem?.peer != nil else {
+            return false
+        }
+        self.tapped()
+        return true
+    }
     
     override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
         let rect = absoluteRect
@@ -107,8 +119,11 @@ final class ShareTopicGridItemNode: GridItemNode {
             return
         }
         self.currentItem = item
+        self.isAccessibilityElement = item.peer != nil
+        self.accessibilityLabel = nil
         
         if let threadInfo = item.threadInfo {
+            self.accessibilityLabel = threadInfo.info.title
             self.textNode.attributedText = NSAttributedString(string: threadInfo.info.title, font: Font.regular(11.0), textColor: item.theme.actionSheet.primaryTextColor)
             
             let iconContent: EmojiStatusComponent.Content
@@ -138,9 +153,11 @@ final class ShareTopicGridItemNode: GridItemNode {
                 if iconComponentView.superview == nil {
                     self.view.addSubview(iconComponentView)
                 }
+                iconComponentView.accessibilityElementsHidden = true
                 iconComponentView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: 7.0), size: iconSize)
             }
         } else if let peer = item.peer, let mainPeer = peer.chatMainPeer {
+            self.accessibilityLabel = mainPeer.compactDisplayTitle
             self.textNode.attributedText = NSAttributedString(string: mainPeer.compactDisplayTitle, font: Font.regular(11.0), textColor: item.theme.actionSheet.primaryTextColor)
             
             let avatarNode: AvatarNode
@@ -148,6 +165,7 @@ final class ShareTopicGridItemNode: GridItemNode {
                 avatarNode = current
             } else {
                 avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 12.0))
+                avatarNode.isAccessibilityElement = false
                 self.avatarNode = avatarNode
                 self.addSubnode(avatarNode)
             }
