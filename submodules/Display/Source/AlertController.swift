@@ -87,6 +87,7 @@ open class AlertController: ViewController, StandalonePresentableController, Key
     private let allowInputInset: Bool
     
     private weak var existingAlertController: AlertController?
+    private weak var previousAccessibilityFocus: AnyObject?
     
     public var willDismiss: (() -> Void)?
     public var dismissed: ((Bool) -> Void)?
@@ -130,10 +131,22 @@ open class AlertController: ViewController, StandalonePresentableController, Key
     override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        self.existingAlertController?.previousAccessibilityFocus = nil
         self.existingAlertController?.dismiss(completion: nil)
         self.existingAlertController = nil
         
         self.controllerNode.animateIn()
+        UIAccessibility.post(notification: .screenChanged, argument: self.contentNode.accessibilityInitialFocusNode?.view ?? self.contentNode.view)
+    }
+
+    override open func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        if let existingAlertController = self.existingAlertController {
+            self.previousAccessibilityFocus = existingAlertController.previousAccessibilityFocus
+        } else if self.previousAccessibilityFocus == nil {
+            self.previousAccessibilityFocus = UIAccessibility.focusedElement(using: .notificationVoiceOver) as AnyObject?
+        }
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -147,7 +160,10 @@ open class AlertController: ViewController, StandalonePresentableController, Key
             self.isDismissed = true
             self.dismissed?(false)
         }
-        self.presentingViewController?.dismiss(animated: false, completion: completion)
+        self.presentingViewController?.dismiss(animated: false, completion: { [weak self] in
+            self?.restoreAccessibilityFocus()
+            completion?()
+        })
     }
     
     open func dismissAnimated() {
@@ -156,6 +172,27 @@ open class AlertController: ViewController, StandalonePresentableController, Key
         }
     }
     
+    override open func accessibilityPerformEscape() -> Bool {
+        guard self.contentNode.dismissOnOutsideTap, !self.isDismissed else {
+            return false
+        }
+        self.willDismiss?()
+        self.controllerNode.animateOut { [weak self] in
+            self?.dismissed?(true)
+            self?.isDismissed = true
+            self?.dismiss()
+        }
+        return true
+    }
+
+    private func restoreAccessibilityFocus() {
+        guard let previousAccessibilityFocus = self.previousAccessibilityFocus else {
+            return
+        }
+        self.previousAccessibilityFocus = nil
+        UIAccessibility.post(notification: .layoutChanged, argument: previousAccessibilityFocus)
+    }
+
     public var keyShortcuts: [KeyShortcut] {
         return [
             KeyShortcut(

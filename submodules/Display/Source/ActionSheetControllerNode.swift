@@ -63,6 +63,14 @@ final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.itemGroupsContainerNode.isUserInteractionEnabled = false
         
         super.init()
+
+        self.view.accessibilityViewIsModal = true
+        self.dismissTapView.isAccessibilityElement = false
+        self.dismissTapView.accessibilityElementsHidden = true
+        self.leftDimView.accessibilityElementsHidden = true
+        self.rightDimView.accessibilityElementsHidden = true
+        self.topDimView.accessibilityElementsHidden = true
+        self.bottomDimView.accessibilityElementsHidden = true
                 
         self.scrollView.delegate = self.wrappedScrollViewDelegate
         
@@ -150,6 +158,12 @@ final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     
     func animateIn(completion: @escaping () -> Void) {
+        if UIAccessibility.isReduceMotionEnabled {
+            self.itemGroupsContainerNode.isUserInteractionEnabled = true
+            completion()
+            return
+        }
+
         let tempDimView = UIView()
         tempDimView.backgroundColor = self.theme.dimColor
         tempDimView.frame = self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height)
@@ -172,6 +186,11 @@ final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     func animateOut(cancelled: Bool) {
+        if UIAccessibility.isReduceMotionEnabled {
+            self.dismiss(cancelled)
+            return
+        }
+
         let tempDimView = UIView()
         tempDimView.backgroundColor = self.theme.dimColor
         tempDimView.frame = self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height)

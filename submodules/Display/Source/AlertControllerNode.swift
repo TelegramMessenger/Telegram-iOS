@@ -50,18 +50,22 @@ final class AlertControllerNode: ASDisplayNode {
         self.containerNode.layer.masksToBounds = true
         
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = theme.backgroundColor
+        self.backgroundNode.backgroundColor = UIAccessibility.isReduceTransparencyEnabled ? theme.backgroundColor.withAlphaComponent(1.0) : theme.backgroundColor
         
 //        self.effectNode = ASDisplayNode(viewBlock: {
 //            return UIVisualEffectView(effect: UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark))
 //        })
         
-        self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark))
+        self.effectView = UIVisualEffectView(effect: UIAccessibility.isReduceTransparencyEnabled ? nil : UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark))
         
         self.contentNode = contentNode
         
         super.init()
         
+        self.view.accessibilityViewIsModal = true
+        self.dimContainerView.isAccessibilityElement = false
+        self.dimContainerView.accessibilityElementsHidden = true
+
         self.view.addSubview(self.dimContainerView)
         self.dimContainerView.addSubview(self.centerDimView)
         self.dimContainerView.addSubview(self.topDimView)
@@ -104,12 +108,16 @@ final class AlertControllerNode: ASDisplayNode {
     }
     
     func updateTheme(_ theme: AlertControllerTheme) {
-        self.effectView.effect = UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark)
-        self.backgroundNode.backgroundColor = theme.backgroundColor
+        self.effectView.effect = UIAccessibility.isReduceTransparencyEnabled ? nil : UIBlurEffect(style: theme.backgroundType == .light ? .light : .dark)
+        self.backgroundNode.backgroundColor = UIAccessibility.isReduceTransparencyEnabled ? theme.backgroundColor.withAlphaComponent(1.0) : theme.backgroundColor
         self.contentNode.updateTheme(theme)
     }
     
     func animateIn() {
+        if UIAccessibility.isReduceMotionEnabled {
+            return
+        }
+
         if let previousNode = self.existingAlertControllerNode {
             let transition =  ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
             
@@ -146,6 +154,11 @@ final class AlertControllerNode: ASDisplayNode {
     }
     
     func animateOut(completion: @escaping () -> Void) {
+        if UIAccessibility.isReduceMotionEnabled {
+            completion()
+            return
+        }
+
         self.containerNode.layer.removeAllAnimations()
         //self.centerDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         //self.centerDimView.image = nil

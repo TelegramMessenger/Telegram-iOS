@@ -22,6 +22,7 @@ open class ActionSheetController: ViewController, PresentableController, Standal
     private var groups: [ActionSheetItemGroup] = []
     
     private var isDismissed: Bool = false
+    private weak var previousAccessibilityFocus: AnyObject?
     
     public var dismissed: ((Bool) -> Void)?
     
@@ -48,13 +49,27 @@ open class ActionSheetController: ViewController, PresentableController, Standal
         }
     }
     
+    open override func accessibilityPerformEscape() -> Bool {
+        if self.isDismissed {
+            return false
+        }
+        self.isDismissed = true
+        self.actionSheetNode.animateOut(cancelled: true)
+        return true
+    }
+
     open override func loadDisplayNode() {
         self.displayNode = ActionSheetControllerNode(theme: self.theme, allowInputInset: self.allowInputInset)
         self.displayNodeDidLoad()
         
         self.actionSheetNode.dismiss = { [weak self] cancelled in
-            self?.dismissed?(cancelled)
-            self?.presentingViewController?.dismiss(animated: false)
+            guard let self else {
+                return
+            }
+            self.dismissed?(cancelled)
+            self.presentingViewController?.dismiss(animated: false, completion: { [weak self] in
+                self?.restoreAccessibilityFocus()
+            })
         }
         
         self.actionSheetNode.setGroups(self.groups)
@@ -72,8 +87,31 @@ open class ActionSheetController: ViewController, PresentableController, Standal
         self.viewDidAppear(completion: {})
     }
     
+    open override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        if self.previousAccessibilityFocus == nil {
+            self.previousAccessibilityFocus = UIAccessibility.focusedElement(using: .notificationVoiceOver) as AnyObject?
+        }
+    }
+
     public func viewDidAppear(completion: @escaping () -> Void) {
-        self.actionSheetNode.animateIn(completion: completion)
+        self.actionSheetNode.animateIn { [weak self] in
+            completion()
+
+            guard let self else {
+                return
+            }
+            UIAccessibility.post(notification: .screenChanged, argument: self.actionSheetNode.view)
+        }
+    }
+
+    private func restoreAccessibilityFocus() {
+        guard let previousAccessibilityFocus = self.previousAccessibilityFocus else {
+            return
+        }
+        self.previousAccessibilityFocus = nil
+        UIAccessibility.post(notification: .layoutChanged, argument: previousAccessibilityFocus)
     }
     
     public func setItemGroups(_ groups: [ActionSheetItemGroup]) {

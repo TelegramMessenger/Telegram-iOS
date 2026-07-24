@@ -36,6 +36,7 @@ private final class ArchiveInfoSheetContentComponent: Component {
     final class View: UIView {
         private let content = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
+        private let accessibilityButton: UIButton
         
         fileprivate let playButtonAnimation = ActionSlot<Void>()
         private var didPlayAnimation = false
@@ -43,7 +44,15 @@ private final class ArchiveInfoSheetContentComponent: Component {
         private var component: ArchiveInfoSheetContentComponent?
         
         override init(frame: CGRect) {
+            self.accessibilityButton = UIButton(type: .custom)
+
             super.init(frame: frame)
+
+            self.accessibilityViewIsModal = true
+
+            self.accessibilityButton.accessibilityTraits = .button
+            self.accessibilityButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
+            self.addSubview(self.accessibilityButton)
         }
         
         required init?(coder: NSCoder) {
@@ -80,6 +89,9 @@ private final class ArchiveInfoSheetContentComponent: Component {
             contentHeight += contentSize.height
             contentHeight += 30.0
             
+            let buttonFontSize = UIFontMetrics(forTextStyle: .headline).scaledValue(for: 17.0)
+            let buttonHeight = max(52.0, ceil(buttonFontSize + 35.0))
+
             var buttonTitle: [AnyComponentWithIdentity<Empty>] = []
             buttonTitle.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(LottieComponent(
                 content: LottieComponent.AppBundleContent(name: "anim_ok"),
@@ -92,11 +104,12 @@ private final class ArchiveInfoSheetContentComponent: Component {
                 text: environment.strings.ArchiveInfo_CloseAction,
                 badge: 0,
                 textColor: environment.theme.list.itemCheckColors.foregroundColor,
+                fontSize: buttonFontSize,
                 badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
                 badgeForeground: environment.theme.list.itemCheckColors.fillColor
             ))))
             
-            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
+            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: buttonHeight, sideInset: 30.0)
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -119,7 +132,7 @@ private final class ArchiveInfoSheetContentComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - buttonInsets.left - buttonInsets.right, height: 52.0)
+                containerSize: CGSize(width: availableSize.width - buttonInsets.left - buttonInsets.right, height: buttonHeight)
             )
             let buttonFrame = CGRect(origin: CGPoint(x: buttonInsets.left, y: contentHeight), size: buttonSize)
             if let buttonView = self.button.view {
@@ -130,10 +143,17 @@ private final class ArchiveInfoSheetContentComponent: Component {
                 }
                 transition.setFrame(view: buttonView, frame: buttonFrame)
             }
+            self.accessibilityButton.accessibilityLabel = environment.strings.ArchiveInfo_CloseAction
+            transition.setFrame(view: self.accessibilityButton, frame: buttonFrame)
+            self.bringSubviewToFront(self.accessibilityButton)
             contentHeight += buttonSize.height
             contentHeight += buttonInsets.bottom
             
             return CGSize(width: availableSize.width, height: contentHeight)
+        }
+
+        @objc private func closePressed() {
+            self.component?.dismiss()
         }
     }
     
@@ -260,6 +280,7 @@ private final class ArchiveInfoScreenComponent: Component {
             if let sheetView = self.sheet.view {
                 if sheetView.superview == nil {
                     self.addSubview(sheetView)
+                    sheetView.accessibilityViewIsModal = true
                 }
                 transition.setFrame(view: sheetView, frame: CGRect(origin: CGPoint(), size: availableSize))
             }
@@ -278,7 +299,12 @@ private final class ArchiveInfoScreenComponent: Component {
 }
 
 public class ArchiveInfoScreen: ViewControllerComponentContainer {
+    private let buttonAction: (() -> Void)?
+    private var isDismissingFromAccessibility = false
+
     public init(context: AccountContext, settings: GlobalPrivacySettings, buttonAction: (() -> Void)? = nil) {
+        self.buttonAction = buttonAction
+
         super.init(context: context, component: ArchiveInfoScreenComponent(
             context: context,
             settings: settings,
@@ -305,5 +331,17 @@ public class ArchiveInfoScreen: ViewControllerComponentContainer {
         super.viewDidAppear(animated)
         
         self.view.disablesInteractiveModalDismiss = true
+        UIAccessibility.post(notification: .screenChanged, argument: self.view)
+    }
+
+    override public func accessibilityPerformEscape() -> Bool {
+        if self.isDismissingFromAccessibility {
+            return false
+        }
+        self.isDismissingFromAccessibility = true
+        self.dismiss(completion: { [buttonAction = self.buttonAction] in
+            buttonAction?()
+        })
+        return true
     }
 }
