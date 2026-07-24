@@ -119,33 +119,37 @@ private final class VisualMediaItemNode: ASDisplayNode {
         if case .ended = recognizer.state {
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 if case .tap = gesture {
-                    if let (item, _, _, _) = self.item {
-                        var media: EngineRawMedia?
-                        for value in item.message.effectiveMedia {
-                            if let image = value as? TelegramMediaImage {
-                                media = image
-                                break
-                            } else if let file = value as? TelegramMediaFile {
-                                media = file
-                                break
-                            }
-                        }
-                        
-                        if let media = media {
-                            if let file = media as? TelegramMediaFile {
-                                if isMediaStreamable(message: EngineMessage(item.message), media: file) {
-                                    self.interaction.openMessage(item.message)
-                                } else {
-                                    self.progressPressed()
-                                }
-                            } else {
-                                self.interaction.openMessage(item.message)
-                            }
-                        }
-                    }
+                    let _ = self.activateMedia()
                 }
             }
         }
+    }
+
+    private func activateMedia() -> Bool {
+        guard let item = self.item?.0 else {
+            return false
+        }
+
+        var media: EngineRawMedia?
+        for value in item.message.effectiveMedia {
+            if let image = value as? TelegramMediaImage {
+                media = image
+                break
+            } else if let file = value as? TelegramMediaFile {
+                media = file
+                break
+            }
+        }
+
+        guard let media else {
+            return false
+        }
+        if let file = media as? TelegramMediaFile, !isMediaStreamable(message: EngineMessage(item.message), media: file) {
+            self.progressPressed()
+        } else {
+            self.interaction.openMessage(item.message)
+        }
+        return true
     }
     
     private func progressPressed() {
@@ -310,9 +314,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.accessibilityLabel = presentationData.strings.VoiceOver_Chat_Video
             }
             self.accessibilityValue = item.message.text.isEmpty ? nil : item.message.text
-            self.accessibilityCustomActions = [
-                UIAccessibilityCustomAction(name: presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: self, selector: #selector(self.accessibilityOpenContextMenu(_:)))
-            ]
+            self.updateAccessibilityActions(strings: presentationData.strings)
             
             self.updateHiddenMedia()
         }
@@ -354,6 +356,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
     func updateSelectionState(animated: Bool) {
         if let (item, _, _, _) = self.item, let theme = self.theme {
             self.containerNode.isGestureEnabled = self.interaction.selectedMessageIds == nil
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            self.updateAccessibilityActions(strings: presentationData.strings)
             
             if let selectedIds = self.interaction.selectedMessageIds {
                 let selected = selectedIds.contains(item.message.id)
@@ -407,14 +411,24 @@ private final class VisualMediaItemNode: ASDisplayNode {
         }
         if let selectedMessageIds = self.interaction.selectedMessageIds {
             self.interaction.toggleSelection(item.message.id, !selectedMessageIds.contains(item.message.id))
+            return true
         } else {
-            self.interaction.openMessage(item.message)
+            return self.activateMedia()
         }
-        return true
+    }
+
+    private func updateAccessibilityActions(strings: PresentationStrings) {
+        if self.interaction.selectedMessageIds == nil {
+            self.accessibilityCustomActions = [
+                UIAccessibilityCustomAction(name: strings.VoiceOver_MessageContextOpenMessageMenu, target: self, selector: #selector(self.accessibilityOpenContextMenu(_:)))
+            ]
+        } else {
+            self.accessibilityCustomActions = nil
+        }
     }
 
     @objc private func accessibilityOpenContextMenu(_ action: UIAccessibilityCustomAction) -> Bool {
-        guard let item = self.item?.0 else {
+        guard self.interaction.selectedMessageIds == nil, let item = self.item?.0 else {
             return false
         }
         self.interaction.openMessageContextActions(item.message, self.containerNode, self.containerNode.bounds, nil)

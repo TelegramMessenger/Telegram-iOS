@@ -3869,7 +3869,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 statusBarHeight: nil,
                 inputHeight: nil,
                 inputHeightIsInteractivellyChanging: false,
-                inVoiceOver: false,
+                inVoiceOver: UIAccessibility.isVoiceOverRunning,
                 presentedInFormSheet: false
             ),
             navigationBarHeight: 0.0,

@@ -425,6 +425,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
             self.insertSubnode(chatController.displayNode, aboveSubnode: self.chatListNode)
             chatController.displayNode.alpha = 0.0
             chatController.displayNode.clipsToBounds = true
+            chatController.displayNode.accessibilityElementsHidden = true
             
             self.updateChatController(transition: .immediate)
             
@@ -453,6 +454,8 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
                     }
                     if let contentNode = chatController.customNavigationBarContentNode {
                         self.removeChatWhenNotSearching = true
+                        chatController.displayNode.accessibilityElementsHidden = false
+                        self.chatListNode.accessibilityElementsHidden = true
                         
                         chatController.displayNode.layer.allowsGroupOpacity = true
                         if transition.isAnimated {
@@ -491,6 +494,8 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
             self.chatController = nil
             
             let displayNode = chatController.displayNode
+            displayNode.accessibilityElementsHidden = true
+            self.chatListNode.accessibilityElementsHidden = false
             chatController.displayNode.layer.allowsGroupOpacity = true
             chatController.displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak displayNode] _ in
                 displayNode?.removeFromSupernode()
@@ -594,7 +599,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
         let combinedBottomInset = bottomInset
         transition.updateFrame(node: chatController.displayNode, frame: chatFrame)
         chatController.updateIsScrollingLockedAtTop(isScrollingLockedAtTop: isScrollingLockedAtTop)
-        chatController.containerLayoutUpdated(ContainerViewLayout(size: chatFrame.size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: deviceMetrics, intrinsicInsets: UIEdgeInsets(top: topInset + navigationHeight, left: sideInset, bottom: combinedBottomInset, right: sideInset), safeInsets: UIEdgeInsets(top: navigationHeight + topInset + 4.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), reservedCorners: .none, division: nil, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false), transition: transition)
+        chatController.containerLayoutUpdated(ContainerViewLayout(size: chatFrame.size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: deviceMetrics, intrinsicInsets: UIEdgeInsets(top: topInset + navigationHeight, left: sideInset, bottom: combinedBottomInset, right: sideInset), safeInsets: UIEdgeInsets(top: navigationHeight + topInset + 4.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), reservedCorners: .none, division: nil, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: UIAccessibility.isVoiceOverRunning, presentedInFormSheet: false), transition: transition)
     }
     
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
