@@ -356,6 +356,26 @@ final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             } else {
                 unlockButton = ComponentView<Empty>()
                 self.unlockButton = unlockButton
+            
+                unlockButton.animationLoopTime = 2.5
+                unlockButton.animation = "premium_unlock"
+                unlockButton.iconPosition = .right
+                
+                unlockButton.pressed = { [weak self] in
+                    self?.unlockPressed()
+                }
+            }
+            let unlockTitle = isBots ? presentationData.strings.PeerInfo_SimilarBots_ShowMore : presentationData.strings.Channel_SimilarChannels_ShowMore
+            unlockButton.title = unlockTitle
+            unlockButton.isAccessibilityElement = true
+            unlockButton.accessibilityLabel = unlockTitle
+            unlockButton.accessibilityTraits = [.button]
+        
+            if themeUpdated {
+                let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
+                let bottomColor = presentationData.theme.list.plainBackgroundColor
+                unlockBackground.image = generateGradientImage(size: CGSize(width: 1.0, height: 170.0), colors: [topColor, bottomColor, bottomColor], locations: [0.0, 0.3, 1.0])
+                unlockButton.updateTheme(SolidRoundedButtonTheme(theme: presentationData.theme))
             }
             
             let textFont = Font.regular(15.0)
