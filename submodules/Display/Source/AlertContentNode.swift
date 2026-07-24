@@ -23,6 +23,10 @@ open class AlertContentNode: ASDisplayNode {
         
     }
     
+    open func contentSizeCategoryUpdated() {
+
+    }
+
     open func performHighlightedAction() {
         
     }

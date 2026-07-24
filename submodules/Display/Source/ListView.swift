@@ -5568,7 +5568,6 @@ private func containsAccessibilityFocus(_ view: UIView) -> Bool {
     }
     return false
 }
-
 /// Builds the additive `sublayerTransform` translation that scrolls the list with a `.customSpring` curve.
 /// Goes through `CALayer.makeAnimation` so the spring is configured (settling duration, speed scaling,
 /// duration factor, frame rate) exactly like every `ContainedViewLayoutTransition` spring, which keeps the
@@ -5586,16 +5585,4 @@ private func makeCustomSpringSublayerTransformAnimation(layer: CALayer, curve: C
     animation.isRemovedOnCompletion = true
     animation.isAdditive = true
     return animation
-}
-
-private func firstAccessibilityElement(in view: UIView) -> UIView? {
-    if view.isAccessibilityElement && !view.isHidden && view.alpha > 0.01 {
-        return view
-    }
-    for subview in view.subviews {
-        if let result = firstAccessibilityElement(in: subview) {
-            return result
-        }
-    }
-    return nil
 }
