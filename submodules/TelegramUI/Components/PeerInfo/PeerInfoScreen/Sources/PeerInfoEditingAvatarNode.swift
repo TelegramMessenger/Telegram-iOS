@@ -16,6 +16,7 @@ import GalleryUI
 final class PeerInfoEditingAvatarNode: ASDisplayNode {
     private let context: AccountContext
     let avatarNode: AvatarNode
+    private let accessibilityArea: AccessibilityAreaNode
     fileprivate var videoNode: UniversalVideoNode?
     fileprivate var markupNode: AvatarVideoNode?
     private var videoContent: NativeVideoContent?
@@ -30,11 +31,23 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         self.context = context
         let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
         self.avatarNode = AvatarNode(font: avatarFont)
+        self.accessibilityArea = AccessibilityAreaNode()
     
         super.init()
         
         self.addSubnode(self.avatarNode)
+        self.addSubnode(self.accessibilityArea)
         self.avatarNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
+        self.accessibilityArea.frame = self.avatarNode.frame
+        self.accessibilityArea.accessibilityTraits = [.button, .image]
+        self.accessibilityArea.activate = { [weak self] in
+            guard let self else {
+                return false
+            }
+            self.tapped?(false)
+            return true
+        }
+        self.avatarNode.isAccessibilityElement = false
     
         self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
@@ -59,8 +72,11 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     var removedPhotoResourceIds = Set<String>()
     func update(peer: EnginePeer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: AvatarUploadProgress?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
         guard let peer = peer else {
+            self.accessibilityArea.isAccessibilityElement = false
             return
         }
+        self.accessibilityArea.isAccessibilityElement = true
+        self.accessibilityArea.accessibilityLabel = peer.compactDisplayTitle
         
         let canEdit = canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
 
@@ -86,6 +102,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
         self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
         self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
+        self.accessibilityArea.frame = self.avatarNode.frame
         
         var isForum = false
         let avatarCornerRadius: CGFloat

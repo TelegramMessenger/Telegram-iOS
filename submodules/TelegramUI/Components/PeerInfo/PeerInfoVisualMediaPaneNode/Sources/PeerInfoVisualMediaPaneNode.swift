@@ -1094,6 +1094,27 @@ public protocol PeerInfoScreenNodeProtocol: AnyObject {
     func displaySharedMediaFastScrollingTooltip()
 }
 
+private final class VisualMediaGridAccessibilityElement: UIAccessibilityElement {
+    var activate: () -> Bool = {
+        return false
+    }
+    var openContextMenu: () -> Bool = {
+        return false
+    }
+
+    init(accessibilityContainer container: Any) {
+        super.init(accessibilityContainer: container)
+    }
+
+    override func accessibilityActivate() -> Bool {
+        return self.activate()
+    }
+
+    @objc func accessibilityOpenContextMenu(_ action: UIAccessibilityCustomAction) -> Bool {
+        return self.openContextMenu()
+    }
+}
+
 public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public enum ContentType {
         case photoOrVideo
@@ -1134,6 +1155,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
     private let contextGestureContainerNode: ContextControllerSourceNode
     private let itemGrid: SparseItemGrid
     private let itemGridBinding: SparseItemGridBindingImpl
+    private var gridAccessibilityElements: [MessageId: VisualMediaGridAccessibilityElement] = [:]
     private let listBackgroundView: UIImageView
     private let listMaskView: UIImageView
     private let directMediaImageCache: DirectMediaImageCache
@@ -1352,6 +1374,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             strongSelf.paneDidScroll?()
 
             strongSelf.cancelPreviewGestures()
+            strongSelf.updateGridAccessibilityElements()
         }
 
         self.itemGridBinding.coveringInsetOffsetUpdatedImpl = { [weak self] transition in
@@ -1894,6 +1917,83 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         }
         return nil
     }
+
+    private func updateGridAccessibilityElements() {
+        switch self.contentType {
+        case .files, .voiceAndVideoMessages, .music:
+            self.gridAccessibilityElements.removeAll()
+            self.itemGrid.view.accessibilityElements = nil
+            return
+        case .photo, .video, .photoOrVideo, .gifs:
+            break
+        }
+
+        var accessibilityElements: [UIAccessibilityElement] = []
+        var validMessageIds: Set<MessageId> = []
+        self.itemGrid.forEachVisibleItem { [weak self] displayItem in
+            guard let self, let itemLayer = displayItem.layer as? GenericItemLayer, let item = itemLayer.item, !itemLayer.isHidden else {
+                return
+            }
+            validMessageIds.insert(item.message.id)
+
+            let accessibilityElement: VisualMediaGridAccessibilityElement
+            if let current = self.gridAccessibilityElements[item.message.id] {
+                accessibilityElement = current
+            } else {
+                accessibilityElement = VisualMediaGridAccessibilityElement(accessibilityContainer: self.itemGrid.view)
+                self.gridAccessibilityElements[item.message.id] = accessibilityElement
+            }
+            accessibilityElement.activate = { [weak self, weak itemLayer] in
+                guard let self, let itemLayer else {
+                    return false
+                }
+                self.itemGridBinding.onTap(item: item, itemLayer: itemLayer, point: CGPoint(x: itemLayer.bounds.midX, y: itemLayer.bounds.midY))
+                return true
+            }
+            accessibilityElement.openContextMenu = { [weak self, weak itemLayer] in
+                guard let self, let itemLayer else {
+                    return false
+                }
+                let rect = self.itemGrid.frameForItem(layer: itemLayer)
+                self.chatControllerInteraction.openMessageContextActions(item.message, self, rect, nil)
+                return true
+            }
+
+            var isVideo = false
+            for media in item.message.effectiveMedia {
+                if let image = media as? TelegramMediaImage, image.video != nil {
+                    isVideo = true
+                    break
+                } else if let file = media as? TelegramMediaFile, file.isVideo || file.isAnimated {
+                    isVideo = true
+                    break
+                }
+            }
+            accessibilityElement.accessibilityLabel = isVideo ? self.presentationData.strings.VoiceOver_Chat_Video : self.presentationData.strings.VoiceOver_Chat_Photo
+            accessibilityElement.accessibilityValue = item.message.text.isEmpty ? nil : item.message.text
+            accessibilityElement.accessibilityTraits = [.button, .image]
+            accessibilityElement.accessibilityCustomActions = [
+                UIAccessibilityCustomAction(name: self.presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: accessibilityElement, selector: #selector(VisualMediaGridAccessibilityElement.accessibilityOpenContextMenu(_:)))
+            ]
+            if self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id) == true {
+                accessibilityElement.accessibilityTraits.insert(.selected)
+            }
+            accessibilityElement.accessibilityFrameInContainerSpace = self.itemGrid.frameForItem(layer: itemLayer)
+            accessibilityElements.append(accessibilityElement)
+        }
+        accessibilityElements.sort { lhs, rhs in
+            let lhsFrame = lhs.accessibilityFrameInContainerSpace
+            let rhsFrame = rhs.accessibilityFrameInContainerSpace
+            if abs(lhsFrame.minY - rhsFrame.minY) > UIScreenPixel {
+                return lhsFrame.minY < rhsFrame.minY
+            } else {
+                return lhsFrame.minX < rhsFrame.minX
+            }
+        }
+        self.gridAccessibilityElements = self.gridAccessibilityElements.filter { validMessageIds.contains($0.key) }
+        self.itemGrid.view.isAccessibilityElement = false
+        self.itemGrid.view.accessibilityElements = accessibilityElements
+    }
     
     public func updateHiddenMedia() {
         self.itemGrid.forEachVisibleItem { item in
@@ -1912,6 +2012,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 itemLayer.isHidden = false
             }
         }
+        self.updateGridAccessibilityElements()
     }
     
     public func transferVelocity(_ velocity: CGFloat) {
@@ -2173,6 +2274,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 }
                 itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id), animated: animated)
             }
+            self.updateGridAccessibilityElements()
 
             let isSelecting = self.chatControllerInteraction.selectionState != nil
             self.itemGrid.pinchEnabled = !isSelecting
@@ -2285,6 +2387,9 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
          
             let listSideInset = isList ? sideInset + 16.0 : sideInset
             self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: listSideInset, bottom: bottomInset, right: listSideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: nil, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
+            DispatchQueue.main.async { [weak self] in
+                self?.updateGridAccessibilityElements()
+            }
             if let initialMessageIndexValue = self.initialMessageIndex, items.items.contains(where: { item in
                 if let _ = item as? VisualMediaItem {
                     return true

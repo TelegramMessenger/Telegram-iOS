@@ -45,6 +45,15 @@ import BundleIconComponent
 import MarqueeComponent
 import EdgeEffect
 
+private final class PeerInfoHeaderAccessibilityAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 final class PeerInfoHeaderNavigationTransition {
     let sourceNavigationBar: NavigationBar
     let sourceTitleView: ChatTitleView
@@ -1370,6 +1379,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateRegular: MultiScaleTextState(attributes: titleAttributes, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: smallTitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
+        if let peer, peer.isScam {
+            self.titleNode.accessibilityLabel = "\(titleStringText), \(presentationData.strings.Message_ScamAccount)"
+        } else if let peer, peer.isFake {
+            self.titleNode.accessibilityLabel = "\(titleStringText), \(presentationData.strings.Message_FakeAccount)"
+        } else {
+            self.titleNode.accessibilityLabel = titleStringText
+        }
         
         let subtitleStates: [AnyHashable: MultiScaleTextState] = [
             TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),
@@ -1383,6 +1399,26 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         self.subtitleNode.accessibilityLabel = subtitleStringText
         self.subtitleNode.isAccessibilityElement = !subtitleIsButton
+        var subtitleAccessibilityActions: [UIAccessibilityCustomAction] = []
+        if self.isSettings, case let .user(user) = peer {
+            if let phone = user.phone, !phone.isEmpty {
+                subtitleAccessibilityActions.append(PeerInfoHeaderAccessibilityAction(name: presentationData.strings.Settings_CopyPhoneNumber, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, false)
+                }))
+            }
+            if let username = user.addressName, !username.isEmpty {
+                subtitleAccessibilityActions.append(PeerInfoHeaderAccessibilityAction(name: presentationData.strings.Settings_CopyUsername, target: self, selector: #selector(self.performAccessibilityAction(_:)), perform: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.displayCopyContextMenu?(self.subtitleNodeRawContainer, false, true)
+                }))
+            }
+        }
+        self.subtitleNode.accessibilityCustomActions = subtitleAccessibilityActions.isEmpty ? nil : subtitleAccessibilityActions
         
         var subtitleButtonHorizontalOffset: CGFloat = 0.0
         if subtitleIsButton {
@@ -2711,6 +2747,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         musicView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                 }
+                musicView.isAccessibilityElement = true
+                musicView.accessibilityLabel = musicString.string
+                musicView.accessibilityTraits = [.button]
+                musicView.accessibilityElementsHidden = false
+                for subview in musicView.subviews {
+                    subview.accessibilityElementsHidden = true
+                }
                 if additive {
                     musicTransition.updateFrameAdditiveToCenter(view: musicView, frame: musicFrame)
                 } else {
@@ -2759,6 +2802,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private func actionButtonPressed(_ buttonNode: PeerInfoHeaderActionButtonNode, gesture: ContextGesture?) {
         self.performButtonAction?(buttonNode.key, nil, gesture)
+    }
+
+    @objc private func performAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? PeerInfoHeaderAccessibilityAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
