@@ -88,6 +88,8 @@ open class AlertController: ViewController, StandalonePresentableController, Key
     
     private weak var existingAlertController: AlertController?
     private weak var previousAccessibilityFocus: AnyObject?
+    private var contentSizeCategoryObserver: NSObjectProtocol?
+    private var reduceTransparencyObserver: NSObjectProtocol?
     
     public var willDismiss: (() -> Void)?
     public var dismissed: ((Bool) -> Void)?
@@ -103,10 +105,29 @@ open class AlertController: ViewController, StandalonePresentableController, Key
         self.blocksBackgroundWhenInOverlay = true
         
         self.statusBar.statusBarStyle = .Ignore
+
+        self.contentSizeCategoryObserver = NotificationCenter.default.addObserver(forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            self?.contentNode.contentSizeCategoryUpdated()
+        })
+        self.reduceTransparencyObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.reduceTransparencyStatusDidChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let self, self.isViewLoaded else {
+                return
+            }
+            self.controllerNode.updateTheme(self.theme)
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        if let contentSizeCategoryObserver = self.contentSizeCategoryObserver {
+            NotificationCenter.default.removeObserver(contentSizeCategoryObserver)
+        }
+        if let reduceTransparencyObserver = self.reduceTransparencyObserver {
+            NotificationCenter.default.removeObserver(reduceTransparencyObserver)
+        }
     }
     
     private var isDismissed = false

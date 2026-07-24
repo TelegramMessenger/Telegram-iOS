@@ -5493,15 +5493,3 @@ private func containsAccessibilityFocus(_ view: UIView) -> Bool {
     }
     return false
 }
-
-private func firstAccessibilityElement(in view: UIView) -> UIView? {
-    if view.isAccessibilityElement && !view.isHidden && view.alpha > 0.01 {
-        return view
-    }
-    for subview in view.subviews {
-        if let result = firstAccessibilityElement(in: subview) {
-            return result
-        }
-    }
-    return nil
-}

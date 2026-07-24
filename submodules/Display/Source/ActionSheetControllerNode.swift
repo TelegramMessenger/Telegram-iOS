@@ -254,6 +254,10 @@ final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     func setGroups(_ groups: [ActionSheetItemGroup]) {
         self.itemGroupsContainerNode.setGroups(groups)
+
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout, transition: .immediate)
+        }
     }
     
     func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
