@@ -706,6 +706,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+        self.cancelButtonNode.accessibilityLabel = self.presentationData.strings.Common_Cancel
+        self.cancelButtonNode.accessibilityTraits = .button
         
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -1840,19 +1842,23 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         if count == 0 {
             if self.presetText != nil {
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = self.presentationData.strings.ShareMenu_Send
                 self.actionButtonNode.isEnabled = false
                 self.actionButtonNode.badge = nil
             } else if let segmentedValues = self.segmentedValues {
                 let value = segmentedValues[self.selectedSegmentedIndex]
                 self.actionButtonNode.setTitle(value.actionTitle, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = value.actionTitle
                 self.actionButtonNode.isEnabled = true
                 self.actionButtonNode.badge = nil
             } else if let defaultAction = self.defaultAction {
                 self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = defaultAction.title
                 self.actionButtonNode.isEnabled = true
                 self.actionButtonNode.badge = nil
             } else {
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = self.presentationData.strings.ShareMenu_Send
                 self.actionButtonNode.isEnabled = false
                 self.actionButtonNode.badge = nil
             }
@@ -1866,6 +1872,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             }
             self.actionButtonNode.isEnabled = true
             self.actionButtonNode.setTitle(text, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+            self.actionButtonNode.accessibilityLabel = text
             self.actionButtonNode.badge = "\(count)"
         }
     }

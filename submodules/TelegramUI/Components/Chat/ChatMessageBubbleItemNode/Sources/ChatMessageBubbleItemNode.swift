@@ -5684,28 +5684,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         super.updateAccessibilityData(accessibilityData, accessibilityNode: self.messageAccessibilityArea, customActionTarget: self, customActionSelector: #selector(self.performLocalAccessibilityCustomAction(_:)))
     }
     
-    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
-        if let action = action as? ChatMessageAccessibilityCustomAction {
-            switch action.action {
-                case .reply:
-                    if let item = self.item {
-                        item.controllerInteraction.setupReply(item.message.id)
-                    }
-                case .options:
-                    if let item = self.item {
-                        var subFrame = self.backgroundNode.frame
-                        if case .group = item.content {
-                            for contentNode in self.contentNodes {
-                                if contentNode.item?.message.stableId == item.message.stableId {
-                                    subFrame = contentNode.frame.insetBy(dx: 0.0, dy: -4.0)
-                                    break
-                                }
-                            }
-                        }
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, subFrame, nil, nil)
-                    }
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        var subFrame = self.backgroundNode.frame
+        if let item = self.item, case .group = item.content {
+            for contentNode in self.contentNodes {
+                if contentNode.item?.message.stableId == item.message.stableId {
+                    subFrame = contentNode.frame.insetBy(dx: 0.0, dy: -4.0)
+                    break
+                }
             }
         }
+        return self.performAccessibilityCustomAction(action, sourceNode: self, sourceRect: subFrame)
     }
     
     override public func shouldAnimateHorizontalFrameTransition() -> Bool {

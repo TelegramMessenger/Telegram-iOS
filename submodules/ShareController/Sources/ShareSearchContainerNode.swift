@@ -241,7 +241,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentGridNode = GridNode()
         self.contentGridNode.isHidden = true
         
-        self.searchNode = ShareSearchBarNode(theme: theme, placeholder: strings.Common_Search)
+        self.searchNode = ShareSearchBarNode(theme: theme, strings: strings, placeholder: strings.Common_Search)
         
         self.cancelButtonNode = HighlightableButtonNode()
         self.cancelButtonNode.setTitle(strings.Common_Cancel, with: cancelFont, with: theme.actionSheet.controlAccentColor, for: [])

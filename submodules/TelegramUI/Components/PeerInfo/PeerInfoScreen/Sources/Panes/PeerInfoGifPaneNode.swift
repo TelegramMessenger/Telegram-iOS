@@ -80,6 +80,9 @@ private final class VisualMediaItemNode: ASDisplayNode {
         self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 50.0, height: 50.0))
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = [.button, .image]
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.imageNode)
@@ -299,6 +302,17 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.mediaBadgeNode.isHidden = true
             }
             self.item = (item, media, size, mediaDimensions)
+
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            if media is TelegramMediaImage {
+                self.accessibilityLabel = presentationData.strings.VoiceOver_Chat_Photo
+            } else {
+                self.accessibilityLabel = presentationData.strings.VoiceOver_Chat_Video
+            }
+            self.accessibilityValue = item.message.text.isEmpty ? nil : item.message.text
+            self.accessibilityCustomActions = [
+                UIAccessibilityCustomAction(name: presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: self, selector: #selector(self.accessibilityOpenContextMenu(_:)))
+            ]
             
             self.updateHiddenMedia()
         }
@@ -343,6 +357,11 @@ private final class VisualMediaItemNode: ASDisplayNode {
             
             if let selectedIds = self.interaction.selectedMessageIds {
                 let selected = selectedIds.contains(item.message.id)
+                if selected {
+                    self.accessibilityTraits.insert(.selected)
+                } else {
+                    self.accessibilityTraits.remove(.selected)
+                }
                 
                 if let selectionNode = self.selectionNode {
                     selectionNode.updateSelected(selected, animated: animated)
@@ -367,6 +386,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                     }
                 }
             } else {
+                self.accessibilityTraits.remove(.selected)
                 if let selectionNode = self.selectionNode {
                     self.selectionNode = nil
                     if animated {
@@ -379,6 +399,26 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 }
             }
         }
+    }
+
+    override func accessibilityActivate() -> Bool {
+        guard let item = self.item?.0 else {
+            return false
+        }
+        if let selectedMessageIds = self.interaction.selectedMessageIds {
+            self.interaction.toggleSelection(item.message.id, !selectedMessageIds.contains(item.message.id))
+        } else {
+            self.interaction.openMessage(item.message)
+        }
+        return true
+    }
+
+    @objc private func accessibilityOpenContextMenu(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let item = self.item?.0 else {
+            return false
+        }
+        self.interaction.openMessageContextActions(item.message, self.containerNode, self.containerNode.bounds, nil)
+        return true
     }
     
     func transitionNode() -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {

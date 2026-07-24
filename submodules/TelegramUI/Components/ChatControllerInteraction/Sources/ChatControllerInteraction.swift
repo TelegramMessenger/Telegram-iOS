@@ -278,6 +278,9 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openMessageStats: (EngineMessage.Id) -> Void
     public let editMessageMedia: (EngineMessage.Id, Bool) -> Void
     public let copyText: (String) -> Void
+    public let accessibilityForwardMessage: (EngineRawMessage) -> Void
+    public let accessibilityDeleteMessage: (EngineRawMessage) -> Void
+    public let canPerformAccessibilityMessageActions: Bool
     public let displayUndo: (UndoOverlayContent) -> Void
     public let isAnimatingMessage: (UInt32) -> Bool
     public let getMessageTransitionNode: () -> ChatMessageTransitionProtocol?
@@ -504,6 +507,9 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         displayTodoToggleUnavailable: @escaping (EngineMessage.Id) -> Void,
         canEditMessageRichText: @escaping (EngineRawMessage) -> Bool = { _ in false },
         toggleMessageRichTextCheckbox: @escaping (EngineMessage.Id, [Int], Bool) -> Void = { _, _, _ in },
+        accessibilityForwardMessage: @escaping (EngineRawMessage) -> Void = { _ in },
+        accessibilityDeleteMessage: @escaping (EngineRawMessage) -> Void = { _ in },
+        canPerformAccessibilityMessageActions: Bool = false,
         openStarsPurchase: @escaping (Int64?) -> Void,
         openRankInfo: @escaping (EnginePeer, ChatRankInfoScreenRole, String) -> Void,
         openSetPeerAvatar: @escaping () -> Void,
@@ -597,6 +603,9 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openMessageStats = openMessageStats
         self.editMessageMedia = editMessageMedia
         self.copyText = copyText
+        self.accessibilityForwardMessage = accessibilityForwardMessage
+        self.accessibilityDeleteMessage = accessibilityDeleteMessage
+        self.canPerformAccessibilityMessageActions = canPerformAccessibilityMessageActions
         self.displayUndo = displayUndo
         self.isAnimatingMessage = isAnimatingMessage
         self.getMessageTransitionNode = getMessageTransitionNode

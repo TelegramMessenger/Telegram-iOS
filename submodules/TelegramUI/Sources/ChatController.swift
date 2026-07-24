@@ -5820,7 +5820,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, queue: .mainQueue())
             self.richTextCheckboxDebounceTimers[messageId] = timer
             timer.start()
-        }, openStarsPurchase: { [weak self] amount in
+        }, accessibilityForwardMessage: { [weak self] message in
+            self?.interfaceInteraction?.forwardMessages([message])
+        }, accessibilityDeleteMessage: { [weak self] message in
+            self?.interfaceInteraction?.deleteMessages([message], nil, { _ in })
+        }, canPerformAccessibilityMessageActions: true, openStarsPurchase: { [weak self] amount in
             self?.interfaceInteraction?.openStarsPurchase(amount)
         }, openRankInfo: { [weak self] peer, role, rank in
             guard let self, let chatPeer = self.presentationInterfaceState.renderedPeer?.peer else {

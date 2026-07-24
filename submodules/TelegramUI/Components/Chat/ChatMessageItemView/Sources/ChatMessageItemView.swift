@@ -66,7 +66,11 @@ private let fileSizeFormatter: ByteCountFormatter = {
 
 public enum ChatMessageAccessibilityCustomActionType {
     case reply
+    case react
     case options
+    case copy
+    case forward
+    case delete
 }
 
 public final class ChatMessageAccessibilityCustomAction: UIAccessibilityCustomAction {
@@ -445,15 +449,16 @@ public final class ChatMessageAccessibilityData {
                     if isSelected {
                         result += item.presentationData.strings.VoiceOver_Chat_Selected
                         result += "\n"
+                        traits.insert(.selected)
                     }
-                    traits.insert(.startsMediaSession)
                 }
                 
                 result += "\(text)"
                 
-                let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)
-                
-                result += "\n\(dateString)"
+                if !isReply {
+                    let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)
+                    result += "\n\(dateString)"
+                }
                 if !isIncoming && !isReply {
                     result += "\n"
                     if item.sending {
@@ -462,14 +467,13 @@ public final class ChatMessageAccessibilityData {
                         result += item.presentationData.strings.VoiceOver_Chat_Failed
                     } else {
                         if item.read {
-                            if announceIncomingAuthors {
-                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
-                            } else {
-                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
-                            }
+                            result += item.presentationData.strings.Conversation_ChecksTooltip_Read
+                        } else {
+                            result += item.presentationData.strings.Conversation_ChecksTooltip_Delivered
                         }
                         for attribute in message.attributes {
                             if let attribute = attribute as? ConsumableContentMessageAttribute {
+                                result += "\n"
                                 if !attribute.consumed {
                                     if announceIncomingAuthors {
                                         result += item.presentationData.strings.VoiceOver_Chat_NotPlayedByRecipients
@@ -600,6 +604,16 @@ public final class ChatMessageAccessibilityData {
             if canReply {
                 customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextReply, target: nil, selector: #selector(self.noop), action: .reply))
             }
+            if canAddMessageReactions(message: EngineMessage(item.message)) {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.MediaEditor_Shortcut_Reaction, target: nil, selector: #selector(self.noop), action: .react))
+            }
+            if !item.message.text.isEmpty {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.Conversation_ContextMenuCopy, target: nil, selector: #selector(self.noop), action: .copy))
+            }
+            if item.controllerInteraction.canPerformAccessibilityMessageActions {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextForward, target: nil, selector: #selector(self.noop), action: .forward))
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextDelete, target: nil, selector: #selector(self.noop), action: .delete))
+            }
             customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: nil, selector: #selector(self.noop), action: .options))
         }
         
@@ -725,6 +739,31 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
 
     public func restoreAccessibilityFocus() {
         UIAccessibility.post(notification: .layoutChanged, argument: self.messageAccessibilityNode?.view ?? self.view)
+    }
+
+    public func performAccessibilityCustomAction(_ customAction: UIAccessibilityCustomAction, sourceNode: ASDisplayNode, sourceRect: CGRect) -> Bool {
+        guard let action = customAction as? ChatMessageAccessibilityCustomAction, let item = self.item else {
+            return false
+        }
+
+        switch action.action {
+        case .reply:
+            item.controllerInteraction.setupReply(item.message.id)
+        case .react:
+            item.controllerInteraction.updateMessageReaction(item.message, .default, false, nil)
+        case .options:
+            item.controllerInteraction.openMessageContextMenu(item.message, false, sourceNode, sourceRect, nil, nil)
+        case .copy:
+            guard !item.message.text.isEmpty else {
+                return false
+            }
+            item.controllerInteraction.copyText(item.message.text)
+        case .forward:
+            item.controllerInteraction.accessibilityForwardMessage(item.message)
+        case .delete:
+            item.controllerInteraction.accessibilityDeleteMessage(item.message)
+        }
+        return true
     }
     
     override open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

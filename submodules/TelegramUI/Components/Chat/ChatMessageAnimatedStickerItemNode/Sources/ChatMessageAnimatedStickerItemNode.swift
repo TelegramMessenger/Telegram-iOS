@@ -804,19 +804,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.updateAccessibilityData(accessibilityData, accessibilityNode: self.messageAccessibilityArea, customActionTarget: self, customActionSelector: #selector(self.performLocalAccessibilityCustomAction(_:)))
     }
     
-    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
-        if let action = action as? ChatMessageAccessibilityCustomAction {
-            switch action.action {
-                case .reply:
-                    if let item = self.item {
-                        item.controllerInteraction.setupReply(item.message.id)
-                    }
-                case .options:
-                    if let item = self.item {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
-                    }
-            }
-        }
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        return self.performAccessibilityCustomAction(action, sourceNode: self, sourceRect: self.imageNode.frame)
     }
         
     override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
@@ -2798,6 +2787,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         guard let item = self.item else {
             return
         }
+        let isSelected = item.controllerInteraction.selectionState.map { $0.selectedIds.contains(item.message.id) }
+        self.updateAccessibilityData(ChatMessageAccessibilityData(item: item, isSelected: isSelected))
         
         if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             return
