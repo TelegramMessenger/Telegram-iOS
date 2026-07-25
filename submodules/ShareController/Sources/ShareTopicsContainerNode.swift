@@ -294,17 +294,37 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     private func dequeueTransition() {
         if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
+
+            var focusedTopicId: Int64?
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareTopicGridItemNode, itemNode.view.accessibilityElementIsFocused() {
+                    focusedTopicId = itemNode.id
+                }
+            }
             
             var itemTransition: ContainedViewLayoutTransition = .immediate
             if transition.animated {
                 itemTransition = .animated(duration: 0.3, curve: .spring)
             }
-            self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+            self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { [weak self] _ in
+                guard let self, let focusedTopicId else {
+                    return
+                }
+                self.contentGridNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ShareTopicGridItemNode, itemNode.id == focusedTopicId, !itemNode.view.accessibilityElementIsFocused() {
+                        UIAccessibility.post(notification: .layoutChanged, argument: itemNode.view)
+                    }
+                }
+            })
         }
     }
     
     func setDidBeginDragging(_ f: (() -> Void)?) {
         self.contentDidBeginDragging = f
+    }
+
+    var accessibilityInitialFocusTarget: Any {
+        return self.backNode.buttonNode.view
     }
         
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
@@ -338,6 +358,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     func animateIn(sourceFrame: CGRect, scrollDelta: CGFloat) {
+        self.accessibilityElementsHidden = false
         self.headerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
         self.backNode.alpha = 1.0
@@ -364,6 +385,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     func animateOut(targetFrame: CGRect, scrollDelta: CGFloat, completion: @escaping () -> Void = {}) {
+        self.accessibilityElementsHidden = true
         self.headerNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
         self.backNode.alpha = 0.0

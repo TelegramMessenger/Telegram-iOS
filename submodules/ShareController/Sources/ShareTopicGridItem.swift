@@ -179,6 +179,22 @@ final class ShareTopicGridItemNode: GridItemNode {
         let textSize = self.textNode.updateLayout(size)
         let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: 4.0 + 60.0 + 4.0), size: textSize)
         self.textNode.frame = textFrame
+        self.updateSelection()
+    }
+
+    private func updateSelection() {
+        guard let item = self.currentItem else {
+            self.accessibilityValue = nil
+            self.accessibilityTraits.remove(.selected)
+            return
+        }
+        let isSelected = item.controllerInteraction.selectedTopics[item.basePeer.id]?.0 == item.id
+        self.accessibilityValue = isSelected ? item.strings.VoiceOver_Chat_Selected : nil
+        if isSelected {
+            self.accessibilityTraits.insert(.selected)
+        } else {
+            self.accessibilityTraits.remove(.selected)
+        }
     }
         
     override func layout() {
