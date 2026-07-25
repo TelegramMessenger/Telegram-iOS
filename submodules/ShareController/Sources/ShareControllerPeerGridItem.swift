@@ -79,8 +79,9 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
         super.init()
 
         self.isAccessibilityElement = true
-        self.accessibilityTraits = .button
-        self.peerNode.accessibilityElementsHidden = true
+        self.accessibilityLabel = title
+        self.accessibilityTraits = .header
+        self.titleNode.accessibilityElementsHidden = true
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
@@ -183,6 +184,10 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         self.peerNode = SelectablePeerNode()
         
         super.init()
+
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .button
+        self.peerNode.accessibilityElementsHidden = true
         
         self.peerNode.toggleSelection = { [weak self] isDisabled in
             if let strongSelf = self {
@@ -325,10 +330,17 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     
     func updateSelection(animated: Bool) {
         var selected = false
+        var isDisabled = false
         if let controllerInteraction = self.controllerInteraction, let (_, _, _, _, maybeItem, _) = self.currentState, let item = maybeItem {
-            if case let .peer(peer, _, _, _, _, _) = item {
+            if case let .peer(peer, _, _, _, requiresPremiumForMessaging, _) = item {
                 selected = controllerInteraction.selectedPeerIds.contains(peer.peerId)
+                isDisabled = requiresPremiumForMessaging
+                self.accessibilityHint = requiresPremiumForMessaging ? self.currentState?.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.peer?.compactDisplayTitle ?? "").string : nil
+            } else {
+                self.accessibilityHint = nil
             }
+        } else {
+            self.accessibilityHint = nil
         }
         
         self.peerNode.updateSelection(selected: selected, animated: animated)
@@ -338,6 +350,11 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         } else {
             self.accessibilityTraits.remove(.selected)
         }
+        if isDisabled {
+            self.accessibilityTraits.insert(.notEnabled)
+        } else {
+            self.accessibilityTraits.remove(.notEnabled)
+        }
     }
 
     override func accessibilityActivate() -> Bool {
@@ -345,8 +362,8 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             return false
         }
         switch item {
-        case let .peer(peer, _, _, _, requiresPremiumForMessaging, requiresStars):
-            if requiresPremiumForMessaging || requiresStars != nil {
+        case let .peer(peer, _, _, _, requiresPremiumForMessaging, _):
+            if requiresPremiumForMessaging {
                 controllerInteraction.disabledPeerSelected(peer)
             } else {
                 controllerInteraction.togglePeer(peer, self.currentState?.search ?? false)

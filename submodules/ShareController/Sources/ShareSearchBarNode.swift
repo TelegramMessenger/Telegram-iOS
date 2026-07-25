@@ -18,6 +18,10 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private let inputInsets = UIEdgeInsets(top: 10.0, left: 26.0, bottom: 10.0, right: 10.0 + 16.0)
     
     var textUpdated: ((String) -> Void)?
+
+    var accessibilityFocusTarget: UIView {
+        return self.textInputNode.textField
+    }
     
     init(theme: PresentationTheme, strings: PresentationStrings, placeholder: String) {
         self.backgroundNode = ASImageNode()

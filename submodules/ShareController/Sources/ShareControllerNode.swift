@@ -591,7 +591,12 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                             }
                         }))
                     ])
-                    return ContextController.Items(content: .list(items), animationCache: nil)
+                    return ContextController.Items(content: .list(items), dismissed: { [weak self] in
+                        guard let self, UIAccessibility.isVoiceOverRunning, !self.actionButtonNode.accessibilityElementsHidden, self.actionButtonNode.alpha > 0.0, self.actionButtonNode.view.window != nil else {
+                            return
+                        }
+                        UIAccessibility.post(notification: .layoutChanged, argument: self.actionButtonNode.view)
+                    }, animationCache: nil)
                 }
                 let contextController = makeContextController(presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node, customPosition: CGPoint(x: 0.0, y: fromForeignApp ? -116.0 : 0.0))), items: items, gesture: gesture)
                 contextController.immediateItemsTransitionAnimation = true
@@ -784,6 +789,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         
     override func didLoad() {
         super.didLoad()
+
+        self.view.accessibilityViewIsModal = true
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
@@ -861,6 +868,10 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
             strongSelf.contentNodeOffsetUpdated(topicsContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
+
+            if UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(notification: .screenChanged, argument: topicsContentNode.accessibilityInitialFocusTarget)
+            }
             
             strongSelf.view.endEditing(true)
         }
@@ -901,6 +912,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     }
                 })
             }
+            if UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(notification: .screenChanged, argument: searchContentNode.accessibilityFocusTarget(peerId: peerId) ?? searchContentNode.accessibilityInitialFocusTarget)
+            }
         } else if let peersContentNode = self.peersContentNode {
             peersContentNode.setDidBeginDragging({ [weak self] in
                 self?.contentNodeDidBeginDragging()
@@ -919,7 +933,40 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     }
                 })
             }
+            if UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(notification: .screenChanged, argument: peersContentNode.accessibilityFocusTarget(peerId: peerId))
+            }
         }
+    }
+
+    func activateInitialAccessibilityFocus() {
+        guard UIAccessibility.isVoiceOverRunning else {
+            return
+        }
+        let target: Any?
+        if let topicsContentNode = self.topicsContentNode {
+            target = topicsContentNode.accessibilityInitialFocusTarget
+        } else if let searchContentNode = self.contentNode as? ShareSearchContainerNode {
+            target = searchContentNode.accessibilityInitialFocusTarget
+        } else if let peersContentNode = self.peersContentNode {
+            target = peersContentNode.accessibilityFocusTarget()
+        } else {
+            target = self.contentNode?.view
+        }
+        UIAccessibility.post(notification: .screenChanged, argument: target)
+    }
+
+    func performAccessibilityEscape() -> Bool {
+        if let topicsContentNode = self.topicsContentNode {
+            topicsContentNode.backPressed()
+            return true
+        }
+        if self.contentNode is ShareSearchContainerNode, let peersContentNode = self.peersContentNode {
+            self.transitionToContentNode(peersContentNode)
+            return true
+        }
+        self.cancel?()
+        return true
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -1067,6 +1114,12 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                         self.setActionNodesHidden(true, inputField: true, actions: true)
                     } else if !(contentNode is ShareLoadingContainer) {
                         self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil || self.mediaParameters?.publicLinkPrefix != nil, actions: true)
+                    }
+
+                    if let searchContentNode = contentNode as? ShareSearchContainerNode, UIAccessibility.isVoiceOverRunning {
+                        UIAccessibility.post(notification: .screenChanged, argument: searchContentNode.accessibilityInitialFocusTarget)
+                    } else if contentNode === self.peersContentNode, previous is ShareSearchContainerNode, let peersContentNode = self.peersContentNode, UIAccessibility.isVoiceOverRunning {
+                        UIAccessibility.post(notification: .screenChanged, argument: peersContentNode.accessibilitySearchFocusTarget)
                     }
                 } else {
                     if let contentNode = self.contentNode {
@@ -1525,8 +1578,24 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                             strongSelf.dismiss?(true)
                         }
                 }
-            }, error: { _ in
-                
+            }, error: { [weak self] error in
+                guard let self else {
+                    return
+                }
+                if let peersContentNode = self.peersContentNode {
+                    self.transitionToContentNode(peersContentNode, fastOut: true)
+                }
+                switch error {
+                case .generic:
+                    self.presentError(nil, self.presentationData.strings.Login_UnknownError)
+                case let .fileTooBig(size):
+                    self.presentError(
+                        self.presentationData.strings.Notifications_UploadError_TooLarge_Title,
+                        self.presentationData.strings.Notifications_UploadError_TooLarge_Text(
+                            dataSizeString(size, formatting: DataSizeStringFormatting(presentationData: self.presentationData))
+                        ).string
+                    )
+                }
             }, completed: {
                 if !wasDone && fromForeignApp {
                     doneImpl(false)

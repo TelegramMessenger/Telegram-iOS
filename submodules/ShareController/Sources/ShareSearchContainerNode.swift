@@ -240,6 +240,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.recentGridNode = GridNode()
         self.contentGridNode = GridNode()
         self.contentGridNode.isHidden = true
+        self.contentGridNode.accessibilityElementsHidden = true
         
         self.searchNode = ShareSearchBarNode(theme: theme, strings: strings, placeholder: strings.Common_Search)
         
@@ -442,11 +443,15 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 if (previousEntries.0 == nil) != (entries == nil) {
                     if previousEntries.0 == nil {
                         strongSelf.recentGridNode.isHidden = true
+                        strongSelf.recentGridNode.accessibilityElementsHidden = true
                         strongSelf.contentGridNode.isHidden = false
+                        strongSelf.contentGridNode.accessibilityElementsHidden = false
                         strongSelf.transitionToContentGridLayout()
                     } else {
                         strongSelf.recentGridNode.isHidden = false
+                        strongSelf.recentGridNode.accessibilityElementsHidden = false
                         strongSelf.contentGridNode.isHidden = true
+                        strongSelf.contentGridNode.accessibilityElementsHidden = true
                         strongSelf.transitionToRecentGridLayout()
                     }
                 }
@@ -504,6 +509,20 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
         self.ensurePeerVisibleOnLayout = peerId
+    }
+
+    var accessibilityInitialFocusTarget: Any {
+        return self.searchNode.accessibilityFocusTarget
+    }
+
+    func accessibilityFocusTarget(peerId: EnginePeer.Id) -> Any? {
+        var result: Any?
+        self.effectiveGridNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
+                result = itemNode.view
+            }
+        }
+        return result
     }
     
     func setDidBeginDragging(_ f: (() -> Void)?) {
@@ -716,6 +735,13 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private func dequeueTransition() {
         if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
+
+            var focusedPeerId: EnginePeer.Id?
+            self.contentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.view.accessibilityElementIsFocused() {
+                    focusedPeerId = itemNode.peerId
+                }
+            }
                         
             var itemTransition: ContainedViewLayoutTransition = .immediate
             if transition.animated {
@@ -733,7 +759,17 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 }
             }
             
-            self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: true), completion: { _ in })
+            self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: true), completion: { [weak self] _ in
+                guard let self, let focusedPeerId else {
+                    return
+                }
+                if let target = self.accessibilityFocusTarget(peerId: focusedPeerId) {
+                    if let targetView = target as? UIView, targetView.accessibilityElementIsFocused() {
+                        return
+                    }
+                    UIAccessibility.post(notification: .layoutChanged, argument: target)
+                }
+            })
         }
     }
     
@@ -750,12 +786,29 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private func dequeueRecentTransition() {
         if let (transition, _) = self.enqueuedRecentTransitions.first {
             self.enqueuedRecentTransitions.remove(at: 0)
+
+            var focusedPeerId: EnginePeer.Id?
+            self.recentGridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.view.accessibilityElementIsFocused() {
+                    focusedPeerId = itemNode.peerId
+                }
+            }
             
             var itemTransition: ContainedViewLayoutTransition = .immediate
             if transition.animated {
                 itemTransition = .animated(duration: 0.3, curve: .spring)
             }
-            self.recentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+            self.recentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { [weak self] _ in
+                guard let self, let focusedPeerId else {
+                    return
+                }
+                if let target = self.accessibilityFocusTarget(peerId: focusedPeerId) {
+                    if let targetView = target as? UIView, targetView.accessibilityElementIsFocused() {
+                        return
+                    }
+                    UIAccessibility.post(notification: .layoutChanged, argument: target)
+                }
+            })
         }
     }
     

@@ -27,6 +27,30 @@ import LottieComponent
 import ButtonComponent
 import ContextUI
 
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    for subview in view.subviews {
+        if accessibilityElementIsFocused(in: subview) {
+            return true
+        }
+    }
+    return false
+}
+
+private func firstAccessibilityElementView(in view: UIView) -> UIView? {
+    if view.isAccessibilityElement {
+        return view
+    }
+    for subview in view.subviews {
+        if let result = firstAccessibilityElementView(in: subview) {
+            return result
+        }
+    }
+    return nil
+}
+
 final class GiftsListView: UIView {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
@@ -424,6 +448,14 @@ final class GiftsListView: UIView {
         guard let starsProducts = self.starsProducts, let params = self.currentParams else {
             return 0.0
         }
+
+        var focusedItemId: AnyHashable?
+        for (id, item) in self.starsItems {
+            if let itemView = item.1.view, accessibilityElementIsFocused(in: itemView) {
+                focusedItemId = id
+                break
+            }
+        }
         
         let optionSpacing: CGFloat = 10.0
         let itemsSideInset = params.sideInset + 16.0
@@ -721,6 +753,25 @@ final class GiftsListView: UIView {
                     if itemAlpha < 1.0 {
                         itemView.layer.allowsGroupOpacity = true
                     }
+
+                    if let accessibilityView = firstAccessibilityElementView(in: itemView) {
+                        let isSelected = self.selectedItemIds.contains(itemReferenceId)
+                        let isSelectionLimitReached = self.canSelect && !isSelected && self.selectedItemIds.count >= Int(self.remainingSelectionCount)
+                        if isSelected {
+                            accessibilityView.accessibilityTraits.insert(.selected)
+                            accessibilityView.accessibilityValue = params.presentationData.strings.VoiceOver_Chat_Selected
+                        } else {
+                            accessibilityView.accessibilityTraits.remove(.selected)
+                            accessibilityView.accessibilityValue = nil
+                        }
+                        if isSelectionLimitReached {
+                            accessibilityView.accessibilityTraits.insert(.notEnabled)
+                            accessibilityView.accessibilityHint = params.presentationData.strings.RequestPeer_ReachedMaximum(self.remainingSelectionCount)
+                        } else {
+                            accessibilityView.accessibilityTraits.remove(.notEnabled)
+                            accessibilityView.accessibilityHint = nil
+                        }
+                    }
                     
                     if self.isReordering && (product.pinnedToTop || self.isCollection) {
                         if itemView.layer.animation(forKey: "shaking_position") == nil {
@@ -761,6 +812,10 @@ final class GiftsListView: UIView {
         }
         for id in removeIds {
             self.starsItems.removeValue(forKey: id)
+        }
+
+        if let focusedItemId, let itemView = self.starsItems[focusedItemId]?.1.view, !accessibilityElementIsFocused(in: itemView), let accessibilityView = firstAccessibilityElementView(in: itemView) {
+            UIAccessibility.post(notification: .layoutChanged, argument: accessibilityView)
         }
         
         var contentHeight = ceil(CGFloat(starsProducts.count) / CGFloat(defaultItemsInRow)) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
