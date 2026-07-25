@@ -560,6 +560,10 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        self.listView.accessibilityPageScrolledString = { row, count in
+            return interfaceState.strings.VoiceOver_ScrollStatus(row, count).string
+        }
+        let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, leftInset, rightInset, bottomInset)
         
         if self.backgroundIsDark != interfaceState.theme.overallDarkAppearance {
