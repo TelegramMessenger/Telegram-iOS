@@ -692,6 +692,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 
                             self.updateScrolling(transition: .easeInOut(duration: 0.2))
                         } : nil,
+                        accessibilityReorderPreviousTitle: "\(params.presentationData.strings.PeerInfo_Gifts_Reorder) ←",
+                        accessibilityReorderNextTitle: "\(params.presentationData.strings.PeerInfo_Gifts_Reorder) →",
                         setSelectedId: { [weak self] id in
                             guard let self, let idValue = id.base as? Int32 else {
                                 return
@@ -1450,7 +1452,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             context: self.context,
             presentationData: currentParams.presentationData,
             source: .controller(ContextControllerContentSourceImpl(controller: previewController, sourceView: view)),
-            items: .single(ContextController.Items(content: .list(items))), gesture: gesture
+            items: .single(ContextController.Items(content: .list(items), dismissed: { [weak view] in
+                guard UIAccessibility.isVoiceOverRunning, let view, view.window != nil, !view.accessibilityElementsHidden else {
+                    return
+                }
+                UIAccessibility.post(notification: .layoutChanged, argument: view)
+            })), gesture: gesture
         )
         self.parentController?.presentInGlobalOverlay(contextController)
     }

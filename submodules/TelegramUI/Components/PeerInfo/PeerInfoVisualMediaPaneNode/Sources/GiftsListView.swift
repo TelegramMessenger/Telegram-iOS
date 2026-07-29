@@ -51,6 +51,23 @@ private func firstAccessibilityElementView(in view: UIView) -> UIView? {
     return nil
 }
 
+private final class GiftAccessibilityAction: UIAccessibilityCustomAction {
+    enum Kind {
+        case movePrevious
+        case moveNext
+        case togglePinned
+    }
+
+    let reference: StarGiftReference
+    let kind: Kind
+
+    init(name: String, reference: StarGiftReference, kind: Kind, target: Any, selector: Selector) {
+        self.reference = reference
+        self.kind = kind
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 final class GiftsListView: UIView {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
@@ -421,6 +438,37 @@ final class GiftsListView: UIView {
             }
         }
     }
+
+    @objc private func performAccessibilityGiftAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? GiftAccessibilityAction, let items = self.starsProducts, let index = items.firstIndex(where: { $0.reference == action.reference }) else {
+            return false
+        }
+        switch action.kind {
+        case .movePrevious:
+            guard index > 0 else {
+                return false
+            }
+            self.reorderIfPossible(reference: action.reference, toIndex: index - 1)
+            self.updateScrolling(transition: .spring(duration: 0.3))
+            return true
+        case .moveNext:
+            guard index + 1 < items.count else {
+                return false
+            }
+            self.reorderIfPossible(reference: action.reference, toIndex: index + 1)
+            self.updateScrolling(transition: .spring(duration: 0.3))
+            return true
+        case .togglePinned:
+            let item = items[index]
+            let pinnedToTop = !item.pinnedToTop
+            if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                self.displayUnpinScreen?(item, nil)
+                return true
+            }
+            self.profileGifts.updateStarGiftPinnedToTop(reference: action.reference, pinnedToTop: pinnedToTop)
+            return true
+        }
+    }
                     
     func loadMore() {
         self.profileGifts.loadMore()
@@ -759,10 +807,8 @@ final class GiftsListView: UIView {
                         let isSelectionLimitReached = self.canSelect && !isSelected && self.selectedItemIds.count >= Int(self.remainingSelectionCount)
                         if isSelected {
                             accessibilityView.accessibilityTraits.insert(.selected)
-                            accessibilityView.accessibilityValue = params.presentationData.strings.VoiceOver_Chat_Selected
                         } else {
                             accessibilityView.accessibilityTraits.remove(.selected)
-                            accessibilityView.accessibilityValue = nil
                         }
                         if isSelectionLimitReached {
                             accessibilityView.accessibilityTraits.insert(.notEnabled)
@@ -771,6 +817,42 @@ final class GiftsListView: UIView {
                             accessibilityView.accessibilityTraits.remove(.notEnabled)
                             accessibilityView.accessibilityHint = nil
                         }
+
+                        var accessibilityActions: [UIAccessibilityCustomAction] = accessibilityView.accessibilityCustomActions ?? []
+                        if let reference = product.reference {
+                            if self.isReordering, let itemIndex = starsProducts.firstIndex(where: { $0.reference == reference }) {
+                                if itemIndex > 0 {
+                                    accessibilityActions.append(GiftAccessibilityAction(
+                                        name: "\(params.presentationData.strings.PeerInfo_Gifts_Context_Reorder) ←",
+                                        reference: reference,
+                                        kind: .movePrevious,
+                                        target: self,
+                                        selector: #selector(self.performAccessibilityGiftAction(_:))
+                                    ))
+                                }
+                                if itemIndex + 1 < starsProducts.count {
+                                    accessibilityActions.append(GiftAccessibilityAction(
+                                        name: "\(params.presentationData.strings.PeerInfo_Gifts_Context_Reorder) →",
+                                        reference: reference,
+                                        kind: .moveNext,
+                                        target: self,
+                                        selector: #selector(self.performAccessibilityGiftAction(_:))
+                                    ))
+                                }
+                            }
+                            if !self.canSelect && !self.isCollection && self.peerId == self.context.account.peerId {
+                                if case .unique = product.gift {
+                                    accessibilityActions.append(GiftAccessibilityAction(
+                                        name: product.pinnedToTop ? params.presentationData.strings.PeerInfo_Gifts_Context_Unpin : params.presentationData.strings.PeerInfo_Gifts_Context_Pin,
+                                        reference: reference,
+                                        kind: .togglePinned,
+                                        target: self,
+                                        selector: #selector(self.performAccessibilityGiftAction(_:))
+                                    ))
+                                }
+                            }
+                        }
+                        accessibilityView.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
                     }
                     
                     if self.isReordering && (product.pinnedToTop || self.isCollection) {

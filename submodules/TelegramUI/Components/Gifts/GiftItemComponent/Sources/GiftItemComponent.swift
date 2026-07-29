@@ -410,6 +410,97 @@ public final class GiftItemComponent: Component {
         @objc private func buttonPressed() {
             self.component?.action?()
         }
+
+        override public func accessibilityActivate() -> Bool {
+            guard let action = self.component?.action else {
+                return false
+            }
+            action()
+            return true
+        }
+
+        @objc private func accessibilityOpenContextMenu(_ action: UIAccessibilityCustomAction) -> Bool {
+            guard self.isGestureEnabled, let contextGesture = self.contextGesture, let activated = self.activated else {
+                return false
+            }
+            activated(contextGesture, CGPoint(x: self.bounds.midX, y: self.bounds.midY))
+            return true
+        }
+
+        private func updateAccessibility(component: GiftItemComponent) {
+            let exposesCard = component.mode == .generic || component.mode == .profile || component.mode == .select || component.mode == .thumbnail || component.mode == .grid
+            self.isAccessibilityElement = exposesCard && !component.isPlaceholder
+            self.containerButton.isAccessibilityElement = false
+
+            guard self.isAccessibilityElement else {
+                self.accessibilityLabel = nil
+                self.accessibilityValue = nil
+                self.accessibilityHint = nil
+                self.accessibilityTraits = []
+                self.accessibilityCustomActions = nil
+                return
+            }
+
+            var label: String
+            switch component.subject {
+            case let .uniqueGift(gift, _):
+                label = "\(gift.title) #\(gift.number)"
+            default:
+                label = component.title ?? component.strings.SharedMedia_GiftCount(1)
+            }
+
+            var values: [String] = []
+            if let title = component.title, title != label {
+                values.append(title)
+            }
+            if let subtitle = component.subtitle {
+                values.append(subtitle)
+            }
+            if let ribbon = component.ribbon {
+                values.append(ribbon.text)
+            }
+            switch component.subject {
+            case let .premium(_, price), let .starGift(_, price):
+                values.append(price)
+            case let .uniqueGift(_, price):
+                if let price {
+                    values.append(price)
+                }
+            case .auction, .preview:
+                break
+            }
+            if component.isPinned {
+                values.append(component.strings.PeerInfo_Gifts_Context_Unpin)
+            }
+            if component.isHidden {
+                values.append(component.strings.PeerInfo_Gifts_Hidden)
+            }
+            if component.isSelected {
+                values.append(component.strings.VoiceOver_Chat_Selected)
+            }
+
+            self.accessibilityLabel = label
+            self.accessibilityValue = values.isEmpty ? nil : values.joined(separator: ", ")
+            self.accessibilityHint = nil
+            self.accessibilityTraits = [.image]
+            if component.action != nil {
+                self.accessibilityTraits.insert(.button)
+            }
+            if component.isSelected {
+                self.accessibilityTraits.insert(.selected)
+            }
+            if component.contextAction != nil {
+                self.accessibilityCustomActions = [
+                    UIAccessibilityCustomAction(
+                        name: component.strings.VoiceOver_MessageContextOpenMessageMenu,
+                        target: self,
+                        selector: #selector(self.accessibilityOpenContextMenu(_:))
+                    )
+                ]
+            } else {
+                self.accessibilityCustomActions = nil
+            }
+        }
         
         func update(component: GiftItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
@@ -1624,6 +1715,8 @@ public final class GiftItemComponent: Component {
             } else {
                 self.containerButton.isUserInteractionEnabled = false
             }
+
+            self.updateAccessibility(component: component)
                         
             return size
         }

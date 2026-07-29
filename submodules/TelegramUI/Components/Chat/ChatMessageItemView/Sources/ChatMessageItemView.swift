@@ -123,7 +123,9 @@ public final class ChatMessageAccessibilityData {
                 
                 loop: for media in message.media {
                     if let _ = media as? TelegramMediaImage {
-                        traits.insert(.image)
+                        if !isReply {
+                            traits.insert(.image)
+                        }
                         if isIncoming {
                             if announceIncomingAuthors, let authorName = authorName {
                                 label = item.presentationData.strings.VoiceOver_Chat_PhotoFrom(authorName).string
@@ -175,10 +177,12 @@ public final class ChatMessageAccessibilityData {
                                         continue
                                     }
                                     isSpecialFile = true
-                                    if isSelected == nil {
+                                    if !isReply && isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                     }
-                                    traits.insert(.startsMediaSession)
+                                    if !isReply {
+                                        traits.insert(.startsMediaSession)
+                                    }
                                     if isVoice {
                                         let durationString = voiceMessageDurationFormatter.string(from: Double(duration)) ?? ""
                                         if isIncoming {
@@ -210,10 +214,12 @@ public final class ChatMessageAccessibilityData {
                                     }
                                 case let .Video(duration, _, flags, _, _, _):
                                     isSpecialFile = true
-                                    if isSelected == nil {
+                                    if !isReply && isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                     }
-                                    traits.insert(.startsMediaSession)
+                                    if !isReply {
+                                        traits.insert(.startsMediaSession)
+                                    }
                                     let durationString = voiceMessageDurationFormatter.string(from: Double(duration)) ?? ""
                                     if flags.contains(.instantRoundVideo) {
                                         if isIncoming {
@@ -242,7 +248,7 @@ public final class ChatMessageAccessibilityData {
                             }
                         }
                         if !isSpecialFile {
-                            if isSelected == nil {
+                            if !isReply && isSelected == nil {
                                 hint = item.presentationData.strings.VoiceOver_Chat_OpenHint
                             }
                             let sizeString = fileSizeFormatter.string(fromByteCount: Int64(file.size ?? 0))
@@ -447,7 +453,7 @@ public final class ChatMessageAccessibilityData {
                 
                 var result = ""
                 
-                if let isSelected = isSelected {
+                if !isReply, let isSelected = isSelected {
                     if isSelected {
                         result += item.presentationData.strings.VoiceOver_Chat_Selected
                         result += "\n"
@@ -560,8 +566,12 @@ public final class ChatMessageAccessibilityData {
                     replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
                 
-                let (_, replyMessageValue) = dataForMessage(replyMessage, true)
-                replyValue = replyMessageValue
+                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
+                if replyMessageValue.isEmpty {
+                    replyValue = replyMessageLabel
+                } else {
+                    replyValue = "\(replyMessageLabel). \(replyMessageValue)"
+                }
                 
                 label = "\(replyLabel) . \(label)"
             }
