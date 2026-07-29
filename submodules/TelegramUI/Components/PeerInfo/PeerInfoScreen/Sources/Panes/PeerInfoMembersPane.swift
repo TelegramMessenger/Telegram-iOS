@@ -22,6 +22,14 @@ private struct PeerMembersListTransaction {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let animated: Bool
+    let entries: [PeerMembersListEntry]
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 enum PeerMembersListAction {
@@ -274,7 +282,7 @@ private func preparedTransition(from fromEntries: [PeerMembersListEntry], to toE
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, addMemberAction: addMemberAction, action: action, contextAction: contextAction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enclosingPeer: enclosingPeer, addMemberAction: addMemberAction, action: action, contextAction: contextAction), directionHint: nil) }
     
-    return PeerMembersListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
+    return PeerMembersListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count, entries: toEntries)
 }
 
 final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
@@ -289,6 +297,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let listMaskView: UIImageView
     private let listNode: ListView
     private var currentEntries: [PeerMembersListEntry] = []
+    private var displayedEntries: [PeerMembersListEntry] = []
     private var enclosingPeer: EnginePeer?
     private var currentState: PeerInfoMembersState?
     private var canLoadMore: Bool = false
@@ -499,10 +508,32 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
         } else {
             options.insert(.Synchronous)
         }
+
+        var focusedEntryId: PeerMembersListEntryStableId?
+        if UIAccessibility.isVoiceOverRunning {
+            for itemNode in self.listNode.visibleItemNodes() {
+                guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                    continue
+                }
+                if accessibilityElementIsFocused(in: itemNode.view) {
+                    focusedEntryId = self.displayedEntries[index].stableId
+                    break
+                }
+            }
+        }
         
         self.listNode.transaction(deleteIndices: transaction.deletions, insertIndicesAndItems: transaction.insertions, updateIndicesAndItems: transaction.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
+            }
+            strongSelf.displayedEntries = transaction.entries
+            if let focusedEntryId, let index = transaction.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
+                for itemNode in strongSelf.listNode.visibleItemNodes() {
+                    if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                        UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                        break
+                    }
+                }
             }
             if !strongSelf.didSetReady {
                 strongSelf.didSetReady = true

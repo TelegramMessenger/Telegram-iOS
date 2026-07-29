@@ -49,6 +49,8 @@ public final class PeekControllerImpl: ViewController, PeekController, ContextCo
     public var disappeared: (() -> Void)?
     
     private var animatedIn = false
+    private var isDismissed = false
+    private weak var previousAccessibilityFocus: AnyObject?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -75,6 +77,7 @@ public final class PeekControllerImpl: ViewController, PeekController, ContextCo
             self?.dismiss()
         })
         self.displayNodeDidLoad()
+        self.view.accessibilityViewIsModal = true
     }
     
     private func getSourceRect() -> CGRect {
@@ -98,6 +101,15 @@ public final class PeekControllerImpl: ViewController, PeekController, ContextCo
             if self.activateImmediately {
                 self.controllerNode.activateMenu(immediately: true)
             }
+            UIAccessibility.post(notification: .screenChanged, argument: firstAccessibilityElement(in: self.controllerNode.view) ?? self.controllerNode.view)
+        }
+    }
+
+    override public func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        if self.previousAccessibilityFocus == nil {
+            self.previousAccessibilityFocus = UIAccessibility.focusedElement(using: .notificationVoiceOver) as AnyObject?
         }
     }
     
@@ -108,13 +120,36 @@ public final class PeekControllerImpl: ViewController, PeekController, ContextCo
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        guard !self.isDismissed else {
+            return
+        }
+        self.isDismissed = true
         self.visibilityUpdated?(false)
         self.controllerNode.animateOut(to: self.getSourceRect(), completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            self?.presentingViewController?.dismiss(animated: false, completion: { [weak self] in
+                self?.restoreAccessibilityFocus()
+                completion?()
+            })
         })
     }
     
     public func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?) {
         self.dismiss(completion: completion)
+    }
+
+    override public func accessibilityPerformEscape() -> Bool {
+        guard !self.isDismissed else {
+            return false
+        }
+        self.dismiss()
+        return true
+    }
+
+    private func restoreAccessibilityFocus() {
+        guard let previousAccessibilityFocus = self.previousAccessibilityFocus else {
+            return
+        }
+        self.previousAccessibilityFocus = nil
+        UIAccessibility.post(notification: .layoutChanged, argument: previousAccessibilityFocus)
     }
 }

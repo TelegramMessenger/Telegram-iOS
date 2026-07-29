@@ -191,13 +191,21 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
     }
 }
 
-struct ContactListSearchContainerTransition {
+private struct ContactListSearchContainerTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let isSearching: Bool
     let emptyResults: Bool
     let query: String
+    let entries: [ContactListSearchEntry]
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, isPeerEnabled: @escaping (ContactListPeer) -> Bool, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer, ContactsSearchContainerNode.OpenPeerAction) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ContactListSearchContainerTransition {
@@ -207,7 +215,7 @@ private func contactListSearchContainerPreparedRecentTransition(from fromEntries
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, isPeerEnabled: isPeerEnabled, addContact: addContact, openPeer: openPeer, openDisabledPeer: openDisabledPeer, contextAction: contextAction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, isPeerEnabled: isPeerEnabled, addContact: addContact, openPeer: openPeer, openDisabledPeer: openDisabledPeer, contextAction: contextAction), directionHint: nil) }
     
-    return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, emptyResults: emptyResults, query: query)
+    return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, emptyResults: emptyResults, query: query, entries: toEntries)
 }
 
 public struct ContactsSearchCategories: OptionSet {
@@ -256,6 +264,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
     
     private var containerViewLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
+    private var displayedEntries: [ContactListSearchEntry] = []
     
     private let searchInput = ComponentView<Empty>()
     
@@ -798,9 +807,30 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
             let isSearching = transition.isSearching
             let emptyResults = transition.emptyResults
             let query = transition.query
+            var focusedEntryId: ContactListSearchEntryId?
+            if UIAccessibility.isVoiceOverRunning {
+                for itemNode in self.listNode.visibleItemNodes() {
+                    guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                        continue
+                    }
+                    if accessibilityElementIsFocused(in: itemNode.view) {
+                        focusedEntryId = self.displayedEntries[index].stableId
+                        break
+                    }
+                }
+            }
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
+                }
+                strongSelf.displayedEntries = transition.entries
+                if let focusedEntryId, let index = transition.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
+                    for itemNode in strongSelf.listNode.visibleItemNodes() {
+                        if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                            UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                            break
+                        }
+                    }
                 }
                 
                 strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Contacts_Search_NoResultsQueryDescription(query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)

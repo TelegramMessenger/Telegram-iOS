@@ -745,6 +745,11 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         accessibilityNode.accessibilityValue = accessibilityData.value
         accessibilityNode.accessibilityHint = accessibilityData.hint
         accessibilityNode.accessibilityTraits = accessibilityData.traits
+        if let item = self.item {
+            accessibilityNode.accessibilityIdentifier = "message.\(item.message.id.peerId.toInt64()).\(item.message.id.namespace).\(item.message.id.id)"
+        } else {
+            accessibilityNode.accessibilityIdentifier = nil
+        }
         accessibilityNode.view.accessibilityRespondsToUserInteraction = accessibilityData.respondsToUserInteraction
         if let customActions = accessibilityData.customActions {
             accessibilityNode.accessibilityCustomActions = customActions.map { action in
