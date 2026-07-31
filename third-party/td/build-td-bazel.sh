@@ -16,13 +16,14 @@ options="$options -DOPENSSL_CRYPTO_LIBRARY=${openssl_crypto_library}"
 options="$options -DOPENSSL_INCLUDE_DIR=${OPENSSL_DIR}/src/include"
 options="$options -DCMAKE_BUILD_TYPE=Release"
 options="$options -DIOS_DEPLOYMENT_TARGET=13.0"
+options="$options -DCCACHE_FOUND=0"
 
 cd "$BUILD_DIR"
 
 # Generate source files
 mkdir native-build
 cd native-build
-cmake -DTD_GENERATE_SOURCE_FILES=ON ../td
+cmake -DCCACHE_FOUND=0 -DTD_GENERATE_SOURCE_FILES=ON ../td
 cmake --build . -- -j$(sysctl -n hw.ncpu)
 cd ..
 
