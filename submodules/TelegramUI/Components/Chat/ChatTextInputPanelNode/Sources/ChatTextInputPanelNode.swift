@@ -1810,7 +1810,13 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             }
         }
         
-        let inputHasText = !(self.richTextInputNode?.inputContentIsEmpty ?? true)
+        // While a media recording is in progress the text field is faded out entirely (see
+        // audioRecordingItemsAlpha), but it can still be first responder and keep receiving keystrokes
+        // from an attached/software keyboard. Treating that invisible text as present would drive the
+        // whole right-hand side of the panel into its "send text" layout — which parks the recording
+        // controls (the mic/send-voice button) off screen at `width + 8.0`. The recording layout must
+        // stay independent of the field's content.
+        let inputHasText = !isRecording && !(self.richTextInputNode?.inputContentIsEmpty ?? true)
         
         var hasMenuButton = false
         var menuButtonExpanded = false
