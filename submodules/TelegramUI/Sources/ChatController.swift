@@ -9810,12 +9810,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         if let botApp = botAppStart.botApp {
-                            self.presentBotApp(botApp: botApp, botPeer: peer, payload: botAppStart.payload, mode: botAppStart.mode, concealed: concealed, commit: {
+                            self.presentBotApp(botApp: botApp, botPeer: peer, payload: botAppStart.payload, mode: botAppStart.mode, botStartPayload: botAppStart.botStartPayload, concealed: concealed, commit: {
                                 dismissWebAppControllers()
                                 commit()
                             })
                         } else {
-                            self.context.sharedContext.openWebApp(
+                            // Called directly rather than through SharedAccountContext.openWebApp (a plain forwarder to
+                            // this function) so that the module-internal dismissal callback can be passed.
+                            openWebAppImpl(
                                 context: self.context,
                                 parentController: self,
                                 updatedPresentationData: self.updatedPresentationData,
@@ -9828,7 +9830,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 source: .generic,
                                 skipTermsOfService: false,
                                 payload: botAppStart.payload,
-                                verifyAgeCompletion: nil
+                                verifyAgeCompletion: nil,
+                                launchDismissedWithoutConfirmation: { [weak self] in
+                                    self?.applyBotStartPayloadFallback(botPeerId: peer.id, payload: botAppStart.botStartPayload)
+                                }
                             )
                             commit()
                         }
