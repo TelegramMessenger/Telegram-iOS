@@ -17,12 +17,17 @@ import MultilineTextComponent
 import BundleIconComponent
 import PlainButtonComponent
 
+/// Presents the Mini App launch confirmation.
+///
+/// - Parameter dismissedWithoutConfirmation: Called when the alert goes away without the launch having
+///   been confirmed: Cancel, a tap outside, Esc, or a programmatic dismissal.
 public func webAppLaunchConfirmationController(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
     peer: EnginePeer,
     requestWriteAccess: Bool = false,
     completion: @escaping (Bool) -> Void,
+    dismissedWithoutConfirmation: (() -> Void)? = nil,
     showMore: (() -> Void)?,
     openTerms: @escaping () -> Void
 ) -> ViewController {
@@ -53,17 +58,28 @@ public func webAppLaunchConfirmationController(
         ))
     }
     
+    // Set before `dismissed` fires: AlertScreen runs an action and only then auto-dismisses. Keep the
+    // launch action synchronous and auto-dismissing, or this flag stops distinguishing the two paths.
+    var didConfirm = false
     let alertController = AlertScreen(
         context: context,
         configuration: AlertScreen.Configuration(actionAlignment: .vertical),
         content: content,
         actions: [
             .init(title: strings.WebApp_LaunchOpenApp, type: .default, action: {
+                didConfirm = true
                 completion(requestWriteAccess && checkState.value)
             }),
             .init(title: strings.Common_Cancel)
         ]
     )
+    if let dismissedWithoutConfirmation {
+        alertController.dismissed = { _ in
+            if !didConfirm {
+                dismissedWithoutConfirmation()
+            }
+        }
+    }
     return alertController
 }
 

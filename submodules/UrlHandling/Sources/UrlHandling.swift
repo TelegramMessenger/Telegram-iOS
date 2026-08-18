@@ -104,7 +104,7 @@ public enum ParsedInternalPeerUrlParameter {
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
-    case appStart(String, String?, ResolvedStartAppMode)
+    case appStart(String, String?, ResolvedStartAppMode, botStartPayload: String?)
     case story(Story)
     case boost
     case text(String)
@@ -159,6 +159,47 @@ public enum ParsedInternalUrl {
 private enum ParsedUrl {
     case externalUrl(String)
     case internalUrl(ParsedInternalUrl)
+}
+
+private func startParameterReferrerPrefix(context: AccountContext?) -> String {
+    var linkRefPrefix = "_tgr_"
+    if let context {
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_start_param_prefixes"] as? String {
+            linkRefPrefix = value
+        }
+    }
+    return linkRefPrefix
+}
+
+private func parsedStartAppMode(queryItems: [URLQueryItem]) -> ResolvedStartAppMode {
+    for queryItem in queryItems {
+        if queryItem.name == "mode", let value = queryItem.value {
+            switch value {
+            case "compact":
+                return .compact
+            case "fullscreen":
+                return .fullscreen
+            default:
+                return .generic
+            }
+        }
+    }
+    return .generic
+}
+
+// A link may carry a `start` payload alongside `startapp`. The Mini App keeps priority, but the
+// `start` payload is preserved so that the chat's Start button can carry it if the Mini App launch
+// confirmation is dismissed. Referral payloads are not a bot start payload, so they are ignored here.
+private func botStartPayloadFallback(queryItems: [URLQueryItem], context: AccountContext?) -> String? {
+    for queryItem in queryItems {
+        if queryItem.name == "start", let value = queryItem.value, !value.isEmpty {
+            if value.hasPrefix(startParameterReferrerPrefix(context: context)) {
+                return nil
+            }
+            return value
+        }
+    }
+    return nil
 }
 
 public func parseInternalUrl(sharedContext: SharedAccountContext, context: AccountContext?, query: String) -> ParsedInternalUrl? {
@@ -330,15 +371,13 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                     }
                                     return .peer(.name(peerName), .attachBotStart(value, startAttach))
                                 } else if queryItem.name == "start" {
-                                    var linkRefPrefix = "_tgr_"
-                                    if let context {
-                                        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_start_param_prefixes"] as? String {
-                                            linkRefPrefix = value
-                                        }
-                                    }
+                                    let linkRefPrefix = startParameterReferrerPrefix(context: context)
                                     if value.hasPrefix(linkRefPrefix) {
                                         let referrer = String(value[value.index(value.startIndex, offsetBy: linkRefPrefix.count)...])
                                         return .peer(.name(peerName), .referrer(referrer))
+                                    } else if let startAppItem = queryItems.first(where: { $0.name == "startapp" }) {
+                                        // Both parameters are present: the Mini App takes priority, `start` is kept as a fallback.
+                                        return .peer(.name(peerName), .appStart("", startAppItem.value, parsedStartAppMode(queryItems: queryItems), botStartPayload: value))
                                     } else {
                                         return .peer(.name(peerName), .botStart(value))
                                     }
@@ -374,25 +413,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                     }
                                     return .startAttach(peerName, value, choose)
                                  } else if queryItem.name == "startapp" {
-                                     var mode: ResolvedStartAppMode = .generic
-                                     if let queryItems = components.queryItems {
-                                         for queryItem in queryItems {
-                                             if let value = queryItem.value {
-                                                 if queryItem.name == "mode" {
-                                                     switch value {
-                                                     case "compact":
-                                                         mode = .compact
-                                                     case "fullscreen":
-                                                         mode = .fullscreen
-                                                     default:
-                                                         break
-                                                     }
-                                                     break
-                                                 }
-                                             }
-                                         }
-                                     }
-                                     return .peer(.name(peerName), .appStart("", queryItem.value, mode))
+                                     let mode = parsedStartAppMode(queryItems: queryItems)
+                                     return .peer(.name(peerName), .appStart("", queryItem.value, mode, botStartPayload: botStartPayloadFallback(queryItems: queryItems, context: context)))
                                  } else if queryItem.name == "story" {
                                     if value == "live" {
                                         return .peer(.name(peerName), .story(.live))
@@ -442,25 +464,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                             } else if queryItem.name == "direct" {
                                 return .peer(.name(peerName), .direct)
                             } else if queryItem.name == "startapp" {
-                                var mode: ResolvedStartAppMode = .generic
-                                if let queryItems = components.queryItems {
-                                    for queryItem in queryItems {
-                                        if let value = queryItem.value {
-                                            if queryItem.name == "mode" {
-                                                switch value {
-                                                case "compact":
-                                                    mode = .compact
-                                                case "fullscreen":
-                                                    mode = .fullscreen
-                                                default:
-                                                    break
-                                                }
-                                                break
-                                            }
-                                        }
-                                    }
-                                }
-                                return .peer(.name(peerName), .appStart("", queryItem.value, mode))
+                                let mode = parsedStartAppMode(queryItems: queryItems)
+                                return .peer(.name(peerName), .appStart("", queryItem.value, mode, botStartPayload: botStartPayloadFallback(queryItems: queryItems, context: context)))
                             } else if queryItem.name == "ref", let referrer = queryItem.value {
                                 return .peer(.name(peerName), .referrer(referrer))
                             }
@@ -788,6 +793,7 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                     let appName = pathComponents[1]
                     var startApp: String?
                     var mode: ResolvedStartAppMode = .generic
+                    var botStartPayload: String?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -806,8 +812,9 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                                 }
                             }
                         }
+                        botStartPayload = botStartPayloadFallback(queryItems: queryItems, context: context)
                     }
-                    return .peer(.name(peerName), .appStart(appName, startApp, mode))
+                    return .peer(.name(peerName), .appStart(appName, startApp, mode, botStartPayload: botStartPayload))
                 } else {
                     return nil
                 }
@@ -958,12 +965,19 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         }
                                     }
                                 }
-                            case let .appStart(name, payload, mode):
+                            case let .appStart(name, payload, mode, botStartPayload):
+                                // If the Mini App can not be launched at all, honour the `start` payload the link carried alongside it.
+                                let appUnavailableResult: ResolveInternalUrlResult
+                                if let botStartPayload {
+                                    appUnavailableResult = .result(.botStart(peer: peer._asPeer(), payload: botStartPayload))
+                                } else {
+                                    appUnavailableResult = .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                }
                                 if name.isEmpty {
                                     if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
-                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: nil, payload: payload, justInstalled: false, mode: mode)))))
+                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: nil, payload: payload, justInstalled: false, mode: mode, botStartPayload: botStartPayload)))))
                                     } else {
-                                        return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
+                                        return .single(appUnavailableResult)
                                     }
                                 } else {
                                     return .single(.progress) |> then(context.engine.messages.getBotApp(botId: peer.id, shortName: name, cached: false)
@@ -973,9 +987,9 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                     }
                                     |> mapToSignal { botApp -> Signal<ResolveInternalUrlResult, NoError> in
                                         if let botApp {
-                                            return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false, mode: mode)))))
+                                            return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false, mode: mode, botStartPayload: botStartPayload)))))
                                         } else {
-                                            return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
+                                            return .single(appUnavailableResult)
                                         }
                                     })
                                 }
