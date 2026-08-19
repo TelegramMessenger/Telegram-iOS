@@ -35,6 +35,11 @@ private let identifierDelimiterSet: CharacterSet = {
     set.insert("/")
     return set
 }()
+private let mentionDelimiterSet: CharacterSet = {
+    var set = CharacterSet.whitespacesAndNewlines
+    set.insert("(")
+    return set
+}()
 private let externalIdentifierDelimiterSet: CharacterSet = {
     var set = identifierDelimiterSet
     set.remove(".")
@@ -329,14 +334,20 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                 }
             } else if scalar == "@" {
                 notFound = false
+                let isMentionBoundary: Bool
+                if let previousScalar = previousScalar {
+                    isMentionBoundary = mentionDelimiterSet.contains(previousScalar)
+                } else {
+                    isMentionBoundary = true
+                }
                 if let (type, range) = currentEntity {
                     if case .command = type {
                         currentEntity = (type, range.lowerBound ..< utf16.index(after: index))
                     } else {
                         commitEntity(utf16, type, range, enabledTypes, &entities)
-                        currentEntity = (.mention, index ..< index)
+                        currentEntity = isMentionBoundary ? (.mention, index ..< index) : nil
                     }
-                } else {
+                } else if isMentionBoundary {
                     currentEntity = (.mention, index ..< index)
                 }
             } else if scalar == "#" {
