@@ -1075,6 +1075,11 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 let attributedText = stringWithAppliedEntities(item.message.text, entities: item.message.textEntitiesAttribute?.entities ?? [], baseColor: textColor, linkColor: textColor, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font, message: item.message, adjustQuoteFontSize: true)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural))
                 
+                // Keep large-emoji TextNode at screen scale so Apple Color Emoji bitmaps stay sharp on Retina.
+                let screenScale = UIScreen.main.scale
+                self.textNode.textNode.contentsScale = screenScale
+                self.textNode.textNode.layer.contentsScale = screenScale
+                
                 imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: textLayoutAndApply!.0.size.height)
                 isEmoji = true
                 
@@ -3334,29 +3339,23 @@ private func fontSizeForEmojiString(_ string: String) -> CGFloat {
     
     let length = max(maxLineLength, linesCount)
     
-    let basicSize: CGFloat = 94.0
-    let multiplier: CGFloat
+    // Prefer Apple Color Emoji bitmap rungs (16/20/24/28/32/40/48) so 2x/3x
+    // Retina does not upsample soft glyphs. The previous 94pt single-emoji size was
+    // ~2x Android TYPE_EMOJIS (~41dp) and looked oversized + blurry on high-DPI screens.
     switch length {
         case 1:
-            multiplier = 1.0
+            return 48.0
         case 2:
-            multiplier = 0.84
+            return 40.0
         case 3:
-            multiplier = 0.69
+            return 32.0
         case 4:
-            multiplier = 0.53
+            return 28.0
         case 5:
-            multiplier = 0.46
-        case 6:
-            multiplier = 0.38
-        case 7:
-            multiplier = 0.32
-        case 8:
-            multiplier = 0.27
-        case 9:
-            multiplier = 0.24
+            return 24.0
+        case 6, 7, 8:
+            return 20.0
         default:
-            multiplier = 0.21
+            return 16.0
     }
-    return floor(basicSize * multiplier)
 }
