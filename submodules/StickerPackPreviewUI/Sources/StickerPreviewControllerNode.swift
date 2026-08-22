@@ -138,7 +138,7 @@ final class StickerPreviewControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
             break
         }
-        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: itemFile, small: false, onlyFullSize: false))
+        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: itemFile, small: false, fetched: true, onlyFullSize: false, blurThumbnail: false))
         
         if let (layout, navigationBarHeight) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
