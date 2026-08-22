@@ -6,6 +6,9 @@ final class AccessibilityUITests: XCTestCase {
     private static let traversalSampleCount = 10
     private static let averageTraversalBudget: TimeInterval = 2.0
     private static let maximumTraversalBudget: TimeInterval = 5.0
+    private static let settingsTreeElementBudget = 250
+    private static let typingUpdateAverageBudget: TimeInterval = 3.0
+    private static let typingUpdateMaximumBudget: TimeInterval = 6.0
 
     private var app: XCUIApplication!
 
@@ -126,5 +129,74 @@ final class AccessibilityUITests: XCTestCase {
         XCTAssertTrue(input.isHittable)
         input.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2.0))
+    }
+
+    func testSettingsVoiceControlContractAndPerformanceWhenFixtureIsAvailable() throws {
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10.0))
+
+        let settingsItems = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ OR identifier BEGINSWITH %@",
+                "peerInfo.disclosure.",
+                "peerInfo.action."
+            )
+        )
+        guard settingsItems.count >= 5 else {
+            throw XCTSkip("Run with VOICEOVER_USE_EXISTING_DATA=1 and leave the main Settings tab visible")
+        }
+
+        var identifiers = Set<String>()
+        for index in 0 ..< settingsItems.count {
+            let item = settingsItems.element(boundBy: index)
+            XCTAssertFalse(item.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertTrue(identifiers.insert(item.identifier).inserted)
+            XCTAssertGreaterThan(item.frame.width, 0.0)
+            XCTAssertGreaterThan(item.frame.height, 0.0)
+        }
+
+        let elementCount = app.descendants(matching: .any).count
+        XCTAssertLessThanOrEqual(elementCount, Self.settingsTreeElementBudget)
+        let attachment = XCTAttachment(string: "Settings accessibility tree elements: \(elementCount)")
+        attachment.name = "Settings accessibility performance"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        measure(metrics: [XCTClockMetric(), XCTMemoryMetric()]) {
+            _ = app.descendants(matching: .any).count
+        }
+    }
+
+    func testChatTypingAccessibilityPerformanceWhenFixtureIsAvailable() throws {
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10.0))
+
+        let input = app.descendants(matching: .any)["chat.input"]
+        guard input.waitForExistence(timeout: 2.0) else {
+            throw XCTSkip("Run with VOICEOVER_USE_EXISTING_DATA=1 and open a writable chat before launching the test")
+        }
+        input.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2.0))
+
+        var samples: [TimeInterval] = []
+        for _ in 0 ..< Self.traversalSampleCount {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            input.typeText("a")
+            _ = app.descendants(matching: .any).count
+            input.typeText(XCUIKeyboardKey.delete.rawValue)
+            samples.append(CFAbsoluteTimeGetCurrent() - startTime)
+        }
+
+        let average = samples.reduce(0.0, +) / Double(samples.count)
+        let maximum = samples.max() ?? 0.0
+        let attachment = XCTAttachment(
+            string: "Typing accessibility samples: \(samples)\nAverage: \(average)\nMaximum: \(maximum)"
+        )
+        attachment.name = "Voice Control typing performance"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+        XCTAssertLessThanOrEqual(average, Self.typingUpdateAverageBudget)
+        XCTAssertLessThanOrEqual(maximum, Self.typingUpdateMaximumBudget)
     }
 }

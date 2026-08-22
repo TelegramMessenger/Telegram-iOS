@@ -16,3 +16,6 @@
 - Added an initial accessibility-tree size budget, XCTest traversal time/memory metrics, and retained `.xcresult` performance evidence.
 - Added opt-in populated-chat UI contracts for message names, stable identifiers, frames, and the input field hit target using `VOICEOVER_USE_EXISTING_DATA=1`.
 - Expanded source contracts to cover media/reply/delivery/play states, history scrolling, selection limits, Share modes, Gifts actions, Dynamic Type, Reduce Motion, and Reduce Transparency.
+- Scaled Rich Message Instant Page typography from the configured chat text size and included that size in the layout cache key.
+- Added stable Voice Control targets for interactive Settings disclosure/action rows.
+- Added opt-in Settings tree/memory and chat typing accessibility performance scenarios with retained measurements and blocking budgets.

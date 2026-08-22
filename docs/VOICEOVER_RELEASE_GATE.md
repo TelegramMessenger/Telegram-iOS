@@ -20,6 +20,8 @@ Generate the Xcode project using the repository build instructions and run `Acce
 
 The default suite launches with `--ui-test` and therefore uses a clean signed-out data directory. To exercise the populated-chat assertions, prepare a dedicated simulator account, leave the required chat open, and run the suite with `VOICEOVER_USE_EXISTING_DATA=1` in the test scheme environment. In this mode the tests retain simulator data and additionally verify message names, unique stable identifiers, non-empty frames, and the input field's expanded hit target and keyboard focus. These tests report `XCTSkip`, rather than a false pass, when the required fixture is absent.
 
+Use the same opt-in mode with the main Settings tab visible to verify meaningful Voice Control names, unique row targets, a 250-element Settings tree budget, and clock/memory traversal metrics. Run it again in a writable chat for the typing scenario: ten type/query/delete samples enforce conservative average and maximum budgets of 3 and 6 seconds and retain the raw samples as an XCTest attachment. Because UI automation time is included, accept tighter device-specific budgets only after collecting a stable `.xcresult` baseline.
+
 The repository command used by the manually dispatched GitHub gate is:
 
 ```sh
@@ -54,6 +56,8 @@ Record the device, iOS version, app commit, locale, and result for each scenario
 - Peer Info, Gifts, members, contacts, and search transaction focus;
 - context, peek, pinch, alert, and action-sheet containment and Escape;
 - Dynamic Type accessibility sizes, Reduce Motion, and Voice Control names.
+- Rich Messages at the minimum, default, maximum Telegram Text Size, and system accessibility text sizes;
+- Settings Voice Control Show Names/Show Numbers and typing performance with Voice Control enabled.
 
 A release is blocked when a P0 chat flow fails, focus moves to an unrelated element, a modal leaks background traversal, or an interactive control has no meaningful name or action.
 

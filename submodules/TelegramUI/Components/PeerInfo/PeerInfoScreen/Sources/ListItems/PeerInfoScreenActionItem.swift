@@ -100,6 +100,8 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.item = item
                 
         self.selectionNode.pressed = item.action
+        self.activateArea.accessibilityIdentifier = "peerInfo.action.\(String(describing: item.id)).\(item.text)"
+        self.activateArea.accessibilityRespondsToUserInteraction = item.action != nil
         if let action = item.action {
             self.activateArea.accessibilityTraits = [.button]
             self.activateArea.activate = {
