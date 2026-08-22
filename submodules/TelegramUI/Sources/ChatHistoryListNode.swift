@@ -4223,7 +4223,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             }
         }
 
-        let accessibilityNavigationTargetMessageId = UIAccessibility.isVoiceOverRunning ? self.controllerInteraction.accessibilityNavigationTargetMessageId : nil`r`n        var accessibilityFocusedMessageId: MessageId?
+        let accessibilityNavigationTargetMessageId = UIAccessibility.isVoiceOverRunning ? self.controllerInteraction.accessibilityNavigationTargetMessageId : nil
+        var accessibilityFocusedMessageId: MessageId?
         if UIAccessibility.isVoiceOverRunning {
             self.forEachVisibleMessageItemNode { itemNode in
                 if accessibilityFocusedMessageId == nil, itemNode.accessibilityContainsFocus(), let item = itemNode.item {

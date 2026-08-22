@@ -329,7 +329,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)
         transition.updateFrame(node: self.selectionNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -highlightNodeOffset), size: CGSize(width: width, height: height + highlightNodeOffset)))
         self.activateArea.frame = CGRect(origin: .zero, size: CGSize(width: width, height: height))
-        
+
         var separatorInset: CGFloat = sideInset
         if bottomItem != nil {
             separatorInset += 49.0

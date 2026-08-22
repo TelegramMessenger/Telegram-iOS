@@ -61,7 +61,7 @@ final class PeerInfoHeaderNavigationTransition {
     let sourceSubtitleFrame: CGRect
     let previousAvatarView: UIView?
     let fraction: CGFloat
-    
+
     init(sourceNavigationBar: NavigationBar, sourceTitleView: ChatTitleView, sourceTitleFrame: CGRect, sourceSubtitleFrame: CGRect, previousAvatarView: UIView?, fraction: CGFloat) {
         self.sourceNavigationBar = sourceNavigationBar
         self.sourceTitleView = sourceTitleView
@@ -2794,7 +2794,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         track = fileName
                     } else {
                         track = presentationData.strings.MediaPlayer_UnknownTrack
-    
+
 
                 let music = self.music ?? {
                     let componentView = ComponentView<Empty>()

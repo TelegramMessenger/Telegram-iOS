@@ -322,6 +322,48 @@ class GiftsContractTests(unittest.TestCase):
 
 
 class AccessibilityPreferencesContractTests(unittest.TestCase):
+    def test_rich_messages_scale_with_chat_text_size_and_invalidate_layout_cache(self) -> None:
+        contents = source(
+            "submodules/TelegramUI/Components/Chat/ChatMessageRichDataBubbleContentNode/Sources/ChatMessageRichDataBubbleContentNode.swift"
+        )
+        for contract in (
+            "baseFontSize: CGFloat",
+            "item.presentationData.fontSize.baseDisplaySize",
+            "let fontScale = baseFontSize / 17.0",
+            "scaledFontSize(17.0)",
+            "current.baseFontSize == baseFontSize",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, contents)
+        for fixed_size in (
+            "size: 19.0",
+            "size: 18.0",
+            "size: 17.0",
+            "size: 15.0",
+            "size: 14.0",
+            "size: 13.0",
+        ):
+            with self.subTest(fixed_size=fixed_size):
+                self.assertNotIn(fixed_size, contents)
+
+    def test_settings_rows_have_voice_control_names_and_stable_targets(self) -> None:
+        owners = (
+            (
+                "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenDisclosureItem.swift",
+                '"peerInfo.disclosure.',
+            ),
+            (
+                "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/ListItems/PeerInfoScreenActionItem.swift",
+                '"peerInfo.action.',
+            ),
+        )
+        for owner, identifier in owners:
+            with self.subTest(owner=owner):
+                contents = source(owner)
+                self.assertIn("activateArea.accessibilityLabel = item.text", contents)
+                self.assertIn("activateArea.accessibilityRespondsToUserInteraction = item.action != nil", contents)
+                self.assertIn(identifier, contents)
+
     def test_common_modals_support_dynamic_type_and_reduce_transparency(self) -> None:
         archive = source(
             "submodules/TelegramUI/Components/Settings/ArchiveInfoScreen/Sources/ArchiveInfoScreen.swift"
@@ -367,6 +409,10 @@ class ReleaseGateContractTests(unittest.TestCase):
             "testPopulatedChatMessageContractWhenFixtureIsAvailable",
             "testChatInputHitTargetWhenFixtureIsAvailable",
             "VOICEOVER_USE_EXISTING_DATA",
+            "testSettingsVoiceControlContractAndPerformanceWhenFixtureIsAvailable",
+            "testChatTypingAccessibilityPerformanceWhenFixtureIsAvailable",
+            "settingsTreeElementBudget",
+            "typingUpdateAverageBudget",
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, contents)
