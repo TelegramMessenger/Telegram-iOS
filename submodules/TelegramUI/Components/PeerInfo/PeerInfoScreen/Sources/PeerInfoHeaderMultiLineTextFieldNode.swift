@@ -53,6 +53,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
         self.clearButtonNode.isAccessibilityElement = false
+        self.clearButtonNode.accessibilityTraits = .button
         
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
@@ -130,7 +131,9 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
         if self.textNode.attributedPlaceholderText == nil || !self.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
             self.textNode.attributedPlaceholderText = attributedPlaceholderText
+            self.textNode.textView.accessibilityHint = attributedPlaceholderText.string
         }
+        self.clearButtonNode.accessibilityLabel = presentationData.strings.WebSearch_RecentSectionClear
         
         if let updateText = updateText {
             let attributedText = NSAttributedString(string: updateText, font: titleFont, textColor: presentationData.theme.list.itemPrimaryTextColor)
@@ -184,7 +187,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         let isHidden = !self.textNode.isFirstResponder() || self.text.isEmpty
         self.clearIconNode.isHidden = isHidden
         self.clearButtonNode.isHidden = isHidden
-        self.clearButtonNode.isAccessibilityElement = isHidden
+        self.clearButtonNode.isAccessibilityElement = !isHidden
     }
     
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {

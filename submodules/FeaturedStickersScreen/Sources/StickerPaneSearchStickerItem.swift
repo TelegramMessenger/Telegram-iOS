@@ -189,6 +189,15 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
             self.setNeedsLayout()
             self.updateVisibility()
         }
+        let strings = context.sharedContext.currentPresentationData.with { $0.strings }
+        self.isAccessibilityElement = true
+        if let code, !code.isEmpty {
+            self.accessibilityLabel = "\(strings.VoiceOver_Chat_Sticker). \(code)"
+        } else {
+            self.accessibilityLabel = strings.VoiceOver_Chat_Sticker
+        }
+        self.accessibilityTraits = [.button, .image]
+        self.accessibilityIdentifier = "sticker.\(stickerItem.file.fileId.id).\(code ?? "")"
     }
     
     public override func layout() {
@@ -213,6 +222,14 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
             return
         }
         self.selected?(self, itemLayer, self.bounds)
+    }
+
+    public override func accessibilityActivate() -> Bool {
+        guard let itemLayer = self.itemLayer else {
+            return false
+        }
+        self.selected?(self, itemLayer, self.bounds)
+        return self.selected != nil
     }
     
     public func transitionNode() -> ASDisplayNode? {

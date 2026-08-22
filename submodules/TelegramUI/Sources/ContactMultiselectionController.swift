@@ -231,6 +231,14 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     private func updateTitle() {
+        func updateTitleView(title: String, counter: String?) {
+            self.titleView.title = CounterControllerTitle(title: title, counter: counter)
+            self.titleView.isAccessibilityElement = true
+            self.titleView.accessibilityLabel = title
+            self.titleView.accessibilityValue = counter.flatMap { $0.isEmpty ? nil : $0 }
+            self.titleView.accessibilityTraits = [.header]
+        }
+
         var updatedCount: Int = 0
         switch self.contactsNode.contentNode {
         case let .contacts(contactsNode):
@@ -261,13 +269,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 count = chatsNode.currentState.selectedPeerIds.count
             }
             if isCall && count <= 1 {
-                self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: nil)
+                updateTitleView(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: nil)
             } else {
                 var count = count
                 if isCall {
                     count += 1
                 }
-                self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
+                updateTitleView(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
             }
             if self.rightNavigationButton == nil && !isCall {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
@@ -280,35 +288,41 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             if case let .contacts(contactsNode) = self.contactsNode.contentNode {
                 count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            self.titleView.title = CounterControllerTitle(title: self.params.title ?? (hasActions ? self.presentationData.strings.Premium_Gift_ContactSelection_Title : self.presentationData.strings.Stars_Purchase_GiftStars), counter: "\(count)/\(maxCount)")
+            updateTitleView(title: self.params.title ?? (hasActions ? self.presentationData.strings.Premium_Gift_ContactSelection_Title : self.presentationData.strings.Stars_Purchase_GiftStars), counter: "\(count)/\(maxCount)")
         case .requestedUsersSelection:
             let maxCount: Int32 = self.limit ?? 10
             var count = 0
             if case let .contacts(contactsNode) = self.contactsNode.contentNode {
                 count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.RequestPeer_SelectUsers, counter: "\(count)/\(maxCount)")
+            updateTitleView(title: self.params.title ?? self.presentationData.strings.RequestPeer_SelectUsers, counter: "\(count)/\(maxCount)")
         case .channelCreation:
-            self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
+            updateTitleView(title: self.params.title ?? self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: nil)
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         case .peerSelection:
-            self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
+            updateTitleView(title: self.params.title ?? self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: nil)
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                rightNavigationButton.accessibilityLabel = self.presentationData.strings.Common_Done
                 self.rightNavigationButton = rightNavigationButton
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                let closeButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                closeButtonItem.accessibilityLabel = self.presentationData.strings.Common_Close
+                self.navigationItem.leftBarButtonItem = closeButtonItem
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         case let .chatSelection(chatSelection):
-            self.titleView.title = CounterControllerTitle(title: self.params.title ?? chatSelection.title, counter: "")
+            updateTitleView(title: self.params.title ?? chatSelection.title, counter: nil)
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                rightNavigationButton.accessibilityLabel = self.presentationData.strings.Common_Done
                 self.rightNavigationButton = rightNavigationButton
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                let closeButtonItem = UIBarButtonItem(title: "___close", style: .plain, target: self, action: #selector(cancelPressed))
+                closeButtonItem.accessibilityLabel = self.presentationData.strings.Common_Close
+                self.navigationItem.leftBarButtonItem = closeButtonItem
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         }
@@ -582,24 +596,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         case .channelCreation, .premiumGifting, .requestedUsersSelection:
                             break
                     }
-                    switch strongSelf.mode {
-                        case let .groupCreation(isCall):
-                            let maxCount: Int32
-                            if isCall {
-                                maxCount = strongSelf.context.userLimits.maxConferenceParticipantCount
-                            } else {
-                                maxCount = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
-                            }
-                            strongSelf.titleView.title = CounterControllerTitle(title: strongSelf.presentationData.strings.Compose_NewGroupTitle, counter: "\(updatedCount)/\(maxCount)")
-                        case .premiumGifting:
-                            let maxCount: Int32 = strongSelf.limit ?? 10
-                            strongSelf.titleView.title = CounterControllerTitle(title: strongSelf.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(updatedCount)/\(maxCount)")
-                        case .requestedUsersSelection:
-                            let maxCount: Int32 = strongSelf.limit ?? 10
-                            strongSelf.titleView.title = CounterControllerTitle(title: strongSelf.presentationData.strings.RequestPeer_SelectUsers, counter: "\(updatedCount)/\(maxCount)")
-                        case .peerSelection, .channelCreation, .chatSelection:
-                            break
-                    }
+                    strongSelf.updateTitle()
                 }
                 
                 if let removedTokenId = removedTokenId {

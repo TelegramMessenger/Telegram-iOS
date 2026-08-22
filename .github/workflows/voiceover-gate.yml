@@ -1,0 +1,60 @@
+name: VoiceOver accessibility gate
+
+on:
+  push:
+    branches:
+      - "VoiceOver-fixes"
+    paths:
+      - "submodules/**/*.swift"
+      - "Telegram/Tests/Sources/AccessibilityUITests.swift"
+      - "Tests/VoiceOverContracts/**"
+      - ".github/workflows/voiceover-gate.yml"
+  pull_request:
+    paths:
+      - "submodules/**/*.swift"
+      - "Telegram/Tests/Sources/AccessibilityUITests.swift"
+      - "Tests/VoiceOverContracts/**"
+      - ".github/workflows/voiceover-gate.yml"
+  workflow_dispatch:
+
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run VoiceOver source contracts
+        run: python3 -m unittest discover -s Tests/VoiceOverContracts -p "test_*.py" -v
+
+  simulator-tree-audit:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Select repository Xcode version
+        run: |
+          XCODE_VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+      - name: Run iOS accessibility tree audit
+        run: |
+          python3 build-system/Make/Make.py \
+            --bazelUserRoot=/private/var/tmp/_bazel_voiceover \
+            test \
+            --configurationPath=build-system/appstore-configuration.json \
+            --disableProvisioningProfiles \
+            --target=Telegram:iOSAppUITestSuite
+      - name: Collect XCTest result bundles
+        if: always()
+        run: |
+          mkdir -p voiceover-test-results
+          find bazel-testlogs -name "*.xcresult" -exec cp -R {} voiceover-test-results/ \; || true
+      - name: Upload VoiceOver performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voiceover-xcresult
+          path: voiceover-test-results
+          if-no-files-found: warn
+          retention-days: 30

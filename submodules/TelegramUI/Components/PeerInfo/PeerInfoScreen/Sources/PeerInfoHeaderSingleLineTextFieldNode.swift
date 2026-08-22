@@ -36,6 +36,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.isHidden = true
         self.clearButtonNode.isAccessibilityElement = false
+        self.clearButtonNode.accessibilityTraits = .button
         
         self.topSeparator = ASDisplayNode()
         
@@ -84,12 +85,13 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         let isHidden = !self.textNode.textField.isFirstResponder || self.text.isEmpty
         self.clearIconNode.isHidden = isHidden
         self.clearButtonNode.isHidden = isHidden
-        self.clearButtonNode.isAccessibilityElement = isHidden
+        self.clearButtonNode.isAccessibilityElement = !isHidden
     }
     
     func update(width: CGFloat, safeInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         self.textNode.textField.font = titleFont
+        self.clearButtonNode.accessibilityLabel = presentationData.strings.WebSearch_RecentSectionClear
         
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme

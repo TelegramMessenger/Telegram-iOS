@@ -5442,7 +5442,7 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
         if let (_, frame) = accessibilityFocusedNode {
             for itemNode in self.itemNodes {
                 if frame.intersects(itemNode.frame) {
-                    UIAccessibility.post(notification: UIAccessibility.Notification.layoutChanged, argument: itemNode.view)
+                    UIAccessibility.post(notification: UIAccessibility.Notification.layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
                     if let index = itemNode.index {
                         let scrollStatus: String
                         if let accessibilityPageScrolledString = self.accessibilityPageScrolledString {
@@ -5465,8 +5465,10 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
         switch direction {
             case .down:
                 scrollDirection = self.rotated ? .up : .down
-            default:
+            case .up:
                 scrollDirection = self.rotated ? .down : .up
+            default:
+                return false
         }
         return self.scrollWithDirection(scrollDirection, distance: distance)
     }
@@ -5477,8 +5479,17 @@ open class ListViewImpl: ASDisplayNode, ListView, ASScrollViewDelegate, ASGestur
 }
 
 private func findAccessibilityFocus(_ node: ASDisplayNode) -> Bool {
-    if node.view.accessibilityElementIsFocused() {
+    return containsAccessibilityFocus(node.view)
+}
+
+private func containsAccessibilityFocus(_ view: UIView) -> Bool {
+    if view.accessibilityElementIsFocused() {
         return true
+    }
+    for subview in view.subviews {
+        if containsAccessibilityFocus(subview) {
+            return true
+        }
     }
     return false
 }

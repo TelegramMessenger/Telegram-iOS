@@ -449,6 +449,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
+        if case let .chats(chatListNode) = self.contentNode {
+            chatListNode.accessibilityPageScrolledString = { row, count in
+                return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
+            }
+        }
     }
     
     func scrollToTop() {

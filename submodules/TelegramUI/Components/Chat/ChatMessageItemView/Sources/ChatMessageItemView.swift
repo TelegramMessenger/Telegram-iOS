@@ -66,7 +66,12 @@ private let fileSizeFormatter: ByteCountFormatter = {
 
 public enum ChatMessageAccessibilityCustomActionType {
     case reply
+    case navigateToReply(EngineMessage.Id)
+    case react
     case options
+    case copy
+    case forward
+    case delete
 }
 
 public final class ChatMessageAccessibilityCustomAction: UIAccessibilityCustomAction {
@@ -86,6 +91,7 @@ public final class ChatMessageAccessibilityData {
     public let traits: UIAccessibilityTraits
     public let customActions: [ChatMessageAccessibilityCustomAction]?
     public let singleUrl: String?
+    public let respondsToUserInteraction: Bool
     
     public init(item: ChatMessageItem, isSelected: Bool?) {
         var hint: String?
@@ -117,7 +123,9 @@ public final class ChatMessageAccessibilityData {
                 
                 loop: for media in message.media {
                     if let _ = media as? TelegramMediaImage {
-                        traits.insert(.image)
+                        if !isReply {
+                            traits.insert(.image)
+                        }
                         if isIncoming {
                             if announceIncomingAuthors, let authorName = authorName {
                                 label = item.presentationData.strings.VoiceOver_Chat_PhotoFrom(authorName).string
@@ -169,10 +177,12 @@ public final class ChatMessageAccessibilityData {
                                         continue
                                     }
                                     isSpecialFile = true
-                                    if isSelected == nil {
+                                    if !isReply && isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                     }
-                                    traits.insert(.startsMediaSession)
+                                    if !isReply {
+                                        traits.insert(.startsMediaSession)
+                                    }
                                     if isVoice {
                                         let durationString = voiceMessageDurationFormatter.string(from: Double(duration)) ?? ""
                                         if isIncoming {
@@ -204,10 +214,12 @@ public final class ChatMessageAccessibilityData {
                                     }
                                 case let .Video(duration, _, flags, _, _, _):
                                     isSpecialFile = true
-                                    if isSelected == nil {
+                                    if !isReply && isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                     }
-                                    traits.insert(.startsMediaSession)
+                                    if !isReply {
+                                        traits.insert(.startsMediaSession)
+                                    }
                                     let durationString = voiceMessageDurationFormatter.string(from: Double(duration)) ?? ""
                                     if flags.contains(.instantRoundVideo) {
                                         if isIncoming {
@@ -236,7 +248,7 @@ public final class ChatMessageAccessibilityData {
                             }
                         }
                         if !isSpecialFile {
-                            if isSelected == nil {
+                            if !isReply && isSelected == nil {
                                 hint = item.presentationData.strings.VoiceOver_Chat_OpenHint
                             }
                             let sizeString = fileSizeFormatter.string(fromByteCount: Int64(file.size ?? 0))
@@ -441,19 +453,20 @@ public final class ChatMessageAccessibilityData {
                 
                 var result = ""
                 
-                if let isSelected = isSelected {
+                if !isReply, let isSelected = isSelected {
                     if isSelected {
                         result += item.presentationData.strings.VoiceOver_Chat_Selected
                         result += "\n"
+                        traits.insert(.selected)
                     }
-                    traits.insert(.startsMediaSession)
                 }
                 
                 result += "\(text)"
                 
-                let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)
-                
-                result += "\n\(dateString)"
+                if !isReply {
+                    let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)
+                    result += "\n\(dateString)"
+                }
                 if !isIncoming && !isReply {
                     result += "\n"
                     if item.sending {
@@ -462,14 +475,13 @@ public final class ChatMessageAccessibilityData {
                         result += item.presentationData.strings.VoiceOver_Chat_Failed
                     } else {
                         if item.read {
-                            if announceIncomingAuthors {
-                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
-                            } else {
-                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
-                            }
+                            result += item.presentationData.strings.Conversation_ChecksTooltip_Read
+                        } else {
+                            result += item.presentationData.strings.Conversation_ChecksTooltip_Delivered
                         }
                         for attribute in message.attributes {
                             if let attribute = attribute as? ConsumableContentMessageAttribute {
+                                result += "\n"
                                 if !attribute.consumed {
                                     if announceIncomingAuthors {
                                         result += item.presentationData.strings.VoiceOver_Chat_NotPlayedByRecipients
@@ -509,6 +521,7 @@ public final class ChatMessageAccessibilityData {
         
         var (label, value) = dataForMessage(item.message, false)
         var replyValue: String?
+        var replyMessageId: EngineMessage.Id?
         
         for attribute in item.message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -537,7 +550,11 @@ public final class ChatMessageAccessibilityData {
                             break
                     }
                 }
-            } else if let attribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[attribute.messageId] {
+            } else if let attribute = attribute as? ReplyMessageAttribute {
+                replyMessageId = attribute.messageId
+                guard let replyMessage = item.message.associatedMessages[attribute.messageId] else {
+                    continue
+                }
                 var replyLabel: String
                 if replyMessage.flags.contains(.Incoming) {
                     if let author = replyMessage.author {
@@ -549,8 +566,12 @@ public final class ChatMessageAccessibilityData {
                     replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
                 
-                let (_, replyMessageValue) = dataForMessage(replyMessage, true)
-                replyValue = replyMessageValue
+                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
+                if replyMessageValue.isEmpty {
+                    replyValue = replyMessageLabel
+                } else {
+                    replyValue = "\(replyMessageLabel). \(replyMessageValue)"
+                }
                 
                 label = "\(replyLabel) . \(label)"
             }
@@ -600,19 +621,39 @@ public final class ChatMessageAccessibilityData {
             if canReply {
                 customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextReply, target: nil, selector: #selector(self.noop), action: .reply))
             }
+            if let replyMessageId {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_Chat_GoToOriginalMessage, target: nil, selector: #selector(self.noop), action: .navigateToReply(replyMessageId)))
+            }
+            if canAddMessageReactions(message: EngineMessage(item.message)) {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.MediaEditor_Shortcut_Reaction, target: nil, selector: #selector(self.noop), action: .react))
+            }
+            if !item.message.text.isEmpty {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.Conversation_ContextMenuCopy, target: nil, selector: #selector(self.noop), action: .copy))
+            }
+            if item.controllerInteraction.canPerformAccessibilityMessageActions {
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextForward, target: nil, selector: #selector(self.noop), action: .forward))
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextDelete, target: nil, selector: #selector(self.noop), action: .delete))
+            }
             customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: nil, selector: #selector(self.noop), action: .options))
         }
         
         if let replyValue {
-            value = "\(value). \(item.presentationData.strings.VoiceOver_Chat_ReplyingToMessage(replyValue).string)"
+            let replyHint = item.presentationData.strings.VoiceOver_Chat_ReplyingToMessage(replyValue).string
+            if let hint, !hint.isEmpty {
+                self.hint = "\(hint). \(replyHint)"
+            } else {
+                self.hint = replyHint
+            }
+        } else {
+            self.hint = hint
         }
         
         self.label = label
         self.value = value
-        self.hint = hint
         self.traits = traits
         self.customActions = customActions.isEmpty ? nil : customActions
         self.singleUrl = singleUrl
+        self.respondsToUserInteraction = singleUrl != nil || !item.message.media.isEmpty
     }
     
     @objc private func noop() {
@@ -656,6 +697,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     open var item: ChatMessageItem?
     open var accessibilityData: ChatMessageAccessibilityData?
+    private weak var messageAccessibilityNode: AccessibilityAreaNode?
     open var safeInsets = UIEdgeInsets()
     
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
@@ -693,6 +735,65 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     open func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
         self.accessibilityData = accessibilityData
+    }
+
+    public func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData, accessibilityNode: AccessibilityAreaNode, customActionTarget: Any, customActionSelector: Selector) {
+        self.accessibilityData = accessibilityData
+        self.messageAccessibilityNode = accessibilityNode
+
+        accessibilityNode.accessibilityLabel = accessibilityData.label
+        accessibilityNode.accessibilityValue = accessibilityData.value
+        accessibilityNode.accessibilityHint = accessibilityData.hint
+        accessibilityNode.accessibilityTraits = accessibilityData.traits
+        if let item = self.item {
+            accessibilityNode.accessibilityIdentifier = "message.\(item.message.id.peerId.toInt64()).\(item.message.id.namespace).\(item.message.id.id)"
+        } else {
+            accessibilityNode.accessibilityIdentifier = nil
+        }
+        accessibilityNode.view.accessibilityRespondsToUserInteraction = accessibilityData.respondsToUserInteraction
+        if let customActions = accessibilityData.customActions {
+            accessibilityNode.accessibilityCustomActions = customActions.map { action in
+                return ChatMessageAccessibilityCustomAction(name: action.name, target: customActionTarget, selector: customActionSelector, action: action.action)
+            }
+        } else {
+            accessibilityNode.accessibilityCustomActions = nil
+        }
+    }
+
+    public func accessibilityContainsFocus() -> Bool {
+        return self.messageAccessibilityNode?.view.accessibilityElementIsFocused() == true || self.view.accessibilityElementIsFocused()
+    }
+
+    public func restoreAccessibilityFocus() {
+        UIAccessibility.post(notification: .layoutChanged, argument: self.messageAccessibilityNode?.view ?? self.view)
+    }
+
+    public func performAccessibilityCustomAction(_ customAction: UIAccessibilityCustomAction, sourceNode: ASDisplayNode, sourceRect: CGRect) -> Bool {
+        guard let action = customAction as? ChatMessageAccessibilityCustomAction, let item = self.item else {
+            return false
+        }
+
+        switch action.action {
+        case .reply:
+            item.controllerInteraction.setupReply(item.message.id)
+        case let .navigateToReply(messageId):
+            item.controllerInteraction.accessibilityNavigationTargetMessageId = messageId
+            item.controllerInteraction.navigateToMessage(item.message.id, messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
+        case .react:
+            item.controllerInteraction.updateMessageReaction(item.message, .default, false, nil)
+        case .options:
+            item.controllerInteraction.openMessageContextMenu(item.message, false, sourceNode, sourceRect, nil, nil)
+        case .copy:
+            guard !item.message.text.isEmpty else {
+                return false
+            }
+            item.controllerInteraction.copyText(item.message.text)
+        case .forward:
+            item.controllerInteraction.accessibilityForwardMessage(item.message)
+        case .delete:
+            item.controllerInteraction.accessibilityDeleteMessage(item.message)
+        }
+        return true
     }
     
     override open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

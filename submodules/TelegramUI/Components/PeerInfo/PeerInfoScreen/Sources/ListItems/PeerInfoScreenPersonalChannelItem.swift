@@ -430,6 +430,17 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
         self.item = item
         self.presentationData = presentationData
         self.theme = presentationData.theme
+        self.activateArea.isAccessibilityElement = !item.data.isLoading
+        self.activateArea.accessibilityTraits = [.button]
+        self.activateArea.activate = {
+            item.action()
+            return true
+        }
+        if let peer = item.data.peer.chatMainPeer {
+            self.activateArea.accessibilityLabel = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        } else {
+            self.activateArea.accessibilityLabel = nil
+        }
         
         self.selectionNode.pressed = { [weak self] in
             if let strongSelf = self {

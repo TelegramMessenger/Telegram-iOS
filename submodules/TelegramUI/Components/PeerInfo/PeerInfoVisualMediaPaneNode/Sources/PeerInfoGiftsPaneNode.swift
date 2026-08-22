@@ -470,6 +470,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
         self.giftsListView.parentController = self.parentController
         self.giftsListView.frame = previousGiftsListView.frame
+        previousGiftsListView.accessibilityElementsHidden = true
+        self.giftsListView.accessibilityElementsHidden = false
                                         
         self.scrollNode.view.insertSubview(self.giftsListView, aboveSubview: previousGiftsListView)
         
@@ -690,6 +692,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 
                             self.updateScrolling(transition: .easeInOut(duration: 0.2))
                         } : nil,
+                        accessibilityReorderPreviousTitle: "\(params.presentationData.strings.PeerInfo_Gifts_Reorder) ←",
+                        accessibilityReorderNextTitle: "\(params.presentationData.strings.PeerInfo_Gifts_Reorder) →",
                         setSelectedId: { [weak self] id in
                             guard let self, let idValue = id.base as? Int32 else {
                                 return
@@ -709,6 +713,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 if let tabSelectorView = self.tabSelector.view {
                     if tabSelectorView.superview == nil {
                         tabSelectorView.alpha = 1.0
+                        tabSelectorView.accessibilityElementsHidden = false
                         self.scrollNode.view.insertSubview(tabSelectorView, at: 0)
                         
                         if !transition.animation.isImmediate {
@@ -720,6 +725,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     topInset += tabSelectorSize.height + 15.0
                 }
             } else if let tabSelectorView = self.tabSelector.view {
+                tabSelectorView.accessibilityElementsHidden = true
                 tabSelectorView.alpha = 0.0
                 tabSelectorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { _ in
                     tabSelectorView.removeFromSuperview()
@@ -834,6 +840,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     panelContentContainer.addSubview(panelButtonView)
                 }
                 panelButtonView.frame = CGRect(origin: CGPoint(x: buttonInsets.left, y: 8.0), size: panelButtonSize)
+                panelButtonView.isAccessibilityElement = true
+                panelButtonView.accessibilityLabel = buttonTitle
+                panelButtonView.accessibilityTraits = [.button]
+                for subview in panelButtonView.subviews {
+                    subview.accessibilityElementsHidden = true
+                }
             }
             
             panelTransition.setFrame(view: panelContentContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - bottomPanelHeight), size: CGSize(width: size.width, height: bottomPanelHeight)))
@@ -904,6 +916,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         panelContentContainer.addSubview(panelCheckView)
                     }
                     panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: 16.0 + 16.0), size: panelCheckSize)
+                    panelCheckView.isAccessibilityElement = true
+                    panelCheckView.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_ChannelNotify
+                    panelCheckView.accessibilityTraits = [.button]
+                    if self.profileGifts.currentState?.notificationsEnabled == true {
+                        panelCheckView.accessibilityTraits.insert(.selected)
+                    }
+                    for subview in panelCheckView.subviews {
+                        subview.accessibilityElementsHidden = true
+                    }
                 }
                 if let panelButtonView = panelButton.view {
                     panelButtonView.isHidden = true
@@ -915,6 +936,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             panelEdgeEffectView.update(content: presentationData.theme.list.blocksBackgroundColor, blur: false, rect: edgeEffectFrame, edge: .bottom, edgeSize: 40.0, transition: panelTransition)
             
             ComponentTransition.spring(duration: 0.4).setSublayerTransform(view: panelContentContainer, transform: CATransform3DMakeTranslation(0.0, bottomPanelHeight * (1.0 - panelVisibility), 0.0))
+            panelContentContainer.accessibilityElementsHidden = panelVisibility == 0.0
             
             contentHeight += bottomPanelHeight
             bottomScrollInset = bottomPanelHeight - 40.0
@@ -1430,7 +1452,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             context: self.context,
             presentationData: currentParams.presentationData,
             source: .controller(ContextControllerContentSourceImpl(controller: previewController, sourceView: view)),
-            items: .single(ContextController.Items(content: .list(items))), gesture: gesture
+            items: .single(ContextController.Items(content: .list(items), dismissed: { [weak view] in
+                guard UIAccessibility.isVoiceOverRunning, let view, view.window != nil, !view.accessibilityElementsHidden else {
+                    return
+                }
+                UIAccessibility.post(notification: .layoutChanged, argument: view)
+            })), gesture: gesture
         )
         self.parentController?.presentInGlobalOverlay(contextController)
     }

@@ -24,6 +24,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     let containerNode: ContextControllerSourceNode
     
     let avatarNode: AvatarNode
+    private let accessibilityArea: AccessibilityAreaNode
     private(set) var avatarStoryView: ComponentView<Empty>?
     var videoNode: UniversalVideoNode?
     var markupNode: AvatarVideoNode?
@@ -60,13 +61,18 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         
         let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
         self.avatarNode = AvatarNode(font: avatarFont)
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init()
         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.avatarNode)
+        self.containerNode.addSubnode(self.accessibilityArea)
         self.containerNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
         self.avatarNode.frame = self.containerNode.bounds
+        self.accessibilityArea.frame = self.containerNode.bounds
+        self.accessibilityArea.accessibilityTraits = [.button, .image]
+        self.avatarNode.isAccessibilityElement = false
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.avatarNode.view.addGestureRecognizer(tapGestureRecognizer)
@@ -252,8 +258,22 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
 
     func update(peer: EnginePeer?, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool, isSettings: Bool) {
         self.params = Params(peer: peer, threadId: threadId, threadInfo: threadInfo, item: item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: isSettings)
+        self.accessibilityArea.isAccessibilityElement = peer != nil
 
         if let peer = peer {
+            self.accessibilityArea.accessibilityLabel = threadInfo?.title ?? peer.compactDisplayTitle
+            self.accessibilityArea.activate = { [weak self] in
+                guard let self else {
+                    return false
+                }
+                if threadInfo != nil {
+                    self.emojiTapped?()
+                } else {
+                    self.tapped?()
+                }
+                return true
+            }
+
             let previousItem = self.item
             var item = item
             self.item = item
@@ -343,6 +363,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             
             self.containerNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
             self.avatarNode.frame = self.containerNode.bounds
+            self.accessibilityArea.frame = self.containerNode.bounds
             self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
 
             if let item = item {

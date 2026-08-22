@@ -484,8 +484,18 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                     action(strongSelf.contextSourceNode, nil)
                 }
             }
+            self.activateArea.accessibilityTraits = [.button]
+            self.activateArea.activate = { [weak self] in
+                guard let self else {
+                    return false
+                }
+                action(self.contextSourceNode, nil)
+                return true
+            }
         } else {
             self.selectionNode.pressed = nil
+            self.activateArea.accessibilityTraits = [.staticText]
+            self.activateArea.activate = nil
         }
                 
         let sideInset: CGFloat = 16.0 + safeInsets.left

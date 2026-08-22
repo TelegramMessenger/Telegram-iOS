@@ -152,6 +152,18 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.item = item
         
         self.selectionNode.pressed = item.action
+        self.activateArea.accessibilityIdentifier = "peerInfo.disclosure.\(String(describing: item.id)).\(item.text)"
+        self.activateArea.accessibilityRespondsToUserInteraction = item.action != nil
+        if let action = item.action {
+            self.activateArea.accessibilityTraits = [.button]
+            self.activateArea.activate = {
+                action()
+                return true
+            }
+        } else {
+            self.activateArea.accessibilityTraits = [.staticText]
+            self.activateArea.activate = nil
+        }
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
         let leftInset = (item.icon == nil && item.iconSignal == nil ? sideInset : sideInset + 29.0 + 16.0)

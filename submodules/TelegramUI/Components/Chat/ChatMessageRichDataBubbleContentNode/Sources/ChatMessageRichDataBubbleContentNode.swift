@@ -50,6 +50,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
     // this, the cached layout would shadow newly-arrived content during streaming.
     private var currentPageLayout: (boundingWidth: CGFloat,
                                     presentationThemeIdentity: ObjectIdentifier,
+                                    baseFontSize: CGFloat,
                                     expandedDetails: [Int: Bool],
                                     messageStableVersion: UInt32,
                                     pendingEditKey: ObjectIdentifier?,
@@ -442,16 +443,21 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 let _ = codeBlockTitleColor
                 let _ = codeBlockAccentColor
                 
+                let baseFontSize = item.presentationData.fontSize.baseDisplaySize
+                let fontScale = baseFontSize / 17.0
+                let scaledFontSize: (CGFloat) -> CGFloat = { size in
+                    return floor(size * fontScale)
+                }
                 let textCategories = InstantPageTextCategories(
-                    kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
-                    header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
-                    subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 18.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
-                    paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
-                    caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: messageTheme.secondaryTextColor),
-                    credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 13.0, lineSpacingFactor: 1.0), color: messageTheme.secondaryTextColor),
-                    table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
-                    article: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 18.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
-                    codeBlock: InstantPageTextAttributes(font: InstantPageFont(style: .monospace, size: 14.0, lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
+                    kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: scaledFontSize(15.0), lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
+                    header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: scaledFontSize(19.0), lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
+                    subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: scaledFontSize(18.0), lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
+                    paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: scaledFontSize(17.0), lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
+                    caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: scaledFontSize(15.0), lineSpacingFactor: 1.0), color: messageTheme.secondaryTextColor),
+                    credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: scaledFontSize(13.0), lineSpacingFactor: 1.0), color: messageTheme.secondaryTextColor),
+                    table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: scaledFontSize(15.0), lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
+                    article: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: scaledFontSize(18.0), lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
+                    codeBlock: InstantPageTextAttributes(font: InstantPageFont(style: .monospace, size: scaledFontSize(14.0), lineSpacingFactor: 1.0), color: messageTheme.primaryTextColor),
                 )
                 let pageTheme = InstantPageTheme(
                     type: isDark ? .dark : .light,
@@ -530,6 +536,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     if let current = currentPageLayout,
                        current.boundingWidth == suggestedBoundingWidth,
                        current.presentationThemeIdentity == presentationThemeIdentity,
+                       current.baseFontSize == baseFontSize,
                        current.expandedDetails == currentExpandedDetails,
                        current.showMoreExpanded == showMoreExpanded,
                        current.messageStableVersion == currentMessageStableVersion,
@@ -944,6 +951,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                             self.currentPageLayout = (
                                 suggestedBoundingWidth,
                                 ObjectIdentifier(item.presentationData.theme.theme),
+                                item.presentationData.fontSize.baseDisplaySize,
                                 self.currentExpandedDetails,
                                 item.message.stableVersion,
                                 (item.attributes.updatingMedia?.richText).map({ ObjectIdentifier($0) }),

@@ -305,9 +305,6 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.stackFromBottom = true
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
-        self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).string
-        }
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
@@ -498,6 +495,9 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        self.listView.accessibilityPageScrolledString = { row, count in
+            return interfaceState.strings.VoiceOver_ScrollStatus(row, count).string
+        }
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, leftInset, rightInset, bottomInset)
         

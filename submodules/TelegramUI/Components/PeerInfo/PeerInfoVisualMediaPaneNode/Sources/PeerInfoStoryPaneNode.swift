@@ -1468,6 +1468,9 @@ private final class StorySearchHeaderComponent: Component {
             let insets = UIEdgeInsets(top: 7.0, left: 16.0, bottom: 7.0, right: 16.0)
             
             let titleString = component.strings.StoryList_GridHeaderLocationSearch(Int32(component.count))
+            self.isAccessibilityElement = true
+            self.accessibilityLabel = titleString
+            self.accessibilityTraits = [.staticText]
             
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -1479,6 +1482,7 @@ private final class StorySearchHeaderComponent: Component {
             )
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    titleView.accessibilityElementsHidden = true
                     self.addSubview(titleView)
                 }
                 titleView.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: titleSize)
@@ -1494,6 +1498,27 @@ private final class StorySearchHeaderComponent: Component {
     
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class StoryGridAccessibilityElement: UIAccessibilityElement {
+    var activate: () -> Bool = {
+        return false
+    }
+    var openContextMenu: () -> Bool = {
+        return false
+    }
+
+    init(accessibilityContainer container: Any) {
+        super.init(accessibilityContainer: container)
+    }
+
+    override func accessibilityActivate() -> Bool {
+        return self.activate()
+    }
+
+    @objc func accessibilityOpenContextMenu(_ action: UIAccessibilityCustomAction) -> Bool {
+        return self.openContextMenu()
     }
 }
 
@@ -1579,6 +1604,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     
     private let itemGrid: SparseItemGrid
     private let itemGridBinding: SparseItemGridBindingImpl
+    private var storyAccessibilityElements: [EngineStoryId: StoryGridAccessibilityElement] = [:]
     private let directMediaImageCache: DirectMediaImageCache
     private var items: SparseItemGrid.Items?
     private var pinnedIds: Set<Int32> = Set()
@@ -2046,6 +2072,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
             strongSelf.paneDidScroll?()
             strongSelf.cancelPreviewGestures()
+            strongSelf.updateAccessibilityElements()
             
             if strongSelf.locationViewState.displayingMapModeOptions {
                 strongSelf.locationViewState.displayingMapModeOptions = false
@@ -3500,6 +3527,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
             itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: isSelected, animated: animated)
         }
+        self.updateAccessibilityElements()
 
         var isSelecting = false
         if let selectedIds = self._itemInteraction?.selectedIds, !selectedIds.isEmpty {
@@ -3546,6 +3574,67 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             self.gridSelectionGesture = nil
         }
     }
+
+    private func updateAccessibilityElements() {
+        var accessibilityElements: [UIAccessibilityElement] = []
+        var validStoryIds: Set<EngineStoryId> = []
+        self.itemGrid.forEachVisibleItem { [weak self] displayItem in
+            guard let self, let itemLayer = displayItem.layer as? ItemLayer, let item = itemLayer.item, !itemLayer.isHidden else {
+                return
+            }
+            validStoryIds.insert(item.storyId)
+
+            let accessibilityElement: StoryGridAccessibilityElement
+            if let current = self.storyAccessibilityElements[item.storyId] {
+                accessibilityElement = current
+            } else {
+                accessibilityElement = StoryGridAccessibilityElement(accessibilityContainer: self.itemGrid.view)
+                self.storyAccessibilityElements[item.storyId] = accessibilityElement
+            }
+            accessibilityElement.activate = { [weak self, weak itemLayer] in
+                guard let self, let itemLayer else {
+                    return false
+                }
+                self.itemGridBinding.onTap(item: item, itemLayer: itemLayer, point: CGPoint(x: itemLayer.bounds.midX, y: itemLayer.bounds.midY))
+                return true
+            }
+            accessibilityElement.openContextMenu = { [weak self, weak itemLayer] in
+                guard let self, let itemLayer else {
+                    return false
+                }
+                let rect = self.itemGrid.frameForItem(layer: itemLayer)
+                self.openContextMenu(item: item.story, itemLayer: itemLayer, rect: rect, gesture: nil)
+                return true
+            }
+            var label = item.story.media._asMedia() is TelegramMediaFile ? self.presentationData.strings.VoiceOver_Chat_Video : self.presentationData.strings.VoiceOver_Chat_Photo
+            if let authorPeer = item.authorPeer {
+                label += ", \(authorPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder))"
+            }
+            accessibilityElement.accessibilityLabel = label
+            accessibilityElement.accessibilityTraits = [.button, .image]
+            accessibilityElement.accessibilityCustomActions = [
+                UIAccessibilityCustomAction(name: self.presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: accessibilityElement, selector: #selector(StoryGridAccessibilityElement.accessibilityOpenContextMenu(_:)))
+            ]
+            if self.itemInteraction.selectedIds?.contains(item.story.id) == true {
+                accessibilityElement.accessibilityTraits.insert(.selected)
+                accessibilityElement.accessibilityValue = self.presentationData.strings.VoiceOver_Chat_Selected
+            }
+            accessibilityElement.accessibilityFrameInContainerSpace = self.itemGrid.frameForItem(layer: itemLayer)
+            accessibilityElements.append(accessibilityElement)
+        }
+        accessibilityElements.sort { lhs, rhs in
+            let lhsFrame = lhs.accessibilityFrameInContainerSpace
+            let rhsFrame = rhs.accessibilityFrameInContainerSpace
+            if abs(lhsFrame.minY - rhsFrame.minY) > UIScreenPixel {
+                return lhsFrame.minY < rhsFrame.minY
+            } else {
+                return lhsFrame.minX < rhsFrame.minX
+            }
+        }
+        self.storyAccessibilityElements = self.storyAccessibilityElements.filter { validStoryIds.contains($0.key) }
+        self.itemGrid.view.isAccessibilityElement = false
+        self.itemGrid.view.accessibilityElements = accessibilityElements
+    }
     
     private func updateHiddenItems() {
         self.itemGrid.forEachVisibleItem { itemValue in
@@ -3564,6 +3653,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 }
             }
         }
+        self.updateAccessibilityElements()
     }
     
     private func presentDeleteConfirmation(ids: Set<Int32>) {
@@ -3708,7 +3798,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 statusBarHeight: nil,
                 inputHeight: nil,
                 inputHeightIsInteractivellyChanging: false,
-                inVoiceOver: false
+                inVoiceOver: UIAccessibility.isVoiceOverRunning
             ),
             navigationBarHeight: 0.0,
             topPadding: mapOverscrollInset + self.additionalNavigationHeight,
@@ -4854,6 +4944,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
          
             self.itemGrid.pinchEnabled = items.count > 2 && !self.isReordering
             self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  listBottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, adjustForSmallCount: adjustForSmallCount, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none, transition: animateGridItems ? .spring(duration: 0.35) : .immediate)
+            DispatchQueue.main.async { [weak self] in
+                self?.updateAccessibilityElements()
+            }
         }
         
         self.listBottomInset = listBottomInset
@@ -5759,6 +5852,12 @@ private final class BottomActionsPanelComponent: Component {
                 if let itemComponenView = itemView.view {
                     if itemComponenView.superview == nil {
                         self.addSubview(itemComponenView)
+                    }
+                    itemComponenView.isAccessibilityElement = true
+                    itemComponenView.accessibilityLabel = item.title
+                    itemComponenView.accessibilityTraits = item.isEnabled ? [.button] : [.button, .notEnabled]
+                    for subview in itemComponenView.subviews {
+                        subview.accessibilityElementsHidden = true
                     }
                     itemComponenView.frame = itemFrame
                 }

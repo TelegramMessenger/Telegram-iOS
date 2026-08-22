@@ -27,6 +27,47 @@ import LottieComponent
 import ButtonComponent
 import ContextUI
 
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    for subview in view.subviews {
+        if accessibilityElementIsFocused(in: subview) {
+            return true
+        }
+    }
+    return false
+}
+
+private func firstAccessibilityElementView(in view: UIView) -> UIView? {
+    if view.isAccessibilityElement {
+        return view
+    }
+    for subview in view.subviews {
+        if let result = firstAccessibilityElementView(in: subview) {
+            return result
+        }
+    }
+    return nil
+}
+
+private final class GiftAccessibilityAction: UIAccessibilityCustomAction {
+    enum Kind {
+        case movePrevious
+        case moveNext
+        case togglePinned
+    }
+
+    let reference: StarGiftReference
+    let kind: Kind
+
+    init(name: String, reference: StarGiftReference, kind: Kind, target: Any, selector: Selector) {
+        self.reference = reference
+        self.kind = kind
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 final class GiftsListView: UIView {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
@@ -397,6 +438,37 @@ final class GiftsListView: UIView {
             }
         }
     }
+
+    @objc private func performAccessibilityGiftAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? GiftAccessibilityAction, let items = self.starsProducts, let index = items.firstIndex(where: { $0.reference == action.reference }) else {
+            return false
+        }
+        switch action.kind {
+        case .movePrevious:
+            guard index > 0 else {
+                return false
+            }
+            self.reorderIfPossible(reference: action.reference, toIndex: index - 1)
+            self.updateScrolling(transition: .spring(duration: 0.3))
+            return true
+        case .moveNext:
+            guard index + 1 < items.count else {
+                return false
+            }
+            self.reorderIfPossible(reference: action.reference, toIndex: index + 1)
+            self.updateScrolling(transition: .spring(duration: 0.3))
+            return true
+        case .togglePinned:
+            let item = items[index]
+            let pinnedToTop = !item.pinnedToTop
+            if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                self.displayUnpinScreen?(item, nil)
+                return true
+            }
+            self.profileGifts.updateStarGiftPinnedToTop(reference: action.reference, pinnedToTop: pinnedToTop)
+            return true
+        }
+    }
                     
     func loadMore() {
         self.profileGifts.loadMore()
@@ -423,6 +495,14 @@ final class GiftsListView: UIView {
         
         guard let starsProducts = self.starsProducts, let params = self.currentParams else {
             return 0.0
+        }
+
+        var focusedItemId: AnyHashable?
+        for (id, item) in self.starsItems {
+            if let itemView = item.1.view, accessibilityElementIsFocused(in: itemView) {
+                focusedItemId = id
+                break
+            }
         }
         
         let optionSpacing: CGFloat = 10.0
@@ -721,6 +801,59 @@ final class GiftsListView: UIView {
                     if itemAlpha < 1.0 {
                         itemView.layer.allowsGroupOpacity = true
                     }
+
+                    if let accessibilityView = firstAccessibilityElementView(in: itemView) {
+                        let isSelected = self.selectedItemIds.contains(itemReferenceId)
+                        let isSelectionLimitReached = self.canSelect && !isSelected && self.selectedItemIds.count >= Int(self.remainingSelectionCount)
+                        if isSelected {
+                            accessibilityView.accessibilityTraits.insert(.selected)
+                        } else {
+                            accessibilityView.accessibilityTraits.remove(.selected)
+                        }
+                        if isSelectionLimitReached {
+                            accessibilityView.accessibilityTraits.insert(.notEnabled)
+                            accessibilityView.accessibilityHint = params.presentationData.strings.RequestPeer_ReachedMaximum(self.remainingSelectionCount)
+                        } else {
+                            accessibilityView.accessibilityTraits.remove(.notEnabled)
+                            accessibilityView.accessibilityHint = nil
+                        }
+
+                        var accessibilityActions: [UIAccessibilityCustomAction] = accessibilityView.accessibilityCustomActions ?? []
+                        if let reference = product.reference {
+                            if self.isReordering, let itemIndex = starsProducts.firstIndex(where: { $0.reference == reference }) {
+                                if itemIndex > 0 {
+                                    accessibilityActions.append(GiftAccessibilityAction(
+                                        name: "\(params.presentationData.strings.PeerInfo_Gifts_Context_Reorder) ←",
+                                        reference: reference,
+                                        kind: .movePrevious,
+                                        target: self,
+                                        selector: #selector(self.performAccessibilityGiftAction(_:))
+                                    ))
+                                }
+                                if itemIndex + 1 < starsProducts.count {
+                                    accessibilityActions.append(GiftAccessibilityAction(
+                                        name: "\(params.presentationData.strings.PeerInfo_Gifts_Context_Reorder) →",
+                                        reference: reference,
+                                        kind: .moveNext,
+                                        target: self,
+                                        selector: #selector(self.performAccessibilityGiftAction(_:))
+                                    ))
+                                }
+                            }
+                            if !self.canSelect && !self.isCollection && self.peerId == self.context.account.peerId {
+                                if case .unique = product.gift {
+                                    accessibilityActions.append(GiftAccessibilityAction(
+                                        name: product.pinnedToTop ? params.presentationData.strings.PeerInfo_Gifts_Context_Unpin : params.presentationData.strings.PeerInfo_Gifts_Context_Pin,
+                                        reference: reference,
+                                        kind: .togglePinned,
+                                        target: self,
+                                        selector: #selector(self.performAccessibilityGiftAction(_:))
+                                    ))
+                                }
+                            }
+                        }
+                        accessibilityView.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
+                    }
                     
                     if self.isReordering && (product.pinnedToTop || self.isCollection) {
                         if itemView.layer.animation(forKey: "shaking_position") == nil {
@@ -747,6 +880,7 @@ final class GiftsListView: UIView {
             if !validIds.contains(id) {
                 removeIds.append(id)
                 if let itemView = item.1.view {
+                    itemView.accessibilityElementsHidden = true
                     if !transition.animation.isImmediate {
                         itemView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
                         itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
@@ -760,6 +894,10 @@ final class GiftsListView: UIView {
         }
         for id in removeIds {
             self.starsItems.removeValue(forKey: id)
+        }
+
+        if let focusedItemId, let itemView = self.starsItems[focusedItemId]?.1.view, !accessibilityElementIsFocused(in: itemView), let accessibilityView = firstAccessibilityElementView(in: itemView) {
+            UIAccessibility.post(notification: .layoutChanged, argument: accessibilityView)
         }
         
         var contentHeight = ceil(CGFloat(starsProducts.count) / CGFloat(defaultItemsInRow)) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
@@ -859,6 +997,9 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_EmptyCollection_Title
+                view.accessibilityTraits = [.header]
             }
             if let view = self.emptyResultsText.view {
                 if view.superview == nil {
@@ -868,6 +1009,9 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsTextFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsTextFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_EmptyCollection_Text
+                view.accessibilityTraits = [.staticText]
             }
             if let view = self.emptyResultsAction.view {
                 if view.superview == nil {
@@ -877,6 +1021,12 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsActionFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_EmptyCollection_Action
+                view.accessibilityTraits = [.button]
+                for subview in view.subviews {
+                    subview.accessibilityElementsHidden = true
+                }
             }
         } else if self.filteredResultsAreEmpty {
             let sideInset: CGFloat = 44.0
@@ -951,6 +1101,7 @@ final class GiftsListView: UIView {
                     self.emptyResultsClippingView.addSubview(view)
                     view.playOnce()
                 }
+                view.accessibilityElementsHidden = true
                 view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
             }
@@ -962,6 +1113,9 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_NoResults
+                view.accessibilityTraits = [.header]
             }
             if let view = self.emptyResultsAction.view {
                 if view.superview == nil {
@@ -971,8 +1125,15 @@ final class GiftsListView: UIView {
                 }
                 view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
                 panelTransition.setPosition(view: view, position: emptyResultsActionFrame.center)
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = presentationData.strings.PeerInfo_Gifts_NoResults_ViewAll
+                view.accessibilityTraits = [.button]
+                for subview in view.subviews {
+                    subview.accessibilityElementsHidden = true
+                }
             }
         } else {
+            self.emptyResultsClippingView.accessibilityElementsHidden = true
             if let view = self.emptyResultsAnimation.view {
                 fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
                     view.removeFromSuperview()
@@ -997,6 +1158,7 @@ final class GiftsListView: UIView {
         }
         
         fadeTransition.setAlpha(view: self.emptyResultsClippingView, alpha: visibleHeight < 300.0 ? 0.0 : 1.0)
+        self.emptyResultsClippingView.accessibilityElementsHidden = (!self.resultsAreEmpty && !self.filteredResultsAreEmpty) || self.emptyResultsClippingView.isHidden || visibleHeight < 300.0
         
         if self.peerId == self.context.account.peerId, !self.canSelect && !self.filteredResultsAreEmpty && self.profileGifts.collectionId == nil && self.emptyResultsClippingView.isHidden {
             let footerText: ComponentView<Empty>

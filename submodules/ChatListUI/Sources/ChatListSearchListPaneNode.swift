@@ -1319,8 +1319,9 @@ public struct ChatListSearchContainerTransition {
     public let approvedGlobalPostQueryState: ApprovedGlobalPostQueryState?
     public let globalSearchStateValue: TelegramGlobalPostSearchState?
     public var animated: Bool
+    public let stableIds: [AnyHashable]
 
-    public init(deletions: [ListViewDeleteItem], insertions: [ListViewInsertItem], updates: [ListViewUpdateItem], displayingResults: Bool, isEmpty: Bool, isLoading: Bool, query: String?, approvedGlobalPostQueryState: ApprovedGlobalPostQueryState?, globalSearchStateValue: TelegramGlobalPostSearchState?, animated: Bool) {
+    public init(deletions: [ListViewDeleteItem], insertions: [ListViewInsertItem], updates: [ListViewUpdateItem], displayingResults: Bool, isEmpty: Bool, isLoading: Bool, query: String?, approvedGlobalPostQueryState: ApprovedGlobalPostQueryState?, globalSearchStateValue: TelegramGlobalPostSearchState?, animated: Bool, stableIds: [AnyHashable] = []) {
         self.deletions = deletions
         self.insertions = insertions
         self.updates = updates
@@ -1331,7 +1332,15 @@ public struct ChatListSearchContainerTransition {
         self.globalSearchStateValue = globalSearchStateValue
         self.query = query
         self.animated = animated
+        self.stableIds = stableIds
     }
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 enum OpenPeerAction {
@@ -1410,7 +1419,7 @@ public func chatListSearchContainerPreparedTransition(
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, requestPeerType: requestPeerType, location: location, communityId: communityId, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused, openStories: openStories, openPublicPosts: openPublicPosts, openMessagesFilter: openMessagesFilter, switchMessagesFilter: switchMessagesFilter), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, requestPeerType: requestPeerType, location: location, communityId: communityId, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused, openStories: openStories, openPublicPosts: openPublicPosts, openMessagesFilter: openMessagesFilter, switchMessagesFilter: switchMessagesFilter), directionHint: nil) }
 
-    return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults, isEmpty: isEmpty, isLoading: isLoading, query: searchQuery, approvedGlobalPostQueryState: approvedGlobalPostQueryState, globalSearchStateValue: globalSearchStateValue, animated: animated)
+    return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults, isEmpty: isEmpty, isLoading: isLoading, query: searchQuery, approvedGlobalPostQueryState: approvedGlobalPostQueryState, globalSearchStateValue: globalSearchStateValue, animated: animated, stableIds: toEntries.map { AnyHashable($0.stableId) })
 }
 
 private struct ChatListSearchListPaneNodeState: Equatable {
@@ -1686,6 +1695,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let searchContextsValue = Atomic<[Int: ChatListSearchMessagesContext]>(value: [:])
     var searchCurrentMessages: [EngineMessage]?
     var currentEntries: [ChatListSearchEntry]?
+    private var displayedEntryIds: [AnyHashable] = []
 
     private var deletedMessagesDisposable: Disposable?
 
@@ -5539,8 +5549,30 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 options.insert(.PreferSynchronousResourceLoading)
             }
 
+            var focusedEntryId: AnyHashable?
+            if UIAccessibility.isVoiceOverRunning, let listNode = self.listNode {
+                for itemNode in listNode.visibleItemNodes() {
+                    guard let index = itemNode.index, self.displayedEntryIds.indices.contains(index) else {
+                        continue
+                    }
+                    if accessibilityElementIsFocused(in: itemNode.view) {
+                        focusedEntryId = self.displayedEntryIds[index]
+                        break
+                    }
+                }
+            }
+
             self.listNode?.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self {
+                    strongSelf.displayedEntryIds = transition.stableIds
+                    if let focusedEntryId, let index = transition.stableIds.firstIndex(of: focusedEntryId), let listNode = strongSelf.listNode {
+                        for itemNode in listNode.visibleItemNodes() {
+                            if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                                UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                                break
+                            }
+                        }
+                    }
                     let searchOptions = strongSelf.searchOptionsValue
                     strongSelf.listNode?.isHidden = strongSelf.tagMask == .photoOrVideo && (strongSelf.searchQueryValue ?? "").isEmpty
                     strongSelf.mediaNode?.isHidden = !(strongSelf.listNode?.isHidden ?? true)

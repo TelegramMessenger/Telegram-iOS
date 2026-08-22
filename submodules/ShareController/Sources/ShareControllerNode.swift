@@ -591,7 +591,12 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                             }
                         }))
                     ])
-                    return ContextController.Items(content: .list(items), animationCache: nil)
+                    return ContextController.Items(content: .list(items), dismissed: { [weak self] in
+                        guard let self, UIAccessibility.isVoiceOverRunning, !self.actionButtonNode.accessibilityElementsHidden, self.actionButtonNode.alpha > 0.0, self.actionButtonNode.view.window != nil else {
+                            return
+                        }
+                        UIAccessibility.post(notification: .layoutChanged, argument: self.actionButtonNode.view)
+                    }, animationCache: nil)
                 }
                 let contextController = makeContextController(presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node, customPosition: CGPoint(x: 0.0, y: fromForeignApp ? -116.0 : 0.0))), items: items, gesture: gesture)
                 contextController.immediateItemsTransitionAnimation = true
@@ -706,6 +711,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+        self.cancelButtonNode.accessibilityLabel = self.presentationData.strings.Common_Cancel
+        self.cancelButtonNode.accessibilityTraits = .button
         
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -782,6 +789,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         
     override func didLoad() {
         super.didLoad()
+
+        self.view.accessibilityViewIsModal = true
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
@@ -859,6 +868,10 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
             strongSelf.contentNodeOffsetUpdated(topicsContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
+
+            if UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(notification: .screenChanged, argument: topicsContentNode.accessibilityInitialFocusTarget)
+            }
             
             strongSelf.view.endEditing(true)
         }
@@ -899,6 +912,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     }
                 })
             }
+            if UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(notification: .screenChanged, argument: searchContentNode.accessibilityFocusTarget(peerId: peerId) ?? searchContentNode.accessibilityInitialFocusTarget)
+            }
         } else if let peersContentNode = self.peersContentNode {
             peersContentNode.setDidBeginDragging({ [weak self] in
                 self?.contentNodeDidBeginDragging()
@@ -917,7 +933,40 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     }
                 })
             }
+            if UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(notification: .screenChanged, argument: peersContentNode.accessibilityFocusTarget(peerId: peerId))
+            }
         }
+    }
+
+    func activateInitialAccessibilityFocus() {
+        guard UIAccessibility.isVoiceOverRunning else {
+            return
+        }
+        let target: Any?
+        if let topicsContentNode = self.topicsContentNode {
+            target = topicsContentNode.accessibilityInitialFocusTarget
+        } else if let searchContentNode = self.contentNode as? ShareSearchContainerNode {
+            target = searchContentNode.accessibilityInitialFocusTarget
+        } else if let peersContentNode = self.peersContentNode {
+            target = peersContentNode.accessibilityFocusTarget()
+        } else {
+            target = self.contentNode?.view
+        }
+        UIAccessibility.post(notification: .screenChanged, argument: target)
+    }
+
+    func performAccessibilityEscape() -> Bool {
+        if let topicsContentNode = self.topicsContentNode {
+            topicsContentNode.backPressed()
+            return true
+        }
+        if self.contentNode is ShareSearchContainerNode, let peersContentNode = self.peersContentNode {
+            self.transitionToContentNode(peersContentNode)
+            return true
+        }
+        self.cancel?()
+        return true
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -970,6 +1019,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     func setActionNodesHidden(_ hidden: Bool, inputField: Bool = false, actions: Bool = false, animated: Bool = true) {
         func updateActionNodesAlpha(_ nodes: [ASDisplayNode], alpha: CGFloat) {
             for node in nodes {
+                node.accessibilityElementsHidden = alpha.isZero
                 if !node.alpha.isEqual(to: alpha) {
                     let previousAlpha = node.alpha
                     node.alpha = alpha
@@ -1005,6 +1055,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             if let previous = previous {
                 previous.setDidBeginDragging(nil)
                 previous.setContentOffsetUpdated(nil)
+                previous.accessibilityElementsHidden = true
                 if animated {
                     transition = .animated(duration: 0.4, curve: .spring)
                     self.previousContentNode = previous
@@ -1032,6 +1083,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             if let (layout, navigationBarHeight, bottomGridInset) = self.containerLayout {
                 if let contentNode = contentNode, let previous = previous {
                     contentNode.frame = previous.frame
+                    contentNode.accessibilityElementsHidden = false
                     contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                     
                     contentNode.setDidBeginDragging({ [weak self] in
@@ -1063,8 +1115,15 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     } else if !(contentNode is ShareLoadingContainer) {
                         self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil || self.mediaParameters?.publicLinkPrefix != nil, actions: true)
                     }
+
+                    if let searchContentNode = contentNode as? ShareSearchContainerNode, UIAccessibility.isVoiceOverRunning {
+                        UIAccessibility.post(notification: .screenChanged, argument: searchContentNode.accessibilityInitialFocusTarget)
+                    } else if contentNode === self.peersContentNode, previous is ShareSearchContainerNode, let peersContentNode = self.peersContentNode, UIAccessibility.isVoiceOverRunning {
+                        UIAccessibility.post(notification: .screenChanged, argument: peersContentNode.accessibilitySearchFocusTarget)
+                    }
                 } else {
                     if let contentNode = self.contentNode {
+                        contentNode.accessibilityElementsHidden = false
                         contentNode.setDidBeginDragging({ [weak self] in
                             self?.contentNodeDidBeginDragging()
                         })
@@ -1077,6 +1136,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
                 }
             } else if let contentNode = contentNode {
+                contentNode.accessibilityElementsHidden = false
                 contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                     self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
                 })
@@ -1200,7 +1260,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 statusBarHeight: nil,
                 inputHeight: nil,
                 inputHeightIsInteractivellyChanging: false,
-                inVoiceOver: false
+                inVoiceOver: layout.inVoiceOver
             )
             controller.presentationContext.containerLayoutUpdated(subLayout, transition: transition)
         }
@@ -1410,19 +1470,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
         
         self.inputFieldNode.deactivateInput()
-        let transition: ContainedViewLayoutTransition
-        if peerId == nil {
-            transition = .animated(duration: 0.12, curve: .easeInOut)
-        } else {
-            transition = .immediate
-        }
-        transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
-        transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
-        if let startAtTimestampNode = self.startAtTimestampNode {
-            transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-        }
+        self.setActionNodesHidden(true, inputField: true, actions: true, animated: peerId == nil)
         
         let peerIds: [PeerId]
         var topicIds: [PeerId: Int64] = [:]
@@ -1500,7 +1548,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     if long {
                         strongSelf.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true, environment: strongSelf.environment), fastOut: true)
                     } else {
-                        strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+                        strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true), fastOut: true)
                     }
                 }
                 
@@ -1530,8 +1578,24 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                             strongSelf.dismiss?(true)
                         }
                 }
-            }, error: { _ in
-                
+            }, error: { [weak self] error in
+                guard let self else {
+                    return
+                }
+                if let peersContentNode = self.peersContentNode {
+                    self.transitionToContentNode(peersContentNode, fastOut: true)
+                }
+                switch error {
+                case .generic:
+                    self.presentError(nil, self.presentationData.strings.Login_UnknownError)
+                case let .fileTooBig(size):
+                    self.presentError(
+                        self.presentationData.strings.Notifications_UploadError_TooLarge_Title,
+                        self.presentationData.strings.Notifications_UploadError_TooLarge_Text(
+                            dataSizeString(size, formatting: DataSizeStringFormatting(presentationData: self.presentationData))
+                        ).string
+                    )
+                }
             }, completed: {
                 if !wasDone && fromForeignApp {
                     doneImpl(false)
@@ -1715,15 +1779,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                         case .preparing:
                             if loadingTimestamp == nil {
                                 strongSelf.inputFieldNode.deactivateInput()
-                                let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-                                transition.updateAlpha(node: strongSelf.actionButtonNode, alpha: 0.0)
-                                transition.updateAlpha(node: strongSelf.inputFieldNode, alpha: 0.0)
-                                transition.updateAlpha(node: strongSelf.actionSeparatorNode, alpha: 0.0)
-                                transition.updateAlpha(node: strongSelf.actionsBackgroundNode, alpha: 0.0)
-                                if let startAtTimestampNode = strongSelf.startAtTimestampNode {
-                                    transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-                                }
-                                strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+                                strongSelf.setActionNodesHidden(true, inputField: true, actions: true)
+                                strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true), fastOut: true)
                                 loadingTimestamp = CACurrentMediaTime()
                                 if reportReady {
                                     strongSelf.ready.set(.single(true))
@@ -1840,19 +1897,23 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         if count == 0 {
             if self.presetText != nil {
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = self.presentationData.strings.ShareMenu_Send
                 self.actionButtonNode.isEnabled = false
                 self.actionButtonNode.badge = nil
             } else if let segmentedValues = self.segmentedValues {
                 let value = segmentedValues[self.selectedSegmentedIndex]
                 self.actionButtonNode.setTitle(value.actionTitle, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = value.actionTitle
                 self.actionButtonNode.isEnabled = true
                 self.actionButtonNode.badge = nil
             } else if let defaultAction = self.defaultAction {
                 self.actionButtonNode.setTitle(defaultAction.title, with: Font.regular(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = defaultAction.title
                 self.actionButtonNode.isEnabled = true
                 self.actionButtonNode.badge = nil
             } else {
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)
+                self.actionButtonNode.accessibilityLabel = self.presentationData.strings.ShareMenu_Send
                 self.actionButtonNode.isEnabled = false
                 self.actionButtonNode.badge = nil
             }
@@ -1866,20 +1927,14 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             }
             self.actionButtonNode.isEnabled = true
             self.actionButtonNode.setTitle(text, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+            self.actionButtonNode.accessibilityLabel = text
             self.actionButtonNode.badge = "\(count)"
         }
     }
     
     func transitionToProgress(signal: Signal<Void, NoError>) {
         self.inputFieldNode.deactivateInput()
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-        transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
-        transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
-        if let startAtTimestampNode = self.startAtTimestampNode {
-            transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-        }
+        self.setActionNodesHidden(true, inputField: true, actions: true)
         
         self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true, environment: self.environment), fastOut: true)
         let timestamp = CACurrentMediaTime()
@@ -1913,16 +1968,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 completion()
             }))
         } else {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-            transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
-            transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
-            transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
-            transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
-            if let startAtTimestampNode = self.startAtTimestampNode {
-                transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
-            }
+            self.setActionNodesHidden(true, inputField: true, actions: true)
             
-            self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+            self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true), fastOut: true)
             
             let timestamp = CACurrentMediaTime()
             var wasDone = false

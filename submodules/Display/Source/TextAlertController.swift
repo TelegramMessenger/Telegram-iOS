@@ -46,7 +46,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         
         super.init()
         
-        self.titleNode.maximumNumberOfLines = 2
+        self.titleNode.maximumNumberOfLines = 0
         
         self.highligthedChanged = { [weak self] value in
             if let strongSelf = self {
@@ -110,7 +110,8 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
     }
     
     private func updateTitle() {
-        var font = Font.regular(theme.baseFontSize)
+        let fontSize = UIFontMetrics(forTextStyle: .body).scaledValue(for: theme.baseFontSize)
+        var font = Font.regular(fontSize)
         var color: UIColor
         switch self.action.type {
             case .defaultAction, .genericAction:
@@ -120,7 +121,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         }
         switch self.action.type {
             case .defaultAction, .defaultDestructiveAction:
-                font = Font.semibold(theme.baseFontSize)
+                font = Font.semibold(fontSize)
             case .destructiveAction, .genericAction:
                 break
         }
@@ -134,7 +135,11 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         
         self.setAttributedTitle(attributedString, for: [])
         self.accessibilityLabel = self.action.title
-        self.accessibilityTraits = [.button]
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
+        if !self.actionEnabled {
+            accessibilityTraits.insert(.notEnabled)
+        }
+        self.accessibilityTraits = accessibilityTraits
     }
     
     @objc func pressed() {
@@ -153,6 +158,16 @@ public enum TextAlertContentActionLayout {
     case vertical
 }
 
+private final class TextAlertAccessibilityCustomAction: UIAccessibilityCustomAction {
+    let perform: () -> Void
+
+    init(name: String, target: Any?, selector: Selector, perform: @escaping () -> Void) {
+        self.perform = perform
+
+        super.init(name: name, target: target, selector: selector)
+    }
+}
+
 public final class TextAlertContentNode: AlertContentNode {
     private var theme: AlertControllerTheme
     private let actionLayout: TextAlertContentActionLayout
@@ -163,6 +178,10 @@ public final class TextAlertContentNode: AlertContentNode {
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
+    private let dynamicTypeTitle: String?
+    private let dynamicTypeText: String?
+    private let dynamicTypeParseMarkdown: Bool
+    private let linkAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     
     private var validLayout: CGSize?
     
@@ -171,6 +190,10 @@ public final class TextAlertContentNode: AlertContentNode {
         return self._dismissOnOutsideTap
     }
     
+    override public var accessibilityInitialFocusNode: ASDisplayNode? {
+        return self.titleNode ?? self.textNode
+    }
+
     private var highlightedItemIndex: Int? = nil
     
     public var textAttributeAction: (NSAttributedString.Key, (Any) -> Void)? {
@@ -193,22 +216,28 @@ public final class TextAlertContentNode: AlertContentNode {
                 self.textNode.highlightAttributeAction = nil
                 self.textNode.tapAttributeAction = nil
             }
+            self.updateTextAccessibilityActions()
         }
     }
     
-    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout, dismissOnOutsideTap: Bool, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil) {
+    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout, dismissOnOutsideTap: Bool, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil, dynamicTypeTitle: String? = nil, dynamicTypeText: String? = nil, dynamicTypeParseMarkdown: Bool = false) {
         self.theme = theme
         self.actionLayout = actionLayout
         self._dismissOnOutsideTap = dismissOnOutsideTap
+        self.dynamicTypeTitle = dynamicTypeTitle
+        self.dynamicTypeText = dynamicTypeText
+        self.dynamicTypeParseMarkdown = dynamicTypeParseMarkdown
+        self.linkAction = linkAction
         if let title = title {
             let titleNode = ImmediateTextNode()
             titleNode.attributedText = title
             titleNode.displaysAsynchronously = false
             titleNode.isUserInteractionEnabled = false
-            titleNode.maximumNumberOfLines = 4
+            titleNode.maximumNumberOfLines = 0
             titleNode.truncationType = .end
             titleNode.isAccessibilityElement = true
             titleNode.accessibilityLabel = title.string
+            titleNode.accessibilityTraits = [.header]
             self.titleNode = titleNode
         } else {
             self.titleNode = nil
@@ -281,6 +310,46 @@ public final class TextAlertContentNode: AlertContentNode {
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
         }
+
+        self.updateTextAccessibilityActions()
+    }
+
+    private func updateTextAccessibilityActions() {
+        guard let attributedText = self.textNode.attributedText, attributedText.length != 0 else {
+            self.textNode.accessibilityCustomActions = nil
+            return
+        }
+
+        var accessibilityActions: [UIAccessibilityCustomAction] = []
+        attributedText.enumerateAttributes(in: NSRange(location: 0, length: attributedText.length), options: []) { [weak self] attributes, range, _ in
+            guard let self else {
+                return
+            }
+            let actionName = attributedText.attributedSubstring(from: range).string.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !actionName.isEmpty else {
+                return
+            }
+
+            if self.textAttributeAction == nil, attributes[NSAttributedString.Key(rawValue: "URL")] != nil, let linkAction = self.linkAction {
+                accessibilityActions.append(TextAlertAccessibilityCustomAction(name: actionName, target: self, selector: #selector(self.performTextAccessibilityAction(_:)), perform: {
+                    linkAction(attributes, range.location)
+                }))
+            }
+            if let (attribute, textAttributeAction) = self.textAttributeAction, let value = attributes[attribute] {
+                accessibilityActions.append(TextAlertAccessibilityCustomAction(name: actionName, target: self, selector: #selector(self.performTextAccessibilityAction(_:)), perform: {
+                    textAttributeAction(value)
+                }))
+            }
+        }
+        self.textNode.accessibilityCustomActions = accessibilityActions.isEmpty ? nil : accessibilityActions
+    }
+
+    @objc private func performTextAccessibilityAction(_ action: UIAccessibilityCustomAction) -> Bool {
+        guard let action = action as? TextAlertAccessibilityCustomAction else {
+            return false
+        }
+        action.perform()
+        return true
     }
     
     func setHighlightedItemIndex(_ index: Int?, update: Bool = false) {
@@ -353,6 +422,19 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
+    override public func contentSizeCategoryUpdated() {
+        for actionNode in self.actionNodes {
+            actionNode.updateTheme(self.theme)
+        }
+        if let dynamicTypeText = self.dynamicTypeText {
+            let attributedStrings = standardTextAlertAttributedStrings(theme: self.theme, title: self.dynamicTypeTitle, text: dynamicTypeText, parseMarkdown: self.dynamicTypeParseMarkdown)
+            self.titleNode?.attributedText = attributedStrings.title
+            self.textNode.attributedText = attributedStrings.text
+            self.updateTextAccessibilityActions()
+        }
+        self.requestLayout?(.immediate)
+    }
+
     override public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         self.validLayout = size
         
@@ -367,23 +449,20 @@ public final class TextAlertContentNode: AlertContentNode {
         }
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right, height: CGFloat.greatestFiniteMagnitude))
         
-        let actionButtonHeight: CGFloat = 44.0
-        
-        var minActionsWidth: CGFloat = 0.0
-        let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
-        let actionTitleInsets: CGFloat = 8.0
+        let minimumActionButtonHeight: CGFloat = 44.0
+        let maxActionWidth: CGFloat = self.actionNodes.isEmpty ? size.width : floor(size.width / CGFloat(self.actionNodes.count))
         
         var effectiveActionLayout = self.actionLayout
+        if self.traitCollection.preferredContentSizeCategory.isAccessibilityCategory {
+            effectiveActionLayout = .vertical
+        }
+        var actionHeights: [CGFloat] = []
         for actionNode in self.actionNodes {
-            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
-            if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
+            let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: max(1.0, maxActionWidth - 16.0), height: CGFloat.greatestFiniteMagnitude))
+            let actionHeight = max(minimumActionButtonHeight, actionTitleSize.height + 20.0)
+            actionHeights.append(actionHeight)
+            if case .horizontal = effectiveActionLayout, actionHeight > minimumActionButtonHeight {
                 effectiveActionLayout = .vertical
-            }
-            switch effectiveActionLayout {
-                case .horizontal:
-                    minActionsWidth += actionTitleSize.width + actionTitleInsets
-                case .vertical:
-                    minActionsWidth = max(minActionsWidth, actionTitleSize.width + actionTitleInsets)
             }
         }
         
@@ -392,9 +471,9 @@ public final class TextAlertContentNode: AlertContentNode {
         var actionsHeight: CGFloat = 0.0
         switch effectiveActionLayout {
             case .horizontal:
-                actionsHeight = actionButtonHeight
+                actionsHeight = actionHeights.max() ?? minimumActionButtonHeight
             case .vertical:
-                actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
+                actionsHeight = actionHeights.reduce(0.0, +)
         }
         
         let contentWidth = alertWidth - insets.left - insets.right
@@ -414,10 +493,11 @@ public final class TextAlertContentNode: AlertContentNode {
             resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: textSize.height + actionsHeight + insets.top + insets.bottom)
         }
         
+        self.actionNodesSeparator.isHidden = self.actionNodes.isEmpty
         self.actionNodesSeparator.frame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel))
         
         var actionOffset: CGFloat = 0.0
-        let actionWidth: CGFloat = floor(resultSize.width / CGFloat(self.actionNodes.count))
+        let actionWidth: CGFloat = self.actionNodes.isEmpty ? resultSize.width : floor(resultSize.width / CGFloat(self.actionNodes.count))
         var separatorIndex = -1
         var nodeIndex = 0
         for actionNode in self.actionNodes {
@@ -447,11 +527,12 @@ public final class TextAlertContentNode: AlertContentNode {
             let actionNodeFrame: CGRect
             switch effectiveActionLayout {
                 case .horizontal:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
+                    actionNodeFrame = CGRect(origin: CGPoint(x: actionOffset, y: resultSize.height - actionsHeight), size: CGSize(width: currentActionWidth, height: actionsHeight))
                     actionOffset += currentActionWidth
                 case .vertical:
-                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionButtonHeight))
-                    actionOffset += actionButtonHeight
+                    let actionHeight = actionHeights[nodeIndex]
+                    actionNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight + actionOffset), size: CGSize(width: currentActionWidth, height: actionHeight))
+                    actionOffset += actionHeight
             }
             
             transition.updateFrame(node: actionNode, frame: actionNodeFrame)
@@ -463,16 +544,18 @@ public final class TextAlertContentNode: AlertContentNode {
     }
 }
 
-public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, dismissOnOutsideTap: Bool = true, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil) -> AlertController {
-    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap, linkAction: linkAction))
-}
+private func standardTextAlertAttributedStrings(theme: AlertControllerTheme, title: String?, text: String, parseMarkdown: Bool) -> (title: NSAttributedString?, text: NSAttributedString) {
+    let titleFontSize = UIFontMetrics(forTextStyle: .headline).scaledValue(for: theme.baseFontSize)
+    let bodyBaseFontSize = title == nil ? theme.baseFontSize : floor(theme.baseFontSize * 13.0 / 17.0)
+    let bodyFontSize = UIFontMetrics(forTextStyle: .body).scaledValue(for: bodyBaseFontSize)
 
-public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil) -> AlertController {
-    var dismissImpl: (() -> Void)?
+    let attributedTitle = title.flatMap {
+        NSAttributedString(string: $0, font: Font.semibold(titleFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
+    }
     let attributedText: NSAttributedString
     if parseMarkdown {
-        let font = title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
-        let boldFont = title == nil ? Font.bold(theme.baseFontSize) : Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
+        let font = title == nil ? Font.semibold(bodyFontSize) : Font.regular(bodyFontSize)
+        let boldFont = title == nil ? Font.bold(bodyFontSize) : Font.semibold(bodyFontSize)
         let body = MarkdownAttributeSet(font: font, textColor: theme.primaryColor)
         let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.primaryColor)
         let link = MarkdownAttributeSet(font: font, textColor: theme.accentColor)
@@ -480,14 +563,25 @@ public func standardTextAlertController(theme: AlertControllerTheme, title: Stri
             return ("URL", url)
         }), textAlignment: .center)
     } else {
-        attributedText = NSAttributedString(string: text, font: title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0)), textColor: theme.primaryColor, paragraphAlignment: .center)
+        let font = title == nil ? Font.semibold(bodyFontSize) : Font.regular(bodyFontSize)
+        attributedText = NSAttributedString(string: text, font: font, textColor: theme.primaryColor, paragraphAlignment: .center)
     }
-    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title != nil ? NSAttributedString(string: title!, font: Font.semibold(theme.baseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center) : nil, text: attributedText, actions: actions.map { action in
+    return (attributedTitle, attributedText)
+}
+
+public func textAlertController(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, dismissOnOutsideTap: Bool = true, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil) -> AlertController {
+    return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap, linkAction: linkAction))
+}
+
+public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil) -> AlertController {
+    var dismissImpl: (() -> Void)?
+    let attributedStrings = standardTextAlertAttributedStrings(theme: theme, title: title, text: text, parseMarkdown: parseMarkdown)
+    let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: attributedStrings.title, text: attributedStrings.text, actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
             dismissImpl?()
             action.action()
         })
-    }, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap, linkAction: linkAction), allowInputInset: allowInputInset)
+    }, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap, linkAction: linkAction, dynamicTypeTitle: title, dynamicTypeText: text, dynamicTypeParseMarkdown: parseMarkdown), allowInputInset: allowInputInset)
     dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }
