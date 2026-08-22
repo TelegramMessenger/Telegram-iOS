@@ -46,6 +46,85 @@ class MessageRendererContractTests(unittest.TestCase):
             with self.subTest(action=action):
                 self.assertIn(f"case {action}:", contents)
 
+    def test_shared_contract_covers_media_reply_and_message_states(self) -> None:
+        contents = source(
+            "submodules/TelegramUI/Components/Chat/ChatMessageItemView/Sources/ChatMessageItemView.swift"
+        )
+        media_contracts = (
+            "TelegramMediaImage",
+            "file.isInstantVideo",
+            ".Sticker(",
+            ".Audio(",
+            ".Video(",
+            "TelegramMediaWebpage",
+            "TelegramMediaContact",
+            "TelegramMediaPoll",
+        )
+        state_contracts = (
+            "VoiceOver_Chat_Selected",
+            "traits.insert(.selected)",
+            "VoiceOver_Chat_Sending",
+            "VoiceOver_Chat_Failed",
+            "Conversation_ChecksTooltip_Read",
+            "Conversation_ChecksTooltip_Delivered",
+            "VoiceOver_Chat_NotPlayedByRecipient",
+            "VoiceOver_Chat_PlayedByRecipient",
+            "ReplyMessageAttribute",
+            "VoiceOver_Chat_ReplyingToMessage",
+            ".navigateToReply(replyMessageId)",
+        )
+        for contract in media_contracts + state_contracts:
+            with self.subTest(contract=contract):
+                self.assertIn(contract, contents)
+
+        fallback_contents = source(
+            "submodules/ChatListUI/Sources/Node/ChatListItemStrings.swift"
+        )
+        for media_type in (
+            "TelegramMediaPaidContent",
+            "TelegramMediaMap",
+            "TelegramMediaGame",
+            "TelegramMediaInvoice",
+            "TelegramMediaAction",
+            "TelegramMediaStory",
+            "TelegramMediaGiveaway",
+            "TelegramMediaGiveawayResults",
+        ):
+            with self.subTest(media_type=media_type):
+                self.assertIn(media_type, fallback_contents)
+
+
+class ChatNavigationContractTests(unittest.TestCase):
+    def test_history_supports_voiceover_scroll_and_stable_message_focus(self) -> None:
+        list_view = source("submodules/Display/Source/ListView.swift")
+        self.assertIn(
+            "override open func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool",
+            list_view,
+        )
+        self.assertIn("self.rotated ? .up : .down", list_view)
+        self.assertIn("UIAccessibility.Notification.pageScrolled", list_view)
+
+        history = source("submodules/TelegramUI/Sources/ChatHistoryListNode.swift")
+        for contract in (
+            "accessibilityFocusedMessageId",
+            "accessibilityContainsFocus()",
+            "restoreAccessibilityFocus()",
+        ):
+            self.assertIn(contract, history)
+
+    def test_input_exposes_stable_hit_target_and_screen_frame(self) -> None:
+        contents = source(
+            "submodules/TelegramUI/Components/Chat/ChatTextInputPanelNode/Sources/ChatTextInputPanelNode.swift"
+        )
+        for contract in (
+            'accessibilityIdentifier = "chat.input"',
+            "inputHitTestSlop",
+            "UIAccessibility.convertToScreenCoordinates",
+            "accessibilityRespondsToUserInteraction = true",
+            "UIAccessibility.post(notification: .layoutChanged, argument: new.inputView)",
+        ):
+            self.assertIn(contract, contents)
+
 
 class FocusPersistenceContractTests(unittest.TestCase):
     def test_transaction_lists_restore_only_existing_stable_ids(self) -> None:
@@ -58,6 +137,7 @@ class FocusPersistenceContractTests(unittest.TestCase):
             "submodules/TelegramUI/Components/AttachmentFileController/Sources/AttachmentFileSearchItem.swift",
             "submodules/TelegramUI/Components/ChatEntityKeyboardInputNode/Sources/StickerPaneSearchContentNode.swift",
             "submodules/TelegramUI/Components/GroupStickerPackSetupController/Sources/GroupStickerSearchContainerNode.swift",
+            "submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift",
             "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoMembersPane.swift",
             "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoGroupsInCommonPaneNode.swift",
             "submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen/Sources/Panes/PeerInfoRecommendedPeersPane.swift",
@@ -117,6 +197,161 @@ class ModalContractTests(unittest.TestCase):
             with self.subTest(node_source=node_source):
                 self.assertIn("accessibilityViewIsModal = true", source(node_source))
 
+    def test_modal_backgrounds_are_hidden_and_reduce_motion_is_respected(self) -> None:
+        alert = source("submodules/Display/Source/AlertControllerNode.swift")
+        action_sheet = source("submodules/Display/Source/ActionSheetControllerNode.swift")
+        self.assertIn("dimContainerView.accessibilityElementsHidden = true", alert)
+        for background in (
+            "dismissTapView",
+            "leftDimView",
+            "rightDimView",
+            "topDimView",
+            "bottomDimView",
+        ):
+            self.assertIn(f"{background}.accessibilityElementsHidden = true", action_sheet)
+        self.assertIn("UIAccessibility.isReduceMotionEnabled", alert)
+        self.assertIn("UIAccessibility.isReduceMotionEnabled", action_sheet)
+
+        archive = source(
+            "submodules/TelegramUI/Components/Settings/ArchiveInfoScreen/Sources/ArchiveInfoScreen.swift"
+        )
+        self.assertIn("self.accessibilityViewIsModal = true", archive)
+        self.assertIn("UIAccessibility.post(notification: .screenChanged", archive)
+        self.assertIn("override public func accessibilityPerformEscape() -> Bool", archive)
+
+
+class SelectionAndShareContractTests(unittest.TestCase):
+    def test_share_peer_and_topic_selection_expose_full_state(self) -> None:
+        peer = source("submodules/ShareController/Sources/ShareControllerPeerGridItem.swift")
+        topic = source("submodules/ShareController/Sources/ShareTopicGridItem.swift")
+        for contract in (
+            "accessibilityLabel",
+            "accessibilityValue",
+            "accessibilityHint",
+            "accessibilityTraits.insert(.selected)",
+            "accessibilityTraits.insert(.notEnabled)",
+            "override func accessibilityActivate() -> Bool",
+        ):
+            self.assertIn(contract, peer)
+        for contract in (
+            "accessibilityLabel",
+            "accessibilityValue",
+            "accessibilityTraits.insert(.selected)",
+            "override func accessibilityActivate() -> Bool",
+        ):
+            self.assertIn(contract, topic)
+
+    def test_share_modes_focus_error_and_escape_contracts_are_retained(self) -> None:
+        segmented = source("submodules/SegmentedControlNode/Sources/SegmentedControlNode.swift")
+        self.assertIn("itemNode.accessibilityLabel = item.title", segmented)
+        self.assertIn("itemNode.accessibilityTraits.insert(.selected)", segmented)
+
+        node = source("submodules/ShareController/Sources/ShareControllerNode.swift")
+        for contract in (
+            "activateInitialAccessibilityFocus",
+            "accessibilityFocusTarget(peerId:",
+            "accessibilityInitialFocusTarget",
+            "UIAccessibility.post(notification: .screenChanged",
+            "UIAccessibility.post(notification: .layoutChanged, argument: self.actionButtonNode.view)",
+        ):
+            self.assertIn(contract, node)
+        controller = source("submodules/ShareController/Sources/ShareController.swift")
+        self.assertIn("override public func accessibilityPerformEscape() -> Bool", controller)
+
+
+class GiftsContractTests(unittest.TestCase):
+    def test_gift_card_exposes_semantics_activation_and_context_menu(self) -> None:
+        contents = source(
+            "submodules/TelegramUI/Components/Gifts/GiftItemComponent/Sources/GiftItemComponent.swift"
+        )
+        for contract in (
+            "override public func accessibilityActivate() -> Bool",
+            "self.isAccessibilityElement = exposesCard && !component.isPlaceholder",
+            "self.containerButton.isAccessibilityElement = false",
+            "self.accessibilityLabel = label",
+            "self.accessibilityValue = values.isEmpty ? nil",
+            "self.accessibilityTraits = [.image]",
+            "self.accessibilityTraits.insert(.button)",
+            "self.accessibilityTraits.insert(.selected)",
+            "accessibilityOpenContextMenu",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, contents)
+
+    def test_gifts_keep_selection_limit_actions_and_stable_focus(self) -> None:
+        contents = source(
+            "submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode/Sources/GiftsListView.swift"
+        )
+        for contract in (
+            "accessibilityTraits.insert(.selected)",
+            "accessibilityTraits.insert(.notEnabled)",
+            "RequestPeer_ReachedMaximum",
+            "kind: .movePrevious",
+            "kind: .moveNext",
+            "kind: .togglePinned",
+            "accessibilityCustomActions",
+            "focusedItemId",
+            "UIAccessibility.post(notification: .layoutChanged, argument: accessibilityView)",
+            "itemView.accessibilityElementsHidden = true",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, contents)
+
+    def test_collection_tabs_expose_selection_and_reorder_actions_without_duplicates(self) -> None:
+        selector = source(
+            "submodules/TelegramUI/Components/TabSelectorComponent/Sources/TabSelectorComponent.swift"
+        )
+        for contract in (
+            "self.isAccessibilityElement = true",
+            "self.containerNode.accessibilityElementsHidden = true",
+            "self.accessibilityLabel = title",
+            "self.accessibilityTraits.insert(.selected)",
+            "self.accessibilityTraits.insert(.notEnabled)",
+            "override func accessibilityActivate() -> Bool",
+            "accessibilityReorderPreviousTitle",
+            "accessibilityReorderNextTitle",
+            "itemView.accessibilityCustomActions",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, selector)
+
+        collection_tab = source(
+            "submodules/TelegramUI/Components/PeerInfo/CollectionTabItemComponent/Sources/CollectionTabItemComponent.swift"
+        )
+        self.assertIn("self.accessibilityLabel = component.title", collection_tab)
+
+
+class AccessibilityPreferencesContractTests(unittest.TestCase):
+    def test_common_modals_support_dynamic_type_and_reduce_transparency(self) -> None:
+        archive = source(
+            "submodules/TelegramUI/Components/Settings/ArchiveInfoScreen/Sources/ArchiveInfoScreen.swift"
+        )
+        archive_content = source(
+            "submodules/TelegramUI/Components/Settings/ArchiveInfoScreen/Sources/ArchiveInfoContentComponent.swift"
+        )
+        alert_controller = source("submodules/Display/Source/AlertController.swift")
+        action_sheet_controller = source("submodules/Display/Source/ActionSheetController.swift")
+        alert_node = source("submodules/Display/Source/AlertControllerNode.swift")
+        action_sheet_group = source("submodules/Display/Source/ActionSheetItemGroupNode.swift")
+
+        self.assertIn("UIFontMetrics(forTextStyle: .headline)", archive)
+        self.assertIn("UIFontMetrics(forTextStyle: .headline)", archive_content)
+        self.assertIn("UIFontMetrics(forTextStyle: .body)", archive_content)
+        self.assertIn("UIContentSizeCategory.didChangeNotification", alert_controller)
+        self.assertIn("UIContentSizeCategory.didChangeNotification", action_sheet_controller)
+        self.assertIn("UIAccessibility.isReduceTransparencyEnabled", alert_node)
+        self.assertIn("UIAccessibility.isReduceTransparencyEnabled", action_sheet_group)
+
+    def test_url_auth_alert_reflows_at_accessibility_sizes(self) -> None:
+        contents = source("submodules/TelegramUI/Sources/ChatMessageActionUrlAuthController.swift")
+        for contract in (
+            "UIFontMetrics(forTextStyle: .footnote)",
+            "UIFontMetrics(forTextStyle: .headline)",
+            "override func contentSizeCategoryUpdated()",
+            "preferredContentSizeCategory.isAccessibilityCategory",
+        ):
+            self.assertIn(contract, contents)
+
 
 class ReleaseGateContractTests(unittest.TestCase):
     def test_ui_suite_keeps_tree_audit_and_performance_budget(self) -> None:
@@ -129,12 +364,16 @@ class ReleaseGateContractTests(unittest.TestCase):
             "XCTClockMetric()",
             "XCTMemoryMetric()",
             "XCTAttachment",
+            "testPopulatedChatMessageContractWhenFixtureIsAvailable",
+            "testChatInputHitTargetWhenFixtureIsAvailable",
+            "VOICEOVER_USE_EXISTING_DATA",
         ):
             with self.subTest(contract=contract):
                 self.assertIn(contract, contents)
 
     def test_workflow_runs_both_automated_gate_layers(self) -> None:
         contents = source(".github/workflows/voiceover-gate.yml")
+        self.assertIn('branches:\n      - "VoiceOver-fixes"', contents)
         self.assertIn("python3 -m unittest discover", contents)
         self.assertIn("--target=Telegram:iOSAppUITestSuite", contents)
         self.assertIn("actions/upload-artifact@v4", contents)

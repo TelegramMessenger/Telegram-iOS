@@ -12,7 +12,10 @@ final class AccessibilityUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments += ["--ui-test", "--voiceover-release-gate"]
+        if ProcessInfo.processInfo.environment["VOICEOVER_USE_EXISTING_DATA"] != "1" {
+            app.launchArguments.append("--ui-test")
+        }
+        app.launchArguments.append("--voiceover-release-gate")
     }
 
     override func tearDownWithError() throws {
@@ -86,5 +89,42 @@ final class AccessibilityUITests: XCTestCase {
         measure(metrics: [XCTClockMetric(), XCTMemoryMetric()]) {
             _ = app.descendants(matching: .any).count
         }
+    }
+
+    func testPopulatedChatMessageContractWhenFixtureIsAvailable() throws {
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10.0))
+
+        let messages = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "message.")
+        )
+        guard messages.count != 0 else {
+            throw XCTSkip("Run with VOICEOVER_USE_EXISTING_DATA=1 and open a populated chat before launching the test")
+        }
+
+        var identifiers = Set<String>()
+        for index in 0 ..< messages.count {
+            let message = messages.element(boundBy: index)
+            XCTAssertFalse(message.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            XCTAssertFalse(message.identifier.isEmpty)
+            XCTAssertTrue(identifiers.insert(message.identifier).inserted)
+            XCTAssertGreaterThan(message.frame.width, 0.0)
+            XCTAssertGreaterThan(message.frame.height, 0.0)
+        }
+    }
+
+    func testChatInputHitTargetWhenFixtureIsAvailable() throws {
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10.0))
+
+        let input = app.descendants(matching: .any)["chat.input"]
+        guard input.waitForExistence(timeout: 2.0) else {
+            throw XCTSkip("Run with VOICEOVER_USE_EXISTING_DATA=1 and open a writable chat before launching the test")
+        }
+        XCTAssertGreaterThanOrEqual(input.frame.width, 44.0)
+        XCTAssertGreaterThanOrEqual(input.frame.height, 44.0)
+        XCTAssertTrue(input.isHittable)
+        input.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2.0))
     }
 }

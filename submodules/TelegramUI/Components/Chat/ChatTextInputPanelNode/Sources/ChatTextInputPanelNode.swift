@@ -3218,6 +3218,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             richTextInputNode.updateLayout(size: textFieldFrame.size)
             let accessibilityInputView = accessibilityTextInputView(in: richTextInputNode.inputView)
             let accessibilityBounds = richTextInputNode.inputView.bounds.inset(by: richTextInputNode.inputHitTestSlop)
+            accessibilityInputView.accessibilityIdentifier = "chat.input"
             accessibilityInputView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(accessibilityBounds, in: richTextInputNode.inputView)
             accessibilityInputView.accessibilityRespondsToUserInteraction = true
             self.updateInputField(textInputFrame: textFieldFrame, transition: ComponentTransition(transition))
