@@ -342,7 +342,7 @@ private enum AttachmentFileSearchEntry: Comparable, Identifiable {
     }
 }
 
-struct AttachmentFileSearchContainerTransition {
+private struct AttachmentFileSearchContainerTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
@@ -350,6 +350,14 @@ struct AttachmentFileSearchContainerTransition {
     let isEmpty: Bool
     let query: String
     let crossfade: Bool
+    let entries: [AttachmentFileSearchEntry]
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 private func attachmentFileSearchContainerPreparedRecentTransition(
@@ -372,7 +380,7 @@ private func attachmentFileSearchContainerPreparedRecentTransition(
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction, mode: mode), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, interaction: interaction, mode: mode), directionHint: nil) }
     
-    return AttachmentFileSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query, crossfade: crossfade)
+    return AttachmentFileSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query, crossfade: crossfade, entries: toEntries)
 }
 
 
@@ -390,6 +398,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
     private let emptyResultsTextNode: ImmediateTextNode
     
     private var enqueuedTransitions: [(AttachmentFileSearchContainerTransition, Bool)] = []
+    private var displayedEntries: [AttachmentFileSearchEntry] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private let searchQuery = Promise<String?>()
@@ -800,9 +809,30 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
             }
             
             let isSearching = transition.isSearching
+            var focusedEntryId: AttachmentFileSearchEntryId?
+            if UIAccessibility.isVoiceOverRunning {
+                for itemNode in self.listNode.visibleItemNodes() {
+                    guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                        continue
+                    }
+                    if accessibilityElementIsFocused(in: itemNode.view) {
+                        focusedEntryId = self.displayedEntries[index].stableId
+                        break
+                    }
+                }
+            }
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
+                }
+                strongSelf.displayedEntries = transition.entries
+                if let focusedEntryId, let index = transition.entries.firstIndex(where: { $0.stableId == focusedEntryId }) {
+                    for itemNode in strongSelf.listNode.visibleItemNodes() {
+                        if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                            UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                            break
+                        }
+                    }
                 }
                 
                 let containerTransition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)

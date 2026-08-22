@@ -57,13 +57,21 @@ private final class GroupStickerSearchEntry: Comparable, Identifiable {
     }
 }
 
-struct GroupStickerSearchContainerTransition {
+private struct GroupStickerSearchContainerTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let isSearching: Bool
     let isEmpty: Bool
     let query: String
+    let entries: [GroupStickerSearchEntry]
+}
+
+private func accessibilityElementIsFocused(in view: UIView) -> Bool {
+    if view.isAccessibilityElement && view.accessibilityElementIsFocused() {
+        return true
+    }
+    return view.subviews.contains(where: { accessibilityElementIsFocused(in: $0) })
 }
 
 private func groupStickerSearchContainerPreparedRecentTransition(from fromEntries: [GroupStickerSearchEntry], to toEntries: [GroupStickerSearchEntry], isSearching: Bool, isEmpty: Bool, query: String, context: AccountContext, presentationData: PresentationData, interaction: GroupStickerSearchContainerInteraction) -> GroupStickerSearchContainerTransition {
@@ -73,7 +81,7 @@ private func groupStickerSearchContainerPreparedRecentTransition(from fromEntrie
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
-    return GroupStickerSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query)
+    return GroupStickerSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmpty: isEmpty, query: query, entries: toEntries)
 }
 
 public final class GroupStickerSearchContainerNode: SearchDisplayControllerContentNode {
@@ -86,6 +94,7 @@ public final class GroupStickerSearchContainerNode: SearchDisplayControllerConte
     private let emptyResultsTextNode: ImmediateTextNode
     
     private var enqueuedTransitions: [(GroupStickerSearchContainerTransition, Bool)] = []
+    private var displayedEntries: [GroupStickerSearchEntry] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private let searchQuery = Promise<String?>()
@@ -251,9 +260,30 @@ public final class GroupStickerSearchContainerNode: SearchDisplayControllerConte
             }
             
             let isSearching = transition.isSearching
+            var focusedPackId: EngineItemCollectionId?
+            if UIAccessibility.isVoiceOverRunning {
+                for itemNode in self.listNode.visibleItemNodes() {
+                    guard let index = itemNode.index, self.displayedEntries.indices.contains(index) else {
+                        continue
+                    }
+                    if accessibilityElementIsFocused(in: itemNode.view) {
+                        focusedPackId = self.displayedEntries[index].stableId
+                        break
+                    }
+                }
+            }
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
+                }
+                strongSelf.displayedEntries = transition.entries
+                if let focusedPackId, let index = transition.entries.firstIndex(where: { $0.stableId == focusedPackId }) {
+                    for itemNode in strongSelf.listNode.visibleItemNodes() {
+                        if itemNode.index == index, !accessibilityElementIsFocused(in: itemNode.view) {
+                            UIAccessibility.post(notification: .layoutChanged, argument: firstAccessibilityElement(in: itemNode.view) ?? itemNode.view)
+                            break
+                        }
+                    }
                 }
                 
                 strongSelf.listNode.isHidden = !isSearching
