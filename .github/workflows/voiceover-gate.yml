@@ -1,6 +1,14 @@
 name: VoiceOver accessibility gate
 
 on:
+  push:
+    branches:
+      - "VoiceOver-fixes"
+    paths:
+      - "submodules/**/*.swift"
+      - "Telegram/Tests/Sources/AccessibilityUITests.swift"
+      - "Tests/VoiceOverContracts/**"
+      - ".github/workflows/voiceover-gate.yml"
   pull_request:
     paths:
       - "submodules/**/*.swift"

@@ -12,9 +12,13 @@ python3 -m unittest discover -s Tests/VoiceOverContracts -p "test_*.py" -v
 
 These tests prevent known renderer, stable-focus, and modal contracts from being removed. They do not prove runtime accessibility.
 
+The source-contract job runs automatically for pushes to `VoiceOver-fixes` and for pull requests that touch accessibility implementation or gate files.
+
 ## 2. Simulator tree audit
 
 Generate the Xcode project using the repository build instructions and run `AccessibilityUITests` from `iOSAppUITestSuite` on an iOS 17 or newer simulator. The suite runs the XCTest accessibility audit and checks stable message identifiers for duplicates.
+
+The default suite launches with `--ui-test` and therefore uses a clean signed-out data directory. To exercise the populated-chat assertions, prepare a dedicated simulator account, leave the required chat open, and run the suite with `VOICEOVER_USE_EXISTING_DATA=1` in the test scheme environment. In this mode the tests retain simulator data and additionally verify message names, unique stable identifiers, non-empty frames, and the input field's expanded hit target and keyboard focus. These tests report `XCTSkip`, rather than a false pass, when the required fixture is absent.
 
 The repository command used by the manually dispatched GitHub gate is:
 

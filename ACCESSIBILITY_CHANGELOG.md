@@ -14,3 +14,5 @@
 - Added modal containment, initial focus, Escape, and trigger-focus restoration to shared alerts, action sheets, context, peek, and pinch controllers.
 - Added source-contract tests, an iOS accessibility-tree audit, a pull-request checklist, and a documented release gate.
 - Added an initial accessibility-tree size budget, XCTest traversal time/memory metrics, and retained `.xcresult` performance evidence.
+- Added opt-in populated-chat UI contracts for message names, stable identifiers, frames, and the input field hit target using `VOICEOVER_USE_EXISTING_DATA=1`.
+- Expanded source contracts to cover media/reply/delivery/play states, history scrolling, selection limits, Share modes, Gifts actions, Dynamic Type, Reduce Motion, and Reduce Transparency.
