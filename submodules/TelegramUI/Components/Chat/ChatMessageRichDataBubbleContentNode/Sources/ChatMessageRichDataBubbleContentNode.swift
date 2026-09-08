@@ -50,6 +50,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
     // this, the cached layout would shadow newly-arrived content during streaming.
     private var currentPageLayout: (boundingWidth: CGFloat,
                                     presentationThemeIdentity: ObjectIdentifier,
+                                    baseFontSize: CGFloat,
                                     expandedDetails: [Int: Bool],
                                     messageStableVersion: UInt32,
                                     pendingEditKey: ObjectIdentifier?,
@@ -442,6 +443,11 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 let _ = codeBlockTitleColor
                 let _ = codeBlockAccentColor
                 
+                // Rich text is a message bubble like any other, so its typography follows
+                // Settings > Appearance > Text Size. The sizes below are authored against the
+                // `.regular` step (17.0pt), so scaling the finished theme by
+                // baseDisplaySize / 17.0 leaves that step identical and moves every other one.
+                let baseFontSize = item.presentationData.fontSize.baseDisplaySize
                 let textCategories = InstantPageTextCategories(
                     kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
                     header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 19.0, lineSpacingFactor: 0.685), color: messageTheme.primaryTextColor),
@@ -477,6 +483,10 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     secondaryControlColor: messageTheme.secondaryTextColor.mixedWith(mainColor.withMultipliedAlpha(0.2), alpha: 0.3),
                     quoteAccentColor: mainColor
                 )
+                // withUpdatedFontStyles multiplies lineSpacingFactor rather than replacing it,
+                // so 1.0 keeps each category's own factor; forceSerif: false keeps the
+                // sans/serif split declared above.
+                .withUpdatedFontStyles(sizeMultiplier: baseFontSize / 17.0, lineSpacingFactor: 1.0, forceSerif: false)
                 
                 var hasDraft = false
                 if item.message.attributes.contains(where: { $0 is TypingDraftMessageAttribute }) {
@@ -530,6 +540,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                     if let current = currentPageLayout,
                        current.boundingWidth == suggestedBoundingWidth,
                        current.presentationThemeIdentity == presentationThemeIdentity,
+                       current.baseFontSize == baseFontSize,
                        current.expandedDetails == currentExpandedDetails,
                        current.showMoreExpanded == showMoreExpanded,
                        current.messageStableVersion == currentMessageStableVersion,
@@ -718,7 +729,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                 var showMoreFramePageLocal: CGRect?
                 if showMore, let pageLayout {
                     let title = item.presentationData.strings.Chat_RichText_ShowMore
-                    let attributedTitle = NSAttributedString(string: title, font: Font.regular(17.0), textColor: messageTheme.linkTextColor)
+                    let attributedTitle = NSAttributedString(string: title, font: Font.regular(item.presentationData.fontSize.baseDisplaySize), textColor: messageTheme.linkTextColor)
                     // The link only fits within the existing bubble width (it does not widen the
                     // bubble the way the status node does); the short fixed string never needs more,
                     // and `.end` truncation is a safe fallback for a pathologically narrow bubble.
@@ -944,6 +955,7 @@ public class ChatMessageRichDataBubbleContentNode: ChatMessageBubbleContentNode 
                             self.currentPageLayout = (
                                 suggestedBoundingWidth,
                                 ObjectIdentifier(item.presentationData.theme.theme),
+                                item.presentationData.fontSize.baseDisplaySize,
                                 self.currentExpandedDetails,
                                 item.message.stableVersion,
                                 (item.attributes.updatingMedia?.richText).map({ ObjectIdentifier($0) }),
