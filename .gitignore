@@ -65,3 +65,4 @@ xcodeproj.bazelrc
 build-input/*
 **/*.pyc
 *.pyc
+/.serena

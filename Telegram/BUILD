@@ -127,7 +127,10 @@ genrule(
     ],
 )
 
-minimum_os_version = "11.0"
+# Xcode 26 refuses to build a project whose IPHONEOS_DEPLOYMENT_TARGET is below 15.0
+# ("the range of supported deployment target versions is 15.0 to 27.0.x"), so the
+# generated Xcode project cannot use the original 11.0 floor.
+minimum_os_version = "15.0"
 minimum_watchos_version="9.0"
 
 empty_languages = [
@@ -2007,7 +2010,11 @@ xcodeproj(
         labels = [
             ":Telegram",
         ],
-        target_environments = ["device", "simulator"],
+        # "device" requires a provisioning profile at analysis time. The bundled
+        # team id is not this machine's, so the generated project is scoped to the
+        # simulator. Restore ["device", "simulator"] (and drop
+        # --disableProvisioningProfiles from generateProject) to run on hardware.
+        target_environments = ["simulator"],
     ),
     xcode_configurations = {
         "Debug": {
