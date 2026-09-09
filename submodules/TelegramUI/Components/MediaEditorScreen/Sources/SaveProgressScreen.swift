@@ -384,6 +384,9 @@ public final class SaveProgressScreenComponent: Component {
 }
 
 public final class SaveProgressScreen: ViewController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: SaveProgressScreen?
         private let context: AccountContext

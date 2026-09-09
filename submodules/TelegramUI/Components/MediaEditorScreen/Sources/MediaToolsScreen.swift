@@ -949,6 +949,9 @@ private final class MediaToolsScreenComponent: Component {
 private let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
 
 public final class MediaToolsScreen: ViewController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: MediaToolsScreen?
         private let context: AccountContext

@@ -38,7 +38,7 @@ static bool cleanArch(std::vector<uint8_t> &archData, bool &isEncrypted) {
             offset += sizeof(struct mach_header_64);
             break;
         default:
-            return nullptr;
+            return false;
     }
     
     uint32_t commandCount = swap32(header->ncmds);

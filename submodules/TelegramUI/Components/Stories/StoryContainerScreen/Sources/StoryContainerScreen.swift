@@ -1721,6 +1721,9 @@ private final class StoryContainerScreenComponent: Component {
 }
 
 public class StoryContainerScreen: ViewControllerComponentContainer {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     public struct TransitionState: Equatable {
         public var sourceSize: CGSize
         public var destinationSize: CGSize

@@ -1560,6 +1560,9 @@ private let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
 private let storyMaxVideoDuration: Double = 60.0
 
 public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     public enum TransitionIn {
         public final class GalleryTransitionIn {
             public weak var sourceView: UIView?

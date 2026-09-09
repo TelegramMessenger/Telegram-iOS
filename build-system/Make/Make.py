@@ -100,7 +100,7 @@ class BazelCommandLine:
 
             # https://github.com/bazelbuild/rules_swift
             # Use -Osize instead of -O when building swift modules.
-            '--features=swift.opt_uses_osize',
+            #'--features=swift.opt_uses_osize',
 
             # --num-threads 0 forces swiftc to generate one object file per module; it:
             # 1. resolves issues with the linker caused by the swift-objc mixing.
@@ -546,6 +546,7 @@ def generate_project(bazel, arguments):
 
     disable_extensions = False
     disable_provisioning_profiles = False
+    project_include_release = False
     generate_dsym = False
     target_name = "Telegram"
 
@@ -553,6 +554,8 @@ def generate_project(bazel, arguments):
         disable_extensions = arguments.disableExtensions
     if arguments.disableProvisioningProfiles is not None:
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
+    if arguments.projectIncludeRelease is not None:
+        project_include_release = arguments.projectIncludeRelease
     if arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
         disable_extensions = True
     if arguments.generateDsym is not None:
@@ -566,6 +569,7 @@ def generate_project(bazel, arguments):
         build_environment=bazel_command_line.build_environment,
         disable_extensions=disable_extensions,
         disable_provisioning_profiles=disable_provisioning_profiles,
+        include_release=project_include_release,
         generate_dsym=generate_dsym,
         configuration_path=bazel_command_line.configuration_path,
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments(),
@@ -592,6 +596,9 @@ def build(bazel, arguments):
         arguments=arguments,
         additional_codesigning_output_path=None
     )
+
+    if arguments.disableProvisioningProfiles:
+        bazel_command_line.set_disable_provisioning_profiles()
 
     bazel_command_line.set_configuration(arguments.configuration)
     bazel_command_line.set_build_number(arguments.buildNumber)
@@ -840,6 +847,15 @@ if __name__ == '__main__':
     )
 
     generateProjectParser.add_argument(
+        '--projectIncludeRelease',
+        action='store_true',
+        default=False,
+        help='''
+            Generate the Xcode project with Debug and Release configurations.
+            '''
+    )
+
+    generateProjectParser.add_argument(
         '--generateDsym',
         action='store_true',
         default=False,
@@ -878,6 +894,12 @@ if __name__ == '__main__':
         ],
         required=True,
         help='Build configuration'
+    )
+    buildParser.add_argument(
+        '--disableProvisioningProfiles',
+        action='store_true',
+        default=False,
+        help='Build without embedding provisioning profiles (simulator-only builds).',
     )
     buildParser.add_argument(
         '--enableParallelSwiftmoduleGeneration',

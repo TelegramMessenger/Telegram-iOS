@@ -268,7 +268,7 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             CATransaction.setAnimationDuration(0.5)
 
-            if let _ = self.propertyAnimator {`
+            if let _ = self.propertyAnimator {
                 self.displayLinkAnimator = DisplayLinkAnimator(duration: 1.15 * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
                     (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
                 }, completion: { [weak self] in

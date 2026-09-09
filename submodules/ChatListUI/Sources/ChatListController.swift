@@ -80,6 +80,9 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 }
 
 public class ChatListControllerImpl: TelegramBaseController, ChatListController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     private var validLayout: ContainerViewLayout?
     
     public let context: AccountContext

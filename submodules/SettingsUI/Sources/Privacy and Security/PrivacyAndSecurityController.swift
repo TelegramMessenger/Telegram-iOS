@@ -631,7 +631,7 @@ private func privacyAndSecurityControllerEntries(
     return entries
 }
 
-class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+class PrivacyAndSecurityControllerImpl: ItemListController {
     var authorizationCompletion: ((Any) -> Void)?
     
     @available(iOS 13.0, *)
@@ -643,6 +643,12 @@ class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationContr
     public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         return self.view.window!
     }
+}
+
+// The iOS 26 SDK still declares these protocols as iOS 13+, but Swift now requires the
+// *conformance* to carry that availability rather than only the witnesses.
+@available(iOS 13.0, *)
+extension PrivacyAndSecurityControllerImpl: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
 }
 
 public func privacyAndSecurityController(

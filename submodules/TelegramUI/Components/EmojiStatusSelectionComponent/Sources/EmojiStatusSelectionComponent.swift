@@ -235,6 +235,9 @@ public final class EmojiStatusSelectionComponent: Component {
 }
 
 public final class EmojiStatusSelectionController: ViewController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     private final class Node: ViewControllerTracingNode {
         private struct EmojiSearchResult {
             var groups: [EmojiPagerContentComponent.ItemGroup]

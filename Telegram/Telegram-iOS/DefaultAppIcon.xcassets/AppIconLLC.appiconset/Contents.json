@@ -87,12 +87,6 @@
     {
       "size" : "76x76",
       "idiom" : "ipad",
-      "filename" : "BlueIconIpad.png",
-      "scale" : "1x"
-    },
-    {
-      "size" : "76x76",
-      "idiom" : "ipad",
       "filename" : "BlueIconIpad@2x.png",
       "scale" : "2x"
     },

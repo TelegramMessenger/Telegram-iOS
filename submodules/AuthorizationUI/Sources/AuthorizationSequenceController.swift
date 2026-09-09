@@ -26,7 +26,7 @@ private enum InnerState: Equatable {
     case authorized
 }
 
-public final class AuthorizationSequenceController: NavigationController, MFMailComposeViewControllerDelegate, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+public final class AuthorizationSequenceController: NavigationController, MFMailComposeViewControllerDelegate {
     static func navigationBarTheme(_ theme: PresentationTheme) -> NavigationBarTheme {
         return NavigationBarTheme(buttonColor: theme.intro.accentTextColor, disabledButtonColor: theme.intro.disabledTextColor, primaryTextColor: theme.intro.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
     }
@@ -1324,4 +1324,12 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         
         return countryCode
     }
+}
+
+
+// The iOS 26 SDK still declares these protocols as iOS 13+, but Swift now requires the
+// *conformance* to carry that availability rather than only the witnesses. Declaring it on
+// an annotated extension keeps the @available(iOS 13.0, *) members as valid witnesses.
+@available(iOS 13.0, *)
+extension AuthorizationSequenceController: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
 }

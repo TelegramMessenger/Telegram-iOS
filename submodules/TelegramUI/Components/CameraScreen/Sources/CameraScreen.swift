@@ -1042,6 +1042,9 @@ private class BlurView: UIVisualEffectView {
 }
 
 public class CameraScreen: ViewController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     public enum Mode {
         case generic
         case story

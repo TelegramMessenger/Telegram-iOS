@@ -2137,6 +2137,9 @@ private final class DrawingScreenComponent: CombinedComponent {
 }
 
 public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, UIDropInteractionDelegate {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     fileprivate final class Node: ViewControllerTracingNode {
         private weak var controller: DrawingScreen?
         private let context: AccountContext

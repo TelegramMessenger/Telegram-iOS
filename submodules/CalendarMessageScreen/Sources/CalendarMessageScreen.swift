@@ -975,6 +975,9 @@ private func monthMetadata(calendar: Calendar, for baseDate: Date, currentYear: 
 }
 
 public final class CalendarMessageScreen: ViewController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     private final class Node: ViewControllerTracingNode, UIScrollViewDelegate {
         struct SelectionState {
             var dayRange: ClosedRange<Int32>?

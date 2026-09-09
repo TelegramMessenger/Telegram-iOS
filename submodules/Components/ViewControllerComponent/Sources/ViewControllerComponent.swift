@@ -19,6 +19,9 @@ private func resolveTheme(baseTheme: PresentationTheme, theme: ViewControllerCom
 }
 
 open class ViewControllerComponentContainer: ViewController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     public enum NavigationBarAppearance {
         case none
         case transparent

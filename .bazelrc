@@ -35,3 +35,21 @@ build --spawn_strategy=standalone
 build --strategy=SwiftCompile=standalone
 build --define RULES_SWIFT_BUILD_DUMMY_WORKER=1
 
+build --linkopt="-ld_classic"
+
+
+# --- Newer-toolchain compatibility (Xcode 26 / clang 17+ / Swift 6.x) ---
+# This tree targets Xcode 15.0.1. Newer compilers added diagnostics
+# (-Wthread-safety-analysis, -Wgnu-folding-constant, Swift deprecation notes,
+# "nearly matches defaulted requirement", ...) that the per-target "-Werror" and
+# "-warnings-as-errors" copts turn into hard build failures. Demote them back to
+# warnings instead of rewriting the sources. These land after the target copts,
+# so they take precedence.
+build --per_file_copt=".*","@-Wno-error"
+build --swiftcopt=-no-warnings-as-errors
+
+# Diagnostics that newer clang emits as errors *by default* (not via -Werror), so
+# the blanket -Wno-error above does not cover them. WebRTC M108 relies on the old
+# implicit double->float narrowing in braced initializers.
+build --per_file_copt=".*","@-Wno-error=c++11-narrowing"
+build --per_file_copt=".*","@-Wno-error=c++11-narrowing-const-reference"

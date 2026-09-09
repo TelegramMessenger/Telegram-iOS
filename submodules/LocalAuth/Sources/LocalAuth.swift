@@ -13,7 +13,7 @@ public struct LocalAuth {
         if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 switch context.biometryType {
-                case .faceID:
+                case .faceID, .opticID:
                     return .faceId
                 case .touchID:
                     return .touchId

@@ -60,14 +60,12 @@ posix_copts = [
 ]
 
 boringssl_copts = select({
-    "@build_bazel_rules_apple//apple:ios_armv7": posix_copts,
     "@build_bazel_rules_apple//apple:ios_arm64": posix_copts,
     "//build-system:ios_sim_arm64": posix_copts,
     "@build_bazel_rules_apple//apple:ios_x86_64": posix_copts,
 })
 
 crypto_sources_asm = select({
-    "@build_bazel_rules_apple//apple:ios_armv7": crypto_sources_ios_arm,
     "@build_bazel_rules_apple//apple:ios_arm64": crypto_sources_ios_aarch64,
     "//build-system:ios_sim_arm64": crypto_sources_ios_aarch64,
     "@build_bazel_rules_apple//apple:ios_x86_64": crypto_sources_mac_x86_64,
@@ -82,7 +80,6 @@ posix_copts_c11 = [
 ]
 
 boringssl_copts_c11 = boringssl_copts + select({
-    "@build_bazel_rules_apple//apple:ios_armv7": posix_copts_c11,
     "@build_bazel_rules_apple//apple:ios_arm64": posix_copts_c11,
     "//build-system:ios_sim_arm64": posix_copts_c11,
     "@build_bazel_rules_apple//apple:ios_x86_64": posix_copts_c11,
@@ -95,7 +92,6 @@ posix_copts_cxx = [
 ]
 
 boringssl_copts_cxx = boringssl_copts + select({
-    "@build_bazel_rules_apple//apple:ios_armv7": posix_copts_cxx,
     "@build_bazel_rules_apple//apple:ios_arm64": posix_copts_cxx,
     "//build-system:ios_sim_arm64": posix_copts_cxx,
     "@build_bazel_rules_apple//apple:ios_x86_64": posix_copts_cxx,
@@ -108,7 +104,6 @@ cc_library(
     copts = boringssl_copts_c11,
     includes = ["src/include"],
     linkopts = select({
-        "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": [],
         "//build-system:ios_sim_arm64": [],
         "@build_bazel_rules_apple//apple:ios_x86_64": [],

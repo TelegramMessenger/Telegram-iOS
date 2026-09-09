@@ -421,6 +421,9 @@ private final class StickerSelectionComponent: Component {
 }
 
 public class StickerPickerScreen: ViewController {
+    // iOS 18 added UIViewController.Transition, which shadows ComponentFlow.Transition
+    // for everything nested in this controller. Pin the name back to ComponentFlow.
+    public typealias Transition = ComponentFlow.Transition
     final class Node: ViewControllerTracingNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         private var presentationData: PresentationData
         private weak var controller: StickerPickerScreen?
