@@ -336,6 +336,12 @@ static NSMutableArray<CALayerSpringParametersOverride *> *currentSpringParameter
 
 @end
 
+@interface UIWindow (TelegramInternalWindows)
+
++ (NSArray<UIWindow *> *)allWindowsIncludingInternalWindows:(BOOL)includeInternal onlyVisibleWindows:(BOOL)onlyVisible;
+
+@end
+
 @interface UIFocusSystem (Telegram)
 
 @end
@@ -728,11 +734,43 @@ static NSMutableDictionary<NSString *, TrustedWebRecord *> *trustedWebRecords() 
     }
 }*/
 
+static UIWindow * _Nullable telegramExistingRemoteKeyboardWindow(void) {
+    NSArray *windows = nil;
+    if ([UIWindow respondsToSelector:@selector(allWindowsIncludingInternalWindows:onlyVisibleWindows:)]) {
+        windows = [UIWindow allWindowsIncludingInternalWindows:YES onlyVisibleWindows:NO];
+    }
+    if (windows.count == 0) {
+        windows = [UIApplication sharedApplication].windows;
+    }
+    
+    UIWindow *bestWindow = nil;
+    for (UIWindow *window in windows) {
+        if (window.isHidden || window.alpha <= (CGFloat)0.01) {
+            continue;
+        }
+        NSString *typeName = NSStringFromClass(window.class);
+        if (![typeName hasPrefix:@"UI"] || ![typeName hasSuffix:@"RemoteKeyboardWindow"]) {
+            continue;
+        }
+        if (bestWindow == nil || window.windowLevel > bestWindow.windowLevel) {
+            bestWindow = window;
+        }
+    }
+    return bestWindow;
+}
+
 - (UIWindow * _Nullable)internalGetKeyboard {
     Class windowClass = NSClassFromString(@"UIRemoteKeyboardWindow");
     if (!windowClass) {
         return nil;
     }
+    
+    if (@available(iOS 26.0, *)) {
+        // `+[UIRemoteKeyboardWindow remoteKeyboardWindowForScreen:create:]` raises
+        // EXC_BREAKPOINT on iOS 26/27 even when create is false.
+        return telegramExistingRemoteKeyboardWindow();
+    }
+    
     UIWindow *result = [(id<UIRemoteKeyboardWindowProtocol>)windowClass remoteKeyboardWindowForScreen:[UIScreen mainScreen] create:false];
     
     if (result) {
