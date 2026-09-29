@@ -16168,6 +16168,7 @@ Error: %8$@";
 "CreateBot.NamePlaceholder" = "Name";
 "CreateBot.UsernameStatus.Checking" = "Checking...";
 "CreateBot.UsernameStatus.Invalid" = "You can only use **a-z**, **0-9** and underscores.";
+"CreateBot.UsernameStatus.Suffix" = "Allowed username suffixes: %@";
 "CreateBot.UsernameStatus.Taken" = "This username is already taken.";
 "CreateBot.UsernameStatus.Short" = "A username must have at least 5 characters.";
 "CreateBot.UsernameStatus.Number" = "A username can't start with a number";

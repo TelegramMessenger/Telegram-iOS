@@ -27,6 +27,7 @@ final class CreateBotContentComponent: Component {
         var name: String = ""
         var username: String = ""
         var usernameIsChecked: Bool = false
+        var usernameConfiguration = BotUsernameConfiguration(allowedSuffixes: nil)
         
         init() {
         }
@@ -98,7 +99,7 @@ final class CreateBotContentComponent: Component {
                 }
                 component.externalState.username = self.usernameInputState.text.string
                 
-                self.inputUsernameUpdated()
+                self.inputUsernameUpdated(username: self.usernameInputState.text.string)
                 if !self.isUpdating {
                     self.state?.updated(transition: .immediate)
                 }
@@ -119,25 +120,24 @@ final class CreateBotContentComponent: Component {
             self.usernameCheckingDisposable?.dispose()
         }
         
-        private func inputUsernameUpdated() {
+        private func inputUsernameUpdated(username: String) {
             guard let component = self.component else {
                 return
             }
-            let username = self.usernameInputState.text.string.lowercased() + "bot"
             if let usernameCheckingStatus = self.usernameCheckingStatus, usernameCheckingStatus.username == username {
                 return
             }
             self.usernameCheckingDisposable?.dispose()
             self.usernameCheckingDisposable = nil
             
-            guard case .success = CreateBotSheetComponent.View.validatedUsername(inputUsername: username) else {
+            guard case .success = component.externalState.usernameConfiguration.validate(username) else {
                 self.usernameCheckingStatus = (username, .invalid)
                 return
             }
             
             self.usernameCheckingStatus = (username, .checking)
             self.usernameCheckingDisposable = (component.context.engine.peers.addressNameAvailability(domain: .bot(component.parentPeer.id), name: username) |> deliverOnMainQueue).startStrict(next: { [weak self] result in
-                guard let self else {
+                guard let self, self.usernameInputState.text.string == username else {
                     return
                 }
                 switch result {
@@ -170,6 +170,9 @@ final class CreateBotContentComponent: Component {
             let isFirstTime = self.component == nil
             self.component = component
             self.state = state
+            if isFirstTime {
+                component.externalState.usernameConfiguration = BotUsernameConfiguration(allowedSuffixes: component.context.currentAppConfiguration.with { $0 }.data?["bot_allowed_suffixes"] as? [String])
+            }
             
             let sideInset: CGFloat = 16.0
 
@@ -310,19 +313,13 @@ final class CreateBotContentComponent: Component {
             }
             contentHeight += nameSectionSize.height + 22.0
             
-            var initialUsername = ""
-            var botSuffix = "bot"
-            if let value = component.initialUsername {
-                if value.lowercased().hasSuffix("bot") {
-                    botSuffix = String(value[value.index(value.endIndex, offsetBy: -3)...])
-                    initialUsername = String(value[value.startIndex ..< value.index(value.endIndex, offsetBy: -3)])
-                } else {
-                    initialUsername = value
-                }
-            }
-            
+            let usernameConfiguration = component.externalState.usernameConfiguration
+            let initialUsername = usernameConfiguration.initialUsername(component.initialUsername)
+            let username = isFirstTime ? initialUsername : self.usernameInputState.text.string
+            self.inputUsernameUpdated(username: username)
+
             let usernameFooterString: NSAttributedString
-            switch CreateBotSheetComponent.View.validatedUsername(inputUsername: "\(self.usernameInputState.text.string)" + botSuffix) {
+            switch usernameConfiguration.validate(username) {
             case let .success(value):
                 switch self.usernameCheckingStatus?.status ?? .valid {
                 case .checking:
@@ -357,6 +354,8 @@ final class CreateBotContentComponent: Component {
                     errorText = environment.strings.CreateBot_UsernameStatus_Number
                 case .unsupportedCharacters:
                     errorText = environment.strings.CreateBot_UsernameStatus_Invalid
+                case .invalidSuffix:
+                    errorText = environment.strings.CreateBot_UsernameStatus_Suffix(usernameConfiguration.allowedSuffixes.joined(separator: ", ")).string
                 }
                 usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
                     return ("URL", contents)
@@ -395,7 +394,6 @@ final class CreateBotContentComponent: Component {
                             keyboardType: .asciiCapable,
                             characterLimit: 32,
                             prefix: NSAttributedString(string: "@", font: Font.regular(17.0), textColor: environment.theme.list.itemPrimaryTextColor),
-                            suffix: NSAttributedString(string: botSuffix, font: Font.regular(17.0), textColor: environment.theme.list.itemSecondaryTextColor),
                             rightAccessory: ListMultilineTextFieldItemComponent.RightAccessory(component: AnyComponentWithIdentity(
                                 id: 0,
                                 component: AnyComponent(EditLabelComponent(
@@ -545,55 +543,16 @@ private final class CreateBotSheetComponent: Component {
             return false
         }
         
-        enum UsernameValidationError: Error {
-            case insufficientLength
-            case unsupportedCharacters
-            case startsWithNumber
-        }
-        
-        static func validatedUsername(inputUsername: String) -> Result<String, UsernameValidationError> {
-            var isUsernameValid = true
-            var usernameCharacters = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
-            usernameCharacters.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
-            usernameCharacters.insert(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
-            usernameCharacters.insert("_")
-            for c in inputUsername.unicodeScalars {
-                if !usernameCharacters.contains(c) {
-                    isUsernameValid = false
-                    break
-                }
-            }
-            if !isUsernameValid {
-                return .failure(.unsupportedCharacters)
-            }
-            if let first = inputUsername.unicodeScalars.first {
-                if CharacterSet.decimalDigits.contains(first) {
-                    return .failure(.startsWithNumber)
-                }
-            }
-            if inputUsername.count < 5 {
-                return .failure(.insufficientLength)
-            }
-            return .success(inputUsername)
-        }
-        
-        static func validatedParams(inputName: String, inputUsername: String) -> (name: String, username: String)? {
-            if inputName.isEmpty {
-                return nil
-            }
-            guard case let .success(username) = validatedUsername(inputUsername: inputUsername) else {
-                return nil
-            }
-            return (inputName, username)
-        }
-        
         private func validatedParams() -> (name: String, username: String)? {
-            if !self.contentExternalState.usernameIsChecked {
+            if !self.contentExternalState.usernameIsChecked || self.contentExternalState.name.isEmpty {
                 return nil
             }
-            return CreateBotSheetComponent.View.validatedParams(inputName: contentExternalState.name, inputUsername: self.contentExternalState.username)
+            guard case let .success(username) = self.contentExternalState.usernameConfiguration.validate(self.contentExternalState.username) else {
+                return nil
+            }
+            return (self.contentExternalState.name, username)
         }
-        
+
         private func performCreateBot() {
             guard let component = self.component else {
                 return
@@ -612,7 +571,7 @@ private final class CreateBotSheetComponent: Component {
             self.actionDisposable?.dispose()
             self.actionDisposable = (component.context.engine.peers.createBot(
                 name: params.name,
-                username: params.username + "bot",
+                username: params.username,
                 managerPeerId: component.parentPeer.id,
                 viaDeeplink: true
             )
