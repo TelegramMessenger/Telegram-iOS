@@ -199,6 +199,7 @@ public final class AccountStateManager {
         
         private let peerInputActivityManager: PeerInputActivityManager?
         let auxiliaryMethods: AccountAuxiliaryMethods
+        private let isSupportUser: Bool
         var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
         
         private var updateService: UpdateMessageService?
@@ -395,6 +396,7 @@ public final class AccountStateManager {
             shouldKeepOnlinePresence: Signal<Bool, NoError>,
             peerInputActivityManager: PeerInputActivityManager?,
             auxiliaryMethods: AccountAuxiliaryMethods,
+            isSupportUser: Bool,
             updateConfigRequested: (() -> Void)?,
             isPremiumUpdated: (() -> Void)?,
             messagesRemovedContext: MessagesRemovedContext
@@ -409,6 +411,7 @@ public final class AccountStateManager {
             self.shouldKeepOnlinePresence = shouldKeepOnlinePresence
             self.peerInputActivityManager = peerInputActivityManager
             self.auxiliaryMethods = auxiliaryMethods
+            self.isSupportUser = isSupportUser
             self.updateConfigRequested = updateConfigRequested
             self.isPremiumUpdated = isPremiumUpdated
             self.messagesRemovedContext = messagesRemovedContext
@@ -815,6 +818,7 @@ public final class AccountStateManager {
                 let mediaBox = postbox.mediaBox
                 let accountPeerId = self.accountPeerId
                 let auxiliaryMethods = self.auxiliaryMethods
+                let isSupportUser = self.isSupportUser
                 let messagesRemovedContext = self.messagesRemovedContext
                 
                 let signal = postbox.transaction { transaction -> (AuthorizedAccountState?, [(peer: Peer, pts: Int32?)], Bool) in
@@ -846,13 +850,25 @@ public final class AccountStateManager {
                         var flags: Int32 = 0
                         var ptsTotalLimit: Int32?
                         
-                        if !"".isEmpty {
+                        // A support account accumulates a large update backlog while unused.
+                        // Replaying it on launch is slow and pointless: the events are for
+                        // tickets the volunteer will never scroll to, and the chat list only
+                        // ever shows the most recent chats anyway.
+                        //
+                        // `ptsTotalLimit` asks the server to answer `differenceTooLong`
+                        // instead of sending a backlog larger than this, which routes us to
+                        // `_internal_resetAccountState` below: jump to the server's current
+                        // state and re-fetch the top chats. Unread state comes from the
+                        // server, so no ticket is lost — only the local message cache, which
+                        // is refilled per chat on demand.
+                        //
+                        // Note this is *update events* (new messages, edits, deletions,
+                        // consumption), not messages or chats — so it trips somewhat before
+                        // 1000 literal new messages.
+                        if isSupportUser {
                             flags |= 1 << 0
                             ptsTotalLimit = 1000
                         }
-                        
-                        flags = 0
-                        ptsTotalLimit = nil
                         
                         if let strongSelf = self {
                             if !invalidatedChannels.isEmpty {
@@ -948,6 +964,7 @@ public final class AccountStateManager {
                         return
                     }
                     if resetState {
+                        Logger.shared.log("State", "difference too long, resetting account state (isSupportUser: \(isSupportUser))")
                         let _ = (_internal_resetAccountState(postbox: postbox, network: network, accountPeerId: accountPeerId)
                         |> deliverOn(strongSelf.queue)).start(completed: {
                             guard let strongSelf = self else {
@@ -2105,7 +2122,8 @@ public final class AccountStateManager {
         addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void,
         shouldKeepOnlinePresence: Signal<Bool, NoError>,
         peerInputActivityManager: PeerInputActivityManager?,
-        auxiliaryMethods: AccountAuxiliaryMethods
+        auxiliaryMethods: AccountAuxiliaryMethods,
+        isSupportUser: Bool = false
     ) {
         let queue = Queue(name: "AccountStateManager")
         
@@ -2131,6 +2149,7 @@ public final class AccountStateManager {
                 shouldKeepOnlinePresence: shouldKeepOnlinePresence,
                 peerInputActivityManager: peerInputActivityManager,
                 auxiliaryMethods: auxiliaryMethods,
+                isSupportUser: isSupportUser,
                 updateConfigRequested: {
                     updateConfigRequestedImpl?()
                 },

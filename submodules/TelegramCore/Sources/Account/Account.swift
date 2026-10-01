@@ -148,12 +148,9 @@ public class UnauthorizedAccount {
                         }
 
                         let user = TelegramUser(user: apiUser)
-                        var isSupportUser = false
-                        if let phone = user.phone, phone.hasPrefix("42"), phone.count <= 5 {
-                            isSupportUser = true
-                        }
+                        let isSupportUser = SupportAccount.isSupportPhoneNumber(user.phone)
                         let state = AuthorizedAccountState(isTestingEnvironment: testingEnvironment, masterDatacenterId: masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
-                        initializedAppSettingsAfterLogin(transaction: transaction, appVersion: networkArguments.appVersion, syncContacts: syncContacts)
+                        initializedAppSettingsAfterLogin(transaction: transaction, appVersion: networkArguments.appVersion, syncContacts: syncContacts, isSupportUser: isSupportUser)
                         transaction.setState(state)
                         return accountManager.transaction { [weak self] transaction -> SendAuthorizationCodeResult in
                             if let self {
@@ -1272,7 +1269,7 @@ public class Account {
         
         self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
             self?.contactSyncManager?.addIsContactUpdates(updates)
-        }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
+        }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods, isSupportUser: isSupportUser)
         
         self.viewTracker = AccountViewTracker(account: self)
         self.viewTracker.resetPeerHoleManagement = { [weak self] peerId in

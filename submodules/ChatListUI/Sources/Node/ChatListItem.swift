@@ -1885,7 +1885,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             enablePreview = false
         }
         
-        self.avatarNode.setStoryStats(storyStats: storyState.flatMap { storyState in
+        // Support volunteers do not post or browse stories from the queue, so the ring is
+        // noise on every row (D19 companion). Passing nil leaves the avatar undecorated.
+        self.avatarNode.setStoryStats(storyStats: item.context.isSupportUser ? nil : storyState.flatMap { storyState in
             return AvatarNode.StoryStats(
                 totalCount: storyState.stats.totalCount,
                 unseenCount: storyState.stats.unseenCount,
@@ -2080,7 +2082,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if isKnown {
                         let photo = personalPhoto ?? profilePhoto
-                        if let photo = photo, item.context.sharedContext.energyUsageSettings.loopEmoji, (!photo.videoRepresentations.isEmpty || photo.emojiMarkup != nil) {
+                        if let photo = photo, !item.context.isSupportUser, item.context.sharedContext.energyUsageSettings.loopEmoji, (!photo.videoRepresentations.isEmpty || photo.emojiMarkup != nil) {
                             let videoNode: AvatarVideoNode
                             if let current = strongSelf.avatarVideoNode {
                                 videoNode = current

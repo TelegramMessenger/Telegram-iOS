@@ -2948,6 +2948,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private weak var storyCameraTooltip: TooltipScreen?
     fileprivate func openStoryCamera(fromList: Bool, gesturePullOffset: CGFloat? = nil) {
+        // Support volunteers cannot post stories (D16). Guarded at this choke point because
+        // seven call sites reach it — camera button, pull gesture, deep links. Story
+        // *viewing* is unaffected; it uses the story container controllers.
+        guard !self.context.isSupportUser else {
+            return
+        }
         guard !self.context.isFrozen else {
             let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
             self.push(controller)

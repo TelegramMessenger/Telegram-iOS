@@ -747,7 +747,7 @@ final class PeerSelectionScreenComponent: Component {
             if component.initialData.mode == .personalChannel && component.initialData.channelId != nil && self.searchQuery.isEmpty {
                 entries.append(.hide)
             }
-            if component.initialData.mode == .community && self.searchQuery.isEmpty {
+            if component.initialData.mode == .community && self.searchQuery.isEmpty && !component.context.isSupportUser {
                 entries.append(.createGroup)
                 entries.append(.createChannel)
             }

@@ -26,6 +26,9 @@ enum InfoSection: Int, CaseIterable {
     case groupLocation
     case calls
     case personalChannel
+    /// TSupport: the shared volunteer note, deliberately above `peerInfo` so it is read
+    /// before the user's own bio.
+    case supportInfo
     case peerInfo
     case balances
     case permissions
@@ -34,6 +37,21 @@ enum InfoSection: Int, CaseIterable {
     case peerMembers
     case channelMonoforum
     case botAffiliateProgram
+}
+
+/// TSupport: everything the profile needs in order to render and edit a volunteer note.
+/// Passed as a single optional so regular accounts simply get `nil` and nothing renders.
+struct SupportInfoItemContext {
+    /// Non-nil while the note is being edited inline; carries the in-progress text.
+    let editingText: String?
+    let beginEditing: () -> Void
+    let updateText: (String) -> Void
+
+    init(editingText: String?, beginEditing: @escaping () -> Void, updateText: @escaping (String) -> Void) {
+        self.editingText = editingText
+        self.beginEditing = beginEditing
+        self.updateText = updateText
+    }
 }
 
 func infoItems(
@@ -46,7 +64,8 @@ func infoItems(
     callMessages: [EngineMessage],
     chatLocation: ChatLocation,
     isOpenedFromChat: Bool,
-    isMyProfile: Bool
+    isMyProfile: Bool,
+    supportInfoContext: SupportInfoItemContext? = nil
 ) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
@@ -87,6 +106,12 @@ func infoItems(
         let ItemBirthdate = 3002
         let ItemAbout = 3003
         let ItemNote = 3004
+        let ItemSupportInfo = 3100
+        let ItemSupportInfoAuthor = 3101
+        /// Must differ from `ItemSupportInfo`: the section container caches item nodes by id,
+        /// so reusing it hands the display node an input item and the type guard collapses
+        /// the row to a stub height.
+        let ItemSupportInfoInput = 3102
         let ItemAppFooter = 3005
         let ItemAffiliate = 4000
         let ItemAffiliateInfo = 4001
@@ -205,6 +230,41 @@ func infoItems(
             )
         }
         
+        // TSupport: the shared volunteer note, in its own section above everything else.
+        // Deliberately outside the `cachedData` block below: the note is fetched separately,
+        // so the row must appear even for a user with no bio, no note and no cached data —
+        // otherwise there is no way to *add* a note to them. Nil for every regular account.
+        if let supportInfoContext, !isMyProfile, user.id != context.account.peerId, !user.isDeleted {
+            if let editingText = supportInfoContext.editingText {
+                items[.supportInfo]!.append(PeerInfoScreenMultilineInputItem(id: ItemSupportInfoInput, text: editingText, placeholder: presentationData.strings.Profile_SupportInfoPlaceholder, textUpdated: { text in
+                    supportInfoContext.updateText(text)
+                }, action: {
+                }, maxLength: 2048))
+            } else {
+                let supportInfo = data.supportInfo
+                let noteText = supportInfo?.text ?? ""
+                let isEmpty = noteText.isEmpty
+                items[.supportInfo]!.append(PeerInfoScreenLabeledValueItem(
+                    id: ItemSupportInfo,
+                    label: presentationData.strings.Profile_SupportInfo,
+                    text: isEmpty ? presentationData.strings.Profile_SupportInfoEmpty : noteText,
+                    entities: isEmpty ? [] : (supportInfo?.entities ?? []),
+                    textColor: isEmpty ? .accent : .primary,
+                    textBehavior: .multiLine(maxLines: 100, enabledEntities: []),
+                    action: { _, _ in
+                        supportInfoContext.beginEditing()
+                    },
+                    requestLayout: { animated in
+                        interaction.requestLayout(animated)
+                    }
+                ))
+                if let supportInfo, !isEmpty, !supportInfo.author.isEmpty {
+                    let dateText = stringForRelativeTimestamp(strings: presentationData.strings, relativeTimestamp: supportInfo.date, relativeTo: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), dateTimeFormat: presentationData.dateTimeFormat)
+                    items[.supportInfo]!.append(PeerInfoScreenCommentItem(id: ItemSupportInfoAuthor, text: presentationData.strings.Profile_SupportInfoAuthor(supportInfo.author, dateText).string))
+                }
+            }
+        }
+
         if let cachedData = data.cachedData as? CachedUserData {
             if let birthday = cachedData.birthday {
                 let isBirthdayToday = hasBirthdayToday(birthday: birthday)

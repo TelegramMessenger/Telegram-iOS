@@ -715,6 +715,27 @@ public final class AvatarNode: ASDisplayNode {
             displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0),
             storeUnrounded: Bool = false
         ) {
+            // Peer photos are suppressed for support volunteers outside the profile screen
+            // (D19). setPeerV2 is an image-only fast path with no monogram rendering, so
+            // suppressing the photo here would leave a blank circle. Delegate to setPeer,
+            // which renders the letter monogram exactly as it does for a peer with no photo.
+            if genericContext.isSupportUser {
+                self.setPeer(
+                    context: genericContext,
+                    account: account,
+                    theme: theme,
+                    peer: peer,
+                    authorOfMessage: authorOfMessage,
+                    overrideImage: overrideImage,
+                    emptyColor: emptyColor,
+                    clipStyle: clipStyle,
+                    synchronousLoad: synchronousLoad,
+                    displayDimensions: displayDimensions,
+                    storeUnrounded: storeUnrounded
+                )
+                return
+            }
+            
             let smallProfileImage = peer?.smallProfileImage
             let params = Params(
                 peerId: peer?.id,
@@ -839,7 +860,13 @@ public final class AvatarNode: ASDisplayNode {
                     icon = .storyIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
-                representation = peer?.smallProfileImage
+                // Support volunteers see a stream of strangers; peer photos are suppressed
+                // outside the profile screen (D19). Leaving `representation` nil makes
+                // AvatarNode fall back to its letter monogram, so layout is unchanged.
+                // The profile screen uses PeerInfoAvatarListNode and is unaffected.
+                if !genericContext.isSupportUser {
+                    representation = peer?.smallProfileImage
+                }
             }
             
             let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.nameColor, peer?.displayLetters ?? [], representation, clipStyle, cutoutRect)

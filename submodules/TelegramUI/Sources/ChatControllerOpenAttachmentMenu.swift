@@ -230,21 +230,24 @@ extension ChatControllerImpl {
                 canSendPolls = false
             }
             
+            // Support volunteers send text, screenshots and files — nothing else (D13).
+            let isSupportUser = self.context.isSupportUser
+            
             var availableButtons: [AttachmentButtonType] = [.gallery, .file]
-            if banSendText == nil {
+            if banSendText == nil, !isSupportUser {
                 availableButtons.append(.location)
                 availableButtons.append(.contact)
             }
             
-            if canSendPolls {
+            if canSendPolls, !isSupportUser {
                 availableButtons.insert(.poll, at: max(0, availableButtons.count - 1))
             }
             
-            if canSendTodos {
+            if canSendTodos, !isSupportUser {
                 availableButtons.insert(.todo, at: max(0, availableButtons.count - 1))
             }
             
-            if "".isEmpty {
+            if "".isEmpty, !isSupportUser {
                 availableButtons.insert(.audio, at: max(0, availableButtons.count - 1))
             }
             
@@ -301,6 +304,9 @@ extension ChatControllerImpl {
                     }
                     
                     for bot in attachMenuBots.reversed() {
+                        if isSupportUser {
+                            break
+                        }
                         var peerType = peerType
                         if bot.peer.id == peer.id {
                             peerType.insert(.sameBot)
@@ -349,7 +355,7 @@ extension ChatControllerImpl {
             let premiumGiftOptions: [CachedPremiumGiftOption]
             
             var showPremiumGift = false
-            if !premiumConfiguration.isPremiumDisabled && self.presentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All {
+            if !isSupportUser, !premiumConfiguration.isPremiumDisabled && self.presentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All {
                 if self.presentationInterfaceState.alwaysShowGiftButton {
                     showPremiumGift = true
                 } else if self.presentationInterfaceState.hasBirthdayToday {
@@ -1092,7 +1098,8 @@ extension ChatControllerImpl {
         // The gallery tab is inherently photos/videos only; audio + location are the only tabs that surface
         // non-photo/video media, so restricting to just `.gallery` yields a photo/video-only picker (used when
         // creating or extending a mosaic group).
-        let availableButtons: [AttachmentButtonType] = photoVideoOnly ? [.gallery] : [.gallery, .audio, .location]
+        // Support accounts get photos/videos only — no audio or location tabs (D13).
+        let availableButtons: [AttachmentButtonType] = (photoVideoOnly || self.context.isSupportUser) ? [.gallery] : [.gallery, .audio, .location]
         presentPollAttachmentScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, subject: .richText, availableButtons: availableButtons, inputMediaNodeData: nil, present: { [weak self] c, push in
             guard let self else {
                 return

@@ -1183,7 +1183,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if data.messageActions.options.contains(.sendGift), !message.id.peerId.isTelegramNotifications {
+        // Support volunteers cannot send gifts (D14). `.gift` is absent from the attachment
+        // menu, so this context action is the reachable gift-sending surface in chat.
+        if data.messageActions.options.contains(.sendGift), !message.id.peerId.isTelegramNotifications, !context.isSupportUser {
             let sendGiftTitle: String
             var isIncoming = message.effectivelyIncoming(context.account.peerId)
             for media in message.media {

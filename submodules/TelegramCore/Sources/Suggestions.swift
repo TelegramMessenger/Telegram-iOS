@@ -114,6 +114,14 @@ private var dismissedSuggestions: [AccountRecordId: Set<String>] = [:] {
 }
 
 func _internal_getServerProvidedSuggestions(account: Account) -> Signal<[ServerProvidedSuggestion], NoError> {
+    // Support volunteers use a shared regional identity; none of these prompts applies, and
+    // USERPIC_SETUP actively contradicts the profile-editing restriction by asking them to
+    // set a photo they are not allowed to change. Filtering here rather than at each
+    // presentation site also excludes suggestions added by the server in future.
+    if account.isSupportUser {
+        return .single([])
+    }
+    
     let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.serverSuggestionInfo()]))
     return combineLatest(account.postbox.combinedView(keys: [key]), dismissedSuggestionsPromise.get())
     |> map { views, dismissedSuggestionsValue -> [ServerProvidedSuggestion] in

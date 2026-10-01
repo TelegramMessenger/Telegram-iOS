@@ -270,6 +270,9 @@ public final class AccountContextImpl: AccountContext {
     private var isFrozenDisposable: Disposable?
     public private(set) var isFrozen: Bool
     
+    private var isSupportUserDisposable: Disposable?
+    public private(set) var isSupportUser: Bool
+    
     public let imageCache: AnyObject?
     
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, availableReplyColors: EngineAvailableColorOptions, availableProfileColors: EngineAvailableColorOptions, temp: Bool = false)
@@ -285,6 +288,10 @@ public final class AccountContextImpl: AccountContext {
         self.audioTranscriptionTrial = AudioTranscription.TrialState.defaultValue
         self.isPremium = false
         self.isFrozen = false
+        // Seeded synchronously from the persisted account record so that read-suppression is
+        // active before the first chat can be opened. Resolving this asynchronously would
+        // leave a cold-start window in which a volunteer's queue is marked read.
+        self.isSupportUser = account.isSupportUser
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -492,6 +499,34 @@ public final class AccountContextImpl: AccountContext {
             self.isFrozen = isFrozen
         })
         
+        // Reconciliation. The account peer's phone number is the authority: it is correct for
+        // every authorisation route, including QR transfer, and for accounts that authorised
+        // before support detection existed.
+        //
+        // A nil/empty phone means *unknown*, not *not a support account* — it must never
+        // revoke support status, or a volunteer's queue silently starts being marked read.
+        self.isSupportUserDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
+        |> map { peer -> Bool? in
+            guard case let .user(user) = peer, let phone = user.phone, !phone.isEmpty else {
+                return nil
+            }
+            return SupportAccount.isSupportPhoneNumber(phone)
+        }
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).startStrict(next: { [weak self] resolved in
+            guard let self, let resolved else {
+                return
+            }
+            self.isSupportUser = resolved
+            if resolved != account.isSupportUser {
+                let _ = SupportAccount.updateAttribute(
+                    accountManager: sharedContext.accountManager,
+                    id: account.id,
+                    isSupportUser: resolved
+                ).startStandalone()
+            }
+        })
+        
         self.experimentalUISettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             guard let self else {
@@ -515,6 +550,7 @@ public final class AccountContextImpl: AccountContext {
         self.userLimitsConfigurationDisposable?.dispose()
         self.peerNameColorsConfigurationDisposable?.dispose()
         self.isFrozenDisposable?.dispose()
+        self.isSupportUserDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

@@ -1613,6 +1613,20 @@ public extension TelegramEngine {
         public func recommendedChannels(peerId: EnginePeer.Id?) -> Signal<RecommendedChannels?, NoError> {
             return _internal_recommendedChannels(account: self.account, peerId: peerId)
         }
+
+        /// TSupport: the shared volunteer note for a user. Support accounts only — callers
+        /// must gate on `isSupportUser`; a regular account never reads or writes this.
+        public func supportPeerInfo(peerId: EnginePeer.Id) -> Signal<SupportPeerInfo?, NoError> {
+            return _internal_supportPeerInfo(postbox: self.account.postbox, peerId: peerId)
+        }
+
+        public func fetchSupportPeerInfo(peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+            return _internal_fetchSupportPeerInfo(account: self.account, peerId: peerId)
+        }
+
+        public func updateSupportPeerInfo(peerId: EnginePeer.Id, text: String, entities: [MessageTextEntity]) -> Signal<Never, UpdateSupportPeerInfoError> {
+            return _internal_updateSupportPeerInfo(account: self.account, peerId: peerId, text: text, entities: entities)
+        }
         
         public func recommendedChannelPeerIds(peerId: EnginePeer.Id?) -> Signal<[EnginePeer.Id]?, NoError> {
             return _internal_recommendedChannelPeerIds(account: self.account, peerId: peerId)

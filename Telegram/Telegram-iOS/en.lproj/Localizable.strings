@@ -16598,3 +16598,10 @@ Error: %8$@";
 "TextProcessing.ActionGenerate" = "Generate";
 "TextProcessing.StyleList.Prompt" = "Prompt";
 "TextProcessing.PromptPlaceholder" = "Generate text, formulas, or tables...";
+
+"Profile.SupportInfo" = "Support Info";
+"Profile.SupportInfoEmpty" = "Add support info";
+"Profile.SupportInfoAuthor" = "%1$@, %2$@";
+"Profile.SupportInfoPlaceholder" = "Support info";
+"Conversation.SupportCheckInfo" = "⚠️ Check Info";
+"Conversation.SupportCheckInfoStatus" = "⚠️ Check Info - %@";

@@ -156,6 +156,10 @@ public struct Namespaces {
         public static let cachedCloudAITextStyles: Int8 = 53
         public static let cachedCommunityPeerLinkRequests: Int8 = 54
         public static let richTextComposerDrafts: Int8 = 55
+
+        /// TSupport: volunteer notes about a user (`help.getUserInfo`). Deliberately far above
+        /// upstream's range so new upstream collections never collide on an upstream merge.
+        public static let supportPeerInfo: Int8 = 120
     }
     
     public struct UnorderedItemList {

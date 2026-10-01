@@ -446,8 +446,23 @@ public extension PeerInfoScreenImpl {
 }
 
 extension PeerInfoScreenImpl {
+    /// Whether this screen is showing a support volunteer's own profile.
+    ///
+    /// Scoped to the account's own peer deliberately: `openAvatarForEditing` also serves
+    /// group avatars and custom photos set for a contact, neither of which is the
+    /// volunteer's own identity and neither of which should be blocked.
+    var isSupportUserOwnProfile: Bool {
+        guard self.context.isSupportUser else {
+            return false
+        }
+        return self.controllerNode.data?.peer?.id == self.context.account.peerId
+    }
+    
     func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }, completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? = { _, _ in nil }) {
         guard !self.presentAccountFrozenInfoIfNeeded() else {
+            return
+        }
+        guard !self.isSupportUserOwnProfile else {
             return
         }
         guard let data = self.controllerNode.data, let peer = data.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: data.threadData) else {
@@ -698,6 +713,9 @@ extension PeerInfoScreenImpl {
     }
     
     func openAvatarRemoval(mode: PeerInfoAvatarEditingMode, peer: EnginePeer? = nil, item: PeerInfoAvatarListItem? = nil, completion: @escaping () -> Void = {}) {
+        guard !self.isSupportUserOwnProfile else {
+            return
+        }
         let proceed = { [weak self] in
             guard let strongSelf = self else {
                 return

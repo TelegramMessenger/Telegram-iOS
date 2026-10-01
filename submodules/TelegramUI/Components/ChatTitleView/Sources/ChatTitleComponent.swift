@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import TelegramUIPreferences
@@ -320,6 +321,12 @@ public final class ChatTitleComponent: Component {
         
         private var component: ChatTitleComponent?
         private weak var state: EmptyComponentState?
+
+        /// TSupport: the shared volunteer note for the peer in the title, if any. Only ever
+        /// populated for support accounts, so a regular account's subtitle is untouched.
+        private var supportInfo: SupportPeerInfo?
+        private var supportInfoPeerId: EnginePeer.Id?
+        private let supportInfoDisposable = MetaDisposable()
         
         override init(frame: CGRect) {
             self.contentContainer = UIView()
@@ -344,6 +351,77 @@ public final class ChatTitleComponent: Component {
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
+
+        deinit {
+            self.supportInfoDisposable.dispose()
+        }
+
+        // MARK: TSupport — "Check Info" warning in the chat title.
+
+        /// Subscribe to the volunteer note for the peer in the title, and refresh it from the
+        /// server. Support accounts only, and only 1:1 user chats — `help.getUserInfo` takes an
+        /// InputUser, and volunteers are never in groups.
+        private func updateSupportInfoSubscription(component: ChatTitleComponent) {
+            var peerId: EnginePeer.Id?
+            if component.context.isSupportUser, case let .peer(peerView, _, _, _, _, _, _, _, _) = component.content {
+                if let user = peerView.peer as? TelegramUser, !user.isDeleted, user.id != component.context.account.peerId, !isServicePeer(user) {
+                    peerId = user.id
+                }
+            }
+
+            if peerId == self.supportInfoPeerId {
+                return
+            }
+            self.supportInfoPeerId = peerId
+
+            guard let peerId else {
+                self.supportInfoDisposable.set(nil)
+                self.supportInfo = nil
+                return
+            }
+
+            self.supportInfo = nil
+            let context = component.context
+            self.supportInfoDisposable.set((context.engine.peers.supportPeerInfo(peerId: peerId)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] info in
+                guard let self, self.supportInfoPeerId == peerId else {
+                    return
+                }
+                if self.supportInfo != info {
+                    self.supportInfo = info
+                    self.state?.updated(transition: .immediate)
+                }
+            }))
+            let _ = context.engine.peers.fetchSupportPeerInfo(peerId: peerId).startStandalone()
+        }
+
+        /// Prefix the subtitle so a note can never be missed. Colours are left alone
+        /// deliberately — the ⚠️ emoji is yellow in any theme, so it carries the signal
+        /// without consuming the blue online/typing cue.
+        private func applyingSupportInfoWarning(to state: ChatTitleActivityNodeState, component: ChatTitleComponent) -> ChatTitleActivityNodeState {
+            guard let supportInfo = self.supportInfo, !supportInfo.isEmpty else {
+                return state
+            }
+            guard case let .info(currentString, infoType) = state else {
+                return state
+            }
+
+            let warningText: String
+            if currentString.string.isEmpty {
+                warningText = component.strings.Conversation_SupportCheckInfo
+            } else {
+                warningText = component.strings.Conversation_SupportCheckInfoStatus(currentString.string).string
+            }
+
+            var attributes: [NSAttributedString.Key: Any] = [
+                .font: Font.regular(12.0),
+                .foregroundColor: component.theme.chat.inputPanel.inputControlColor
+            ]
+            if currentString.length != 0 {
+                attributes = currentString.attributes(at: 0, effectiveRange: nil)
+            }
+            return .info(NSAttributedString(string: warningText, attributes: attributes), infoType)
+        }
         
         @objc private func onTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
@@ -366,6 +444,7 @@ public final class ChatTitleComponent: Component {
             
             self.component = component
             self.state = state
+            self.updateSupportInfoSubscription(component: component)
             
             var titleSegments: [AnimatedTextComponent.Item] = []
             var titleLeftIcon: TitleIconComponent.Kind?
@@ -1056,7 +1135,7 @@ public final class ChatTitleComponent: Component {
                 containerSize: CGSize(width: maxTitleWidth, height: 100.0)
             )
             
-            let _ = subtitleNode.transitionToState(state, animation: transition.animation.isImmediate ? .none : .slide)
+            let _ = subtitleNode.transitionToState(self.applyingSupportInfoWarning(to: state, component: component), animation: transition.animation.isImmediate ? .none : .slide)
             let subtitleSize = subtitleNode.updateLayout(CGSize(width: availableSize.width - containerSideInset * 2.0, height: 100.0), alignment: .center)
             
             var minSubtitleWidth: CGFloat?

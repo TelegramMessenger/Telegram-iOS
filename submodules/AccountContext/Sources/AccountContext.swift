@@ -1752,6 +1752,12 @@ public protocol AccountContext: AnyObject {
     
     var isPremium: Bool { get }
     var isFrozen: Bool { get }
+    /// Whether this account authorised with a TSupport volunteer phone number.
+    ///
+    /// Seeded synchronously from the persisted account record, then kept in sync with the
+    /// account peer's phone number. Prefer this over `account.isSupportUser`, which is fixed
+    /// at construction and so is stale for the first session after a QR-code login.
+    var isSupportUser: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }
     var peerNameColors: PeerNameColors { get }
     

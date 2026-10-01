@@ -702,7 +702,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             presentationData = presentationData.withUpdated(chatWallpaper: forcedWallpaper)
         }
         self.presentationData = presentationData
-        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
+        // Support volunteers receive a high volume of unsolicited media from strangers;
+        // auto-download is off by default for them. Applied here rather than written to
+        // storage because MediaAutoDownloadSettings lives in account-manager shared data
+        // and is global — persisting it would disable downloads on the volunteer's other
+        // accounts too.
+        if context.isSupportUser {
+            self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.disablingAutomaticDownload
+        } else {
+            self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
+        }
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
@@ -6817,6 +6826,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         
         self.automaticMediaDownloadSettingsDisposable = (context.sharedContext.automaticMediaDownloadSettings
+        |> map { settings -> MediaAutoDownloadSettings in
+            // Keep the support-account override applied when the shared settings change;
+            // otherwise this subscription would immediately undo it.
+            return context.isSupportUser ? settings.disablingAutomaticDownload : settings
+        }
         |> deliverOnMainQueue).startStrict(next: { [weak self] downloadSettings in
             if let strongSelf = self, strongSelf.automaticMediaDownloadSettings != downloadSettings {
                 strongSelf.automaticMediaDownloadSettings = downloadSettings
@@ -9987,6 +10001,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func displayMediaRecordingTooltip() {
+        // The voice/video recording button is hidden for support volunteers (D12), so the
+        // tooltip explaining how to use it has nothing to point at.
+        if self.context.isSupportUser {
+            return
+        }
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }

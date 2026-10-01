@@ -362,6 +362,15 @@ final class AuthorizedApplicationContext {
                         inAppNotificationSettings = InAppNotificationSettings.defaultSettings
                     }
                     
+                    // Support volunteers get no in-app banner, sound or vibration while
+                    // working the queue. Overridden at runtime rather than written to the
+                    // stored settings: InAppNotificationSettings lives in accountManager
+                    // shared data and is global, so persisting it would silence the
+                    // volunteer's other accounts too.
+                    if strongSelf.context.isSupportUser {
+                        return
+                    }
+                    
                     if let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
                         let _ = (appLockContext.isCurrentlyLocked
                         |> take(1)

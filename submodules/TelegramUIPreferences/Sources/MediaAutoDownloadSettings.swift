@@ -372,8 +372,7 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
     public var energyUsageSettings: EnergyUsageSettings
     public var highQualityStories: Bool
     
-    public static var defaultSettings: MediaAutoDownloadSettings {
-        let mb: Int64 = 1024 * 1024
+    public static var defaultSettings: MediaAutoDownloadSettings {        let mb: Int64 = 1024 * 1024
         let presets = MediaAutoDownloadPresets(low:
             MediaAutoDownloadCategories(
                 basePreset: .low,
@@ -407,6 +406,21 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
         self.downloadInBackground = downloadInBackground
         self.energyUsageSettings = energyUsageSettings
         self.highQualityStories = highQualityStories
+    }
+    
+    /// A copy with automatic downloading switched off on every connection type.
+    ///
+    /// Used for support accounts, which receive a high volume of unsolicited media from
+    /// strangers. Everything else is preserved, so re-enabling in Settings restores the
+    /// volunteer's own presets.
+    ///
+    /// Note stickers still download — `shouldDownloadMediaAutomatically` short-circuits for
+    /// them, and they are required for message rendering.
+    public var disablingAutomaticDownload: MediaAutoDownloadSettings {
+        var settings = self
+        settings.cellular.enabled = false
+        settings.wifi.enabled = false
+        return settings
     }
     
     public init(from decoder: Decoder) throws {

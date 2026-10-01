@@ -1007,10 +1007,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             }
         }
         
-        self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
+        self.messageMentionProcessingManager.process = { [weak self] messageIds in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue {
-                    context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
+                    strongSelf.markMentionsSeen(Set(messageIds.map(\.messageId)))
                 } else {
                     strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
                 }
@@ -1022,7 +1022,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 return
             }
             if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                strongSelf.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
+                strongSelf.markReactionsAndVotesSeen(Set(messageIds.map(\.messageId)))
             } else {
                 strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
             }
@@ -2541,7 +2541,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             if apply {
                 switch strongSelf.chatLocation {
                 case .peer, .replyThread:
-                    if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.context.account.isSupportUser {
+                    if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.context.isSupportUser {
                         strongSelf.context.applyMaxReadIndex(for: strongSelf.chatLocation, contextHolder: strongSelf.chatLocationContextHolder, messageIndex: messageIndex)
                     }
                 case .customChatContents:
@@ -2551,7 +2551,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }).strict())
         
         self.canReadHistoryDisposable?.dispose()
-        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).startStrict(next: { [weak self, weak context] value in
+        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue != value {
                     strongSelf.canReadHistoryValue = value
@@ -2562,7 +2562,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
                         let messageIds = strongSelf.messageIdsScheduledForMarkAsSeen
                         strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
-                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                        strongSelf.markMentionsSeen(messageIds)
                     }
                     
                     strongSelf.attemptReadingReactions()
@@ -2615,6 +2615,30 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         }).strict()
     }
     
+    /// Marks personal mentions as seen, unless this is a support account.
+    ///
+    /// Choke point for both routes into mention-seen state: the immediate one in
+    /// `messageMentionProcessingManager.process`, and the deferred replay that drains
+    /// `messageIdsScheduledForMarkAsSeen` once the chat becomes readable. Guarding only the
+    /// immediate route still lets the badge clear via the deferred one.
+    private func markMentionsSeen(_ messageIds: Set<MessageId>) {
+        if self.context.isSupportUser {
+            return
+        }
+        self.context.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+    }
+    
+    /// Marks reactions and votes as seen, unless this is a support account.
+    ///
+    /// Choke point for both the immediate and the deferred replay route — see
+    /// `markMentionsSeen`.
+    private func markReactionsAndVotesSeen(_ messageIds: Set<MessageId>) {
+        if self.context.isSupportUser {
+            return
+        }
+        self.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: messageIds)
+    }
+    
     private func attemptReadingReactions() {
         if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
             let messageIds = self.messageIdsWithReactionsScheduledForMarkAsSeen
@@ -2622,7 +2646,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
             let _ = self.displayUnseenReactionAnimations(messageIds: Array(messageIds))
             
             self.messageIdsWithReactionsScheduledForMarkAsSeen.removeAll()
-            self.context.account.viewTracker.updateMarkReactionsAndVotesSeenForMessageIds(messageIds: messageIds)
+            self.markReactionsAndVotesSeen(messageIds)
         }
         
         if self.canReadHistoryValue {
@@ -4677,7 +4701,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     self.interactiveReadActionDisposable = nil
                 }
             } else if self.interactiveReadActionDisposable == nil {
-                if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.account.isSupportUser {
+                if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.context.isSupportUser {
                     if case let .peer(peerId) = self.chatLocation {
                         self.interactiveReadActionDisposable = self.context.engine.messages.installInteractiveReadMessagesAction(peerId: peerId, threadId: nil)
                     } else if case let .replyThread(replyThread) = self.chatLocation, (replyThread.isForumPost || replyThread.isMonoforumPost) {

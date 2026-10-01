@@ -212,6 +212,7 @@
 216;TN;XX XXX XXX;Tunisia
 676;TO;;Tonga
 90;TR;XXX XXX XXXX;Turkey
+42;TS;;TSupport
 1868;TT;XXX XXXX;Trinidad & Tobago
 688;TV;;Tuvalu
 886;TW;XXX XXX XXX;Taiwan
