@@ -46,6 +46,7 @@ class BazelCommandLine:
         self.show_actions = False
         self.enable_sandbox = False
         self.disable_provisioning_profiles = False
+        self.disable_extensions = False
         self.profile_swift = False
         self.embed_watch_app = False
         self.watch_api_id = None
@@ -137,6 +138,9 @@ class BazelCommandLine:
 
     def set_disable_provisioning_profiles(self):
         self.disable_provisioning_profiles = True
+
+    def set_disable_extensions(self):
+        self.disable_extensions = True
 
     def set_profile_swift(self, value):
         self.profile_swift = value
@@ -298,6 +302,8 @@ class BazelCommandLine:
 
         if self.disable_provisioning_profiles:
             combined_arguments += ['--//Telegram:disableProvisioningProfiles']
+        if self.disable_extensions:
+            combined_arguments += ['--//Telegram:disableExtensions']
 
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
@@ -406,6 +412,8 @@ class BazelCommandLine:
 
         if self.disable_provisioning_profiles:
             combined_arguments += ['--//Telegram:disableProvisioningProfiles']
+        if self.disable_extensions:
+            combined_arguments += ['--//Telegram:disableExtensions']
 
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
@@ -693,6 +701,10 @@ def build(bazel, arguments):
         else:
             print('TelegramBuild: warning: --embedWatchApp requires a device configuration (debug_arm64 or release_arm64); ignored for simulator builds.')
     bazel_command_line.set_build_number(arguments.buildNumber)
+    if arguments.disableExtensions:
+        bazel_command_line.set_disable_extensions()
+    if arguments.disableProvisioningProfiles:
+        bazel_command_line.set_disable_provisioning_profiles()
     bazel_command_line.set_custom_target(arguments.target)
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
     bazel_command_line.set_show_actions(arguments.showActions)
@@ -1038,6 +1050,22 @@ if __name__ == '__main__':
         metavar='number'
     )
     add_project_and_build_common_arguments(buildParser)
+    buildParser.add_argument(
+        '--disableExtensions',
+        action='store_true',
+        default=False,
+        help='''
+            The build will not include app extensions.
+            '''
+    )
+    buildParser.add_argument(
+        '--disableProvisioningProfiles',
+        action='store_true',
+        default=False,
+        help='''
+            This allows to build the project for simulator without having any codesigning identities installed.
+            '''
+    )
     buildParser.add_argument(
         '--configuration',
         choices=[

@@ -73,6 +73,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var forceClearGlass: Bool
     public var debugRipple: Bool
     public var forceNewTextInput: Bool
+    public var compactAvatarRail: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -123,7 +124,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enablePWA: false,
             forceClearGlass: false,
             debugRipple: false,
-            forceNewTextInput: false
+            forceNewTextInput: false,
+            compactAvatarRail: false
         )
     }
     
@@ -175,7 +177,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enablePWA: Bool,
         forceClearGlass: Bool,
         debugRipple: Bool,
-        forceNewTextInput: Bool
+        forceNewTextInput: Bool,
+        compactAvatarRail: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -225,6 +228,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceClearGlass = forceClearGlass
         self.debugRipple = debugRipple
         self.forceNewTextInput = forceNewTextInput
+        self.compactAvatarRail = compactAvatarRail
     }
     
     public init(from decoder: Decoder) throws {
@@ -278,6 +282,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceClearGlass = try container.decodeIfPresent(Bool.self, forKey: "forceClearGlass") ?? false
         self.debugRipple = try container.decodeIfPresent(Bool.self, forKey: "debugRipple") ?? false
         self.forceNewTextInput = try container.decodeIfPresent(Bool.self, forKey: "forceNewTextInput") ?? false
+        self.compactAvatarRail = try container.decodeIfPresent(Bool.self, forKey: "compactAvatarRail") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -331,6 +336,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.forceClearGlass, forKey: "forceClearGlass")
         try container.encodeIfPresent(self.debugRipple, forKey: "debugRipple")
         try container.encodeIfPresent(self.forceNewTextInput, forKey: "forceNewTextInput")
+        try container.encodeIfPresent(self.compactAvatarRail, forKey: "compactAvatarRail")
     }
 }
 

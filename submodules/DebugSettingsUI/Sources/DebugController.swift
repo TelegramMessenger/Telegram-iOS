@@ -98,6 +98,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case forceClearGlass(Bool)
     case debugRipple(Bool)
     case debugRichText(Bool)
+    case compactAvatarRail(Bool)
     case browserExperiment(Bool)
     case allForumsHaveTabs(Bool)
     case enableReactionOverrides(Bool)
@@ -137,7 +138,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .debugRichText, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .debugRichText, .compactAvatarRail, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -236,8 +237,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 41
         case .debugRichText:
             return 42
-        case .browserExperiment:
+        case .compactAvatarRail:
             return 43
+        case .browserExperiment:
+            return 44
         case .allForumsHaveTabs:
             return 44
         case .enableReactionOverrides:
@@ -1317,6 +1320,17 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .compactAvatarRail(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "iPad Mini Avatar Rail", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                UserDefaults.standard.set(value, forKey: "ExperimentalUISettings.compactAvatarRail")
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.compactAvatarRail = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .browserExperiment(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Inline UI", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1596,6 +1610,7 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.forceClearGlass(experimentalSettings.forceClearGlass))
         entries.append(.debugRipple(experimentalSettings.debugRipple))
         entries.append(.debugRichText(experimentalSettings.forceNewTextInput))
+        entries.append(.compactAvatarRail(experimentalSettings.compactAvatarRail))
         #if DEBUG
         entries.append(.browserExperiment(experimentalSettings.browserExperiment))
         #else

@@ -3720,6 +3720,7 @@ public final class ChatListNode: ListViewImpl {
             additionalScrollDistance += insetDelta
         }
         self.ignoreStopScrolling = true
+        self.isSelectionGestureEnabled = updateSizeAndInsets.size.width > 160.0
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         self.ignoreStopScrolling = false
         

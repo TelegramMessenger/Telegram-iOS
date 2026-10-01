@@ -306,6 +306,10 @@ final class ChatListContainerItemNode: ASDisplayNode {
         
         var listInsets = insets
         var additionalTopInset: CGFloat = 0.0
+        let isCompactAvatarRail = size.width <= 160.0
+        if isCompactAvatarRail {
+            listInsets.top = (insets.top > 0.0 ? insets.top : 24.0) + 12.0
+        }
         
         if let chatFolderUpdates = self.chatFolderUpdates {
             let topPanel: TopPanelItem

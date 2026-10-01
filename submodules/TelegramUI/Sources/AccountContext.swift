@@ -500,6 +500,7 @@ public final class AccountContextImpl: AccountContext {
             guard let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) else {
                 return
             }
+            UserDefaults.standard.set(settings.compactAvatarRail, forKey: "ExperimentalUISettings.compactAvatarRail")
             (self.animationRenderer as? DCTMultiAnimationRendererImpl)?.useYuvA = settings.compressedEmojiCache
         })
     }
