@@ -6,8 +6,8 @@
 // API development tools -> Create application -> взять api_id и api_hash.
 // Чужие/публичные ключи Telegram душит лимитами (API_ID_PUBLISHED_FLOOD),
 // поэтому нужны личные.
-static const int32_t kApiId = 12345678;
-static NSString * const kApiHash = @"0123456789abcdef0123456789abcdef";
+static const int32_t kApiId = 26038409;
+static NSString * const kApiHash = @"462cbea6c75e4dd6da95cb56820ac50f";
 
 static int32_t TgApiFixApiId(id self, SEL _cmd) {
     return kApiId;
