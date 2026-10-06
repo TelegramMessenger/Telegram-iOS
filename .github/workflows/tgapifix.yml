@@ -1,0 +1,53 @@
+name: Build TgApiFix dylib
+
+on:
+  push:
+    branches: [tweak/tgapifix]
+    paths:
+      - 'tools/TgApiFix/**'
+      - '.github/workflows/tgapifix.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tweak/tgapifix
+          fetch-depth: 1
+
+      - name: Build TgApiFix.dylib
+        run: |
+          cd tools/TgApiFix
+          xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=13.0 \
+            -dynamiclib -framework Foundation \
+            -o TgApiFix.dylib TgApiFix.m
+          codesign --force --sign - TgApiFix.dylib
+          ls -la TgApiFix.dylib
+          file TgApiFix.dylib
+
+      - name: Upload dylib as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TgApiFix-dylib
+          path: tools/TgApiFix/TgApiFix.dylib
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub release with dylib
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="tgapifix-v1"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" -y
+            git push origin ":refs/tags/$TAG" || true
+          fi
+          gh release create "$TAG" \
+            --title "TgApiFix dylib" \
+            --notes "Runtime override of BuildConfig apiId/apiHash (fixes login on test keys). See tools/TgApiFix/README.md" \
+            "tools/TgApiFix/TgApiFix.dylib#TgApiFix.dylib"
