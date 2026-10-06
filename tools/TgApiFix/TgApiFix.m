@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <mach-o/dyld.h>
 
@@ -44,10 +45,61 @@ static void TgApiFixImageAdded(const struct mach_header *mh, intptr_t slide) {
     TgApiFixTryPatch();
 }
 
+// Debug popup: visible proof the dylib is loaded, no Console needed.
+static void TgApiFixShowAlert(void) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        UIWindow *window = nil;
+        UIApplication *app = [UIApplication sharedApplication];
+        for (id scene in app.connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) {
+                continue;
+            }
+            for (UIWindow *w in [(UIWindowScene *)scene windows]) {
+                if (w.isKeyWindow) {
+                    window = w;
+                    break;
+                }
+            }
+            if (window) {
+                break;
+            }
+        }
+        if (!window) {
+            for (id scene in app.connectedScenes) {
+                if (![scene isKindOfClass:[UIWindowScene class]]) {
+                    continue;
+                }
+                NSArray<UIWindow *> *windows = [(UIWindowScene *)scene windows];
+                if (windows.count > 0) {
+                    window = windows[0];
+                    break;
+                }
+            }
+        }
+        UIViewController *root = window.rootViewController;
+        while (root.presentedViewController) {
+            root = root.presentedViewController;
+        }
+        if (!root) {
+            return;
+        }
+        NSString *msg = [NSString stringWithFormat:@"active, apiId=%d", (int)kApiId];
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"TgApiFix"
+                                                                       message:msg
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                                  style:UIAlertActionStyleDefault
+                                                handler:nil]];
+        [root presentViewController:alert animated:YES completion:nil];
+        NSLog(@"[TgApiFix] startup alert shown");
+    });
+}
+
 __attribute__((constructor))
 static void TgApiFixInit(void) {
     TgApiFixTryPatch();
     if (!gPatched) {
         _dyld_register_func_for_add_image(TgApiFixImageAdded);
     }
+    TgApiFixShowAlert();
 }

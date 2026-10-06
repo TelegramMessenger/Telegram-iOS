@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")"
 xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=13.0 \
-  -dynamiclib -framework Foundation \
+  -dynamiclib -framework Foundation -framework UIKit \
   -o TgApiFix.dylib TgApiFix.m
 codesign --force --sign - TgApiFix.dylib
 echo "OK: $(pwd)/TgApiFix.dylib"
