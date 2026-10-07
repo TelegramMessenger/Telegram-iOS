@@ -295,7 +295,7 @@ final class RustEngineEndToEndTests: XCTestCase {
         super.tearDown()
     }
 
-    private func makeContext(useTempAuthKeys: Bool) -> MTContext {
+    private func makeContext(useTempAuthKeys: Bool, encryptionProvider: EncryptionProvider = UnusedEncryptionProvider()) -> MTContext {
         let serialization = Serialization()
         var apiEnvironment = MTApiEnvironment(deviceModelName: "MTProtoRustEngine end-to-end tests")
         apiEnvironment.apiId = 9
@@ -304,7 +304,7 @@ final class RustEngineEndToEndTests: XCTestCase {
         apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
         apiEnvironment.disableUpdates = false
         apiEnvironment = apiEnvironment.withUpdatedLangPackCode("en")
-        let context = MTContext(serialization: serialization, encryptionProvider: UnusedEncryptionProvider(), apiEnvironment: apiEnvironment, isTestingEnvironment: false, useTempAuthKeys: useTempAuthKeys)
+        let context = MTContext(serialization: serialization, encryptionProvider: encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: false, useTempAuthKeys: useTempAuthKeys)
         context.keychain = InMemoryKeychain()
         return context
     }
@@ -1041,5 +1041,149 @@ final class RustEngineEndToEndTests: XCTestCase {
             }
             XCTAssertTrue(self.eventually { remembered() == run.stored }, run.message)
         }
+    }
+}
+
+private final class LoggedOutListener: NSObject, MTContextChangeListener {
+    private let lock = NSLock()
+    private var count = 0
+
+    func contextLoggedOut(_ context: MTContext) {
+        self.lock.lock()
+        self.count += 1
+        self.lock.unlock()
+    }
+
+    var logouts: Int {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        return self.count
+    }
+}
+
+/// The home datacenter's permanent key is unknown to the server (a session terminated from another
+/// device while the app was closed): the engine's binds are refused, it reports `PermanentKeyInvalid`,
+/// and the bridge asks `MTContext.checkIfLoggedOut`, whose fresh key exchange and bind decide.
+extension RustEngineEndToEndTests {
+    /// The production logout check, with one test-only difference: MtProtoKit takes a key exchange's
+    /// RSA keys from the context only for a CDN, and the test server's key is not one of Telegram's,
+    /// so the check's auth action is made as for a CDN. The exchange and the bind run over TCP as in
+    /// the app. `checks` counts the actions made: with a permanent key in place and the engine making
+    /// its own temporary keys, only the logout check makes any.
+    private func probingContext(permanentKey: Data, encryptionProvider: EncryptionProvider, checks: Atomic<Int>) -> MTContext {
+        let datacenterId = RustEngineEndToEndTests.datacenterId
+        let context = self.makeContext(useTempAuthKeys: true, encryptionProvider: encryptionProvider)
+        self.setAddress(of: context, preferForMedia: false)
+        context.updatePublicKeysForDatacenter(withId: datacenterId, publicKeys: [["key": self.server.publicKeyPem]])
+        let factory: @convention(block) (MTDatacenterAuthInfoSelector, Bool, Bool, @escaping (MTDatacenterAuthAction?, Bool) -> Void) -> MTDatacenterAuthAction = { selector, _, skipBind, completion in
+            let _ = checks.modify { $0 + 1 }
+            return MTDatacenterAuthAction(authKeyInfoSelector: selector, isCdn: true, skipBind: skipBind, completion: { action, success in
+                completion(action, success)
+            })
+        }
+        context.setValue(factory, forKey: "authActionFactory")
+        context.updateAuthInfoForDatacenter(withId: datacenterId, authInfo: self.authInfo(key: permanentKey), selector: .persistent)
+        MTContext.contextQueue().dispatch(onQueue: {}, synchronous: true)
+        return context
+    }
+
+    private func temporaryKeyCopy(boundTo permanentKey: Data, validUntil: Int32) -> MTDatacenterAuthInfo {
+        let made = self.authInfo(key: Data((0 ..< 256).map { _ in UInt8.random(in: 0 ... 255) }), validUntil: validUntil)
+        return made.withUpdatedAuthKeyAttributes([rustEngineBoundToAttribute: NSNumber(value: self.authInfo(key: permanentKey).authKeyId)])!
+    }
+
+    private func wait(seconds: Double, until condition: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(seconds)
+        while Date() < deadline {
+            MTContext.contextQueue().dispatch(onQueue: {}, synchronous: true)
+            if condition() {
+                return true
+            }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        return false
+    }
+
+    private static func randomKey() -> Data {
+        return Data((0 ..< 256).map { _ in UInt8.random(in: 0 ... 255) })
+    }
+
+    /// The Rust engine left a copy of its expired temporary key in `ephemeralMain` (the app was closed
+    /// past the key's end). The check used to complete on that copy without contacting the server, so
+    /// the account stayed "Updating..." for ever.
+    func testAnUnknownHomePermanentKeyLogsOutExactlyOnce() throws {
+        guard let encryptionProvider = LibCryptoEncryptionProvider() else {
+            throw XCTSkip("MtProtoKit's key exchange needs libcrypto: install OpenSSL 3 or set MTPROTO_TEST_LIBCRYPTO")
+        }
+        let datacenterId = RustEngineEndToEndTests.datacenterId
+        let forgotten = RustEngineEndToEndTests.randomKey()
+        let checks = Atomic<Int>(value: 0)
+        let context = self.probingContext(permanentKey: forgotten, encryptionProvider: encryptionProvider, checks: checks)
+        let staleCopy = self.temporaryKeyCopy(boundTo: forgotten, validUntil: Int32(Date().timeIntervalSince1970) - 3600)
+        context.updateAuthInfoForDatacenter(withId: datacenterId, authInfo: staleCopy, selector: .ephemeralMain)
+        let listener = LoggedOutListener()
+        context.add(listener)
+        defer { context.remove(listener) }
+        let session = self.pfsEngine(context).makeSession(datacenterId: datacenterId, role: .main, usageCalculationInfo: nil, delegate: nil)
+        session.setPaused(false)
+        defer { session.stop() }
+        let disposable = session.requestService.add(self.request(tag: 90) { _ in })
+        defer { disposable.dispose() }
+
+        XCTAssertTrue(self.wait(seconds: 40.0, until: { listener.logouts > 0 }), "checks \(checks.with { $0 }), handshakes \(self.server.handshakes())")
+        XCTAssertFalse(self.wait(seconds: 5.0, until: { listener.logouts > 1 }))
+        XCTAssertEqual(listener.logouts, 1)
+        XCTAssertEqual(checks.with { $0 }, 1, "one check per minute, however often the engine reports the key")
+        XCTAssertEqual(context.authInfoForDatacenter(withId: datacenterId, selector: .ephemeralMain)?.authKeyId, staleCopy.authKeyId, "the check stores nothing")
+    }
+
+    /// The engine reported the key unknown (a forged or misread refusal), but the server knows it: the
+    /// check's fresh key binds, nobody is logged out, and the session's own temporary key stays.
+    func testALogoutCheckWhoseBindSucceedsKeepsTheAccountAndTheSessionsKey() throws {
+        guard let encryptionProvider = LibCryptoEncryptionProvider() else {
+            throw XCTSkip("MtProtoKit's key exchange needs libcrypto: install OpenSSL 3 or set MTPROTO_TEST_LIBCRYPTO")
+        }
+        let datacenterId = RustEngineEndToEndTests.datacenterId
+        let checks = Atomic<Int>(value: 0)
+        let context = self.probingContext(permanentKey: self.server.key, encryptionProvider: encryptionProvider, checks: checks)
+        let sessionsKey = self.temporaryKeyCopy(boundTo: self.server.key, validUntil: Int32(Date().timeIntervalSince1970) + 3600)
+        context.updateAuthInfoForDatacenter(withId: datacenterId, authInfo: sessionsKey, selector: .ephemeralMain)
+        let listener = LoggedOutListener()
+        context.add(listener)
+        defer { context.remove(listener) }
+        let binds = self.server.binds()
+
+        context.checkIfLoggedOut(datacenterId)
+
+        XCTAssertTrue(self.wait(seconds: 20.0, until: { self.server.binds() > binds }), "the check binds a fresh key, handshakes \(self.server.handshakes())")
+        XCTAssertFalse(self.wait(seconds: 3.0, until: { listener.logouts > 0 }))
+        XCTAssertEqual(checks.with { $0 }, 1)
+        XCTAssertEqual(context.authInfoForDatacenter(withId: datacenterId, selector: .ephemeralMain)?.authKeyId, sessionsKey.authKeyId, "the check's key never replaces the session's")
+    }
+
+    /// With TCP blocked the engine still reaches the server over HTTP and reports the key unknown, but
+    /// the check is MtProtoKit's key exchange over TCP: it never concludes, and nobody is logged out on
+    /// the engine's word alone. The check gives up after its deadline (shortened here), so its
+    /// connection does not outlive the test.
+    func testALogoutCheckThatGetsNoAnswerDoesNotLogOut() throws {
+        guard let encryptionProvider = LibCryptoEncryptionProvider() else {
+            throw XCTSkip("MtProtoKit's key exchange needs libcrypto: install OpenSSL 3 or set MTPROTO_TEST_LIBCRYPTO")
+        }
+        let datacenterId = RustEngineEndToEndTests.datacenterId
+        self.server.setTcpBlackhole(true)
+        let checks = Atomic<Int>(value: 0)
+        let context = self.probingContext(permanentKey: RustEngineEndToEndTests.randomKey(), encryptionProvider: encryptionProvider, checks: checks)
+        context.setValue(10.0, forKey: "loggedOutCheckTimeout")
+        let listener = LoggedOutListener()
+        context.add(listener)
+        defer { context.remove(listener) }
+        let session = self.pfsEngine(context).makeSession(datacenterId: datacenterId, role: .main, usageCalculationInfo: nil, delegate: nil)
+        session.setPaused(false)
+        defer { session.stop() }
+        let disposable = session.requestService.add(self.request(tag: 91) { _ in })
+        defer { disposable.dispose() }
+
+        XCTAssertTrue(self.wait(seconds: 40.0, until: { checks.with { $0 } > 0 }), "the engine reports the key unknown over HTTP, handshakes \(self.server.handshakes())")
+        XCTAssertFalse(self.wait(seconds: 15.0, until: { listener.logouts > 0 }))
     }
 }

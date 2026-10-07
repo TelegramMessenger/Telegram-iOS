@@ -240,11 +240,11 @@ public func rustEngineMissingKeyAction(isCdn: Bool, requiresForeignAuthToken: Bo
 /// It logs the account out, exactly as `MtProtoKitEngine` does, because that is how a session
 /// terminated from another device drops the account and its local data.
 ///
-/// Do not route it through `MTContext.checkIfLoggedOut` (integration.md R1's suggestion): that probe
-/// runs an `EphemeralMain` auth action, and `-[MTDatacenterAuthAction execute:]` completes at once,
-/// without contacting the server, when the context already stores a key for that selector, which the
-/// main session's own temporary key always is. The probe then reports "not removed" every time, and
-/// a terminated session never logs out.
+/// Do not route it through `MTContext.checkIfLoggedOut` (integration.md R1's suggestion). The `401`
+/// is already the server's verdict, and the probe is a fresh key exchange and bind over MtProtoKit's
+/// TCP: where only HTTP or Telegram Web reach Telegram it never concludes, and a session terminated
+/// from another device would stay logged in. (Until 2026-10 the probe was worse: it completed on the
+/// stored `EphemeralMain` key without contacting the server and always answered "not removed".)
 public enum RustEngineAuthorizationRequiredAction: Equatable {
     case logOut
     /// Workers re-transfer their authorization through `authTokenRequired` instead.
@@ -502,4 +502,21 @@ public func rustEngineNetworkFingerprint(interfaces: [RustEngineNetworkInterface
         parts.append("router \(router.interface) \(router.address)")
     }
     return Array(Set(parts)).sorted().joined(separator: "\n")
+}
+
+/// The engine's own threads are `mtproto-main`, `mtproto-worker-N` and `mtproto-resolver`. The engine
+/// aborts on a panic (`panic = "abort"`) on the panicking thread. The app counts a crash on an engine
+/// thread or queue (`rustEngineOwnsQueue(label:)`), including the bridge callbacks that run there, as an
+/// engine crash and reports it with `recordRustEngineCrash` to fall back to MtProtoKit after repeated
+/// crashes.
+public func rustEngineOwnsThread(named name: String) -> Bool {
+    return name.hasPrefix("mtproto-")
+}
+
+/// The bridge's own dispatch queues: `org.telegram.MTProtoRust.streams` (`RustStreamHost`),
+/// `.carrier` (`RustCarrierStreams`), `.session` (each `RustNetworkSession`) and `.network`
+/// (`RustEngineRuntime`'s network watcher). A crash while one of them is the current queue is an engine
+/// crash, as for `rustEngineOwnsThread(named:)`.
+public func rustEngineOwnsQueue(label: String) -> Bool {
+    return label.hasPrefix("org.telegram.MTProtoRust.")
 }

@@ -933,8 +933,9 @@ final class RustNetworkSession: NetworkEngineSession {
     /// The engine's binds say the server no longer knows the permanent key (a session terminated from
     /// another device, a key the server dropped). On another datacenter the key and its authorization
     /// token are made anew. On the home datacenter it is MtProtoKit's call, as with MtProtoKit:
-    /// `checkIfLoggedOut` probes the key and logs an authorized account out once the probe confirms it is
-    /// gone; until then the session waits, reported as updating. A key that replaced another less than a
+    /// `checkIfLoggedOut` probes the key (a fresh temporary key, bound over MtProtoKit's TCP and never
+    /// stored) and logs an authorized account out once the probe's own bind is refused with
+    /// `ENCRYPTED_MESSAGE_INVALID`; until then the session waits, reported as updating. A key that replaced another less than a
     /// minute ago is left alone: the engine reports a key it just got only after it kept failing past
     /// that, so the report is about the key it replaced.
     private func handlePermanentKeyInvalid() {

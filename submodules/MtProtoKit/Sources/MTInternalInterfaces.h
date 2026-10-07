@@ -29,6 +29,11 @@
 
 - (MTDatacenterAuthAction * _Nonnull)makeAuthActionWithSelector:(MTDatacenterAuthInfoSelector)selector isCdn:(bool)isCdn skipBind:(bool)skipBind completion:(void (^ _Nonnull)(MTDatacenterAuthAction * _Nonnull, bool))completion;
 
+// How long checkIfLoggedOut waits for its probe before giving up without a
+// verdict (120 s). A probe that never ends would otherwise keep the context
+// alive through its connection.
+@property (nonatomic) NSTimeInterval loggedOutCheckTimeout;
+
 @end
 
 @interface MTDatacenterTransferAuthAction ()
@@ -52,6 +57,13 @@
 // Creates a new key even when the context already holds one for the selector,
 // so a temporary key can be replaced before it expires.
 @property (nonatomic) bool replacesExistingKey;
+
+// Set, the action only asks whether the server still knows this permanent key
+// (MTContext.checkIfLoggedOut): it always makes a fresh temporary key, binds
+// it to this key rather than to whatever the context holds by then, never
+// stores it, and reports the bind's outcome (success, or failure with
+// bindError).
+@property (nonatomic, strong) MTDatacenterAuthKey * _Nullable probedPermanentKey;
 
 - (void)complete;
 - (void)fail;

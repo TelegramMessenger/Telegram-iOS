@@ -26,8 +26,8 @@ final class RustNetworkEngine: NetworkEngine {
 /// Supplies the Rust MTProto engine (`third-party/mtproto-engine`) to `NetworkInitializationArguments`.
 ///
 /// Declines (the network then stays on MtProtoKit) in app extensions, when the engine library
-/// cannot start, and for configurations the engine cannot carry yet: a WEB proxy and developer
-/// datacenter address overrides.
+/// cannot start, and for the one configuration the engine cannot carry yet: developer datacenter
+/// address overrides. A WEB proxy is carried through `WebProxyTransport`'s raw streams.
 public struct RustNetworkEngineFactory: NetworkEngineFactory {
     public init() {
     }

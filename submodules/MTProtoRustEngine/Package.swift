@@ -8,7 +8,7 @@ let package = Package(
     products: [
         .library(
             name: "MTProtoRustEngine",
-            targets: ["MTProtoRustEngine"]),
+            targets: ["MTProtoRustEngine", "MTProtoRustEngineMapping"]),
     ],
     dependencies: [
         .package(name: "TelegramCore", path: "../TelegramCore"),

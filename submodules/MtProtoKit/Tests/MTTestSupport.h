@@ -63,6 +63,7 @@ bool MTTestIsWaiting(MTProto *proto);
 
 @property (nonatomic, readonly) MTDatacenterAuthInfoSelector selector;
 @property (nonatomic, readonly) NSInteger datacenterId;
+@property (nonatomic, readonly) bool wasCancelled;
 
 - (instancetype)initWithSelector:(MTDatacenterAuthInfoSelector)selector completion:(void (^)(MTDatacenterAuthAction *, bool))completion onExecute:(void (^)(MTTestAuthAction *))onExecute;
 

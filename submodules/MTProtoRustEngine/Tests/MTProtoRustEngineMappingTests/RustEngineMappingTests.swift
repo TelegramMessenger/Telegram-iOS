@@ -309,4 +309,66 @@ final class RustEngineMappingTests: XCTestCase {
         XCTAssertFalse(rustEngineNetworkRouterCounts(RustEngineNetworkRouter(interface: "pdp_ip0", address: "10.64.0.1")))
         XCTAssertFalse(rustEngineNetworkRouterCounts(RustEngineNetworkRouter(interface: "en0", address: "")))
     }
+
+    func testEngineThreadsAreToldApartByName() {
+        XCTAssertTrue(rustEngineOwnsThread(named: "mtproto-main"))
+        XCTAssertTrue(rustEngineOwnsThread(named: "mtproto-worker-3"))
+        XCTAssertTrue(rustEngineOwnsThread(named: "mtproto-resolver"))
+        XCTAssertFalse(rustEngineOwnsThread(named: ""))
+        XCTAssertFalse(rustEngineOwnsThread(named: "main"))
+        XCTAssertFalse(rustEngineOwnsThread(named: "com.apple.NSURLSession-work"))
+        XCTAssertFalse(rustEngineOwnsThread(named: "MTProto"))
+    }
+
+    private static let bridgeQueueLabels: Set<String> = [
+        "org.telegram.MTProtoRust.streams",
+        "org.telegram.MTProtoRust.carrier",
+        "org.telegram.MTProtoRust.session",
+        "org.telegram.MTProtoRust.network",
+    ]
+
+    func testBridgeQueuesAreToldApartByLabel() {
+        for label in RustEngineMappingTests.bridgeQueueLabels {
+            XCTAssertTrue(rustEngineOwnsQueue(label: label), label)
+        }
+        XCTAssertFalse(rustEngineOwnsQueue(label: ""))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "com.apple.main-thread"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "com.apple.root.default-qos"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "org.telegram.Telegram.trace"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "org.telegram.MTProtoRust"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "org.telegram.MTProtoRustX.session"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "mtproto-main"))
+    }
+
+    /// Pins the labels the bridge really creates its queues with: every queue made anywhere under
+    /// `Sources/MTProtoRustEngine` has a literal label, the labels are these four, and each is recognized.
+    func testEveryBridgeQueueIsRecognized() throws {
+        let sources = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Sources/MTProtoRustEngine")
+        let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil))
+        let files = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        XCTAssertGreaterThan(files.count, 5)
+        let creation = try NSRegularExpression(pattern: #"\b(?:DispatchQueue|Queue)\(|dispatch_queue_create\("#)
+        let labelled = try NSRegularExpression(pattern: #"\b(?:DispatchQueue\(label|Queue\(name): "([^"\\]*)"[,)]"#)
+        var creations: [String] = []
+        var labels: [String] = []
+        for file in files {
+            let text = try String(contentsOf: file, encoding: .utf8)
+            let range = NSRange(text.startIndex..., in: text)
+            for match in creation.matches(in: text, range: range) {
+                creations.append("\(file.lastPathComponent) at \(match.range.location)")
+            }
+            for match in labelled.matches(in: text, range: range) {
+                labels.append(String(text[Range(match.range(at: 1), in: text)!]))
+            }
+        }
+        XCTAssertEqual(labels.count, creations.count, "every bridge queue needs a literal label: \(creations)")
+        XCTAssertEqual(Set(labels), RustEngineMappingTests.bridgeQueueLabels)
+        for label in labels {
+            XCTAssertTrue(rustEngineOwnsQueue(label: label), label)
+        }
+    }
 }

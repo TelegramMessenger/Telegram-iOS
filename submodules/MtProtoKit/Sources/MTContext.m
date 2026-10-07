@@ -304,6 +304,7 @@ static NSTimeInterval MTRetryDelayForFailureCount(NSUInteger failureCount) {
         _tempKeysInUse = [[NSMutableSet alloc] init];
         _datacenterCheckKeyRemovedActionTimestamps = [[NSMutableDictionary alloc] init];
         _datacenterCheckKeyRemovedActions = [[NSMutableDictionary alloc] init];
+        _loggedOutCheckTimeout = 120.0;
         
         _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] init];
         _currentSessionInfos = [[NSMutableArray alloc] init];
@@ -1940,7 +1941,9 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
             _datacenterCheckKeyRemovedActionTimestamps[@(datacenterId)] = @(timestamp);
             [_datacenterCheckKeyRemovedActions[@(datacenterId)] dispose];
             __weak MTContext *weakSelf = self;
-            _datacenterCheckKeyRemovedActions[@(datacenterId)] = [[MTDiscoverConnectionSignals checkIfAuthKeyRemovedWithContext:self datacenterId:datacenterId authKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId validUntilTimestamp:authInfo.validUntilTimestamp notBound:false]] startWithNextStrict:^(NSNumber* isRemoved) {
+            int64_t probedAuthKeyId = authInfo.authKeyId;
+            MTSignal *check = [[MTDiscoverConnectionSignals checkIfAuthKeyRemovedWithContext:self datacenterId:datacenterId authKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId validUntilTimestamp:authInfo.validUntilTimestamp notBound:false]] timeout:self->_loggedOutCheckTimeout onQueue:[MTContext contextQueue] orSignal:[MTSignal single:@false]];
+            _datacenterCheckKeyRemovedActions[@(datacenterId)] = [check startWithNextStrict:^(NSNumber* isRemoved) {
                 [[MTContext contextQueue] dispatchOnQueue:^{
                     __strong MTContext *strongSelf = weakSelf;
                     if (strongSelf == nil) {
@@ -1948,6 +1951,12 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
                     }
                     
                     if ([isRemoved boolValue]) {
+                        if ([strongSelf authInfoForDatacenterWithId:datacenterId selector:MTDatacenterAuthInfoSelectorPersistent].authKeyId != probedAuthKeyId) {
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTContext#%" PRIxPTR ": permanent key %lld for %d was replaced while the logout check ran, ignoring its verdict]", (intptr_t)strongSelf, probedAuthKeyId, (int)datacenterId);
+                            }
+                            return;
+                        }
                         NSArray *changeListeners = [[NSArray alloc] initWithArray:strongSelf->_changeListeners];
                         for (MTWeakContextChangeListener *value in changeListeners) {
                             id<MTContextChangeListener> listener = value.target;
