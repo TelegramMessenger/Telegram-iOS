@@ -932,12 +932,12 @@ final class RustNetworkSession: NetworkEngineSession {
 
     /// The engine's binds say the server no longer knows the permanent key (a session terminated from
     /// another device, a key the server dropped). On another datacenter the key and its authorization
-    /// token are made anew. On the home datacenter it is MtProtoKit's call, as with MtProtoKit:
-    /// `checkIfLoggedOut` probes the key (a fresh temporary key, bound over MtProtoKit's TCP and never
-    /// stored) and logs an authorized account out once the probe's own bind is refused with
-    /// `ENCRYPTED_MESSAGE_INVALID`; until then the session waits, reported as updating. A key that replaced another less than a
-    /// minute ago is left alone: the engine reports a key it just got only after it kept failing past
-    /// that, so the report is about the key it replaced.
+    /// token are made anew. On the home datacenter nothing is decided: refused binds alone are no
+    /// verdict, since a server can refuse fresh temporary keys for a while and still know the permanent
+    /// one (tdlib never logs out on refused binds alone: a `-404` under the permanent key is always part
+    /// of its verdict), and a logout wipes the account's local data. The session keeps binding, reported as updating. A key that
+    /// replaced another less than a minute ago is left alone: the engine reports a key it just got only
+    /// after it kept failing past that, so the report is about the key it replaced.
     private func handlePermanentKeyInvalid() {
         guard self.runsPfs, let keyId = self.installedKeyId else {
             return
@@ -956,7 +956,7 @@ final class RustNetworkSession: NetworkEngineSession {
             }
             self.dropAndRequireKey(isCdn: false, rejectedKeyId: keyId, engineStillHoldsKey: true, selector: .persistent)
         } else {
-            self.context.checkIfLoggedOut(self.datacenterId)
+            rustEngineImportantLog("\(self.logPrefix) permanent key \(keyId) reported unknown on the home datacenter: refused binds are no verdict, binding again")
         }
     }
 

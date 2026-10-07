@@ -505,13 +505,17 @@ Load-bearing, and none of it shows up as a build error:
   (`rustEngineAuthorizationRequiredAction`). **Never gate it on `MTContext.checkIfLoggedOut`**: the
   `401` is already the server's verdict, while the probe is a key exchange and bind over MtProtoKit's
   TCP that never concludes where only HTTP or Telegram Web reach Telegram, so a session terminated
-  from another device could stay logged in. The probe is for the case without a verdict: the engine's
-  `PermanentKeyInvalid` on the home datacenter (`handlePermanentKeyInvalid`). It must contact the
-  server: its auth action carries `replacesExistingKey` and `probedPermanentKey`, so it always makes
-  a fresh temporary key, binds it to the probed permanent key, never stores it, gives up without a
-  verdict after 120 s, and logs out only on the bind's `ENCRYPTED_MESSAGE_INVALID`. Without them it
-  completed on the stored `EphemeralMain` key (the main session's own, or a stale copy of an expired
-  engine key) and never logged anyone out.
+  from another device could stay logged in. The probe is MtProtoKit's answer to a `-404` on a session
+  under the permanent key. It must contact the server: its auth action carries `replacesExistingKey`
+  and `probedPermanentKey`, so it always makes a fresh temporary key, binds it to the probed permanent
+  key, never stores it, gives up without a verdict after 120 s, and logs out only on the bind's
+  `ENCRYPTED_MESSAGE_INVALID`. Without them it completed on the stored `EphemeralMain` key (the main
+  session's own, or a stale copy of an expired engine key) and never logged anyone out.
+- **The engine's `PermanentKeyInvalid` on the home datacenter starts no logout check**
+  (`handlePermanentKeyInvalid`). It is made of refused binds only, and a server can refuse fresh
+  temporary keys for a while and still know the permanent key; tdlib never logs out on refused binds
+  alone (a `-404` under the permanent key is always part of its verdict). A logout wipes local data, so
+  the session keeps binding.
 - **On iOS the engine changes only through the Debug switch.** Live switching
   (`SwitchingNetworkEngine`: the live `mtproto_engine_rust_disabled` kill switch and the live
   WEB-proxy moves) is macOS only (`#if os(macOS)` in `initializedNetwork` and `Account`); Telegram-Mac

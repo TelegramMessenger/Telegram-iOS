@@ -1062,8 +1062,9 @@ private final class LoggedOutListener: NSObject, MTContextChangeListener {
 }
 
 /// The home datacenter's permanent key is unknown to the server (a session terminated from another
-/// device while the app was closed): the engine's binds are refused, it reports `PermanentKeyInvalid`,
-/// and the bridge asks `MTContext.checkIfLoggedOut`, whose fresh key exchange and bind decide.
+/// device while the app was closed): the engine's binds are refused and it reports `PermanentKeyInvalid`,
+/// which starts nothing on the home datacenter; `MTContext.checkIfLoggedOut`, started directly here,
+/// decides with its own fresh key exchange and bind.
 extension RustEngineEndToEndTests {
     /// The production logout check, with one test-only difference: MtProtoKit takes a key exchange's
     /// RSA keys from the context only for a CDN, and the test server's key is not one of Telegram's,
@@ -1108,9 +1109,36 @@ extension RustEngineEndToEndTests {
         return Data((0 ..< 256).map { _ in UInt8.random(in: 0 ... 255) })
     }
 
+    /// The engine reports the home datacenter's permanent key unknown after its second refused bind.
+    /// Refused binds alone are no verdict (the server may still know the key), so the bridge starts no
+    /// logout check: no logout and no check's key exchange in the seconds after that report.
+    func testRefusedBindsAloneDoNotStartALogoutCheckOnTheHomeDatacenter() throws {
+        guard let encryptionProvider = LibCryptoEncryptionProvider() else {
+            throw XCTSkip("MtProtoKit's key exchange needs libcrypto: install OpenSSL 3 or set MTPROTO_TEST_LIBCRYPTO")
+        }
+        let datacenterId = RustEngineEndToEndTests.datacenterId
+        let forgotten = RustEngineEndToEndTests.randomKey()
+        let checks = Atomic<Int>(value: 0)
+        let context = self.probingContext(permanentKey: forgotten, encryptionProvider: encryptionProvider, checks: checks)
+        let listener = LoggedOutListener()
+        context.add(listener)
+        defer { context.remove(listener) }
+        let session = self.pfsEngine(context).makeSession(datacenterId: datacenterId, role: .main, usageCalculationInfo: nil, delegate: nil)
+        session.setPaused(false)
+        defer { session.stop() }
+        let disposable = session.requestService.add(self.request(tag: 91) { _ in })
+        defer { disposable.dispose() }
+
+        XCTAssertTrue(self.wait(seconds: 40.0, until: { self.server.handshakes().count >= 2 }), "handshakes \(self.server.handshakes().count)")
+        XCTAssertFalse(self.wait(seconds: 10.0, until: { listener.logouts > 0 || checks.with { $0 } > 0 }))
+        XCTAssertEqual(listener.logouts, 0)
+        XCTAssertEqual(checks.with { $0 }, 0, "refused binds start no logout check")
+    }
+
     /// The Rust engine left a copy of its expired temporary key in `ephemeralMain` (the app was closed
     /// past the key's end). The check used to complete on that copy without contacting the server, so
-    /// the account stayed "Updating..." for ever.
+    /// the account stayed "Updating..." for ever. The check is started directly: refused binds alone no
+    /// longer start it.
     func testAnUnknownHomePermanentKeyLogsOutExactlyOnce() throws {
         guard let encryptionProvider = LibCryptoEncryptionProvider() else {
             throw XCTSkip("MtProtoKit's key exchange needs libcrypto: install OpenSSL 3 or set MTPROTO_TEST_LIBCRYPTO")
@@ -1129,16 +1157,18 @@ extension RustEngineEndToEndTests {
         defer { session.stop() }
         let disposable = session.requestService.add(self.request(tag: 90) { _ in })
         defer { disposable.dispose() }
+        context.checkIfLoggedOut(datacenterId)
+        context.checkIfLoggedOut(datacenterId)
 
         XCTAssertTrue(self.wait(seconds: 40.0, until: { listener.logouts > 0 }), "checks \(checks.with { $0 }), handshakes \(self.server.handshakes())")
         XCTAssertFalse(self.wait(seconds: 5.0, until: { listener.logouts > 1 }))
         XCTAssertEqual(listener.logouts, 1)
-        XCTAssertEqual(checks.with { $0 }, 1, "one check per minute, however often the engine reports the key")
+        XCTAssertEqual(checks.with { $0 }, 1, "one check per minute, however often it is asked")
         XCTAssertEqual(context.authInfoForDatacenter(withId: datacenterId, selector: .ephemeralMain)?.authKeyId, staleCopy.authKeyId, "the check stores nothing")
     }
 
-    /// The engine reported the key unknown (a forged or misread refusal), but the server knows it: the
-    /// check's fresh key binds, nobody is logged out, and the session's own temporary key stays.
+    /// A logout check runs while the server knows the key: the check's fresh key binds, nobody is logged
+    /// out, and the session's own temporary key stays.
     func testALogoutCheckWhoseBindSucceedsKeepsTheAccountAndTheSessionsKey() throws {
         guard let encryptionProvider = LibCryptoEncryptionProvider() else {
             throw XCTSkip("MtProtoKit's key exchange needs libcrypto: install OpenSSL 3 or set MTPROTO_TEST_LIBCRYPTO")
@@ -1161,10 +1191,10 @@ extension RustEngineEndToEndTests {
         XCTAssertEqual(context.authInfoForDatacenter(withId: datacenterId, selector: .ephemeralMain)?.authKeyId, sessionsKey.authKeyId, "the check's key never replaces the session's")
     }
 
-    /// With TCP blocked the engine still reaches the server over HTTP and reports the key unknown, but
-    /// the check is MtProtoKit's key exchange over TCP: it never concludes, and nobody is logged out on
-    /// the engine's word alone. The check gives up after its deadline (shortened here), so its
-    /// connection does not outlive the test.
+    /// With TCP blocked the engine still reaches the server over HTTP and its binds are refused, but the
+    /// check (started directly: refused binds alone no longer start it) is MtProtoKit's key exchange over
+    /// TCP: it never concludes, and nobody is logged out. The check gives up after its deadline
+    /// (shortened here), so its connection does not outlive the test.
     func testALogoutCheckThatGetsNoAnswerDoesNotLogOut() throws {
         guard let encryptionProvider = LibCryptoEncryptionProvider() else {
             throw XCTSkip("MtProtoKit's key exchange needs libcrypto: install OpenSSL 3 or set MTPROTO_TEST_LIBCRYPTO")
@@ -1183,7 +1213,9 @@ extension RustEngineEndToEndTests {
         let disposable = session.requestService.add(self.request(tag: 91) { _ in })
         defer { disposable.dispose() }
 
-        XCTAssertTrue(self.wait(seconds: 40.0, until: { checks.with { $0 } > 0 }), "the engine reports the key unknown over HTTP, handshakes \(self.server.handshakes())")
+        XCTAssertTrue(self.wait(seconds: 40.0, until: { self.server.handshakes().count >= 2 }), "the engine's binds over HTTP, handshakes \(self.server.handshakes())")
+        context.checkIfLoggedOut(datacenterId)
+        XCTAssertTrue(self.wait(seconds: 5.0, until: { checks.with { $0 } > 0 }))
         XCTAssertFalse(self.wait(seconds: 15.0, until: { listener.logouts > 0 }))
     }
 }
