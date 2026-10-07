@@ -67,9 +67,13 @@
     [self cleanup];
 }
 
-- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId {
+- (void)attachToContext:(MTContext *)context datacenterId:(NSInteger)datacenterId {
     _datacenterId = datacenterId;
     _context = context;
+}
+
+- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId {
+    [self attachToContext:context datacenterId:datacenterId];
     
     if (_datacenterId != 0 && context != nil)
     {

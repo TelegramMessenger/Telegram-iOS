@@ -127,6 +127,29 @@ public final class NetworkEngineRequest {
         self.completedImpl = completed
     }
     
+    /// A request an engine sends on its own behalf, outside `Network` (an authorization transfer it runs
+    /// for `MTContext`): logged as `name`, no dependency, no quick ack, no progress.
+    public convenience init(
+        payload: Data,
+        name: String,
+        parse: @escaping (Data) -> Any?,
+        shouldContinueAfterError: @escaping (NetworkEngineErrorContext) -> Bool,
+        completed: @escaping (Result<NetworkEngineResponse, NetworkEngineRequestFailure>) -> Void
+    ) {
+        self.init(
+            payload: payload,
+            metadata: WrappedRequestMetadata(metadata: name, tag: nil),
+            shortMetadata: WrappedRequestShortMetadata(shortMetadata: name),
+            parse: parse,
+            options: NetworkEngineRequestOptions(),
+            shouldContinueAfterError: shouldContinueAfterError,
+            dependsOn: nil,
+            acknowledged: nil,
+            progress: nil,
+            completed: completed
+        )
+    }
+    
     /// Asked on `FLOOD_WAIT_X`, `FLOOD_PREMIUM_WAIT_X` and `500`/`-500` errors. `true` retries the
     /// request after the wait (2 seconds for server errors), `false` completes it with the error.
     public func shouldContinueAfterError(_ context: NetworkEngineErrorContext) -> Bool {
@@ -259,6 +282,20 @@ public protocol NetworkEngine: AnyObject {
     var kind: NetworkEngineKind { get }
     /// `delegate` is held weakly and must be set before the session can report anything.
     func makeSession(datacenterId: Int, role: NetworkEngineSessionRole, usageCalculationInfo: MTNetworkUsageCalculationInfo?, delegate: NetworkEngineSessionDelegate?) -> NetworkEngineSession
+    /// The engine carries the network from now on: it may take over what `MTContext` does on the network
+    /// besides sessions (making auth keys, transferring authorizations). Called once when the network
+    /// starts on it and whenever a live switch moves the network to it.
+    func activate()
+    /// The network moved to another engine: what `activate` took over goes back to `MTContext`'s own.
+    func deactivate()
+}
+
+public extension NetworkEngine {
+    func activate() {
+    }
+
+    func deactivate() {
+    }
 }
 
 /// Supplies an alternative engine. Passed through `NetworkInitializationArguments`, so a process

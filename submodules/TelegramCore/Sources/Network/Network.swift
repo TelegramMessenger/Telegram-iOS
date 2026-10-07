@@ -681,6 +681,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             let rustDisabledReason = networkEngineRustDisabledReason(appConfiguration: appConfiguration, engineState: networkEngine.state, appVersion: arguments.appVersion, timestamp: Int32(Date().timeIntervalSince1970))
             let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension)
+            resolvedEngine.activate()
             let rustEngineDisabled = rustDisabledReason != nil
             // Live engine switching (the server kill switch, a WEB proxy turned on and off) is macOS only.
             // On iOS the engine changes only through the Debug Settings switch, at the next launch: no
@@ -769,12 +770,14 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
     private let contextProxyIdUpdated: (NetworkContextProxyId?) -> Void
     private let contextLoggedOutUpdated: () -> Void
+    private let contextPermanentKeyUnknown: (Int, Int64) -> Void
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void, contextLoggedOutUpdated: @escaping () -> Void) {
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void, contextLoggedOutUpdated: @escaping () -> Void, contextPermanentKeyUnknown: @escaping (Int, Int64) -> Void) {
         self.requestPublicKeys = requestPublicKeys
         self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
         self.contextProxyIdUpdated = contextProxyIdUpdated
         self.contextLoggedOutUpdated = contextLoggedOutUpdated
+        self.contextPermanentKeyUnknown = contextPermanentKeyUnknown
     }
     
     deinit {
@@ -813,6 +816,10 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     
     func contextLoggedOut(_ context: MTContext) {
         self.contextLoggedOutUpdated()
+    }
+    
+    func contextDatacenterPermanentKeyUnknown(_ context: MTContext, datacenterId: Int, authKeyId: Int64) {
+        self.contextPermanentKeyUnknown(datacenterId, authKeyId)
     }
 }
 
@@ -945,6 +952,10 @@ public final class Network: NSObject {
     }
     
     var loggedOut: (() -> Void)?
+    /// The logout check found that the server no longer knows this permanent key of the datacenter (called
+    /// on the context queue right before `loggedOut`, with the key still in place). A login replaces the
+    /// key instead of logging out.
+    var permanentKeyUnknown: ((Int, Int64) -> Void)?
     var didReceiveSoftAuthResetError: (() -> Void)?
     
     override public var description: String {
@@ -1029,6 +1040,8 @@ public final class Network: NSObject {
         }, contextLoggedOutUpdated: { [weak self] in
             Logger.shared.log("Network", "contextLoggedOut")
             self?.loggedOut?()
+        }, contextPermanentKeyUnknown: { [weak self] datacenterId, authKeyId in
+            self?.permanentKeyUnknown?(datacenterId, authKeyId)
         })
         self.networkHelper = networkHelper
         context.add(networkHelper)

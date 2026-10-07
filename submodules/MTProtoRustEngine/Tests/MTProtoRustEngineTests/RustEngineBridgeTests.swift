@@ -6,7 +6,7 @@ import MTProtoRustEngineMapping
 @testable import MTProtoRustEngine
 
 final class RustEngineBridgeTests: XCTestCase {
-    private static let logger: Logger = {
+    static let logger: Logger = {
         let path = NSTemporaryDirectory() + "mtproto-rust-tests-\(getpid())"
         try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
         let logger = Logger(rootPath: path, basePath: path)
@@ -146,7 +146,7 @@ final class RustEngineBridgeTests: XCTestCase {
             return
         }
         XCTAssertNotNil(runtime.engine)
-        XCTAssertEqual(mt_engine_abi_version(), 3)
+        XCTAssertEqual(mt_engine_abi_version(), 4)
         let first = runtime.nextRequestId()
         let second = runtime.nextRequestId()
         XCTAssertNotEqual(first, 0)

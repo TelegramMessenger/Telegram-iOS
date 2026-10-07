@@ -1587,8 +1587,9 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
 }
 
 - (MTDatacenterAuthAction *)makeAuthActionWithSelector:(MTDatacenterAuthInfoSelector)selector isCdn:(bool)isCdn skipBind:(bool)skipBind completion:(void (^)(MTDatacenterAuthAction *, bool))completion {
-    if (_authActionFactory != nil) {
-        return _authActionFactory(selector, isCdn, skipBind, completion);
+    MTDatacenterAuthAction * _Nonnull (^authActionFactory)(MTDatacenterAuthInfoSelector, bool, bool, void (^ _Nonnull)(MTDatacenterAuthAction * _Nonnull, bool)) = self.authActionFactory;
+    if (authActionFactory != nil) {
+        return authActionFactory(selector, isCdn, skipBind, completion);
     }
     return [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:selector isCdn:isCdn skipBind:skipBind completion:completion];
 }
@@ -1641,7 +1642,8 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
         
         if (_datacenterTransferAuthActions[@(datacenterId)] == nil && _datacenterTransferAuthRetryTimers[@(datacenterId)] == nil && masterDatacenterId != datacenterId)
         {
-            MTDatacenterTransferAuthAction *transferAction = _transferAuthActionFactory != nil ? _transferAuthActionFactory() : [[MTDatacenterTransferAuthAction alloc] init];
+            MTDatacenterTransferAuthAction * _Nonnull (^transferAuthActionFactory)(void) = self.transferAuthActionFactory;
+            MTDatacenterTransferAuthAction *transferAction = transferAuthActionFactory != nil ? transferAuthActionFactory() : [[MTDatacenterTransferAuthAction alloc] init];
             transferAction.delegate = self;
             _datacenterTransferAuthActions[@(datacenterId)] = transferAction;
             [transferAction execute:self masterDatacenterId:masterDatacenterId destinationDatacenterId:datacenterId authToken:authToken];
@@ -1963,6 +1965,8 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
                             if (!listener) {
                                 continue;
                             }
+                            if ([listener respondsToSelector:@selector(contextDatacenterPermanentKeyUnknown:datacenterId:authKeyId:)])
+                                [listener contextDatacenterPermanentKeyUnknown:strongSelf datacenterId:datacenterId authKeyId:probedAuthKeyId];
                             if ([listener respondsToSelector:@selector(contextLoggedOut:)])
                                 [listener contextLoggedOut:strongSelf];
                         }
