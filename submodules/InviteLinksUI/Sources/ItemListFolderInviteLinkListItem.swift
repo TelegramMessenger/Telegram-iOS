@@ -359,6 +359,9 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    var revealTopSeparatorIsHidden = false
+                    var revealBottomSeparatorIsHidden = false
+
                     strongSelf.layoutParams = (item, params, neighbors, firstWithHeader, last)
                                         
                     strongSelf.accessibilityLabel = titleAttributedString.string
@@ -422,7 +425,7 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
                                 stripeInset = leftInset
                             }
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: stripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - stripeInset, height: separatorHeight))
-                            strongSelf.bottomStripeNode.isHidden = last
+                            revealBottomSeparatorIsHidden = last
                         case .blocks:
                             if strongSelf.backgroundNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -444,20 +447,20 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
                             var hasBottomCorners = false
                             switch neighbors.top {
                                 case .sameSection(false):
-                                    strongSelf.topStripeNode.isHidden = true
+                                    revealTopSeparatorIsHidden = true
                                 default:
                                     hasTopCorners = true
-                                    strongSelf.topStripeNode.isHidden = hasCorners
+                                    revealTopSeparatorIsHidden = hasCorners
                             }
                             let bottomStripeInset: CGFloat
                             switch neighbors.bottom {
                                 case .sameSection(false):
                                     bottomStripeInset = leftInset
-                                    strongSelf.bottomStripeNode.isHidden = false
+                                    revealBottomSeparatorIsHidden = false
                                 default:
                                     bottomStripeInset = 0.0
                                     hasBottomCorners = true
-                                    strongSelf.bottomStripeNode.isHidden = hasCorners
+                                    revealBottomSeparatorIsHidden = hasCorners
                             }
                             
                             strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
@@ -481,7 +484,7 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.subtitleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: verticalInset + titleLayout.size.height + titleSpacing), size: subtitleLayout.size))
                                         
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel)), aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
                     
                     if item.invite == nil {
                         let shimmerNode: ShimmerEffectNode
@@ -518,10 +521,11 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
                         shimmerNode.removeFromSupernode()
                     }
                     
+                    strongSelf.updateRevealOptionsSeparatorNodes(top: strongSelf.topStripeNode, bottom: strongSelf.bottomStripeNode, topIsHidden: revealTopSeparatorIsHidden, bottomIsHidden: revealBottomSeparatorIsHidden)
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.removeAction != nil {
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.ChatListFilter_LinkActionDelete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]))
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.ChatListFilter_LinkActionDelete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
                     }
@@ -530,43 +534,7 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
         }
     }
     
-    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
-        super.setHighlighted(highlighted, at: point, animated: animated)
-        
-        if highlighted {
-            self.highlightedBackgroundNode.alpha = 1.0
-            if self.highlightedBackgroundNode.supernode == nil {
-                var anchorNode: ASDisplayNode?
-                if self.bottomStripeNode.supernode != nil {
-                    anchorNode = self.bottomStripeNode
-                } else if self.topStripeNode.supernode != nil {
-                    anchorNode = self.topStripeNode
-                } else if self.backgroundNode.supernode != nil {
-                    anchorNode = self.backgroundNode
-                }
-                if let anchorNode = anchorNode {
-                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
-                } else {
-                    self.addSubnode(self.highlightedBackgroundNode)
-                }
-            }
-        } else {
-            if self.highlightedBackgroundNode.supernode != nil {
-                if animated {
-                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            if completed {
-                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                            }
-                        }
-                        })
-                    self.highlightedBackgroundNode.alpha = 0.0
-                } else {
-                    self.highlightedBackgroundNode.removeFromSupernode()
-                }
-            }
-        }
-    }
+
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)

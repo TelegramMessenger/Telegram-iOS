@@ -1035,12 +1035,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 color = item.presentationData.theme.list.itemDisclosureActions.accent.fillColor
                                 textColor = item.presentationData.theme.list.itemDisclosureActions.accent.foregroundColor
                         }
-                        mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, iconColor: textColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor))
+                        mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, iconColor: textColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: option.type == .destructive))
                         index += 1
                     }
                     peerRevealOptions = mappedOptions
                 } else {
-                    peerRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]
+                    peerRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]
                 }
             } else {
                 peerRevealOptions = []
@@ -1817,7 +1817,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         }
                     }
                     
-                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel)), transition: transition)
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel)), transition: transition, aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
                     
                     if let presence = item.presence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)
@@ -1881,7 +1881,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     }
                     
                     strongSelf.backgroundNode.isHidden = !item.displayDecorations
-                    strongSelf.highlightedBackgroundNode.isHidden = !item.displayDecorations || !item.highlightable
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
@@ -1899,7 +1898,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     var isHighlighted = false
     
     var reallyHighlighted: Bool {
-        var reallyHighlighted = self.isHighlighted || self.isRevealOptionsActive
+        var reallyHighlighted = self.isHighlighted
         if let (item, _, _, _) = self.layoutParams, item.highlighted {
             reallyHighlighted = true
         }
@@ -1907,6 +1906,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     }
     
     func updateIsHighlighted(transition: ContainedViewLayoutTransition) {
+        if let item = self.layoutParams?.0 {
+            // Embedded rows forward their touch highlight here as well, so a
+            // swipe can continue on the same surface without a second overlay.
+            self.highlightedBackgroundNode.isHidden = !item.highlightable
+        }
         self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.reallyHighlighted, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
     
