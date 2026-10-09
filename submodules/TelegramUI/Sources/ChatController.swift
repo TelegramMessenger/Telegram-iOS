@@ -4990,11 +4990,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                LargeEmojiActionSheetItem(context: strongSelf.context, text: strongSelf.presentationData.strings.Conversation_LargeEmojiDisabledInfo, fitz: fitz, file: file),
-                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LargeEmojiEnable, color: .accent, action: { [weak actionSheet, weak self] in
-                    actionSheet?.dismissAnimated()
+            let alertScreen = largeEmojiAlertScreen(
+                context: strongSelf.context,
+                updatedPresentationData: strongSelf.updatedPresentationData,
+                fitz: fitz,
+                file: file,
+                enable: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -5003,14 +5004,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }).startStandalone()
                     
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .emoji(name: "TwoFactorSetupRememberSuccess", text: strongSelf.presentationData.strings.Conversation_LargeEmojiEnabled), elevatedLayout: false, action: { _ in return false }), in: .current)
-                })
-            ]), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])])
+                }
+            )
             strongSelf.chatDisplayNode.dismissInput()
-            strongSelf.present(actionSheet, in: .window(.root))
+            strongSelf.present(alertScreen, in: .window(.root))
         }, openJoinLink: { [weak self] joinHash in
             guard let strongSelf = self else {
                 return

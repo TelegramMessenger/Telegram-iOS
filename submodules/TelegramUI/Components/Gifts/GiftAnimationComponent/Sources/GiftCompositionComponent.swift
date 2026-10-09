@@ -483,47 +483,31 @@ public final class GiftCompositionComponent: Component {
                 }
                 
                 var updateNeeded = false
-                if self.lastPatternChangeTime == nil || now - (self.lastPatternChangeTime ?? now) >= self.currentInterval * 6.0 {
+                if !component.revealedAttributes.contains(.pattern), self.lastPatternChangeTime == nil || now - (self.lastPatternChangeTime ?? now) >= self.currentInterval * 6.0 {
                     self.lastPatternChangeTime = now
                     
-                    if component.revealedAttributes.contains(.pattern) {
-                        if self.previewPatternIndex != -1 {
-                            self.previewPatternIndex = -1
-                            self.animatePreviewTransition = true
-                            updateNeeded = true
-                        }
-                    } else {
-                        let previousPatternIndex = self.previewPatternIndex
-                        var randomPatternIndex = previousPatternIndex
-                        while randomPatternIndex == previousPatternIndex && !self.previewPatterns.isEmpty {
-                            randomPatternIndex = Int32.random(in: 0 ..< Int32(self.previewPatterns.count))
-                        }
-                        if !self.previewPatterns.isEmpty { self.previewPatternIndex = randomPatternIndex }
-                        
-                        self.animatePreviewTransition = true
-                        updateNeeded = true
+                    let previousPatternIndex = self.previewPatternIndex
+                    var randomPatternIndex = previousPatternIndex
+                    while randomPatternIndex == previousPatternIndex && !self.previewPatterns.isEmpty {
+                        randomPatternIndex = Int32.random(in: 0 ..< Int32(self.previewPatterns.count))
                     }
+                    if !self.previewPatterns.isEmpty { self.previewPatternIndex = randomPatternIndex }
+
+                    self.animatePreviewTransition = true
+                    updateNeeded = true
                 }
-                if self.lastBackdropChangeTime == nil || now - (self.lastBackdropChangeTime ?? now) >= self.currentInterval * 3.55 {
+                if !component.revealedAttributes.contains(.backdrop), self.lastBackdropChangeTime == nil || now - (self.lastBackdropChangeTime ?? now) >= self.currentInterval * 3.55 {
                     self.lastBackdropChangeTime = now
                     
-                    if component.revealedAttributes.contains(.backdrop) {
-                        if self.previewBackdropIndex != -1 {
-                            self.previewBackdropIndex = -1
-                            self.animateBackdropSwipe = true
-                            updateNeeded = true
-                        }
-                    } else {
-                        let previousBackdropIndex = self.previewBackdropIndex
-                        var randomBackdropIndex = previousBackdropIndex
-                        while randomBackdropIndex == previousBackdropIndex && !self.previewBackdrops.isEmpty {
-                            randomBackdropIndex = Int32.random(in: 0 ..< Int32(self.previewBackdrops.count))
-                        }
-                        if !self.previewBackdrops.isEmpty { self.previewBackdropIndex = randomBackdropIndex }
-                        
-                        self.animateBackdropSwipe = true
-                        updateNeeded = true
+                    let previousBackdropIndex = self.previewBackdropIndex
+                    var randomBackdropIndex = previousBackdropIndex
+                    while randomBackdropIndex == previousBackdropIndex && !self.previewBackdrops.isEmpty {
+                        randomBackdropIndex = Int32.random(in: 0 ..< Int32(self.previewBackdrops.count))
                     }
+                    if !self.previewBackdrops.isEmpty { self.previewBackdropIndex = randomBackdropIndex }
+
+                    self.animateBackdropSwipe = true
+                    updateNeeded = true
                 }
                 
                 if updateNeeded {
@@ -674,6 +658,14 @@ public final class GiftCompositionComponent: Component {
                     }
                 }
                 if let previewAttributes = previewAttributesOpt, !previewAttributes.isEmpty {
+                    if component.revealedAttributes.contains(.pattern), self.previewPatternIndex != -1 {
+                        self.previewPatternIndex = -1
+                        self.animatePreviewTransition = true
+                    }
+                    if component.revealedAttributes.contains(.backdrop), self.previewBackdropIndex != -1 {
+                        self.previewBackdropIndex = -1
+                        self.animateBackdropSwipe = true
+                    }
                     if self.previewPatternIndex != -1, case let .pattern(_, file, _) = self.previewPatterns[Int(self.previewPatternIndex)] {
                         patternFile = file
                         files[file.fileId.id] = file
