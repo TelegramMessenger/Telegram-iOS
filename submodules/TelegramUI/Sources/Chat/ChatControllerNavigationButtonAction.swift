@@ -437,7 +437,7 @@ extension ChatControllerImpl {
                         if peer.restrictionText(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) == nil && !self.presentationInterfaceState.isNotAccessible {
                             if peer.id == self.context.account.peerId {
                                 if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), mode: .generic, avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
-                                    self.effectiveNavigationController?.pushViewController(infoController)
+                                    self.pushPeerInfoControllerAvoidingDuplicate(infoController)
                                 }
                             } else {
                                 var expandAvatar = expandAvatar
@@ -457,7 +457,7 @@ extension ChatControllerImpl {
                                     mode = .generic
                                 }
                                 if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: self.contentData?.inviteRequestsContext) {
-                                    self.effectiveNavigationController?.pushViewController(infoController)
+                                    self.pushPeerInfoControllerAvoidingDuplicate(infoController)
                                 }
                             }
 
@@ -467,7 +467,7 @@ extension ChatControllerImpl {
                 case .replyThread:
                     if let peer = self.presentationInterfaceState.renderedPeer?.peer, case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
                         if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), mode: .forumTopic(thread: replyThreadMessage), avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
-                            self.effectiveNavigationController?.pushViewController(infoController)
+                            self.pushPeerInfoControllerAvoidingDuplicate(infoController)
                         }
                     } else if let monoforumPeer = self.presentationInterfaceState.renderedPeer?.peer, case let .replyThread(replyThreadMessage) = self.chatLocation, monoforumPeer.isMonoForum {
                         let context = self.context
@@ -482,13 +482,13 @@ extension ChatControllerImpl {
                                     return
                                 }
                                 if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer, mode: .monoforum(monoforumPeer.id), avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
-                                    self.effectiveNavigationController?.pushViewController(infoController)
+                                    self.pushPeerInfoControllerAvoidingDuplicate(infoController)
                                 }
                             }
                         }
                     } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isForumOrMonoForum, case let .replyThread(message) = self.chatLocation {
                         if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(channel), mode: .forumTopic(thread: message), avatarInitiallyExpanded: false, fromChat: true, requestsContext: self.contentData?.inviteRequestsContext) {
-                            self.effectiveNavigationController?.pushViewController(infoController)
+                            self.pushPeerInfoControllerAvoidingDuplicate(infoController)
                         }
                     }
                 case .customChatContents:
@@ -715,5 +715,21 @@ extension ChatControllerImpl {
         case .edit:
             self.editChat()
         }
+    }
+
+    // #2185: rapid title-bar taps each pushed a new PeerInfoScreen, so a fast burst
+    // opened several stacked Info screens. Route every Info push through this guard:
+    // if this peer's Info is already on top of the navigation stack, treat the extra
+    // tap as a no-op instead of pushing a duplicate.
+    private func pushPeerInfoControllerAvoidingDuplicate(_ infoController: ViewController) {
+        guard let navigationController = self.effectiveNavigationController else {
+            return
+        }
+        if let topController = navigationController.viewControllers.last as? PeerInfoScreenImpl,
+           let newController = infoController as? PeerInfoScreenImpl,
+           topController.peerId == newController.peerId {
+            return
+        }
+        navigationController.pushViewController(infoController)
     }
 }
