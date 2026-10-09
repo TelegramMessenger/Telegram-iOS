@@ -56,6 +56,43 @@ def _vm_build_domain() -> str:
 EPHEMERAL_VM_PREFIX = 'telegrambuild-{}-'.format(_vm_build_domain())
 
 
+# gitlab-runner usually runs as a launchd service, and launchd starts jobs with a minimal PATH
+# (/usr/bin:/bin:/usr/sbin:/sbin) that has no Homebrew, so a bare "tart" is not found there.
+# TART_PATH names the binary explicitly; otherwise PATH, then the usual Homebrew locations.
+TART_FALLBACK_PATHS = [
+    '/opt/homebrew/bin/tart',
+    '/opt/homebrew/tart',
+    '/usr/local/bin/tart',
+]
+
+_tart_executable_path: Optional[str] = None
+
+
+def tart_executable() -> str:
+    global _tart_executable_path
+    if _tart_executable_path is not None:
+        return _tart_executable_path
+
+    candidates = []
+    override = os.environ.get('TART_PATH')
+    if override:
+        candidates.append(override)
+    found_in_path = shutil.which('tart')
+    if found_in_path is not None:
+        candidates.append(found_in_path)
+    candidates += TART_FALLBACK_PATHS
+
+    for candidate in candidates:
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            _tart_executable_path = candidate
+            return candidate
+
+    raise TartBuildError(
+        'tart not found (looked in TART_PATH, PATH={}, and {}). Install it with `brew install cirruslabs/cli/tart`, '
+        'or set TART_PATH to the binary.'.format(os.environ.get('PATH', ''), ', '.join(TART_FALLBACK_PATHS))
+    )
+
+
 def list_local_vm_names() -> List[str]:
     """Names of the locally stored Tart VMs, read from ~/.tart/vms.
 
@@ -323,7 +360,7 @@ class TartVMManager:
                 # Clone the base image
                 logger.info(f"Cloning VM {vm_name} from image {image}")
                 clone_result = subprocess.run([
-                    "tart", "clone", image, vm_name
+                    tart_executable(), "clone", image, vm_name
                 ], check=True, capture_output=True, text=True)
 
                 logger.info(f"Successfully cloned VM {vm_name}")
@@ -332,7 +369,7 @@ class TartVMManager:
                 # host DHCP lease file keyed by MAC, so clones that inherited the base image's
                 # address would all resolve to the same guest. Disk size is deliberately left
                 # alone -- it comes from the (pre-configured) base image.
-                set_arguments = ["tart", "set", vm_name, "--random-mac", "--random-serial"]
+                set_arguments = [tart_executable(), "set", vm_name, "--random-mac", "--random-serial"]
                 if cpu is not None:
                     set_arguments += ["--cpu", str(cpu)]
                 if memory is not None:
@@ -346,7 +383,7 @@ class TartVMManager:
             def run_vm():
                 """Run the VM in background thread"""
                 try:
-                    run_arguments = ["tart", "run", vm_name]
+                    run_arguments = [tart_executable(), "run", vm_name]
                     for mount_directory in mount_directories.keys():
                         run_arguments.append(f"--dir={mount_directory}:{mount_directories[mount_directory]}")
                     subprocess.run(run_arguments, check=True, capture_output=False, text=True)
@@ -471,7 +508,7 @@ class TartVMManager:
 
         logger.info(f"Stopping VM {vm_name}")
         subprocess.run([
-            "tart", "stop", vm_name
+            tart_executable(), "stop", vm_name
         ], check=False, capture_output=True, text=True)
 
         if self._wait_for_vm_process_exit(vm_name, timeout):
@@ -535,7 +572,7 @@ class TartVMManager:
             try:
                 logger.info(f"Deleting VM {vm_name}")
                 subprocess.run([
-                    "tart", "delete", vm_name
+                    tart_executable(), "delete", vm_name
                 ], check=True, capture_output=True, text=True)
 
                 return True
@@ -551,7 +588,7 @@ class TartVMManager:
         """Check if a VM is currently running"""
         try:
             result = subprocess.run([
-                "tart", "list"
+                tart_executable(), "list"
             ], check=True, capture_output=True, text=True)
             
             # Check if the VM appears in the list with "running" status
@@ -634,7 +671,7 @@ class TartVMManager:
         """Get detailed information about a VM"""
         try:
             result = subprocess.run([
-                "tart", "ip", vm_name
+                tart_executable(), "ip", vm_name
             ], check=True, capture_output=True, text=True)
             
             ip_address = result.stdout.strip()
