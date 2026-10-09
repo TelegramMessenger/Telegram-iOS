@@ -27,7 +27,6 @@ final class CreateBotContentComponent: Component {
         var name: String = ""
         var username: String = ""
         var usernameIsChecked: Bool = false
-        var usernameConfiguration = BotUsernameConfiguration(allowedSuffixes: nil)
         
         init() {
         }
@@ -57,15 +56,19 @@ final class CreateBotContentComponent: Component {
         return true
     }
     
-    private enum UsernameCheckingStatus {
+    private enum UsernameCheckingStatus: Equatable {
         case checking
         case valid
         case invalid
         case taken
+        case suffixNotAllowed
+        case premiumRequired
+        case suffixLimitExceeded(limit: Int32?)
     }
 
     final class View: UIView {
         private var component: CreateBotContentComponent?
+        private var environment: ViewControllerComponentContainer.Environment?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
         
@@ -80,7 +83,7 @@ final class CreateBotContentComponent: Component {
         private let nameInputState = ListMultilineTextFieldItemComponent.ExternalState()
         private let nameInputTag = ListMultilineTextFieldItemComponent.Tag()
         
-        private var usernameCheckingStatus: (username: String, status: UsernameCheckingStatus)? {
+        private var usernameCheckingStatus: (username: String, isPremium: Bool, status: UsernameCheckingStatus)? {
             didSet {
                 guard let component = self.component else {
                     return
@@ -89,6 +92,11 @@ final class CreateBotContentComponent: Component {
             }
         }
         private var usernameCheckingDisposable: Disposable?
+        
+        // Live, so a purchase made from the footer's link clears a Premium error on return.
+        private var isPremium: Bool = false
+        private var isPremiumDisposable: Disposable?
+        private var chevronImage: (UIImage, PresentationTheme)?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -99,7 +107,7 @@ final class CreateBotContentComponent: Component {
                 }
                 component.externalState.username = self.usernameInputState.text.string
                 
-                self.inputUsernameUpdated(username: self.usernameInputState.text.string)
+                self.updateUsernameStatus(typedText: self.usernameInputState.text.string)
                 if !self.isUpdating {
                     self.state?.updated(transition: .immediate)
                 }
@@ -118,42 +126,71 @@ final class CreateBotContentComponent: Component {
         
         deinit {
             self.usernameCheckingDisposable?.dispose()
+            self.isPremiumDisposable?.dispose()
         }
         
-        private func inputUsernameUpdated(username: String) {
+        private func updateUsernameStatus(typedText: String) {
             guard let component = self.component else {
                 return
             }
-            if let usernameCheckingStatus = self.usernameCheckingStatus, usernameCheckingStatus.username == username {
+            let resolvedUsername = CreateBotUsername(typedText: typedText, endings: CreateBotUsernameEndings(appConfiguration: component.context.currentAppConfiguration.with { $0 }))
+            let username = resolvedUsername.username.lowercased()
+            let isPremium = self.isPremium
+            if let usernameCheckingStatus = self.usernameCheckingStatus, usernameCheckingStatus.username == username, usernameCheckingStatus.isPremium == isPremium {
                 return
             }
             self.usernameCheckingDisposable?.dispose()
             self.usernameCheckingDisposable = nil
             
-            guard case .success = component.externalState.usernameConfiguration.validate(username) else {
-                self.usernameCheckingStatus = (username, .invalid)
+            if resolvedUsername.validationError != nil {
+                self.usernameCheckingStatus = (username, isPremium, .invalid)
+                return
+            }
+            // Decided on the device: without Premium a Premium ending cannot be taken, whatever the
+            // server would say about the name itself.
+            if resolvedUsername.requiresPremium && !isPremium {
+                self.usernameCheckingStatus = (username, isPremium, .premiumRequired)
                 return
             }
             
-            self.usernameCheckingStatus = (username, .checking)
-            self.usernameCheckingDisposable = (component.context.engine.peers.addressNameAvailability(domain: .bot(component.parentPeer.id), name: username) |> deliverOnMainQueue).startStrict(next: { [weak self] result in
-                guard let self, self.usernameInputState.text.string == username else {
+            self.usernameCheckingStatus = (username, isPremium, .checking)
+            self.usernameCheckingDisposable = (component.context.engine.peers.checkBotUsername(username) |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                guard let self else {
                     return
                 }
+                let status: UsernameCheckingStatus
                 switch result {
                 case .available:
-                    self.usernameCheckingStatus = (username, .valid)
-                case .invalid:
-                    self.usernameCheckingStatus = (username, .invalid)
-                case .purchaseAvailable:
-                    self.usernameCheckingStatus = (username, .invalid)
+                    status = .valid
+                case .invalid, .purchaseAvailable:
+                    status = .invalid
                 case .taken:
-                    self.usernameCheckingStatus = (username, .taken)
+                    status = .taken
+                case .suffixNotAllowed:
+                    status = .suffixNotAllowed
+                case .premiumRequired:
+                    status = .premiumRequired
+                case let .suffixLimitExceeded(limit):
+                    status = .suffixLimitExceeded(limit: limit)
                 }
+                self.usernameCheckingStatus = (username, isPremium, status)
                 if !self.isUpdating {
                     self.state?.updated(transition: .immediate)
                 }
             })
+        }
+        
+        private func openPremium() {
+            guard let component = self.component, let environment = self.environment else {
+                return
+            }
+            let controller = component.context.sharedContext.makePremiumIntroController(
+                context: component.context,
+                source: .settings,
+                forceDark: false,
+                dismissed: nil
+            )
+            environment.controller()?.push(controller)
         }
 
         func update(component: CreateBotContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
@@ -169,9 +206,28 @@ final class CreateBotContentComponent: Component {
             
             let isFirstTime = self.component == nil
             self.component = component
+            self.environment = environment
             self.state = state
+            
             if isFirstTime {
-                component.externalState.usernameConfiguration = BotUsernameConfiguration(allowedSuffixes: component.context.currentAppConfiguration.with { $0 }.data?["bot_allowed_suffixes"] as? [String])
+                self.isPremium = component.context.isPremium
+                self.isPremiumDisposable = (component.context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
+                )
+                |> map { peer -> Bool in
+                    return peer?.isPremium ?? false
+                }
+                |> distinctUntilChanged
+                |> deliverOnMainQueue).startStrict(next: { [weak self] isPremium in
+                    guard let self, self.isPremium != isPremium else {
+                        return
+                    }
+                    self.isPremium = isPremium
+                    self.updateUsernameStatus(typedText: self.usernameInputState.text.string)
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
+                })
             }
             
             let sideInset: CGFloat = 16.0
@@ -313,53 +369,67 @@ final class CreateBotContentComponent: Component {
             }
             contentHeight += nameSectionSize.height + 22.0
             
-            let usernameConfiguration = component.externalState.usernameConfiguration
-            let initialUsername = usernameConfiguration.initialUsername(component.initialUsername)
-            let username = isFirstTime ? initialUsername : self.usernameInputState.text.string
-            self.inputUsernameUpdated(username: username)
-
-            let usernameFooterString: NSAttributedString
-            switch usernameConfiguration.validate(username) {
-            case let .success(value):
-                switch self.usernameCheckingStatus?.status ?? .valid {
-                case .checking:
-                    usernameFooterString = NSAttributedString(
-                        string: environment.strings.CreateBot_UsernameStatus_Checking,
-                        font: Font.regular(13.0),
-                        textColor: environment.theme.list.freeTextColor
-                    )
-                case .invalid:
-                    let errorText = environment.strings.CreateBot_UsernameStatus_Invalid
-                    usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
+            // The field takes its initial text only while it updates below, so the first pass resolves
+            // from that text directly; checking it now also puts its status in this pass's footer.
+            let initialUsername = component.initialUsername ?? ""
+            let usernameText = isFirstTime ? initialUsername : self.usernameInputState.text.string
+            if isFirstTime {
+                self.updateUsernameStatus(typedText: initialUsername)
+            }
+            let usernameEndings = CreateBotUsernameEndings(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            let resolvedUsername = CreateBotUsername(typedText: usernameText, endings: usernameEndings)
+            
+            let footerTextColor = environment.theme.list.freeTextColor
+            let footerErrorColor = environment.theme.list.itemDestructiveColor
+            let footerLinkColor = environment.theme.list.itemAccentColor
+            let footerString: (String, UIColor) -> NSMutableAttributedString = { text, color in
+                return NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: color),
+                    bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: color),
+                    link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: footerLinkColor),
+                    linkAttribute: { contents in
                         return ("URL", contents)
-                    }))
-                case .taken:
-                    let errorText = environment.strings.CreateBot_UsernameStatus_Taken
-                    usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
-                        return ("URL", contents)
-                    }))
-                case .valid:
-                    usernameFooterString = NSAttributedString(
-                        string: environment.strings.CreateBot_UsernameStatus_Link(value).string,
-                        font: Font.regular(13.0),
-                        textColor: environment.theme.list.freeTextColor
-                    )
-                }
-            case let .failure(error):
+                    }
+                )))
+            }
+            
+            let usernameFooterString: NSMutableAttributedString
+            if let validationError = resolvedUsername.validationError {
                 let errorText: String
-                switch error {
-                case .insufficientLength:
+                switch validationError {
+                case .tooShort:
                     errorText = environment.strings.CreateBot_UsernameStatus_Short
+                case .tooLong:
+                    errorText = environment.strings.CreateBot_UsernameStatus_Long
                 case .startsWithNumber:
                     errorText = environment.strings.CreateBot_UsernameStatus_Number
                 case .unsupportedCharacters:
                     errorText = environment.strings.CreateBot_UsernameStatus_Invalid
-                case .invalidSuffix:
-                    errorText = environment.strings.CreateBot_UsernameStatus_Suffix(usernameConfiguration.allowedSuffixes.joined(separator: ", ")).string
                 }
-                usernameFooterString = parseMarkdownIntoAttributedString(errorText, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemDestructiveColor), link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemDestructiveColor), linkAttribute: { contents in
-                    return ("URL", contents)
-                }))
+                usernameFooterString = footerString(errorText, footerErrorColor)
+            } else {
+                switch self.usernameCheckingStatus?.status ?? .valid {
+                case .checking, .valid:
+                    usernameFooterString = footerString(createBotUsernameHint(endings: usernameEndings, strings: environment.strings), footerTextColor)
+                case .invalid:
+                    usernameFooterString = footerString(environment.strings.CreateBot_UsernameStatus_Invalid, footerErrorColor)
+                case .taken:
+                    usernameFooterString = footerString(environment.strings.CreateBot_UsernameStatus_Taken, footerErrorColor)
+                case .suffixNotAllowed:
+                    // The server knows an ending this account may not use; the hint lists the ones it may.
+                    usernameFooterString = footerString(createBotUsernameHint(endings: usernameEndings, strings: environment.strings), footerErrorColor)
+                case .premiumRequired:
+                    let errorText = environment.strings.CreateBot_UsernameStatus_PremiumRequired(createBotUsernameEndingsList([resolvedUsername.ending], strings: environment.strings)).string
+                    usernameFooterString = footerString("\(errorText) [\(environment.strings.CreateBot_UsernameStatus_Subscribe)]()", footerErrorColor)
+                    if self.chevronImage?.1 !== environment.theme, let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: footerLinkColor) {
+                        self.chevronImage = (image, environment.theme)
+                    }
+                    if let range = usernameFooterString.string.range(of: ">", options: .backwards), let chevronImage = self.chevronImage?.0 {
+                        usernameFooterString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: usernameFooterString.string))
+                    }
+                case let .suffixLimitExceeded(limit):
+                    usernameFooterString = footerString(createBotUsernameSuffixLimitText(limit: limit, endings: usernameEndings, strings: environment.strings), footerErrorColor)
+                }
             }
             
             let usernameSectionSize = self.usernameSection.update(
@@ -377,7 +447,19 @@ final class CreateBotContentComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(usernameFooterString),
-                        maximumNumberOfLines: 0
+                        maximumNumberOfLines: 0,
+                        highlightColor: footerLinkColor.withMultipliedAlpha(0.1),
+                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                                return NSAttributedString.Key(rawValue: "URL")
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { [weak self] _, _ in
+                            self?.openPremium()
+                        }
                     )),
                     items: [
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
@@ -392,8 +474,9 @@ final class CreateBotContentComponent: Component {
                             autocapitalizationType: .none,
                             autocorrectionType: .no,
                             keyboardType: .asciiCapable,
-                            characterLimit: 32,
+                            characterLimit: CreateBotUsername.maxLength,
                             prefix: NSAttributedString(string: "@", font: Font.regular(17.0), textColor: environment.theme.list.itemPrimaryTextColor),
+                            suffix: resolvedUsername.appendedSuffix.flatMap { NSAttributedString(string: $0, font: Font.regular(17.0), textColor: environment.theme.list.itemSecondaryTextColor) },
                             rightAccessory: ListMultilineTextFieldItemComponent.RightAccessory(component: AnyComponentWithIdentity(
                                 id: 0,
                                 component: AnyComponent(EditLabelComponent(
@@ -543,16 +626,24 @@ private final class CreateBotSheetComponent: Component {
             return false
         }
         
-        private func validatedParams() -> (name: String, username: String)? {
-            if !self.contentExternalState.usernameIsChecked || self.contentExternalState.name.isEmpty {
+        static func validatedParams(inputName: String, inputUsername: String, endings: CreateBotUsernameEndings) -> (name: String, username: String)? {
+            if inputName.isEmpty {
                 return nil
             }
-            guard case let .success(username) = self.contentExternalState.usernameConfiguration.validate(self.contentExternalState.username) else {
+            let username = CreateBotUsername(typedText: inputUsername, endings: endings)
+            if username.validationError != nil {
                 return nil
             }
-            return (self.contentExternalState.name, username)
+            return (inputName, username.username)
         }
-
+        
+        private func validatedParams() -> (name: String, username: String)? {
+            guard let component = self.component, self.contentExternalState.usernameIsChecked else {
+                return nil
+            }
+            return CreateBotSheetComponent.View.validatedParams(inputName: contentExternalState.name, inputUsername: self.contentExternalState.username, endings: CreateBotUsernameEndings(appConfiguration: component.context.currentAppConfiguration.with { $0 }))
+        }
+        
         private func performCreateBot() {
             guard let component = self.component else {
                 return
@@ -564,6 +655,7 @@ private final class CreateBotSheetComponent: Component {
             guard let params = self.validatedParams() else {
                 return
             }
+            let endings = CreateBotUsernameEndings(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             
             self.isCreating = true
             self.state?.updated(transition: .immediate)
@@ -618,6 +710,20 @@ private final class CreateBotSheetComponent: Component {
                             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: isPremium)
                         ).get()
                         text = environment.strings.CreateBot_UsernameStatus_LimitExceeded(Int32(limits.maxBotsCreated))
+                    case .suffixNotAllowed:
+                        text = parseMarkdownIntoAttributedString(createBotUsernameHint(endings: endings, strings: environment.strings), attributes: MarkdownAttributes(
+                            body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: .black),
+                            bold: MarkdownAttributeSet(font: Font.regular(13.0), textColor: .black),
+                            link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: .black),
+                            linkAttribute: { _ in
+                                return nil
+                            }
+                        )).string
+                    case .premiumRequired:
+                        let ending = CreateBotUsername(typedText: params.username, endings: endings).ending
+                        text = environment.strings.CreateBot_UsernameStatus_PremiumRequired(createBotUsernameEndingsList([ending], strings: environment.strings)).string
+                    case let .suffixLimitExceeded(limit):
+                        text = createBotUsernameSuffixLimitText(limit: limit, endings: endings, strings: environment.strings)
                     }
                     
                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
@@ -1087,4 +1193,30 @@ private final class EditLabelComponent: Component {
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+/// "'ai', 'agent', 'app' or 'game'": the endings quoted and joined the way the strings join lists.
+func createBotUsernameEndingsList(_ endings: [String], strings: PresentationStrings) -> String {
+    let items = endings.map { strings.CreateBot_UsernameEnding($0).string }
+    guard let last = items.last else {
+        return ""
+    }
+    if items.count == 1 {
+        return last
+    }
+    return items.dropLast().joined(separator: strings.CreateBot_UsernameEndingDelimiter) + strings.CreateBot_UsernameEndingFinalDelimiter + last
+}
+
+/// The footer's resting text, listing the endings the server allows. Markdown: the Premium part links.
+func createBotUsernameHint(endings: CreateBotUsernameEndings, strings: PresentationStrings) -> String {
+    let freeEndings = createBotUsernameEndingsList([CreateBotUsernameEndings.freeEnding], strings: strings)
+    if endings.premium.isEmpty {
+        return strings.CreateBot_UsernameHintFree(freeEndings).string
+    }
+    return strings.CreateBot_UsernameHint(freeEndings, createBotUsernameEndingsList(endings.premium, strings: strings)).string
+}
+
+func createBotUsernameSuffixLimitText(limit: Int32?, endings: CreateBotUsernameEndings, strings: PresentationStrings) -> String {
+    let count = strings.CreateBot_UsernameStatus_SuffixLimitCount(limit ?? CreateBotUsername.defaultSuffixLimit)
+    return strings.CreateBot_UsernameStatus_SuffixLimit(count, createBotUsernameEndingsList(endings.premium, strings: strings)).string
 }

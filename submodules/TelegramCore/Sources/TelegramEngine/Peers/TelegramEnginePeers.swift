@@ -694,6 +694,10 @@ public extension TelegramEngine {
         public func sendBotRequestedPeer(peerId: PeerId, requestId: String, buttonId: Int32, requestedPeerIds: [PeerId]) -> Signal<Void, SendBotRequestedPeerError> {
             return _internal_sendBotRequestedPeer(account: self.account, peerId: peerId, messageId: nil, requestId: requestId, buttonId: buttonId, requestedPeerIds: requestedPeerIds)
         }
+        
+        public func checkBotUsername(_ username: String) -> Signal<BotUsernameAvailability, NoError> {
+            return _internal_checkBotUsername(account: self.account, username: username)
+        }
 
         public func createBot(name: String, username: String, managerPeerId: PeerId, viaDeeplink: Bool) -> Signal<EnginePeer, CreateBotError> {
             return _internal_createBot(account: self.account, name: name, username: username, managerPeerId: managerPeerId, viaDeeplink: viaDeeplink)

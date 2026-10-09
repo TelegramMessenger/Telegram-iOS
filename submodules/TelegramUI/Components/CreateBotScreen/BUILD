@@ -39,21 +39,33 @@ swift_library(
 )
 
 swift_library(
-    name = "BotUsernameTestsLib",
+    name = "CreateBotScreenTestsLib",
     testonly = True,
-    srcs = ["Sources/BotUsernameConfiguration.swift"] + glob(["Tests/**/*.swift"]),
+    srcs = glob([
+        "Tests/**/*.swift",
+    ]),
+    deps = [
+        ":CreateBotScreen",
+        "//submodules/TelegramCore",
+    ],
 )
 
+# The runner MUST pin a real device/OS: the default runner picks an invalid
+# device and the test process exits 15.
 ios_test_runner(
-    name = "BotUsernameTestRunner",
+    name = "CreateBotScreenTestRunner",
     device_type = "iPhone 17",
     os_version = "26.5",
 )
 
 ios_unit_test(
-    name = "BotUsernameTests",
+    name = "CreateBotScreenTests",
     minimum_os_version = "15.0",
-    runner = ":BotUsernameTestRunner",
-    deps = [":BotUsernameTestsLib"],
-    visibility = ["//visibility:public"],
+    runner = ":CreateBotScreenTestRunner",
+    deps = [
+        ":CreateBotScreenTestsLib",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
 )
