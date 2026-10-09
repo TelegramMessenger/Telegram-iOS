@@ -27,7 +27,7 @@ private final class ActivationSession: NetworkEngineSession {
     func stop() {
     }
 
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
         completion()
     }
 }

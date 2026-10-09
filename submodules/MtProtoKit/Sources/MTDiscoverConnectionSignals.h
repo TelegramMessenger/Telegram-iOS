@@ -15,6 +15,9 @@ typedef struct {
 
 + (NSData * _Nonnull)payloadData:(MTPayloadData * _Nonnull)outPayloadData context:(MTContext * _Nonnull)context address:(MTDatacenterAddress * _Nonnull)address;
 
+// Completes when the address answers req_pq_multi with a matching res_pq over MtProtoKit's TCP; errors otherwise.
++ (MTSignal * _Nonnull)tcpConnectionWithContext:(MTContext * _Nonnull)context datacenterId:(NSUInteger)datacenterId address:(MTDatacenterAddress * _Nonnull)address;
+
 + (MTSignal * _Nonnull)discoverSchemeWithContext:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId addressList:(NSArray * _Nonnull)addressList media:(bool)media isProxy:(bool)isProxy;
 
 // The addresses a discovery round actually probes. Under an MTProxy or WEB relay the

@@ -18,6 +18,10 @@ final class RecordingNetworkEngine: NetworkEngine {
         return self.inner.kind
     }
 
+    func networkIdentity() -> String? {
+        return self.inner.networkIdentity()
+    }
+
     func makeSession(datacenterId: Int, role: NetworkEngineSessionRole, usageCalculationInfo: MTNetworkUsageCalculationInfo?, delegate: NetworkEngineSessionDelegate?) -> NetworkEngineSession {
         let recordingDelegate = delegate.map { RecordingSessionDelegate(delegate: $0, telemetry: self.telemetry) }
         let session = self.inner.makeSession(datacenterId: datacenterId, role: role, usageCalculationInfo: usageCalculationInfo, delegate: recordingDelegate)
@@ -119,12 +123,16 @@ private final class RecordingNetworkEngineSession: NetworkEngineSession {
         self.session.stop()
     }
 
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
-        self.session.movePendingRequests(to: service, completion: completion)
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
+        self.session.movePendingRequests(to: service, deadline: deadline, completion: completion)
     }
 
     func observeConnectionDrops(_ observer: @escaping (NetworkEngineConnectionDrop) -> Void) {
         self.session.observeConnectionDrops(observer)
+    }
+
+    func serverActivity(_ reply: @escaping (NetworkEngineServerActivity?) -> Void) {
+        self.session.serverActivity(reply)
     }
 }
 

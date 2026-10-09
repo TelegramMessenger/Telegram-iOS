@@ -477,12 +477,31 @@ private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext
 private final class NetworkMainSessionDelegate: NetworkEngineSessionDelegate {
     private weak var connectionStatus: Promise<ConnectionStatus>?
     weak var network: Network?
+    private let livenessLock = NSLock()
+    private var lastState: NetworkEngineConnectionState?
+    private weak var livenessMonitor: NetworkLivenessMonitor?
     
     init(connectionStatus: Promise<ConnectionStatus>) {
         self.connectionStatus = connectionStatus
     }
     
+    /// The monitor hears every state from now on, starting with the latest one.
+    func attach(_ monitor: NetworkLivenessMonitor) {
+        self.livenessLock.lock()
+        self.livenessMonitor = monitor
+        let state = self.lastState
+        self.livenessLock.unlock()
+        if let state = state {
+            monitor.connectionStateChanged(state)
+        }
+    }
+    
     func networkSessionConnectionStateChanged(_ state: NetworkEngineConnectionState) {
+        self.livenessLock.lock()
+        self.lastState = state
+        let monitor = self.livenessMonitor
+        self.livenessLock.unlock()
+        monitor?.connectionStateChanged(state)
         let connectionStatus = self.connectionStatus
         if state.isConnected {
             if state.isUpdatingConnectionContext || state.isPerformingServiceTasks {
@@ -679,7 +698,12 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             context.beginExplicitBackupAddressDiscovery()
             #endif*/
             
-            let rustDisabledReason = networkEngineRustDisabledReason(appConfiguration: appConfiguration, engineState: networkEngine.state, appVersion: arguments.appVersion, timestamp: Int32(Date().timeIntervalSince1970))
+            var rustDisabledReason = networkEngineRustDisabledReason(appConfiguration: appConfiguration, engineState: networkEngine.state, appVersion: arguments.appVersion, timestamp: Int32(Date().timeIntervalSince1970))
+            #if os(macOS)
+            if rustDisabledReason == nil {
+                rustDisabledReason = networkLivenessDisabledReason()
+            }
+            #endif
             let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension)
             resolvedEngine.activate()
             let rustEngineDisabled = rustDisabledReason != nil
@@ -901,6 +925,8 @@ public final class Network: NSObject {
     private let webProxyLeaseToken = UUID()
     private let webProxyActive: ValuePromise<Bool>
     private let webProxyCarrierDemandDisposable = MetaDisposable()
+    /// macOS, Rust with live switching: the local health check (`NetworkLivenessMonitor`).
+    private var livenessMonitor: NetworkLivenessMonitor?
     public let useBetaFeatures: Bool
     public let useExperimentalFeatures: Bool
     
@@ -1069,10 +1095,54 @@ public final class Network: NSObject {
             return nil
         })
         
+        #if os(macOS)
+        if let switchingEngine = switchingEngine, !isAppExtension {
+            let monitor = NetworkLivenessMonitor(queue: queue, datacenterId: datacenterId, dependencies: NetworkLivenessMonitor.Dependencies(
+                clock: networkLivenessUptime,
+                activity: { [weak mainSession] reply in
+                    guard let mainSession = mainSession else {
+                        reply(nil)
+                        return
+                    }
+                    mainSession.serverActivity(reply)
+                },
+                engineKind: { [weak switchingEngine] in
+                    return switchingEngine?.kind ?? .mtProtoKit
+                },
+                networkIdentity: { [weak switchingEngine] in
+                    return switchingEngine?.networkIdentity()
+                },
+                probeUnavailable: { [weak context] in
+                    return context?.apiEnvironment.socksProxySettings?.webProxy == true ? "a WEB proxy, which MtProtoKit's probe cannot use" : nil
+                },
+                probe: { [weak context] timeout in
+                    guard let context = context else {
+                        return .single(false)
+                    }
+                    return networkLivenessMtProtoKitProbe(context: context, datacenterId: datacenterId, timeout: timeout)
+                },
+                report: { [weak telemetry] report in
+                    telemetry?.engineFallback(report, engine: .rust)
+                },
+                switchToMtProtoKit: { [weak self] reason in
+                    self?.disableRustEngine(reason: reason)
+                },
+                limiter: NetworkLivenessProbeLimiter.shared
+            ))
+            self.livenessMonitor = monitor
+            mainSession.observeConnectionDrops { [weak monitor] drop in
+                monitor?.connectionDropped(drop)
+            }
+            mainSessionDelegate.attach(monitor)
+            monitor.start()
+        }
+        #endif
+
         let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
         |> distinctUntilChanged |> deliverOn(queue)
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
             if let strongSelf = self {
+                strongSelf.livenessMonitor?.setResumed(value)
                 if value {
                     Logger.shared.log("Network", "Resume network connection")
                     strongSelf.mainSession.setPaused(false)
@@ -1142,6 +1212,7 @@ public final class Network: NSObject {
     }
     
     deinit {
+        self.livenessMonitor?.stop()
         self.shouldKeepConnectionDisposable.dispose()
         self.isUserOnlineDisposable.dispose()
         self.webProxyCarrierDemandDisposable.dispose()

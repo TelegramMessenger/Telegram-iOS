@@ -100,10 +100,15 @@ final class RustEngineBridgeTests: XCTestCase {
             (.temporaryKeyBound, MTEventKindTemporaryKeyBound), (.temporaryKeyBindFailed, MTEventKindTemporaryKeyBindFailed),
             (.permanentKeyInvalid, MTEventKindPermanentKeyInvalid), (.temporaryKeyInUse, MTEventKindTemporaryKeyInUse),
             (.temporaryKeyDropped, MTEventKindTemporaryKeyDropped), (.routeMemoryChanged, MTEventKindRouteMemoryChanged),
+            (.released, MTEventKindReleased),
         ]
         for (kind, raw) in pairs {
             XCTAssertEqual(kind.rawValue, raw.rawValue)
         }
+    }
+
+    func testReleasedFlagMatchesHeader() {
+        XCTAssertEqual(rustEngineReleasedMayHaveRunFlag, UInt32(MTReleasedMayHaveRun))
     }
 
     func testFlagsMatchHeader() {
@@ -146,7 +151,7 @@ final class RustEngineBridgeTests: XCTestCase {
             return
         }
         XCTAssertNotNil(runtime.engine)
-        XCTAssertEqual(mt_engine_abi_version(), 4)
+        XCTAssertEqual(mt_engine_abi_version(), 5)
         let first = runtime.nextRequestId()
         let second = runtime.nextRequestId()
         XCTAssertNotEqual(first, 0)

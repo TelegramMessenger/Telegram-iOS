@@ -132,63 +132,108 @@ final class MtProtoKitEngine: NetworkEngine {
 private final class MtProtoKitPendingRequest {
     let request: NetworkEngineRequest
     let internalId: Any!
-    let sequence: Int
     var isTaken = false
     var isCancelled = false
     var moved: Disposable?
 
-    init(request: NetworkEngineRequest, internalId: Any!, sequence: Int) {
+    init(request: NetworkEngineRequest, internalId: Any!) {
         self.request = request
         self.internalId = internalId
-        self.sequence = sequence
     }
+}
+
+/// A handover in progress (`movePendingRequests`): where released requests go, and its deadline.
+private struct MtProtoKitHandover {
+    static let extensionStep: Double = 5.0
+    static let longest: Double = 30.0
+
+    let target: NetworkEngineRequestService
+    var completions: [() -> Void]
+    let startedAt: Double
+    var deadline: Double
+    var lastAnswerAt: Double?
+    var releasedAll = false
+    var finished = false
+}
+
+private func mtProtoKitHandoverClock() -> Double {
+    return ProcessInfo.processInfo.systemUptime
 }
 
 private final class MtProtoKitPendingRequests {
     private let lock = NSLock()
     private var requests: [ObjectIdentifier: MtProtoKitPendingRequest] = [:]
-    private var nextSequence = 0
+    private var handover: MtProtoKitHandover?
 
-    func insert(request: NetworkEngineRequest, internalId: Any!) -> MtProtoKitPendingRequest {
+    /// Nil when the request was taken; otherwise the session hands its requests over and this one goes
+    /// straight to the returned service.
+    func insert(_ pending: MtProtoKitPendingRequest, key: ObjectIdentifier) -> NetworkEngineRequestService? {
         self.lock.lock()
-        let pending = MtProtoKitPendingRequest(request: request, internalId: internalId, sequence: self.nextSequence)
-        self.nextSequence += 1
-        self.requests[ObjectIdentifier(pending)] = pending
-        self.lock.unlock()
-        return pending
+        defer {
+            self.lock.unlock()
+        }
+        if let handover = self.handover {
+            return handover.target
+        }
+        self.requests[key] = pending
+        return nil
     }
 
-    func complete(_ pending: MtProtoKitPendingRequest) -> Bool {
+    /// Whether the answer goes to the caller, and the handover's completion when it was the last request.
+    func complete(_ pending: MtProtoKitPendingRequest, key: ObjectIdentifier) -> (deliver: Bool, finished: (() -> Void)?) {
         self.lock.lock()
         defer {
             self.lock.unlock()
         }
         if pending.isTaken {
-            return false
+            return (false, nil)
         }
-        self.requests.removeValue(forKey: ObjectIdentifier(pending))
-        return true
+        self.requests.removeValue(forKey: key)
+        if self.handover != nil {
+            self.handover?.lastAnswerAt = mtProtoKitHandoverClock()
+            return (true, self.finishIfEmpty())
+        }
+        return (true, nil)
     }
 
-    func cancel(_ pending: MtProtoKitPendingRequest) -> Disposable? {
+    func cancel(_ pending: MtProtoKitPendingRequest, key: ObjectIdentifier) -> (moved: Disposable?, finished: (() -> Void)?) {
         self.lock.lock()
         defer {
             self.lock.unlock()
         }
         pending.isCancelled = true
-        self.requests.removeValue(forKey: ObjectIdentifier(pending))
-        return pending.moved
+        self.requests.removeValue(forKey: key)
+        return (pending.moved, self.handover != nil ? self.finishIfEmpty() : nil)
     }
 
-    func takeAll() -> [MtProtoKitPendingRequest] {
+    /// A request MtProtoKit let go during the handover, and where it goes.
+    func take(key: ObjectIdentifier) -> (MtProtoKitPendingRequest, NetworkEngineRequestService)? {
         self.lock.lock()
-        let taken = self.requests.values.filter { !$0.isCancelled }.sorted(by: { $0.sequence < $1.sequence })
+        defer {
+            self.lock.unlock()
+        }
+        guard let handover = self.handover, let pending = self.requests.removeValue(forKey: key), !pending.isCancelled else {
+            return nil
+        }
+        pending.isTaken = true
+        return (pending, handover.target)
+    }
+
+    /// Every request still here, in no particular order: the handover ends without them being released.
+    func takeAll() -> [(MtProtoKitPendingRequest, NetworkEngineRequestService)] {
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        guard let handover = self.handover else {
+            return []
+        }
+        let taken = self.requests.values.filter { !$0.isCancelled }
         for pending in taken {
             pending.isTaken = true
         }
         self.requests.removeAll()
-        self.lock.unlock()
-        return taken
+        return taken.map { ($0, handover.target) }
     }
 
     func setMoved(_ pending: MtProtoKitPendingRequest, disposable: Disposable) -> Bool {
@@ -197,6 +242,88 @@ private final class MtProtoKitPendingRequests {
         let isCancelled = pending.isCancelled
         self.lock.unlock()
         return isCancelled
+    }
+
+    func beginHandover(target: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) -> Bool {
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        if var handover = self.handover {
+            if handover.finished {
+                Queue.concurrentDefaultQueue().async {
+                    completion()
+                }
+            } else {
+                handover.completions.append(completion)
+                self.handover = handover
+            }
+            return false
+        }
+        let now = mtProtoKitHandoverClock()
+        self.handover = MtProtoKitHandover(target: target, completions: [completion], startedAt: now, deadline: now + min(max(deadline, 0.0), MtProtoKitHandover.longest))
+        return true
+    }
+
+    /// The handover's completions once nothing is left, at most once.
+    func finishIfDone() -> (() -> Void)? {
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        return self.finishIfEmpty()
+    }
+
+    /// Call with `lock` held. The completion runs on another queue: it stops the session, which must not
+    /// happen inside one of MtProtoKit's own callbacks.
+    private func finishIfEmpty() -> (() -> Void)? {
+        guard var handover = self.handover, !handover.finished, self.requests.isEmpty else {
+            return nil
+        }
+        handover.finished = true
+        self.handover = handover
+        let completions = handover.completions
+        return {
+            Queue.concurrentDefaultQueue().async {
+                for completion in completions {
+                    completion()
+                }
+            }
+        }
+    }
+
+    enum DeadlineStep {
+        case wait(Double)
+        case releaseAll
+        case done
+    }
+
+    /// At the deadline: extended while answers keep arriving (5 s steps, 30 s at most), then every
+    /// request still waiting is released.
+    func deadlineStep() -> DeadlineStep {
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        guard var handover = self.handover, !handover.finished else {
+            return .done
+        }
+        let now = mtProtoKitHandoverClock()
+        let limit = handover.startedAt + MtProtoKitHandover.longest
+        while now >= handover.deadline && handover.deadline < limit && (handover.lastAnswerAt.map { $0 > handover.deadline - MtProtoKitHandover.extensionStep } ?? false) {
+            handover.deadline = min(handover.deadline + MtProtoKitHandover.extensionStep, limit)
+        }
+        defer {
+            self.handover = handover
+        }
+        if now < handover.deadline {
+            return .wait(handover.deadline - now)
+        }
+        if handover.releasedAll {
+            return .done
+        }
+        handover.releasedAll = true
+        return .releaseAll
     }
 }
 
@@ -208,12 +335,68 @@ private final class MtProtoKitRequestService: NetworkEngineRequestService {
         self.requestService = requestService
     }
     
-    func movePendingRequests(to service: NetworkEngineRequestService) {
-        for pending in self.pendingRequests.takeAll() {
-            self.requestService.removeRequest(byInternalId: pending.internalId)
-            let disposable = service.add(pending.request)
-            if self.pendingRequests.setMoved(pending, disposable: disposable) {
+    /// See `NetworkEngineSession.movePendingRequests`: MtProtoKit keeps a request that has a message id
+    /// until its answer or the deadline and lets every other one go (`handOverRequests:`).
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
+        guard self.pendingRequests.beginHandover(target: service, deadline: deadline, completion: completion) else {
+            return
+        }
+        let pendingRequests = self.pendingRequests
+        self.requestService.handOverRequests { mtRequest, mayHaveReachedServer, retryAfter in
+            guard let mtRequest = mtRequest else {
+                return
+            }
+            MtProtoKitRequestService.released(mtRequest, mayHaveReachedServer: mayHaveReachedServer, retryAfter: retryAfter, pendingRequests: pendingRequests)
+        }
+        self.scheduleDeadline(after: 0.0)
+        pendingRequests.finishIfDone()?()
+    }
+
+    private func scheduleDeadline(after delay: Double) {
+        let pendingRequests = self.pendingRequests
+        let requestService = self.requestService
+        Queue.concurrentDefaultQueue().after(delay, { [weak self] in
+            switch pendingRequests.deadlineStep() {
+            case let .wait(remaining):
+                self?.scheduleDeadline(after: remaining + 0.01)
+            case .releaseAll:
+                requestService.releaseHandedOverRequests()
+                Queue.concurrentDefaultQueue().after(2.0, {
+                    for (pending, target) in pendingRequests.takeAll() {
+                        MtProtoKitRequestService.decide(pending, mayHaveReachedServer: true, retryAfter: 0.0, errorContext: nil, target: target, pendingRequests: pendingRequests)
+                    }
+                    pendingRequests.finishIfDone()?()
+                })
+            case .done:
+                break
+            }
+        })
+    }
+
+    private static func released(_ mtRequest: MTRequest, mayHaveReachedServer: Bool, retryAfter: Double, pendingRequests: MtProtoKitPendingRequests) {
+        if let (pending, target) = pendingRequests.take(key: ObjectIdentifier(mtRequest)) {
+            decide(pending, mayHaveReachedServer: mayHaveReachedServer, retryAfter: retryAfter, errorContext: mtRequest.errorContext, target: target, pendingRequests: pendingRequests)
+        }
+        pendingRequests.finishIfDone()?()
+    }
+
+    private static func decide(_ pending: MtProtoKitPendingRequest, mayHaveReachedServer: Bool, retryAfter: Double, errorContext: MTRequestErrorContext?, target: NetworkEngineRequestService, pendingRequests: MtProtoKitPendingRequests) {
+        let decision = networkEngineReleaseDecision(mayHaveRun: mayHaveReachedServer, retryAfter: retryAfter, allowsServerError: {
+            return pending.request.shouldContinueAfterError(NetworkEngineErrorContext(
+                floodWaitSeconds: Int(errorContext?.floodWaitSeconds ?? 0),
+                floodWaitErrorText: errorContext?.floodWaitErrorText,
+                internalServerErrorCount: Int(errorContext?.internalServerErrorCount ?? 0) + 1
+            ))
+        })
+        switch decision {
+        case let .move(delay):
+            let disposable = networkEngineMove(pending.request, to: target, after: delay)
+            if pendingRequests.setMoved(pending, disposable: disposable) {
                 disposable.dispose()
+            }
+        case .fail:
+            if !pending.isCancelled {
+                pending.request.completed(.failure(NetworkEngineRequestFailure(error: networkEngineSwitchedError, info: NetworkEngineResponseInfo(nil))))
             }
         }
     }
@@ -221,8 +404,12 @@ private final class MtProtoKitRequestService: NetworkEngineRequestService {
     func add(_ request: NetworkEngineRequest) -> Disposable {
         let mtRequest = MTRequest()
         let internalId: Any! = mtRequest.internalId
+        let key = ObjectIdentifier(mtRequest)
         let pendingRequests = self.pendingRequests
-        let pending = pendingRequests.insert(request: request, internalId: internalId)
+        let pending = MtProtoKitPendingRequest(request: request, internalId: internalId)
+        if let target = pendingRequests.insert(pending, key: key) {
+            return target.add(request)
+        }
         
         let parse = request.parse
         mtRequest.setPayload(request.payload, metadata: request.metadata, shortMetadata: request.shortMetadata, responseParser: { response in
@@ -256,17 +443,18 @@ private final class MtProtoKitRequestService: NetworkEngineRequestService {
         }
         
         mtRequest.completed = { (boxedResponse, info, error) -> () in
-            if !pendingRequests.complete(pending) {
-                return
+            let (deliver, finished) = pendingRequests.complete(pending, key: key)
+            if deliver {
+                let responseInfo = NetworkEngineResponseInfo(info)
+                if let error = error {
+                    request.completed(.failure(NetworkEngineRequestFailure(error: error, info: responseInfo)))
+                } else if let boxedResponse = boxedResponse {
+                    request.completed(.success(NetworkEngineResponse(result: boxedResponse, info: responseInfo)))
+                } else {
+                    request.completed(.success(NetworkEngineResponse(result: boxedResponse as Any, info: responseInfo)))
+                }
             }
-            let responseInfo = NetworkEngineResponseInfo(info)
-            if let error = error {
-                request.completed(.failure(NetworkEngineRequestFailure(error: error, info: responseInfo)))
-            } else if let boxedResponse = boxedResponse {
-                request.completed(.success(NetworkEngineResponse(result: boxedResponse, info: responseInfo)))
-            } else {
-                request.completed(.success(NetworkEngineResponse(result: boxedResponse as Any, info: responseInfo)))
-            }
+            finished?()
         }
         
         if let dependsOn = request.dependsOn {
@@ -282,11 +470,13 @@ private final class MtProtoKitRequestService: NetworkEngineRequestService {
         requestService.add(mtRequest)
         
         return ActionDisposable { [weak requestService] in
-            if let moved = pendingRequests.cancel(pending) {
+            let (moved, finished) = pendingRequests.cancel(pending, key: key)
+            if let moved = moved {
                 moved.dispose()
             } else {
                 requestService?.removeRequest(byInternalId: internalId)
             }
+            finished?()
         }
     }
 }
@@ -426,8 +616,7 @@ private final class MtProtoKitSession: NSObject, NetworkEngineSession, MTRequest
         self.mtProto.finalizeSession()
     }
     
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
-        self.mtProtoKitRequestService.movePendingRequests(to: service)
-        completion()
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
+        self.mtProtoKitRequestService.movePendingRequests(to: service, deadline: deadline, completion: completion)
     }
 }

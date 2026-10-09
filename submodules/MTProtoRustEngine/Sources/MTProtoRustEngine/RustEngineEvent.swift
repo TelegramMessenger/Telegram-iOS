@@ -37,6 +37,18 @@ enum RustEngineEventKind: UInt32 {
     case temporaryKeyInUse = 33
     case temporaryKeyDropped = 34
     case routeMemoryChanged = 35
+    case released = 36
+
+    /// The server sent the session something (for the local health check): an answer other than a
+    /// completion (which the session times itself), an update, a pong, a bind's answer.
+    var isServerActivity: Bool {
+        switch self {
+        case .failed, .acknowledged, .progress, .authorizationRequired, .softAuthReset, .authTokenRequired, .temporaryKeyRejected, .initHashStored, .verificationRequired, .updatesReset, .update, .timeDifferenceUpdated, .saltsUpdated, .pong, .retryDecisionRequired, .temporaryKeyBound, .temporaryKeyBindFailed:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 struct RustEngineEvent {

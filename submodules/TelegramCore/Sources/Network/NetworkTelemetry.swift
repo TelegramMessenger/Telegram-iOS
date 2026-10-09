@@ -145,6 +145,9 @@ public enum NetworkFailureClass: String, Codable, Equatable, CaseIterable {
     /// The request succeeded, but took longer than `NetworkTelemetry.slowAfter`, not counting flood
     /// waits and time the app spent suspended.
     case slow
+    /// Not a request: the local health check moved the network off the engine (`NetworkLivenessMonitor`),
+    /// recorded as method `engine.local_health` with the engine's latest connection drops.
+    case engineFallback = "engine_fallback"
 }
 
 /// The connection status of the main session, as the app shows it.
@@ -651,6 +654,12 @@ struct NetworkTelemetryRequestDescription {
         self.info = info
         self.requestBytes = request.payload.count
         self.expectedBytes = request.options.expectedResponseSize
+    }
+
+    init(info: NetworkTelemetryRequestInfo) {
+        self.info = info
+        self.requestBytes = 0
+        self.expectedBytes = 0
     }
 }
 
@@ -1280,7 +1289,7 @@ public final class NetworkTelemetry {
     }
 
     /// Call with `lock` held.
-    private func appendFailure(_ request: NetworkTelemetryRequestDescription, errorState: NetworkTelemetryErrorState, failure: NetworkFailureClass, code: Int32, error: String, duration: Double, spannedSuspension: Bool, now: Double) {
+    private func appendFailure(_ request: NetworkTelemetryRequestDescription, errorState: NetworkTelemetryErrorState, failure: NetworkFailureClass, code: Int32, error: String, duration: Double, spannedSuspension: Bool, now: Double, drops: [NetworkTelemetryDrop]? = nil) {
         let samples = self.recentLatency[request.info.role.index].sorted
         let mainSamples = request.info.role == .main ? [] : self.mainRoundTrip.sorted
         func percentile(_ p: Double, of samples: [Double]) -> Double? {
@@ -1314,7 +1323,7 @@ public final class NetworkTelemetry {
             viaProxy: self.viaProxy,
             userOnline: self.userOnline,
             connection: self.connectionEvents.suffix(NetworkTelemetry.connectionHistory).map { NetworkTelemetryConnectionEvent(ago: ((now - $0.time) * 1000.0).rounded() / 1000.0, state: $0.state) },
-            drops: self.recentDrops(role: request.info.role, now: now),
+            drops: drops ?? self.recentDrops(role: request.info.role, now: now),
             sinceOnline: self.connectionState?.isConnected == true ? 0.0 : self.lastConnected.map { ((now - $0) * 1000.0).rounded() / 1000.0 },
             inFlight: self.inFlightEstimate,
             latencyP50: percentile(0.5, of: samples),
@@ -1449,6 +1458,26 @@ public final class NetworkTelemetry {
             self.summaryDirty = true
         }
         self.scheduleDelayedFlush()
+    }
+
+    /// The local health check moved the network off `engine`: one failure record of the method
+    /// `engine.local_health` on the main session, whose error says whether the engine held a connection,
+    /// with the drops the check saw (the latest `dropsPerRecord`).
+    func engineFallback(_ report: NetworkLivenessReport, engine: NetworkEngineKind) {
+        let now = self.clock()
+        let silentFor = report.activity.silentFor ?? 0.0
+        let info = NetworkTelemetryRequestInfo(startedAt: now - silentFor, engine: engine, role: .main, datacenterId: report.datacenterId, method: "engine.local_health")
+        let drops = report.drops.suffix(NetworkTelemetry.dropsPerRecord).map { entry in
+            NetworkTelemetryDrop(ago: (entry.ago * 1000.0).rounded() / 1000.0, reason: networkTelemetryDropReason(entry.drop.reason), answered: entry.drop.answered, age: (entry.drop.age * 1000.0).rounded() / 1000.0)
+        }
+        self.lock.locked {
+            self.countPendingSamples()
+            let key = self.methodKey(engine: engine, role: .main, method: info.method)
+            self.methods[key, default: NetworkTelemetryMethodStats()].failures[NetworkFailureClass.engineFallback.rawValue, default: 0] += 1
+            self.appendFailure(NetworkTelemetryRequestDescription(info: info), errorState: NetworkTelemetryErrorState(), failure: .engineFallback, code: 0, error: "SILENT", duration: silentFor, spannedSuspension: false, now: now, drops: drops.isEmpty ? nil : Array(drops))
+            self.summaryDirty = true
+        }
+        self.schedule(.immediate)
     }
 
     /// The engine gave up on a connection of a session of `role`.
