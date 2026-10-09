@@ -549,6 +549,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     
     var walletTransferAnimation: ChatWalletTransferAnimation?
+    var walletTransferAnimationsVisible = false
     weak var attachmentController: AttachmentController?
     
     weak var currentImportMessageTooltip: UndoOverlayController?
@@ -7672,6 +7673,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+
+        self.walletTransferAnimationsVisible = true
+        self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemNode in
+            itemNode.unreadMessageRangeUpdated()
+        }
                 
         if self.willAppear {
             self.chatDisplayNode.historyNode.refreshPollActionsForVisibleMessages()
@@ -8270,6 +8276,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+
+        self.walletTransferAnimationsVisible = false
         
         if #available(iOS 18.0, *) {
         } else {

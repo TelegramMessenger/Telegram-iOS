@@ -143,16 +143,22 @@ final class ChatWalletTransferAnimation {
         return self.seenArrivals.contains(id) ? .finished : nil
     }
 
+    private var canPlayArrivals: Bool {
+        guard let controller = self.controller, controller.walletTransferAnimationsVisible,
+              controller.canReadHistoryValue else { return false }
+        if case .standard(.previewing) = controller.mode { return false }
+        return true
+    }
+
     func requestArrival(_ message: EngineRawMessage) {
-        guard self.isApplicationActive, !self.seenArrivals.contains(message.id),
-              let interaction = self.controller?.controllerInteraction, interaction.canReadHistory,
+        guard self.isApplicationActive, self.canPlayArrivals, !self.seenArrivals.contains(message.id),
+              let interaction = self.controller?.controllerInteraction,
               message.flags.contains(.Incoming),
               interaction.unreadMessageRange[UnreadMessageRangeKey(peerId: message.id.peerId, namespace: message.id.namespace)]?.contains(message.id.id) == true else { return }
         self.seenArrivals.insert(message.id)
         let rise = interaction.freshWalletTransferMessageIds.remove(message.id) != nil
         guard !UIAccessibility.isReduceMotionEnabled else { return }
         self.arrivals[message.id] = Arrival(message: message, rise: rise)
-        // All requests from the current layout transaction are sorted on the next frame.
         self.ensureDisplayLink()
     }
 
@@ -169,7 +175,7 @@ final class ChatWalletTransferAnimation {
     private func updateArrivals(at now: CFTimeInterval, nodes: [ChatMessageTransferBubbleContentNode]) {
         for arrival in self.arrivals.values.sorted(by: { $0.message.index < $1.message.index }) {
             let id = arrival.message.id
-            guard self.controller?.controllerInteraction?.canReadHistory == true,
+            guard self.canPlayArrivals,
                   !UIAccessibility.isReduceMotionEnabled,
                   let node = nodes.first(where: { $0.item?.message.id == id && $0.canPlayIncomingTransferAnimation }) else {
                 self.cancelArrival(id)
