@@ -132,6 +132,10 @@ public extension TelegramEngine {
             )
         }
 
+        public func getCachedUserAddressPeers(addresses: [String]) -> Signal<[WalletTransactionPeer], NoError> {
+            return _internal_getCachedWalletUserAddressPeers(account: self.account, addresses: addresses)
+        }
+
         public func getTransactions(
             inbound: Bool,
             outbound: Bool,
