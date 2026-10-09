@@ -1167,15 +1167,29 @@ private final class WalletSendScreenComponent: Component {
             }
 
             let presentationData = self.currentPresentationData(for: component)
+            var restoreInputFocus = self.amountField.isInputActive
             let alertController = AlertScreen(
                 title: nil,
                 text: presentationData.initial.strings.Wallet_Send_DiscardAlertText,
                 actions: [
                     .init(title: presentationData.initial.strings.Attachment_CancelSelectionAlertNo),
-                    .init(title: presentationData.initial.strings.Attachment_CancelSelectionAlertYes, type: .default, action: completion)
+                    .init(title: presentationData.initial.strings.Attachment_CancelSelectionAlertYes, type: .default, action: {
+                        restoreInputFocus = false
+                        completion()
+                    })
                 ],
                 updatedPresentationData: presentationData
             )
+            alertController.dismissed = { [weak self, weak controller] _ in
+                DispatchQueue.main.async { [weak self, weak controller] in
+                    guard let self, restoreInputFocus, self.isVisible, self.window != nil,
+                          let controller, self.environment?.controller() === controller, !controller.isBeingDismissed,
+                          !self.isPreparingTransfer, !self.isResolvingSigningAccess, !self.isSubmittingTransfer else {
+                        return
+                    }
+                    self.amountField.activateInput()
+                }
+            }
             controller.present(alertController, in: .window(.root))
         }
 
