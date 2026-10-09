@@ -396,10 +396,13 @@ final class SwitchingNetworkEngine: NetworkEngine {
             return false
         }
         self.lock.lock()
+        let previous = self.engine
         self.engine = engine
         self.sessions.removeAll(where: { $0.value == nil })
         let sessions = self.sessions.compactMap(\.value)
         self.lock.unlock()
+        previous.deactivate()
+        engine.activate()
         for session in sessions {
             session.switchEngine(to: engine, drainTimeout: drainTimeout)
         }

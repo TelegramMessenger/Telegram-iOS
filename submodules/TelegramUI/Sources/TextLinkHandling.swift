@@ -143,12 +143,16 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
             switch itemLink {
                 case .url(let url, var concealed):
                     let (parsedString, parsedConcealed) = parseUrl(url: url, wasConcealed: false)
-                    if parsedConcealed {
+                    // A login part hides the host the link opens (see `externalUrlWithLoginPart`).
+                    let loginPartUrl = externalUrlWithLoginPart(url)
+                    if parsedConcealed || loginPartUrl != nil {
                         concealed = true
                     }
                     
                     if concealed {
-                        var rawDisplayUrl: String = parsedString
+                        // For a login part the prompt shows the host the link really opens. The external-URL opener
+                        // asks about such a link as well, so accepting it here tells the opener it has been confirmed.
+                        var rawDisplayUrl: String = loginPartUrl.map { urlRemovingLoginPart($0).absoluteString } ?? parsedString
                         let maxLength = 180
                         if rawDisplayUrl.count > maxLength {
                             rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
@@ -156,6 +160,9 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         var displayUrl = rawDisplayUrl
                         displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
                         controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                            if let loginPartUrl {
+                                noteLoginPartConfirmed(loginPartUrl)
+                            }
                             openLinkImpl(url)
                         })]), in: .window(.root))
                     } else {
@@ -188,7 +195,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                     let actionSheet = ActionSheetController(presentationData: presentationData)
                     let (displayUrl, _) = parseUrl(url: url, wasConcealed: false)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: displayUrl),
+                        ActionSheetTextItem(title: displayUrlRevealingLoginPart(url) ?? displayUrl),
                         ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             openLinkImpl(url)

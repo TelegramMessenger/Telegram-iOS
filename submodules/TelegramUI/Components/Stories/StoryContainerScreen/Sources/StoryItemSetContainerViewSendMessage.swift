@@ -56,6 +56,7 @@ import ShareWithPeersScreen
 import UrlEscaping
 import AlertComponent
 import ShareController
+import UrlWhitelist
 
 private var ObjCKey_DeinitWatcher: Int?
 
@@ -3273,7 +3274,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
         var copyAction = component.strings.Conversation_ContextMenuCopy
         switch action {
         case let .url(url, _):
-            title = url
+            title = displayUrlRevealingLoginPart(url) ?? url
             value = url
             canOpenIn = availableOpenInOptions(context: component.context, item: .url(url: url)).count > 1
             if canOpenIn {

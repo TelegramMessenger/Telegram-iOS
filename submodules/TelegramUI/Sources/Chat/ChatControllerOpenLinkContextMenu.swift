@@ -243,7 +243,7 @@ extension ChatControllerImpl {
 
                 let actionSheet = ActionSheetController(presentationData: self.presentationData)
                 var items: [ActionSheetItem] = []
-                items.append(ActionSheetTextItem(title: cleanUrl))
+                items.append(ActionSheetTextItem(title: displayUrlRevealingLoginPart(url) ?? cleanUrl))
                 if hasOpenAction {
                     items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()

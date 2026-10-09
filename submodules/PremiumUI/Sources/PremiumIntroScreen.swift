@@ -2072,7 +2072,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 }
                                 subtitle = "\(environment.strings.Gift_Options_Premium_Months(product.months)) • \(product.price)"
                             } else {
-                                //subtitle = product.price
                                 subtitle = "\(environment.strings.Gift_Options_Premium_Months(product.months)) • \(product.price)"
                             }
                         }
@@ -3037,6 +3036,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         var hasIdleAnimations = true
         
         var inProgress = false
+        var purchaseInFlight = false
+        var purchasePending = false
         
         private(set) var promoConfiguration: PremiumPromoConfiguration?
         
@@ -3215,8 +3216,40 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.preloadDisposableSet.dispose()
         }
         
+        private func resetPurchaseProgress() {
+            self.inProgress = false
+            self.purchaseInFlight = false
+            self.purchasePending = false
+            self.updateInProgress(false)
+        }
+
+        private func handlePurchaseError(_ error: InAppPurchaseManager.PurchaseError) {
+            Logger.shared.log("PremiumIntroScreen", "Purchase ended with error: \(error)")
+            self.resetPurchaseProgress()
+            self.updated(transition: .immediate)
+
+            let presentationData = self.screenContext.presentationData
+            let errorText: String?
+            switch error {
+            case .generic, .assignFailed, .tryLater:
+                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+            case .network:
+                errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
+            case .notAllowed:
+                errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
+            case .cantMakePayments:
+                errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
+            case .cancelled:
+                errorText = nil
+            }
+            if let errorText {
+                self.screenContext.context?.engine.accountData.addAppLogEvent(type: "premium.promo_screen_fail")
+                self.present(textAlertController(sharedContext: self.screenContext.sharedContext, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+            }
+        }
+
         func buy() {
-            guard !self.inProgress else {
+            guard !self.inProgress && !self.purchaseInFlight else {
                 return
             }
             
@@ -3288,133 +3321,118 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 context.engine.accountData.addAppLogEvent(type: "premium.promo_screen_accept")
             }
             
-            self.inProgress = true
-            self.updateInProgress(true)
-            self.updated(transition: .immediate)
-            
-            if let storeProduct = premiumProduct.storeProduct {
-                let purpose: AppStoreTransactionPurpose = isUpgrade ? .upgrade : .subscription
-                
-                let canPurchasePremium: Signal<Bool, NoError>
-                switch self.screenContext {
-                case let .accountContext(context):
-                    canPurchasePremium = context.engine.payments.canPurchasePremium(purpose: purpose)
-                case let .sharedContext(_, engine, _):
-                    canPurchasePremium = engine.payments.canPurchasePremium(purpose: purpose)
+            guard let storeProduct = premiumProduct.storeProduct else {
+                guard case let .accountContext(context) = self.screenContext,
+                      let navigationController = self.navigationController?(),
+                      !premiumProduct.option.botUrl.isEmpty else {
+                    self.handlePurchaseError(.generic)
+                    return
                 }
-                let _ = (canPurchasePremium
-                |> deliverOnMainQueue).start(next: { [weak self] available in
+                self.inProgress = true
+                self.updateInProgress(true)
+                self.updated(transition: .immediate)
+                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: premiumProduct.option.botUrl, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                Queue.mainQueue().after(3.0) { [weak self] in
                     guard let self else {
                         return
                     }
-                    if available {
-                        self.paymentDisposable.set((inAppPurchaseManager.buyProduct(storeProduct, purpose: purpose)
-                        |> deliverOnMainQueue).start(next: { [weak self] status in
-                            if let self, case .purchased = status {
-                                let activation: Signal<Never, AssignAppStoreTransactionError>
-                                if let context = self.screenContext.context {
-                                    activation = context.account.postbox.peerView(id: context.account.peerId)
-                                    |> castError(AssignAppStoreTransactionError.self)
-                                    |> take(until: { view in
-                                        if let peer = view.peers[view.peerId], peer.isPremium {
-                                            return SignalTakeAction(passthrough: false, complete: true)
-                                        } else {
-                                            return SignalTakeAction(passthrough: false, complete: false)
-                                        }
-                                    })
-                                    |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
-                                        return .never()
-                                    }
-                                    |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
-                                } else {
-                                    activation = .complete()
-                                }
-                                
-                                self.activationDisposable.set((activation
-                                |> deliverOnMainQueue).start(error: { [weak self] _ in
-                                    if let self {
-                                        self.inProgress = false
-                                        self.updateInProgress(false)
-                                        
-                                        self.updated(transition: .immediate)
-                                        
-                                        if let context = self.screenContext.context {
-                                            context.engine.accountData.addAppLogEvent(type: "premium.promo_screen_fail")
-                                        }
-                                        
-                                        let errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                                        let alertController = textAlertController(sharedContext: self.screenContext.sharedContext, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                                        self.present(alertController)
-                                    }
-                                }, completed: { [weak self] in
-                                    guard let self else {
-                                        return
-                                    }
-                                    if let context = self.screenContext.context {
-                                        let _ = updatePremiumPromoConfigurationOnce(account: context.account).start()
-                                    }
-                                    self.inProgress = false
-                                    self.updateInProgress(false)
-                                    
-                                    self.isPremium = true
-                                    self.justBought = true
-                                    
-                                    self.updated(transition: .easeInOut(duration: 0.25))
-                                    self.completion()
-                                }))
-                            }
-                        }, error: { [weak self] error in
-                            guard let self else {
-                                return
-                            }
-                            self.inProgress = false
-                            self.updateInProgress(false)
-                            self.updated(transition: .immediate)
-                            
-                            var errorText: String?
-                            switch error {
-                            case .generic:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                            case .network:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorNetwork
-                            case .notAllowed:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorNotAllowed
-                            case .cantMakePayments:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
-                            case .assignFailed:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                            case .tryLater:
-                                errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
-                            case .cancelled:
-                                break
-                            }
-                            
-                            if let errorText = errorText {
-                                if let context = self.screenContext.context {
-                                    context.engine.accountData.addAppLogEvent(type: "premium.promo_screen_fail")
-                                }
-                                
-                                let alertController = textAlertController(sharedContext: self.screenContext.sharedContext, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                                self.present(alertController)
-                            }
-                        }))
-                    } else {
-                        self.inProgress = false
-                        self.updateInProgress(false)
-                        self.updated(transition: .immediate)
-                    }
-                })
-            } else if case let .accountContext(context) = self.screenContext, let navigationController = self.navigationController?() {
-                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: premiumProduct.option.botUrl, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                
-                Queue.mainQueue().after(3.0) {
+                    self.resetPurchaseProgress()
+                    self.updated(transition: .immediate)
+                }
+                return
+            }
+
+            self.purchaseInFlight = true
+            self.purchasePending = false
+            self.inProgress = true
+            self.updateInProgress(true)
+            self.updated(transition: .immediate)
+
+            let purpose: AppStoreTransactionPurpose = isUpgrade ? .upgrade : .subscription
+            let canPurchasePremium: Signal<Bool, NoError>
+            switch self.screenContext {
+            case let .accountContext(context):
+                canPurchasePremium = context.engine.payments.canPurchasePremium(purpose: purpose)
+            case let .sharedContext(_, engine, _):
+                canPurchasePremium = engine.payments.canPurchasePremium(purpose: purpose)
+            }
+            Logger.shared.log("PremiumIntroScreen", "Checking purchase availability")
+            self.paymentDisposable.set((canPurchasePremium
+            |> castError(InAppPurchaseManager.PurchaseError.self)
+            |> take(1)
+            |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.network))
+            |> deliverOnMainQueue
+            |> mapToSignal { available -> Signal<InAppPurchaseManager.PurchaseState, InAppPurchaseManager.PurchaseError> in
+                Logger.shared.log("PremiumIntroScreen", "Purchase availability: \(available)")
+                guard available else {
+                    return .fail(.generic)
+                }
+                return inAppPurchaseManager.buyProduct(storeProduct, purpose: purpose, reportPending: true)
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                guard let self else {
+                    return
+                }
+                switch status {
+                case .waiting:
+                    Logger.shared.log("PremiumIntroScreen", "Still waiting for purchase; allowing dismissal without a notification")
                     self.inProgress = false
                     self.updateInProgress(false)
                     self.updated(transition: .immediate)
+                case .pending:
+                    guard !self.purchasePending else {
+                        return
+                    }
+                    Logger.shared.log("PremiumIntroScreen", "Purchase pending; allowing dismissal")
+                    self.purchasePending = true
+                    self.inProgress = false
+                    self.updateInProgress(false)
+                    self.updated(transition: .immediate)
+                    self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Premium_Purchase_PendingInfo, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, action: { _ in return true }))
+                case .purchased:
+                    Logger.shared.log("PremiumIntroScreen", "Purchase completed; waiting for activation")
+                    let activation: Signal<Never, AssignAppStoreTransactionError>
+                    if let context = self.screenContext.context {
+                        activation = context.account.postbox.peerView(id: context.account.peerId)
+                        |> castError(AssignAppStoreTransactionError.self)
+                        |> take(until: { view in
+                            if let peer = view.peers[view.peerId], peer.isPremium {
+                                return SignalTakeAction(passthrough: false, complete: true)
+                            } else {
+                                return SignalTakeAction(passthrough: false, complete: false)
+                            }
+                        })
+                        |> mapToSignal { _ -> Signal<Never, AssignAppStoreTransactionError> in
+                            return .never()
+                        }
+                        |> timeout(15.0, queue: Queue.mainQueue(), alternate: .fail(.timeout))
+                    } else {
+                        activation = .complete()
+                    }
+
+                    self.activationDisposable.set((activation
+                    |> deliverOnMainQueue).start(error: { [weak self] _ in
+                        self?.handlePurchaseError(.generic)
+                    }, completed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        Logger.shared.log("PremiumIntroScreen", "Premium activated")
+                        if let context = self.screenContext.context {
+                            let _ = updatePremiumPromoConfigurationOnce(account: context.account).start()
+                        }
+                        self.resetPurchaseProgress()
+                        self.isPremium = true
+                        self.justBought = true
+                        self.updated(transition: .easeInOut(duration: 0.25))
+                        self.completion()
+                    }))
                 }
-            }
+            }, error: { [weak self] error in
+                self?.handlePurchaseError(error)
+            }))
         }
-        
+
         func updateIsFocused(_ isFocused: Bool) {
             self.hasIdleAnimations = !isFocused
             self.updated(transition: .immediate)
@@ -3853,7 +3871,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if !buttonIsHidden {
                 let buttonTitle: String
                 var buttonSubtitle: String?
-                if case let .auth(price, days) = context.component.source {
+                if state.purchasePending {
+                    buttonTitle = environment.strings.Premium_Purchase_Pending
+                } else if case let .auth(price, days) = context.component.source {
                     buttonTitle = environment.strings.Premium_Week_SignUp(price).string
                     if days == 7 {
                         buttonSubtitle = environment.strings.Premium_Week_SignUpInfo
@@ -3928,6 +3948,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                             id: AnyHashable("\(buttonTitle)-\(buttonSubtitle ?? "")"),
                             component: buttonContent
                         ),
+                        isEnabled: !state.purchaseInFlight,
                         displaysProgress: state.inProgress,
                         action: {
                             if let controller = controller() as? PremiumIntroScreen, let customProceed = controller.customProceed {

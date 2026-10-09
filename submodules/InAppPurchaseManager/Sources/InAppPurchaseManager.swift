@@ -7,10 +7,13 @@ import TelegramStringFormatting
 import TelegramUIPreferences
 import PersistentStringHash
 
-private let productIdentifiers = [
+private let subscriptionProductIdentifiers = [
     "org.telegram.telegramPremium.annual",
     "org.telegram.telegramPremium.semiannual",
-    "org.telegram.telegramPremium.monthly",
+    "org.telegram.telegramPremium.monthly"
+]
+
+private let productIdentifiers = subscriptionProductIdentifiers + [
     "org.telegram.telegramPremium.twelveMonths",
     "org.telegram.telegramPremium.sixMonths",
     "org.telegram.telegramPremium.threeMonths",
@@ -180,6 +183,8 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     public enum PurchaseState {
+        case waiting
+        case pending
         case purchased(transactionId: String)
     }
     
@@ -199,13 +204,26 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     private final class PaymentTransactionContext {
-        var state: SKPaymentTransactionState?
+        var state: TransactionState?
         let purpose: PendingInAppPurchaseState.Purpose
-        let subscriber: (TransactionState) -> Void
+        let isSubscription: Bool
+        let subscribers = Bag<(TransactionState) -> Void>()
+        let preparationDisposable = MetaDisposable()
         
-        init(purpose: PendingInAppPurchaseState.Purpose, subscriber: @escaping (TransactionState) -> Void) {
+        init(purpose: PendingInAppPurchaseState.Purpose, isSubscription: Bool) {
             self.purpose = purpose
-            self.subscriber = subscriber
+            self.isSubscription = isSubscription
+        }
+
+        deinit {
+            self.preparationDisposable.dispose()
+        }
+
+        func updateState(_ state: TransactionState) {
+            self.state = state
+            for subscriber in self.subscribers.copyItems() {
+                subscriber(state)
+            }
         }
     }
     
@@ -216,6 +234,15 @@ public final class InAppPurchaseManager: NSObject {
         case failed(error: SKError?)
         case assignFailed
         case deferred
+
+        var isTerminal: Bool {
+            switch self {
+            case .purchased, .restored, .failed, .assignFailed:
+                return true
+            case .purchasing, .deferred:
+                return false
+            }
+        }
     }
     
     private let engine: SomeTelegramEngine
@@ -223,6 +250,8 @@ public final class InAppPurchaseManager: NSObject {
     private var products: [Product] = []
     private var productsPromise = Promise<[Product]>([])
     private var productRequest: SKProductsRequest?
+    private var productRequestTimeoutTimer: SwiftSignalKit.Timer?
+    private var productRequestRetryTimer: SwiftSignalKit.Timer?
     
     private let stateQueue = Queue()
     private var paymentContexts: [String: PaymentTransactionContext] = [:]
@@ -233,8 +262,6 @@ public final class InAppPurchaseManager: NSObject {
     
     private let disposableSet = DisposableDict<String>()
     
-    private var lastRequestTimestamp: Double?
-
     public init(engine: SomeTelegramEngine) {
         self.engine = engine
                 
@@ -245,6 +272,9 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     deinit {
+        self.productRequestTimeoutTimer?.invalidate()
+        self.productRequestRetryTimer?.invalidate()
+        self.productRequest?.cancel()
         SKPaymentQueue.default().remove(self)
     }
     
@@ -253,22 +283,49 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     private func requestProducts() {
-        Logger.shared.log("InAppPurchaseManager", "Requesting products")
-        let productRequest = SKProductsRequest(productIdentifiers: Set(productIdentifiers))
-        productRequest.delegate = self
-        productRequest.start()
-        
-        self.productRequest = productRequest
-        self.lastRequestTimestamp = CFAbsoluteTimeGetCurrent()
+        Queue.mainQueue().async { [weak self] in
+            guard let self, self.products.isEmpty, self.productRequest == nil, self.productRequestRetryTimer == nil else {
+                return
+            }
+            Logger.shared.log("InAppPurchaseManager", "Requesting products")
+            let productRequest = SKProductsRequest(productIdentifiers: Set(productIdentifiers))
+            productRequest.delegate = self
+            self.productRequest = productRequest
+
+            let timeoutTimer = SwiftSignalKit.Timer(timeout: 30.0, repeat: false, completion: { [weak self, weak productRequest] in
+                guard let self, let productRequest, self.productRequest === productRequest else {
+                    return
+                }
+                Logger.shared.log("InAppPurchaseManager", "Product request timed out")
+                self.productRequest = nil
+                self.productRequestTimeoutTimer = nil
+                productRequest.cancel()
+                self.scheduleProductRequestRetry()
+            }, queue: Queue.mainQueue())
+            self.productRequestTimeoutTimer = timeoutTimer
+            timeoutTimer.start()
+            productRequest.start()
+        }
+    }
+
+    private func scheduleProductRequestRetry() {
+        guard self.products.isEmpty, self.productRequest == nil, self.productRequestRetryTimer == nil else {
+            return
+        }
+        Logger.shared.log("InAppPurchaseManager", "Retrying product request in 10 seconds")
+        let retryTimer = SwiftSignalKit.Timer(timeout: 10.0, repeat: false, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.productRequestRetryTimer = nil
+            self.requestProducts()
+        }, queue: Queue.mainQueue())
+        self.productRequestRetryTimer = retryTimer
+        retryTimer.start()
     }
     
     public var availableProducts: Signal<[Product], NoError> {
-        if self.products.isEmpty {
-            if let lastRequestTimestamp, CFAbsoluteTimeGetCurrent() - lastRequestTimestamp > 10.0 {
-                Logger.shared.log("InAppPurchaseManager", "No available products, rerequest")
-                self.requestProducts()
-            }
-        }
+        self.requestProducts()
         return self.productsPromise.get()
     }
     
@@ -290,11 +347,7 @@ public final class InAppPurchaseManager: NSObject {
         }
     }
     
-    public func buyProduct(_ product: Product, quantity: Int32 = 1, purpose: AppStoreTransactionPurpose) -> Signal<PurchaseState, PurchaseError> {
-        if !self.canMakePayments {
-            return .fail(.cantMakePayments)
-        }
-                
+    public func buyProduct(_ product: Product, quantity: Int32 = 1, purpose: AppStoreTransactionPurpose, reportPending: Bool = false) -> Signal<PurchaseState, PurchaseError> {
         let accountPeerId: String
         switch self.engine {
         case let .authorized(engine):
@@ -302,75 +355,220 @@ public final class InAppPurchaseManager: NSObject {
         case let .unauthorized(engine):
             accountPeerId = "\(engine.account.id.int64)"
         }
-        
-        Logger.shared.log("InAppPurchaseManager", "Buying: account \(accountPeerId), product \(product.skProduct.productIdentifier), price \(product.price)")
-        
         let purpose = PendingInAppPurchaseState.Purpose(appStorePurpose: purpose)
-        
-        let payment = SKMutablePayment(product: product.skProduct)
-        payment.applicationUsername = accountPeerId
-        payment.quantity = Int(quantity)
-        SKPaymentQueue.default().add(payment)
-        
-        let productIdentifier = payment.productIdentifier
-        let signal = Signal<PurchaseState, PurchaseError> { subscriber in
-            let disposable = MetaDisposable()
-            
+
+        return Signal { subscriber in
+            let disposables = DisposableSet()
+            let disposed = Atomic(value: false)
+            disposables.add(ActionDisposable {
+                let _ = disposed.swap(true)
+            })
+
             self.stateQueue.async {
-                let paymentContext = PaymentTransactionContext(purpose: purpose, subscriber: { state in
-                    switch state {
-                        case let .purchased(transactionId), let .restored(transactionId):
-                            if let transactionId = transactionId {
-                                subscriber.putNext(.purchased(transactionId: transactionId))
-                                subscriber.putCompletion()
-                            } else {
-                                subscriber.putError(.generic)
-                            }
-                        case let .failed(error):
-                            if let error = error {
-                                let mappedError: PurchaseError
-                                switch error.code {
-                                    case .paymentCancelled:
-                                        mappedError = .cancelled
-                                    case .cloudServiceNetworkConnectionFailed, .cloudServicePermissionDenied:
-                                        mappedError = .network
-                                    case .paymentNotAllowed, .clientInvalid:
-                                        mappedError = .notAllowed
-                                    case .unknown:
-                                        if let _ = error.userInfo["tryLater"] {
-                                            mappedError = .tryLater
-                                        } else {
-                                            mappedError = .generic
-                                        }
-                                    default:
-                                        mappedError = .generic
-                                }
-                                subscriber.putError(mappedError)
-                            } else {
-                                subscriber.putError(.generic)
-                            }
-                        case .assignFailed:
-                            subscriber.putError(.assignFailed)
-                        case .deferred, .purchasing:
-                            break
+                guard !disposed.with({ $0 }) else {
+                    return
+                }
+
+                var didReportWaiting = false
+                var didReportPending = false
+                let reportWaitingOnce: () -> Void = {
+                    if reportPending && !didReportWaiting && !didReportPending && !disposed.with({ $0 }) {
+                        didReportWaiting = true
+                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), still waiting for purchase result")
+                        subscriber.putNext(.waiting)
                     }
-                })
-                self.paymentContexts[productIdentifier] = paymentContext
-                
-                disposable.set(ActionDisposable { [weak paymentContext] in
-                    self.stateQueue.async {
-                        if let current = self.paymentContexts[productIdentifier], current === paymentContext {
-                            self.paymentContexts.removeValue(forKey: productIdentifier)
+                }
+                let reportPendingOnce: () -> Void = {
+                    if reportPending && !didReportPending && !disposed.with({ $0 }) {
+                        didReportPending = true
+                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), purchase deferred by StoreKit")
+                        subscriber.putNext(.pending)
+                    }
+                }
+                let waitingTimer: SwiftSignalKit.Timer?
+                if reportPending {
+                    let timer = SwiftSignalKit.Timer(timeout: 30.0, repeat: false, completion: reportWaitingOnce, queue: self.stateQueue)
+                    waitingTimer = timer
+                    disposables.add(ActionDisposable {
+                        timer.invalidate()
+                    })
+                    timer.start()
+                } else {
+                    waitingTimer = nil
+                }
+
+                let handleState: (TransactionState) -> Void = { state in
+                    if state.isTerminal {
+                        waitingTimer?.invalidate()
+                    }
+                    switch state {
+                    case let .purchased(transactionId), let .restored(transactionId):
+                        if let transactionId {
+                            subscriber.putNext(.purchased(transactionId: transactionId))
+                            subscriber.putCompletion()
+                        } else {
+                            subscriber.putError(.generic)
+                        }
+                    case let .failed(error):
+                        if let error {
+                            let mappedError: PurchaseError
+                            switch error.code {
+                            case .paymentCancelled:
+                                mappedError = .cancelled
+                            case .cloudServiceNetworkConnectionFailed, .cloudServicePermissionDenied:
+                                mappedError = .network
+                            case .paymentNotAllowed, .clientInvalid:
+                                mappedError = .notAllowed
+                            case .unknown:
+                                if let _ = error.userInfo["tryLater"] {
+                                    mappedError = .tryLater
+                                } else {
+                                    mappedError = .generic
+                                }
+                            default:
+                                mappedError = .generic
+                            }
+                            subscriber.putError(mappedError)
+                        } else {
+                            subscriber.putError(.generic)
+                        }
+                    case .assignFailed:
+                        subscriber.putError(.assignFailed)
+                    case .deferred:
+                        waitingTimer?.invalidate()
+                        reportPendingOnce()
+                    case .purchasing:
+                        break
+                    }
+                }
+
+                let subscribe: (PaymentTransactionContext, Bool) -> Void = { [self] context, isExisting in
+                    let index = context.subscribers.add(handleState)
+                    disposables.add(ActionDisposable { [weak self, weak context] in
+                        self?.stateQueue.async {
+                            context?.subscribers.remove(index)
+                        }
+                    })
+                    if let state = context.state {
+                        handleState(state)
+                    }
+                    if isExisting {
+                        waitingTimer?.invalidate()
+                        reportWaitingOnce()
+                    }
+                }
+
+                let begin: (SKPaymentTransaction?, PendingInAppPurchaseState.Purpose?) -> Void = { [self] transaction, savedPurpose in
+                    guard !disposed.with({ $0 }) else {
+                        return
+                    }
+                    if purpose.isSubscription, let context = self.paymentContexts.values.first(where: { $0.isSubscription }) {
+                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), observing existing subscription")
+                        subscribe(context, true)
+                        return
+                    }
+
+                    let productIdentifier: String
+                    let context: PaymentTransactionContext
+                    if let transaction {
+                        productIdentifier = transaction.payment.productIdentifier
+                        switch transaction.transactionState {
+                        case .purchased:
+                            handleState(.purchased(transactionId: transaction.transactionIdentifier))
+                            return
+                        case .restored:
+                            handleState(.restored(transactionId: transaction.transactionIdentifier))
+                            return
+                        case .failed:
+                            handleState(.failed(error: transaction.error as? SKError))
+                            return
+                        default:
+                            break
+                        }
+                        context = PaymentTransactionContext(purpose: savedPurpose ?? .restore, isSubscription: true)
+                        context.state = transaction.transactionState == .deferred ? .deferred : .purchasing
+                        self.paymentContexts[productIdentifier] = context
+                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), resuming subscription \(productIdentifier)")
+                        subscribe(context, true)
+                        return
+                    } else {
+                        guard self.canMakePayments else {
+                            waitingTimer?.invalidate()
+                            subscriber.putError(.cantMakePayments)
+                            return
+                        }
+                        productIdentifier = product.id
+                        context = PaymentTransactionContext(purpose: purpose, isSubscription: purpose.isSubscription)
+                        self.paymentContexts[productIdentifier] = context
+                        subscribe(context, false)
+                    }
+
+                    context.preparationDisposable.set((updatePendingInAppPurchaseState(
+                        engine: self.engine,
+                        productId: productIdentifier,
+                        content: PendingInAppPurchaseState(productId: productIdentifier, purpose: context.purpose)
+                    )
+                    |> deliverOn(self.stateQueue)).start(completed: { [weak self, weak context] in
+                        guard let self, let context, self.paymentContexts[productIdentifier] === context else {
+                            return
+                        }
+                        Queue.mainQueue().async {
+                            let payment = SKMutablePayment(product: product.skProduct)
+                            payment.applicationUsername = accountPeerId
+                            payment.quantity = Int(quantity)
+                            Logger.shared.log("InAppPurchaseManager", "Buying: account \(accountPeerId), product \(productIdentifier), price \(product.price)")
+                            SKPaymentQueue.default().add(payment)
+                        }
+                    }))
+                }
+
+                if !purpose.isSubscription || self.paymentContexts.values.contains(where: { $0.isSubscription }) {
+                    begin(nil, nil)
+                    return
+                }
+
+                Queue.mainQueue().async {
+                    guard !disposed.with({ $0 }) else {
+                        return
+                    }
+                    let transactions = SKPaymentQueue.default().transactions.filter { transaction in
+                        guard subscriptionProductIdentifiers.contains(transaction.payment.productIdentifier),
+                              transaction.payment.applicationUsername == nil || transaction.payment.applicationUsername == accountPeerId else {
+                            return false
+                        }
+                        switch transaction.transactionState {
+                        case .purchasing, .deferred, .purchased:
+                            return true
+                        default:
+                            return false
                         }
                     }
-                })
+                    let states: Signal<[(SKPaymentTransaction, PendingInAppPurchaseState?)], NoError>
+                    if transactions.isEmpty {
+                        states = .single([])
+                    } else {
+                        states = combineLatest(transactions.map { transaction in
+                            return pendingInAppPurchaseState(engine: self.engine, productId: transaction.payment.productIdentifier)
+                            |> take(1)
+                            |> map { state in
+                                return (transaction, state)
+                            }
+                        })
+                    }
+                    disposables.add((states
+                    |> take(1)
+                    |> deliverOn(self.stateQueue)).start(next: { states in
+                        let existing = states.first(where: { transaction, state in
+                            return transaction.payment.applicationUsername == accountPeerId || state?.purpose.isSubscription == true
+                        })
+                        begin(existing?.0, existing?.1?.purpose)
+                    }))
+                }
             }
-            
-            return disposable
+            return disposables
         }
-        return signal
     }
-    
+
     public struct ReceiptPurchase: Equatable {
         public let productId: String
         public let transactionId: String
@@ -387,13 +585,37 @@ public final class InAppPurchaseManager: NSObject {
 
 extension InAppPurchaseManager: SKProductsRequestDelegate {
     public func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
-        self.productRequest = nil
-        
-        Queue.mainQueue().async {
+        Queue.mainQueue().async { [weak self] in
+            guard let self, self.productRequest === request else {
+                return
+            }
+            self.productRequest = nil
+            self.productRequestTimeoutTimer?.invalidate()
+            self.productRequestTimeoutTimer = nil
             let products = response.products.map { Product(skProduct: $0) }
-             
+
             Logger.shared.log("InAppPurchaseManager", "Received products \(products.map({ $0.skProduct.productIdentifier }).joined(separator: ", "))")
+            guard !products.isEmpty else {
+                self.scheduleProductRequestRetry()
+                return
+            }
+            self.productRequestRetryTimer?.invalidate()
+            self.productRequestRetryTimer = nil
+            self.products = products
             self.productsPromise.set(.single(products))
+        }
+    }
+
+    public func request(_ request: SKRequest, didFailWithError error: Error) {
+        Queue.mainQueue().async { [weak self] in
+            guard let self, self.productRequest === request else {
+                return
+            }
+            self.productRequest = nil
+            self.productRequestTimeoutTimer?.invalidate()
+            self.productRequestTimeoutTimer = nil
+            Logger.shared.log("InAppPurchaseManager", "Product request failed: \(error.localizedDescription)")
+            self.scheduleProductRequestRetry()
         }
     }
 }
@@ -471,7 +693,18 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 }
                 if let transactionState = transactionState {
                     if let context = self.paymentContexts[productIdentifier] {
-                        context.subscriber(transactionState)
+                        context.updateState(transactionState)
+                        switch transactionState {
+                        case .failed:
+                            self.paymentContexts.removeValue(forKey: productIdentifier)
+                            let _ = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil).start()
+                        case .restored:
+                            self.paymentContexts.removeValue(forKey: productIdentifier)
+                        default:
+                            break
+                        }
+                    } else if case .failed = transactionState, transaction.payment.applicationUsername == accountPeerId {
+                        let _ = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil).start()
                     }
                 }
             }
@@ -484,8 +717,6 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                     return
                 }
                 let productIdentifier = transaction.payment.productIdentifier
-                
-                var completion: Signal<Never, NoError> = .never()
                 
                 let products = self.availableProducts
                 |> filter { products in
@@ -522,8 +753,6 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                     }
                 }
                 
-                completion = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil)
-                
                 let receiptData = getReceiptData() ?? Data()
 #if DEBUG
                 self.debugSaveReceipt(receiptData: receiptData)
@@ -550,21 +779,49 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                         }
                     }).start(error: { [weak self] _ in
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] failed to assign")
-                        for transaction in transactions {
-                            self?.stateQueue.async {
-                                if let strongSelf = self, let context = strongSelf.paymentContexts[transaction.payment.productIdentifier] {
-                                    context.subscriber(.assignFailed)
-                                }
+                        self?.stateQueue.async {
+                            guard let self else {
+                                return
                             }
+                            for transaction in transactionsToAssign {
+                                let productIdentifier = transaction.payment.productIdentifier
+                                if let context = paymentContexts[productIdentifier] {
+                                    guard self.paymentContexts[productIdentifier] === context else {
+                                        continue
+                                    }
+                                    context.updateState(.assignFailed)
+                                    self.paymentContexts.removeValue(forKey: productIdentifier)
+                                } else if self.paymentContexts[productIdentifier] != nil {
+                                    continue
+                                }
+                                let _ = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil).start()
+                            }
+                        }
+                        for transaction in transactionsToAssign {
                             queue.finishTransaction(transaction)
                         }
-                    }, completed: {
+                    }, completed: { [weak self] in
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] successfully assigned")
-                        for transaction in transactions {
+                        for transaction in transactionsToAssign {
                             queue.finishTransaction(transaction)
                         }
-                        
-                        let _ = completion.start()
+                        self?.stateQueue.async {
+                            guard let self else {
+                                return
+                            }
+                            for transaction in transactionsToAssign {
+                                let productIdentifier = transaction.payment.productIdentifier
+                                if let context = paymentContexts[productIdentifier] {
+                                    guard self.paymentContexts[productIdentifier] === context else {
+                                        continue
+                                    }
+                                    self.paymentContexts.removeValue(forKey: productIdentifier)
+                                } else if self.paymentContexts[productIdentifier] != nil {
+                                    continue
+                                }
+                                let _ = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil).start()
+                            }
+                        }
                     }),
                     forKey: transactionIds
                 )
@@ -692,6 +949,15 @@ private final class PendingInAppPurchaseState: Codable {
         case starsGift(peerId: EnginePeer.Id, count: Int64)
         case starsGiveaway(stars: Int64, boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, users: Int32)
         case authCode(restore: Bool, phoneNumber: String, phoneCodeHash: String, premiumDays: Int32)
+
+        var isSubscription: Bool {
+            switch self {
+            case .subscription, .upgrade:
+                return true
+            default:
+                return false
+            }
+        }
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -718,7 +984,7 @@ private final class PendingInAppPurchaseState: Codable {
             case .giveaway:
                 self = .giveaway(
                     boostPeer: EnginePeer.Id(try container.decode(Int64.self, forKey: .boostPeer)),
-                    additionalPeerIds: try container.decode([Int64].self, forKey: .randomId).map { EnginePeer.Id($0) },
+                    additionalPeerIds: try container.decode([Int64].self, forKey: .additionalPeerIds).map { EnginePeer.Id($0) },
                     countries: try container.decodeIfPresent([String].self, forKey: .countries) ?? [],
                     onlyNewSubscribers: try container.decode(Bool.self, forKey: .onlyNewSubscribers),
                     showWinners: try container.decodeIfPresent(Bool.self, forKey: .showWinners) ?? false,
@@ -740,7 +1006,7 @@ private final class PendingInAppPurchaseState: Codable {
                 self = .starsGiveaway(
                     stars: try container.decode(Int64.self, forKey: .stars),
                     boostPeer: EnginePeer.Id(try container.decode(Int64.self, forKey: .boostPeer)),
-                    additionalPeerIds: try container.decode([Int64].self, forKey: .randomId).map { EnginePeer.Id($0) },
+                    additionalPeerIds: try container.decode([Int64].self, forKey: .additionalPeerIds).map { EnginePeer.Id($0) },
                     countries: try container.decodeIfPresent([String].self, forKey: .countries) ?? [],
                     onlyNewSubscribers: try container.decode(Bool.self, forKey: .onlyNewSubscribers),
                     showWinners: try container.decodeIfPresent(Bool.self, forKey: .showWinners) ?? false,

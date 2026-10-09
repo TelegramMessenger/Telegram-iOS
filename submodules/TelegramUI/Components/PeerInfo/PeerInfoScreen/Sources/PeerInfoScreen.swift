@@ -114,6 +114,7 @@ import PeerMessagesMediaPlaylist
 import EdgeEffect
 import Pasteboard
 import AccountPeerContextItem
+import UrlWhitelist
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -1107,7 +1108,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: url),
+                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(url) ?? url),
                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         if let strongSelf = self {
@@ -1121,7 +1122,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 strongSelf.view.endEditing(true)
                                 strongSelf.controller?.push(actionSheet)
                             } else {
-                                strongSelf.context.sharedContext.applicationBindings.openUrl(url)
+                                strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.controller?.navigationController as? NavigationController, dismissInput: {})
                             }
                         }
                     }),

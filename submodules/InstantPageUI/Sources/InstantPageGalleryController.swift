@@ -11,6 +11,7 @@ import AccountContext
 import GalleryUI
 import TelegramUniversalVideoContent
 import OpenInExternalAppUI
+import UrlWhitelist
 
 public struct InstantPageGalleryEntryLocation: Equatable {
     public let position: Int32
@@ -297,7 +298,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
                 let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
                 let actionSheet = ActionSheetController(presentationData: presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: url.url),
+                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(url.url) ?? url.url),
                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         openLinkImpl?(url)

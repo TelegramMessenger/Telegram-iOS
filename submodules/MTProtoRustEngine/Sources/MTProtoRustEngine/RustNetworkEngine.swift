@@ -10,24 +10,36 @@ final class RustNetworkEngine: NetworkEngine {
     private let context: MTContext
     private let serverPublicKeys: [String]
     private let httpPort: UInt16
+    private let actions: RustEngineActions
 
     init(runtime: RustEngineRuntime, context: MTContext, serverPublicKeys: [String]? = nil, httpPort: UInt16 = 80) {
         self.runtime = runtime
         self.context = context
-        self.serverPublicKeys = serverPublicKeys ?? MTDatacenterAuthDefaultPublicKeys(!context.isTestingEnvironment)
+        let serverPublicKeys: [String] = serverPublicKeys ?? MTDatacenterAuthDefaultPublicKeys(!context.isTestingEnvironment)
+        self.serverPublicKeys = serverPublicKeys
         self.httpPort = httpPort
+        self.actions = RustEngineActions(runtime: runtime, context: context, serverPublicKeys: serverPublicKeys, httpPort: httpPort)
     }
 
     func makeSession(datacenterId: Int, role: NetworkEngineSessionRole, usageCalculationInfo: MTNetworkUsageCalculationInfo?, delegate: NetworkEngineSessionDelegate?) -> NetworkEngineSession {
         return RustNetworkSession(runtime: self.runtime, context: self.context, datacenterId: datacenterId, role: role, usageCalculationInfo: usageCalculationInfo, delegate: delegate, serverPublicKeys: self.serverPublicKeys, httpPort: self.httpPort)
+    }
+
+    /// Permanent keys, the logout check and authorization transfers of the context go over this engine.
+    func activate() {
+        self.actions.install()
+    }
+
+    func deactivate() {
+        self.actions.uninstall()
     }
 }
 
 /// Supplies the Rust MTProto engine (`third-party/mtproto-engine`) to `NetworkInitializationArguments`.
 ///
 /// Declines (the network then stays on MtProtoKit) in app extensions, when the engine library
-/// cannot start, and for configurations the engine cannot carry yet: a WEB proxy and developer
-/// datacenter address overrides.
+/// cannot start, and for the one configuration the engine cannot carry yet: developer datacenter
+/// address overrides. A WEB proxy is carried through `WebProxyTransport`'s raw streams.
 public struct RustNetworkEngineFactory: NetworkEngineFactory {
     public init() {
     }

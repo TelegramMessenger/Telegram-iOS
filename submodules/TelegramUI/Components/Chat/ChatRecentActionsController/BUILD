@@ -10,6 +10,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/UrlWhitelist",
         "//submodules/AccountContext",
         "//submodules/AlertUI",
         "//submodules/AsyncDisplayKit",

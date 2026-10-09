@@ -103,7 +103,10 @@ public func openUserGeneratedUrl(
     let (parsedString, parsedConcealed) = parseUrl(url: url, wasConcealed: concealed)
     concealed = parsedConcealed
 
-    if  forceConcealed {
+    // A login part hides the host the link opens (see `externalUrlWithLoginPart`).
+    let loginPartUrl = externalUrlWithLoginPart(url)
+
+    if forceConcealed || loginPartUrl != nil {
         concealed = true
     } else if let parsedUrl = parseInternalUrl(sharedContext: context.sharedContext, context: context, query: url) {
         if case .proxy = parsedUrl {
@@ -112,60 +115,33 @@ public func openUserGeneratedUrl(
     }
 
     if concealed && !skipConcealedAlert {
-        var rawDisplayUrl: String = parsedString
-        let maxLength = 180
-        if rawDisplayUrl.count > maxLength {
-            rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
-        }
-
-        var displayUrl = rawDisplayUrl
-        displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
-        displayUrl = (try? punycodedFullURLString(displayUrl)) ?? displayUrl
+        // For a login part the prompt shows the host the link really opens. The external-URL opener asks about such
+        // a link as well, so accepting it here tells the opener it has been confirmed.
+        let displayUrl = loginPartUrl.map { urlRemovingLoginPart($0).absoluteString } ?? parsedString
 
         let disposable = MetaDisposable()
         let checkState = concealedAlertOption.map { _ in AlertCheckComponent.ExternalState() }
-
-        var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
-        content.append(AnyComponentWithIdentity(id: "title", component: AnyComponent(AlertTitleComponent(title: presentationData.strings.OpenLinkConfirmation_Title))))
-        content.append(AnyComponentWithIdentity(id: "text", component: AnyComponent(AlertTextComponent(
-            content: .plain(displayUrl),
-            alignment: .center,
-            color: .primary,
-            style: .background(.default),
-            insets: UIEdgeInsets(top: 9.0, left: 4.0, bottom: 0.0, right: 4.0)
-        ))))
-        if let webpage, case .Loaded = webpage.content {
-            content.append(AnyComponentWithIdentity(id: "webpagePreview", component: AnyComponent(AlertWebpagePreviewComponent(
-                context: context,
-                presentationData: presentationData,
-                webpage: webpage
-            ))))
-        }
-        if let concealedAlertOption, let checkState {
-            content.append(AnyComponentWithIdentity(id: "check", component: AnyComponent(AlertCheckComponent(
-                title: concealedAlertOption.title,
-                initialValue: false,
-                externalState: checkState
-            ))))
-        }
 
         var updatedPresentationDataSignal = context.sharedContext.presentationData
         if forceDark {
             updatedPresentationDataSignal = .single(presentationData)
         }
-        let controller = AlertScreen(
-            configuration: .init(allowInputInset: true),
-            content: content,
-            actions: [
-                .init(title: presentationData.strings.Common_Cancel),
-                .init(title: presentationData.strings.OpenLinkConfirmation_Open, type: .default, action: {
-                    if checkState?.value == true {
-                        concealedAlertOption?.action()
-                    }
-                    disposable.set(openImpl())
-                }),
-            ],
-            updatedPresentationData: (presentationData, updatedPresentationDataSignal)
+        let controller = openLinkConfirmationController(
+            context: context,
+            presentationData: presentationData,
+            updatedPresentationData: updatedPresentationDataSignal,
+            displayUrl: displayUrl,
+            webpage: webpage,
+            check: concealedAlertOption.flatMap { option in checkState.map { (title: option.title, state: $0) } },
+            open: {
+                if let loginPartUrl {
+                    noteLoginPartConfirmed(loginPartUrl)
+                }
+                if checkState?.value == true {
+                    concealedAlertOption?.action()
+                }
+                disposable.set(openImpl())
+            }
         )
         controller.dismissed = {  _ in
             alertDisplayUpdated?(nil)
@@ -176,6 +152,64 @@ public func openUserGeneratedUrl(
     } else {
         return openImpl()
     }
+}
+
+/// The "Open this link?" prompt. `displayUrl` is shortened, stripped of right-to-left overrides and has its host
+/// punycoded before it is shown.
+public func openLinkConfirmationController(
+    context: AccountContext,
+    presentationData: PresentationData,
+    updatedPresentationData: Signal<PresentationData, NoError>,
+    displayUrl: String,
+    webpage: TelegramMediaWebpage? = nil,
+    check: (title: String, state: AlertCheckComponent.ExternalState)? = nil,
+    open: @escaping () -> Void
+) -> AlertScreen {
+    var rawDisplayUrl: String = displayUrl
+    let maxLength = 180
+    if rawDisplayUrl.count > maxLength {
+        rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
+    }
+
+    var shownUrl = rawDisplayUrl
+    shownUrl = shownUrl.replacingOccurrences(of: "\u{202e}", with: "")
+    shownUrl = (try? punycodedFullURLString(shownUrl)) ?? shownUrl
+
+    var content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = []
+    content.append(AnyComponentWithIdentity(id: "title", component: AnyComponent(AlertTitleComponent(title: presentationData.strings.OpenLinkConfirmation_Title))))
+    content.append(AnyComponentWithIdentity(id: "text", component: AnyComponent(AlertTextComponent(
+        content: .plain(shownUrl),
+        alignment: .center,
+        color: .primary,
+        style: .background(.default),
+        insets: UIEdgeInsets(top: 9.0, left: 4.0, bottom: 0.0, right: 4.0)
+    ))))
+    if let webpage, case .Loaded = webpage.content {
+        content.append(AnyComponentWithIdentity(id: "webpagePreview", component: AnyComponent(AlertWebpagePreviewComponent(
+            context: context,
+            presentationData: presentationData,
+            webpage: webpage
+        ))))
+    }
+    if let check {
+        content.append(AnyComponentWithIdentity(id: "check", component: AnyComponent(AlertCheckComponent(
+            title: check.title,
+            initialValue: false,
+            externalState: check.state
+        ))))
+    }
+
+    return AlertScreen(
+        configuration: .init(allowInputInset: true),
+        content: content,
+        actions: [
+            .init(title: presentationData.strings.Common_Cancel),
+            .init(title: presentationData.strings.OpenLinkConfirmation_Open, type: .default, action: {
+                open()
+            }),
+        ],
+        updatedPresentationData: (presentationData, updatedPresentationData)
+    )
 }
 
 private enum PunycodeError: Error {

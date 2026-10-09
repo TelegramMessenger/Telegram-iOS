@@ -413,6 +413,12 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                         loop: for entity in entities {
                             switch entity.type {
                                 case .Url, .Email:
+                                    // An email address is opened as a web address unless it carries "mailto:":
+                                    // "user@example.com" would open example.com, with "user" as a login.
+                                    var isEmail = false
+                                    if case .Email = entity.type {
+                                        isEmail = true
+                                    }
                                     var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
                                     let nsString = message.text as NSString
                                     if range.location + range.length > nsString.length {
@@ -439,7 +445,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         host = urlString
                                     }
                                     if let url = parsedUrl, let host = host {
-                                        primaryUrl = urlString
+                                        primaryUrl = isEmail ? "mailto:" + urlString : urlString
                                         if url.path.hasPrefix("/addstickers/") {
                                             title = NSAttributedString(string: urlString, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                                             
@@ -486,7 +492,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         if item.presentationData.theme.theme.list.itemAccentColor.isEqual(item.presentationData.theme.theme.list.itemPrimaryTextColor) {
                                             urlAttributedString.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                         }
-                                        urlAttributedString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
+                                        urlAttributedString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: isEmail ? "mailto:" + urlString : urlString, range: NSMakeRange(0, urlAttributedString.length))
                                         linkText = urlAttributedString
 
                                         descriptionText = mutableDescriptionText

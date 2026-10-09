@@ -13,6 +13,8 @@ import OpenInExternalAppUI
 import BrowserUI
 import OverlayStatusController
 import PresentationDataUtils
+import UrlWhitelist
+import OpenUserGeneratedUrl
 
 public struct ParsedSecureIdUrl {
     public let peerId: EnginePeer.Id
@@ -140,19 +142,6 @@ func formattedConfirmationCode(_ code: Int) -> String {
         result.append(c)
     }
     return result
-}
-
-private func canonicalExternalUrl(from url: String) -> URL? {
-    var urlWithScheme = url
-    if !url.contains("://") && !url.hasPrefix("mailto:") {
-        urlWithScheme = "http://" + url
-    }
-    if let parsed = URL(string: urlWithScheme) {
-        return parsed
-    } else if let encoded = (urlWithScheme as NSString).addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) {
-        return URL(string: encoded)
-    }
-    return nil
 }
 
 private func makeResolvedUrlHandler(
@@ -367,6 +356,25 @@ private func makeTelegramUrl(_ path: String, queryItems: [URLQueryItem] = []) ->
 }
 
 func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
+    // A login part hides the host a link opens (see `externalUrlWithLoginPart`). Every external link leaves through
+    // here, whoever opens it, so here it is confirmed, unless a prompt that showed the real host was just accepted.
+    if let loginPartUrl = externalUrlWithLoginPart(url), !consumeLoginPartConfirmation(loginPartUrl) {
+        let controller = openLinkConfirmationController(
+            context: context,
+            presentationData: presentationData,
+            updatedPresentationData: .single(presentationData),
+            displayUrl: urlRemovingLoginPart(loginPartUrl).absoluteString,
+            open: {
+                openCheckedExternalUrl(context: context, urlContext: urlContext, url: url, forceExternal: forceExternal, presentationData: presentationData, navigationController: navigationController, dismissInput: dismissInput)
+            }
+        )
+        context.sharedContext.presentGlobalController(controller, nil)
+        return
+    }
+    openCheckedExternalUrl(context: context, urlContext: urlContext, url: url, forceExternal: forceExternal, presentationData: presentationData, navigationController: navigationController, dismissInput: dismissInput)
+}
+
+private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         if url.lowercased().hasPrefix("tel:+888") {
             context.sharedContext.presentGlobalController(textAlertController(context: context, title: nil, text: presentationData.strings.Conversation_CantPhoneCallAnonymousNumberError, actions: [

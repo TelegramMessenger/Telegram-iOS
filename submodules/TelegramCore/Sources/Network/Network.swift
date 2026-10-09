@@ -423,14 +423,40 @@ func networkEngineRustDisabled(appConfiguration: AppConfiguration) -> Bool {
     }
 }
 
-private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext, factory: NetworkEngineFactory?, settings: NetworkEngineSettings?, appConfiguration: AppConfiguration, isAppExtension: Bool) -> NetworkEngine {
+/// What an account's app configuration says about the Rust engine; nil while it was never fetched.
+func networkEngineServerFlag(appConfiguration: AppConfiguration) -> Bool? {
+    if appConfiguration.data == nil {
+        return nil
+    }
+    return networkEngineRustDisabled(appConfiguration: appConfiguration)
+}
+
+/// Why the Rust engine may not run for this network, nil when it may: the account's own app
+/// configuration, or while it has none (a login, a fresh account) what other accounts got from the
+/// server; and the local crash-loop fallback.
+func networkEngineRustDisabledReason(appConfiguration: AppConfiguration, engineState: NetworkEngineState?, appVersion: String, timestamp: Int32) -> String? {
+    let build = networkEngineStateBuild(appVersion: appVersion)
+    if let rustDisabled = networkEngineServerFlag(appConfiguration: appConfiguration) {
+        if rustDisabled {
+            return "mtproto_engine_rust_disabled"
+        }
+    } else if let engineState = engineState, engineState.serverDisabledRust(build: build) {
+        return "mtproto_engine_rust_disabled for another account"
+    }
+    if let engineState = engineState, engineState.locallyDisabledRust(build: build, timestamp: timestamp) {
+        return "engine crash loop"
+    }
+    return nil
+}
+
+private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext, factory: NetworkEngineFactory?, settings: NetworkEngineSettings?, rustDisabledReason: String?, isAppExtension: Bool) -> NetworkEngine {
     let preferredEngine = settings?.engine ?? NetworkEngineSettings.defaultSettings.engine
     guard let factory = factory else {
         Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (no factory, preferred \(preferredEngine.rawValue))")
         return MtProtoKitEngine(context: context)
     }
-    if networkEngineRustDisabled(appConfiguration: appConfiguration) {
-        Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (mtproto_engine_rust_disabled, preferred \(preferredEngine.rawValue))")
+    if let rustDisabledReason = rustDisabledReason {
+        Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (\(rustDisabledReason), preferred \(preferredEngine.rawValue))")
         return MtProtoKitEngine(context: context)
     }
     switch preferredEngine {
@@ -486,7 +512,7 @@ private final class NetworkMainSessionDelegate: NetworkEngineSessionDelegate {
     }
 }
 
-func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, networkEngineSettings: NetworkEngineSettings?, phoneNumber: String?, useRequestTimeoutTimers: Bool, appConfiguration: AppConfiguration) -> Signal<Network, NoError> {
+func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, networkEngine: NetworkEngineInputs, phoneNumber: String?, useRequestTimeoutTimers: Bool, appConfiguration: AppConfiguration) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
@@ -653,14 +679,16 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             context.beginExplicitBackupAddressDiscovery()
             #endif*/
             
-            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngineSettings, appConfiguration: appConfiguration, isAppExtension: isAppExtension)
-            let rustEngineDisabled = networkEngineRustDisabled(appConfiguration: appConfiguration)
+            let rustDisabledReason = networkEngineRustDisabledReason(appConfiguration: appConfiguration, engineState: networkEngine.state, appVersion: arguments.appVersion, timestamp: Int32(Date().timeIntervalSince1970))
+            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension)
+            resolvedEngine.activate()
+            let rustEngineDisabled = rustDisabledReason != nil
             // Live engine switching (the server kill switch, a WEB proxy turned on and off) is macOS only.
             // On iOS the engine changes only through the Debug Settings switch, at the next launch: no
             // wrapper is created, so switchEngine/disableRustEngine have nothing to act on and the
             // network runs the resolved engine directly, exactly as without a factory.
             #if os(macOS)
-            let prefersRustEngine = (networkEngineSettings?.engine ?? NetworkEngineSettings.defaultSettings.engine) == .rust
+            let prefersRustEngine = (networkEngine.settings?.engine ?? NetworkEngineSettings.defaultSettings.engine) == .rust
             let rustEngineWaitsForWebProxy = arguments.networkEngineFactory != nil && !rustEngineDisabled && resolvedEngine.kind == .mtProtoKit && prefersRustEngine && initialActiveServer?.isWebProxy == true && arguments.networkEngineFactory?.supportsWebProxy != true
             // Live switching only ever moves a network off Rust, or back to Rust after a WEB proxy, so it
             // is needed only while Rust is in play; otherwise MtProtoKit runs directly.
@@ -742,12 +770,14 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
     private let contextProxyIdUpdated: (NetworkContextProxyId?) -> Void
     private let contextLoggedOutUpdated: () -> Void
+    private let contextPermanentKeyUnknown: (Int, Int64) -> Void
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void, contextLoggedOutUpdated: @escaping () -> Void) {
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void, contextLoggedOutUpdated: @escaping () -> Void, contextPermanentKeyUnknown: @escaping (Int, Int64) -> Void) {
         self.requestPublicKeys = requestPublicKeys
         self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
         self.contextProxyIdUpdated = contextProxyIdUpdated
         self.contextLoggedOutUpdated = contextLoggedOutUpdated
+        self.contextPermanentKeyUnknown = contextPermanentKeyUnknown
     }
     
     deinit {
@@ -786,6 +816,10 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     
     func contextLoggedOut(_ context: MTContext) {
         self.contextLoggedOutUpdated()
+    }
+    
+    func contextDatacenterPermanentKeyUnknown(_ context: MTContext, datacenterId: Int, authKeyId: Int64) {
+        self.contextPermanentKeyUnknown(datacenterId, authKeyId)
     }
 }
 
@@ -918,6 +952,10 @@ public final class Network: NSObject {
     }
     
     var loggedOut: (() -> Void)?
+    /// The logout check found that the server no longer knows this permanent key of the datacenter (called
+    /// on the context queue right before `loggedOut`, with the key still in place). A login replaces the
+    /// key instead of logging out.
+    var permanentKeyUnknown: ((Int, Int64) -> Void)?
     var didReceiveSoftAuthResetError: (() -> Void)?
     
     override public var description: String {
@@ -1002,6 +1040,8 @@ public final class Network: NSObject {
         }, contextLoggedOutUpdated: { [weak self] in
             Logger.shared.log("Network", "contextLoggedOut")
             self?.loggedOut?()
+        }, contextPermanentKeyUnknown: { [weak self] datacenterId, authKeyId in
+            self?.permanentKeyUnknown?(datacenterId, authKeyId)
         })
         self.networkHelper = networkHelper
         context.add(networkHelper)

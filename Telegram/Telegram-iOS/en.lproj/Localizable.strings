@@ -7853,6 +7853,8 @@ Sorry for the inconvenience.";
 "Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";
 "Premium.Purchase.ErrorCantMakePayments" = "In-app purchases are not allowed on this device.";
 "Premium.Purchase.ErrorTryLater" = "An error occurred. Please try again.";
+"Premium.Purchase.Pending" = "Purchase Pending";
+"Premium.Purchase.PendingInfo" = "Your purchase is awaiting confirmation. You can leave this screen. Premium will activate when the purchase is confirmed.";
 
 "Premium.Restore.Success" = "Done";
 "Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";

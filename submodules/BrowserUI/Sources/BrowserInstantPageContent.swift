@@ -23,6 +23,7 @@ import LocationUI
 import OpenInExternalAppUI
 import GalleryUI
 import TextFormat
+import UrlWhitelist
 
 final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDelegate {
     private let context: AccountContext
@@ -1684,7 +1685,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                                 let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: self.theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                                    ActionSheetTextItem(title: baseUrl),
+                                    ActionSheetTextItem(title: displayUrlRevealingLoginPart(baseUrl) ?? baseUrl),
                                     ActionSheetButtonItem(title: openText, color: .accent, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {

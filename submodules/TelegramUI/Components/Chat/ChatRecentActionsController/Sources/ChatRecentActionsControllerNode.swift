@@ -31,6 +31,7 @@ import ChatMessageItemView
 import ChatLoadingNode
 import GlassBackgroundComponent
 import ComponentFlow
+import UrlWhitelist
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -578,7 +579,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         
                         var items: [ActionSheetItem] = []
-                        items.append(ActionSheetTextItem(title: cleanUrl))
+                        items.append(ActionSheetTextItem(title: displayUrlRevealingLoginPart(url) ?? cleanUrl))
                         items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {

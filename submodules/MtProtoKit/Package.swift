@@ -29,5 +29,12 @@ let package = Package(
             cSettings: [
                 .headerSearchPath("PublicHeaders"),
             ]),
+        .testTarget(
+            name: "MtProtoKitTests",
+            dependencies: ["MtProtoKit"],
+            path: "Tests",
+            cSettings: [
+                .headerSearchPath("../Sources"),
+            ]),
     ]
 )

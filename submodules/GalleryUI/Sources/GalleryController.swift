@@ -16,6 +16,7 @@ import OpenInExternalAppUI
 import ScreenCaptureDetection
 import UndoUI
 import TranslateUI
+import UrlWhitelist
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     //TODO:rewrite to take all media (effectiveMedia returns all rich-text media; we stop at the first)
@@ -1211,7 +1212,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                         let actionSheet = ActionSheetController(presentationData: presentationData)
                         
                         var items: [ActionSheetItem] = []
-                        items.append(ActionSheetTextItem(title: cleanUrl))
+                        items.append(ActionSheetTextItem(title: displayUrlRevealingLoginPart(url) ?? cleanUrl))
                         items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {

@@ -4,6 +4,7 @@
 #import <MtProtoKit/MTDatacenterTransferAuthAction.h>
 #import <MtProtoKit/MTBackupAddressSignals.h>
 #import <MtProtoKit/MTProto.h>
+#import <MtProtoKit/MTExternalActions.h>
 
 @class MTRequest;
 @class MTRpcError;
@@ -14,52 +15,25 @@
 // The actions that produce an auth key (MTDatacenterAuthAction) or transfer an
 // auth token (MTDatacenterTransferAuthAction) are the only parts of "a
 // connection waits for its key or token" that need the network, so tests
-// replace them through the factories below and keep everything that decides
-// whether a waiting connection recovers.
+// replace them through the factories of MTExternalActions.h and keep
+// everything that decides whether a waiting connection recovers.
 
 @interface MTContext ()
 
-// Builds the action that transfers a datacenter's auth token. nil (the
-// default) means a real MTDatacenterTransferAuthAction.
-@property (nonatomic, copy) MTDatacenterTransferAuthAction * _Nonnull (^ _Nullable transferAuthActionFactory)(void);
-
-// Builds the action that creates an auth key. nil (the default) means a real
-// MTDatacenterAuthAction.
-@property (nonatomic, copy) MTDatacenterAuthAction * _Nonnull (^ _Nullable authActionFactory)(MTDatacenterAuthInfoSelector selector, bool isCdn, bool skipBind, void (^ _Nonnull completion)(MTDatacenterAuthAction * _Nonnull, bool));
-
 - (MTDatacenterAuthAction * _Nonnull)makeAuthActionWithSelector:(MTDatacenterAuthInfoSelector)selector isCdn:(bool)isCdn skipBind:(bool)skipBind completion:(void (^ _Nonnull)(MTDatacenterAuthAction * _Nonnull, bool))completion;
+
+// How long checkIfLoggedOut waits for its probe before giving up without a
+// verdict (120 s). A probe that never ends would otherwise keep the context
+// alive through its connection.
+@property (nonatomic) NSTimeInterval loggedOutCheckTimeout;
 
 @end
 
 @interface MTDatacenterTransferAuthAction ()
 
-// How a transfer reports its outcome. A test double overrides the execute
-// method and calls these, so the reporting path is the production one.
-- (void)complete;
-- (void)fail;
-
 // Gives a transfer request the same error policy as the app's own requests:
 // a 500 is retried after a delay instead of failing the transfer.
 + (void)applyRetryPolicyToRequest:(MTRequest * _Nonnull)request;
-
-@end
-
-@interface MTDatacenterAuthAction ()
-
-// The error auth.bindTempAuthKey answered with, when a bind failed.
-@property (nonatomic, strong) MTRpcError * _Nullable bindError;
-
-// Creates a new key even when the context already holds one for the selector,
-// so a temporary key can be replaced before it expires.
-@property (nonatomic) bool replacesExistingKey;
-
-- (void)complete;
-- (void)fail;
-
-// True only for the answer that means the server no longer knows the
-// permanent key (ENCRYPTED_MESSAGE_INVALID). Any other bind failure says
-// nothing about whether the key still exists.
-+ (bool)bindErrorMeansPermanentKeyIsUnknown:(MTRpcError * _Nullable)bindError;
 
 @end
 
