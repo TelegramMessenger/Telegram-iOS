@@ -47,7 +47,6 @@ public enum WalletTransferArrivalAnimation {
     }
 
     static func crossing(_ point: CGPoint) -> CGFloat {
-        // Card content is inset four points in the reference's 224 x 156 canvas.
         return point.x + 4.0 + 0.35 * (point.y + 4.0) - 13.7
     }
 
@@ -121,7 +120,6 @@ private final class TransferArrivalTextView: UIView {
         } else {
             let bounds = CTFontGetBoundingRectsForGlyphs(font, .horizontal, &glyph, nil, 1).integral
             if !bounds.isEmpty && !bounds.isInfinite && !bounds.isNull {
-                // Keep color-font glyphs (for example an emoji in a peer name).
                 let format = UIGraphicsImageRendererFormat()
                 format.scale = UIScreenScale
                 image = UIGraphicsImageRenderer(size: bounds.size, format: format).image { renderer in
@@ -179,7 +177,6 @@ private final class TransferArrivalTextView: UIView {
                         if kind == 0, index >= 0, index < string.length {
                             let character = string.substring(with: string.rangeOfComposedCharacterSequence(at: index)).first
                             if let number = character?.wholeNumberValue, number < 10 {
-                                // Verify the shaped glyph: a truncation token may reuse a string index.
                                 var code = string.character(at: index)
                                 var expected: CGGlyph = 0
                                 if CTFontGetGlyphsForCharacters(font, &code, &expected, 1), expected == glyphs[i] {
@@ -663,7 +660,6 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
     override public func didEnterHierarchy() {
         super.didEnterHierarchy()
         self.updateIncomingTransferVisibility()
-        // UIKit may attach the backing view to its window after the node enters hierarchy.
         DispatchQueue.main.async { [weak self] in
             self?.updateIncomingTransferVisibility()
         }
@@ -919,7 +915,6 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
         return self.isIncomingTransfer && self.visibility != .none && self.cardNode.bounds.width > 0
             && self.isNodeLoaded && self.view.window != nil
             && self.cardIcon?.isExpanded != true
-            && self.item?.controllerInteraction.canReadHistory == true
             && UIApplication.shared.applicationState == .active
     }
 
@@ -948,7 +943,6 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
         case .finished:
             self.finishIncomingTransferAnimation()
         case nil:
-            // Prepare before visibility and history-reading readiness allow the scene to start.
             if isUnread, item.controllerInteraction.requestWalletTransferArrival != nil, self.cardIcon?.isExpanded != true {
                 self.prepareIncomingTransferAnimation(rise: item.controllerInteraction.freshWalletTransferMessageIds.contains(item.message.id))
             } else {
@@ -2115,7 +2109,6 @@ public final class ChatMessageTransferBubbleContentNode: ChatMessageBubbleConten
 
                         let ribbonSize = TransferCardRibbonGeometry.size
                         if self.arrivalTextView != nil {
-                            // Apply layout in model coordinates, then restore the arrival pose below.
                             self.ribbonBackgroundNode.transform = CATransform3DIdentity
                             self.ribbonTextContainerNode.transform = CATransform3DIdentity
                         }
