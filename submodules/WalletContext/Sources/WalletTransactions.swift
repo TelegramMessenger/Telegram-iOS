@@ -296,7 +296,7 @@ func walletAddressMappingKey(_ address: String) -> String? {
 }
 
 @available(macOS 10.15, *)
-private func transactionWithResolvedPeer(
+func transactionWithResolvedPeer(
     _ transaction: WalletContext.Transaction,
     peerByAddress: [String: EnginePeer]
 ) -> WalletContext.Transaction {
