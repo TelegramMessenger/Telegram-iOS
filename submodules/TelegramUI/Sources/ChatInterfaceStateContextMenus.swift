@@ -1234,7 +1234,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                }
                return false
            }) {
-            actions.append(.action(ContextMenuActionItem(text: "Send Money", icon: { theme in
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Wallet_SendMoney, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Ton"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 f(.dismissWithoutContent)

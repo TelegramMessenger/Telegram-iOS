@@ -649,7 +649,7 @@ extension PeerInfoScreenNode {
                     }
 
                     if WalletConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 }).isAvailable, strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, user.id != strongSelf.context.account.peerId, !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport) {
-                        items.append(.action(ContextMenuActionItem(text: "Send Money", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Wallet_SendMoney, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Ton"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
