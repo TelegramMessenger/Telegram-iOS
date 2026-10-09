@@ -16891,6 +16891,7 @@ Error: %8$@";
 "Wallet.Send.RecipientWallet" = "%@’s wallet";
 "Wallet.Send.Balance" = "Balance: %@";
 "Wallet.Send.Amount" = "Send %@";
+"Wallet.Send.DiscardAlertText" = "Discard this transfer?";
 "Wallet.Settings.Backup" = "Encrypted Backup";
 "Wallet.Settings.EnableBackup" = "Enable Backup";
 "Wallet.Settings.DisableBackup" = "Disable Backup";
@@ -17085,9 +17086,9 @@ Error: %8$@";
 "MESSAGE_GRAM_TRANSFER" = "%1$@ sent you %2$@";
 "MESSAGE_GRAM_TRANSFER_COMMENT" = "%1$@ sent you %2$@: %3$@";
 "MESSAGE_WALLET_TONCONNECT_REQUEST" = "You have a TON Connect request";
-"MESSAGE_WALLET_TONCONNECT_REQUEST_DAPP" = "You have a TON Connect request from %@";
-"MESSAGE_GRAM_TRANSFER_UNKNOWN" = "You received %@";
-"MESSAGE_GRAM_TRANSFER_UNKNOWN_COMMENT" = "You received %@: %@";
+"MESSAGE_WALLET_TONCONNECT_REQUEST_DAPP" = "You have a TON Connect request from %2$@";
+"MESSAGE_GRAM_TRANSFER_UNKNOWN" = "You received %2$@";
+"MESSAGE_GRAM_TRANSFER_UNKNOWN_COMMENT" = "You received %2$@: %3$@";
 
 "Story.Editor.CollageDraftAllMediaMissing" = "None of the media in this collage are available anymore. This draft will be deleted.";
 

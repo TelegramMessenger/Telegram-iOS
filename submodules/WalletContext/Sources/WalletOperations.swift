@@ -452,22 +452,35 @@ public extension WalletContext {
     func prepareTransfer(address: String, amount: Int64, sendAll: Bool = false, comment: String?, commentEncrypted: Bool = false, recipientPublicKey: Data? = nil, session: PasscodeSession? = nil, pendingRegistration: PendingTransferRegistration? = nil, estimatedFee: Int64? = nil) -> Signal<PreparedTransfer, WalletError> {
         self.signal(
             name: "preparing_transfer",
+            keepsTransferInBackground: true,
             discardResult: { [impl = self.impl] prepared in
                 Task { await impl.discardPreparedTransfer(prepared) }
+            },
+            discardOnCancel: { [impl = self.impl] in
+                if let pendingRegistration {
+                    Task { await impl.discardPendingTransferRegistration(pendingRegistration) }
+                }
             }
         ) { impl, operationId in
-            try await impl.prepareTransfer(
-                address: address,
-                amount: amount,
-                sendAll: sendAll,
-                comment: comment,
-                commentEncrypted: commentEncrypted,
-                recipientPublicKey: recipientPublicKey,
-                session: session,
-                pendingRegistration: pendingRegistration,
-                estimatedFee: estimatedFee,
-                operationId: operationId
-            )
+            do {
+                return try await impl.prepareTransfer(
+                    address: address,
+                    amount: amount,
+                    sendAll: sendAll,
+                    comment: comment,
+                    commentEncrypted: commentEncrypted,
+                    recipientPublicKey: recipientPublicKey,
+                    session: session,
+                    pendingRegistration: pendingRegistration,
+                    estimatedFee: estimatedFee,
+                    operationId: operationId
+                )
+            } catch {
+                if let pendingRegistration {
+                    await impl.discardPendingTransferRegistration(pendingRegistration)
+                }
+                throw error
+            }
         }
     }
 
@@ -506,8 +519,21 @@ public extension WalletContext {
     ) -> Signal<PendingTransfer, WalletError> {
         Signal { subscriber in
             let control = WalletTransferSubmissionControl()
-            return self.signal(name: "submitting_transfer", cancelOnDispose: false, submissionControl: control) { impl, operationId in
-                try await impl.submitTransfer(prepared, recipientPeerId: recipientPeerId, pendingMessageCreated: pendingMessageCreated, session: session, operationId: operationId, control: control, stageUpdated: stageUpdated)
+            return self.signal(
+                name: "submitting_transfer",
+                cancelOnDispose: false,
+                keepsTransferInBackground: prepared.collectible == nil,
+                submissionControl: control,
+                discardOnCancel: { [impl = self.impl] in
+                    Task { await impl.discardPreparedTransfer(prepared) }
+                }
+            ) { impl, operationId in
+                do {
+                    return try await impl.submitTransfer(prepared, recipientPeerId: recipientPeerId, pendingMessageCreated: pendingMessageCreated, session: session, operationId: operationId, control: control, stageUpdated: stageUpdated)
+                } catch {
+                    await impl.discardPreparedTransfer(prepared)
+                    throw error
+                }
             }.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
@@ -2065,6 +2091,9 @@ extension WalletContextImpl {
         self.authorization.finish(self.preparedAuthorizations.removeValue(forKey: "transfer:" + prepared.id))
         guard let record = self.preparedTransfers[prepared.id], record.transfer == prepared else {
             return
+        }
+        if let registration = self.pendingTransferRegistrations[prepared.id]?.registration {
+            self.discardPendingTransferRegistration(registration)
         }
         self.preparedTransfers[prepared.id] = nil
         self.resumeDeferredSynchronizationIfNeeded()
