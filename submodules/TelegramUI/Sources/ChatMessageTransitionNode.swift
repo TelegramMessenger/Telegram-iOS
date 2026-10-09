@@ -322,16 +322,64 @@ private func chatMessageTransitionAnimationDuration() -> Double {
     #if DEBUG && false
     return 3.0
     #else
-    return 0.3
+    return 0.5
     #endif
 }
 
 public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTransitionNode, ChatMessageTransitionProtocol {
-    static let animationDuration: Double = chatMessageTransitionAnimationDuration()
+    /// Parameters of one spring of the send transition. Springs are time-scaled by `CALayer.makeAnimation` so
+    /// that they settle exactly within the duration they are run with; the damping ratio
+    /// `damping / (2 * sqrt(stiffness * mass))` therefore fully defines the shape (overshoot) of the curve.
+    public struct SpringParameters: Equatable {
+        public var mass: CGFloat
+        public var stiffness: CGFloat
+        public var damping: CGFloat
+        public var initialVelocity: CGFloat
 
-    public static let verticalAnimationControlPoints: (Float, Float, Float, Float) = (0.19919472913616398, 0.010644531250000006, 0.27920937042459737, 0.91025390625)
-    public static let verticalAnimationCurve: ContainedViewLayoutTransitionCurve = .custom(verticalAnimationControlPoints.0, verticalAnimationControlPoints.1, verticalAnimationControlPoints.2, verticalAnimationControlPoints.3)
-    public static let horizontalAnimationCurve: ContainedViewLayoutTransitionCurve = .custom(0.23, 1.0, 0.32, 1.0)
+        public init(mass: CGFloat = 1.0, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat = 0.0) {
+            self.mass = mass
+            self.stiffness = stiffness
+            self.damping = damping
+            self.initialVelocity = initialVelocity
+        }
+
+        public var curve: ContainedViewLayoutTransitionCurve {
+            return .customSpring(mass: self.mass, stiffness: self.stiffness, damping: self.damping, initialVelocity: self.initialVelocity)
+        }
+
+        public func listCurve(duration: Double) -> ListViewAnimationCurve {
+            return .CustomSpring(duration: duration, mass: self.mass, stiffness: self.stiffness, damping: self.damping, initialVelocity: self.initialVelocity)
+        }
+    }
+
+    /// Total duration of a send transition. The vertical spring, the scale spring and the history list scroll
+    /// all settle within it.
+    static let animationDuration: Double = chatMessageTransitionAnimationDuration()
+    /// The horizontal spring of a text message settles twice as fast as the vertical one: the bubble first
+    /// snaps to its horizontal position and keeps travelling up.
+    static let horizontalAnimationDuration: Double = animationDuration * 0.5
+
+    /// Vertical axis, ζ ≈ 0.75: a soft overshoot (about 3% of the travelled distance) shared with the history list.
+    public static let verticalSpring = SpringParameters(stiffness: 300.0, damping: 26.0)
+    /// Horizontal axis, critically damped (ζ = 1.0), so an outgoing bubble never travels past the trailing edge.
+    public static let horizontalSpring = SpringParameters(stiffness: 400.0, damping: 40.0)
+    /// Scale of a text message: it leaves the input field at 100%, squashes to `scaleDipScale` during the first
+    /// `scaleDipFraction` of the transition, then springs back to 100% by the end of it. Both phases run
+    /// critically damped springs (ζ = 1.0), so the bubble settles without a bounce.
+    public static let scaleDipScale: CGFloat = 0.9
+    public static let scaleDipFraction: Double = 0.3
+    public static let scaleDownSpring = SpringParameters(stiffness: 400.0, damping: 40.0)
+    public static let scaleUpSpring = SpringParameters(stiffness: 400.0, damping: 40.0)
+
+    public static let verticalAnimationCurve: ContainedViewLayoutTransitionCurve = verticalSpring.curve
+    public static let horizontalAnimationCurve: ContainedViewLayoutTransitionCurve = horizontalSpring.curve
+    public static let scaleDownAnimationCurve: ContainedViewLayoutTransitionCurve = scaleDownSpring.curve
+    public static let scaleUpAnimationCurve: ContainedViewLayoutTransitionCurve = scaleUpSpring.curve
+    /// Curve for the history list scroll (`ListViewScrollToItem`) that accompanies a send transition, so the list
+    /// moves with the same spring as the bubble.
+    public static var verticalListAnimationCurve: ListViewAnimationCurve {
+        return verticalSpring.listCurve(duration: animationDuration)
+    }
 
     final class ReplyPanel {
         let titleView: UIView
@@ -686,8 +734,9 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                 self.itemNode.cancelInsertionAnimations()
 
+                let textHorizontalDuration = ChatMessageTransitionNodeImpl.horizontalAnimationDuration
                 let horizontalCurve = ChatMessageTransitionNodeImpl.horizontalAnimationCurve
-                let horizontalTransition: ContainedViewLayoutTransition = .animated(duration: horizontalDuration, curve: horizontalCurve)
+                let horizontalTransition: ContainedViewLayoutTransition = .animated(duration: textHorizontalDuration, curve: horizontalCurve)
                 let verticalCurve = ChatMessageTransitionNodeImpl.verticalAnimationCurve
                 let verticalTransition: ContainedViewLayoutTransition = .animated(duration: verticalDuration, curve: verticalCurve)
 
@@ -695,15 +744,52 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                 self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
                 self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, mainWindowScreenBounds.size)
-                
-                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: verticalCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
+
+                // `timingFunction` carries the spring: `mediaTimingFunction` is nil for springs, and without the
+                // former the animation would silently fall back to ease-in-out.
+                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), to: CGPoint(), duration: verticalDuration, delay: delay, timingFunction: verticalCurve.timingFunction, mediaTimingFunction: verticalCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.endAnimation()
                 })
-                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: horizontalCurve.mediaTimingFunction, additive: true)
-                
+                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), to: CGPoint(), duration: textHorizontalDuration, delay: delay, timingFunction: horizontalCurve.timingFunction, mediaTimingFunction: horizontalCurve.mediaTimingFunction, additive: true)
+
+                // Squash-and-pop scale on two springs: the bubble leaves the input field at 100%, shrinks to
+                // `scaleDipScale` during the first `scaleDipFraction` of the transition and springs back to 100%
+                // by its end. Both phases are additive on `transform.scale` (the model value stays 1.0, the two
+                // phases sum up: 0 → -dip, then -dip + (0 → +dip)), and each phase is paired with an additive
+                // position animation on the same spring. `transform.scale` scales the container about its own
+                // center, and that translation keeps the bubble's bottom corner on its side of the chat
+                // (bottom-trailing for outgoing messages) fixed at every intermediate value.
+                let contentRect = self.contextSourceNode.contentRect
+                let isLeftAligned = targetAbsoluteRect.midX < self.itemNode.bounds.width * 0.5
+                let scaleAnchor = CGPoint(x: contentRect.minX + (isLeftAligned ? 0.0 : contentRect.width), y: contentRect.maxY)
+                let scaleCenter = CGPoint(x: contentRect.width * 0.5, y: contentRect.height * 0.5)
+                let scaleDip = 1.0 - ChatMessageTransitionNodeImpl.scaleDipScale
+                let scaleDownDuration = verticalDuration * ChatMessageTransitionNodeImpl.scaleDipFraction
+                let scaleUpDuration = verticalDuration - scaleDownDuration
+                let scaleDownCurve = ChatMessageTransitionNodeImpl.scaleDownAnimationCurve
+                let scaleUpCurve = ChatMessageTransitionNodeImpl.scaleUpAnimationCurve
+                let anchorCompensation = CGPoint(x: (scaleAnchor.x - scaleCenter.x) * scaleDip, y: (scaleAnchor.y - scaleCenter.y) * scaleDip)
+                // All four animations keep their final values (`removeOnCompletion: false`) and are removed
+                // together once the last one completes. If Core Animation removed one phase on its own, the other
+                // phase of the same key path would still be applied for one frame (scale 0.9 instead of 1.0),
+                // which shows as a blink of the bubble right after it lands.
+                let scaleAnimationKeys = ["sendTransitionScaleDown", "sendTransitionScaleDownPosition", "sendTransitionScaleUp", "sendTransitionScaleUpPosition"]
+                let containerLayer = self.containerNode.layer
+                containerLayer.animate(from: NSNumber(value: 0.0), to: NSNumber(value: Double(-scaleDip)), keyPath: "transform.scale", timingFunction: scaleDownCurve.timingFunction, duration: scaleDownDuration, delay: delay, mediaTimingFunction: scaleDownCurve.mediaTimingFunction, removeOnCompletion: false, additive: true, key: scaleAnimationKeys[0])
+                containerLayer.animate(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: anchorCompensation), keyPath: "position", timingFunction: scaleDownCurve.timingFunction, duration: scaleDownDuration, delay: delay, mediaTimingFunction: scaleDownCurve.mediaTimingFunction, removeOnCompletion: false, additive: true, key: scaleAnimationKeys[1])
+                containerLayer.animate(from: NSNumber(value: 0.0), to: NSNumber(value: Double(scaleDip)), keyPath: "transform.scale", timingFunction: scaleUpCurve.timingFunction, duration: scaleUpDuration, delay: delay + scaleDownDuration, mediaTimingFunction: scaleUpCurve.mediaTimingFunction, removeOnCompletion: false, additive: true, key: scaleAnimationKeys[2])
+                containerLayer.animate(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: CGPoint(x: -anchorCompensation.x, y: -anchorCompensation.y)), keyPath: "position", timingFunction: scaleUpCurve.timingFunction, duration: scaleUpDuration, delay: delay + scaleDownDuration, mediaTimingFunction: scaleUpCurve.mediaTimingFunction, removeOnCompletion: false, additive: true, completion: { [weak containerLayer] _ in
+                    guard let containerLayer else {
+                        return
+                    }
+                    for key in scaleAnimationKeys {
+                        containerLayer.removeAnimation(forKey: key)
+                    }
+                }, key: scaleAnimationKeys[3])
+
 
                 if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
                     itemNode.animateContentFromTextInputField(
@@ -883,13 +969,13 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                 self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
                 self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, mainWindowScreenBounds.size)
-                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
+                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: verticalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.endAnimation()
                 })
-                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true)
+                self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true)
 
                 switch stickerMediaInput {
                 case .inputPanel, .universal:
@@ -918,7 +1004,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                             let _ = audioMicInput.micButton.animateDecorationToSentMessage(targetRect: targetAbsoluteRect, in: self.view, duration: verticalDuration, horizontalCurve: ChatMessageTransitionNodeImpl.horizontalAnimationCurve, verticalCurve: ChatMessageTransitionNodeImpl.verticalAnimationCurve)
 
-                            self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self, weak contextContainer] _ in
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: verticalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self, weak contextContainer] _ in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -931,7 +1017,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                                 strongSelf.endAnimation()
                             })
 
-                            self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true)
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: horizontalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true)
                         }
                     }
                 }
@@ -952,9 +1038,9 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                     videoMessage.view.frame = videoMessage.view.frame.offsetBy(dx: targetAbsoluteRect.midX - sourceAbsoluteRect.midX, dy: targetAbsoluteRect.midY - sourceAbsoluteRect.midY)
 
                     self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
-                    self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
+                    self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
 
-                    self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, completion: { [weak self] _ in
+                    self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, completion: { [weak self] _ in
                         guard let strongSelf = self else {
                             return
                         }
@@ -996,8 +1082,8 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                             self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, mainWindowScreenBounds.size)
 
-                            self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
-                            self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -1076,8 +1162,8 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
                         self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, mainWindowScreenBounds.size)
 
-                        self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
-                        self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
+                        self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
+                        self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, timingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.timingFunction, mediaTimingFunction: ChatMessageTransitionNodeImpl.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
                             guard let strongSelf = self else {
                                 return
                             }

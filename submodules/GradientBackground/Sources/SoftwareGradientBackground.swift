@@ -576,7 +576,8 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     let framesPerAnyStep = maxFrame / stepCount
 
                     for frameIndex in 0 ..< maxFrame {
-                        let t = curve.solve(at: CGFloat(frameIndex) / CGFloat(maxFrame - 1))
+                        // Spring curves overshoot past 1.0; the step/frame bookkeeping below assumes 0.0 ... 1.0.
+                        let t = max(0.0, min(1.0, curve.solve(at: CGFloat(frameIndex) / CGFloat(maxFrame - 1))))
                         let globalStep = Int(t * CGFloat(maxFrame))
                         let stepIndex = min(stepCount - 1, globalStep / framesPerAnyStep)
 

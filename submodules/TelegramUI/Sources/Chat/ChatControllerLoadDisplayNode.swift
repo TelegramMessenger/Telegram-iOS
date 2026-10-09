@@ -927,9 +927,11 @@ extension ChatControllerImpl {
                     } else {
                         isScheduledMessages = false
                     }
-                    let duration: Double = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNodeImpl.animationDuration : 0.18
-                    let curve: ContainedViewLayoutTransitionCurve = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalAnimationCurve : .easeInOut
-                    let controlPoints: (Float, Float, Float, Float) = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalAnimationControlPoints : (0.5, 0.33, 0.0, 0.0)
+                    let hasScheduledTransitions = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions
+                    let duration: Double = hasScheduledTransitions ? ChatMessageTransitionNodeImpl.animationDuration : 0.18
+                    let curve: ContainedViewLayoutTransitionCurve = hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalAnimationCurve : .easeInOut
+                    // The list scrolls on the bubble's own vertical spring, or the new bubble drifts against its neighbours.
+                    let listCurve: ListViewAnimationCurve = hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalListAnimationCurve : .Custom(duration: duration, 0.5, 0.33, 0.0, 0.0)
 
                     let shouldUseFastMessageSendAnimation = strongSelf.chatDisplayNode.shouldUseFastMessageSendAnimation
                     
@@ -965,9 +967,9 @@ extension ChatControllerImpl {
                             }
 
                             if isScheduledMessages, let insertedIndex {
-                                scrollToItem = ListViewScrollToItem(index: insertedIndex, position: .visible, animated: true, curve: .Custom(duration: duration, controlPoints.0, controlPoints.1, controlPoints.2, controlPoints.3), directionHint: .Down)
+                                scrollToItem = ListViewScrollToItem(index: insertedIndex, position: .visible, animated: true, curve: listCurve, directionHint: .Down)
                             } else if transition.historyView.originalView.laterId == nil {
-                                scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Custom(duration: duration, controlPoints.0, controlPoints.1, controlPoints.2, controlPoints.3), directionHint: .Up)
+                                scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: listCurve, directionHint: .Up)
                                 if enableSendAnimationV2, Thread.isMainThread, let strongSelf {
                                     if strongSelf.chatDisplayNode.historyNode.isStrictlyScrolledToPinToEdgeItem() {
                                         scrollToItem = nil

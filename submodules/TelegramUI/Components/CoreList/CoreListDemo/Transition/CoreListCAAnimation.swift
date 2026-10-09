@@ -2,9 +2,10 @@ import UIKit
 import QuartzCore
 
 /// The single place CoreList turns a curve into a CAAnimation — a copy of
-/// `CAAnimationUtils.makeAnimation`'s branch tree (`CAAnimationUtils.swift:69`), minus the branches
-/// CoreList has no caller for (the `kCAMediaTimingFunctionCustomSpringPrefix` parse and the
-/// `mediaTimingFunction` override).
+/// `CAAnimationUtils.makeAnimation`'s branch tree (`CAAnimationUtils.swift:69`), minus the
+/// `mediaTimingFunction` override, which CoreList has no caller for. Display's
+/// `kCAMediaTimingFunctionCustomSpringPrefix` branch is here as `Curve.customSpring`, taking its
+/// parameters as a value rather than parsing them out of a string.
 ///
 /// Both emitters call this: `CALayer.animate` installs the result directly, and
 /// `CoreAnimationCompiler` layers the model-path properties on top (`beginTime`, `fillMode`,
@@ -56,6 +57,12 @@ func makeCoreListAnimation(fromValue: Any?,
         // `isSystemSpring` path below so its natural 1.6s settle is mapped onto the pass duration as
         // `speed`, the same way the two system springs are.
         animation = makeCoreListSmoothDecelerationAnimation(keyPath)
+        isSystemSpring = true
+    } else if case let .customSpring(mass, stiffness, damping, initialVelocity) = curve {
+        // Display's `kCAMediaTimingFunctionCustomSpringPrefix` branch: the spring runs to its own
+        // settle, and the shared `isSystemSpring` path maps that onto the pass as `speed`.
+        animation = makeCoreListCustomSpringAnimation(keyPath, mass: mass, stiffness: stiffness,
+                                                      damping: damping, initialVelocity: initialVelocity)
         isSystemSpring = true
     } else if case .spring = curve {
         switch springKind {
@@ -118,6 +125,10 @@ extension CoreListTransition.Animation.Curve {
             // animation, which UIKit also never evaluates — `progressForFraction:` computes it and
             // then overwrites it from the CASpringAnimation branch.
             return CAMediaTimingFunction(controlPoints: 0.0, 0.2, 1.0, 1.0)
+        case .customSpring:
+            // Unreachable from `makeCoreListAnimation` as well, which emits the real spring first.
+            // Returns the linear function that spring is emitted with.
+            return CAMediaTimingFunction(name: .linear)
         }
     }
 }

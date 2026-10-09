@@ -51,6 +51,20 @@ public struct CoreListTransition: Equatable {
             /// `ComponentTransition` bridge in `CoreListChatHistoryBackend.swift`).
             case uiKitSmoothDeceleration
 
+            /// A `CASpringAnimation` with explicit parameters, played over the pass duration exactly
+            /// as Display's `CALayer.makeAnimation` plays `ContainedViewLayoutTransitionCurve.customSpring`:
+            /// the spring runs to its own `settlingDuration` and `speed` maps that onto the pass. So the
+            /// damping ratio alone shapes the curve, and content the host animates with the same
+            /// parameters through `ContainedViewLayoutTransition` moves in lockstep with the list — which
+            /// is what the chat's send transition needs (the list scrolls with the new bubble's own
+            /// vertical spring). `initialVelocity` is in units of the full travel per second, positive
+            /// towards the target, as `CASpringAnimation` defines it.
+            ///
+            /// Like `.uiKitSmoothDeceleration` it is not a bezier, so it costs a real case: the model
+            /// evaluates the closed form of the same damped oscillator Core Animation renders
+            /// (`coreListCustomSpringProgress`), and the emitter installs the real spring.
+            case customSpring(mass: CGFloat, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat)
+
             public static var slide: Curve { .custom(0.33, 0.52, 0.25, 0.99) }
 
             /// `UIScrollView.setContentOffset(_:animated: true)`'s curve.
@@ -420,9 +434,9 @@ public extension CoreListTransition {
             options = [.curveEaseIn]
         case .spring:
             options = UIView.AnimationOptions(rawValue: 7 << 16)
-        case .easeInOut, .custom, .bounce, .uiKitSmoothDeceleration:
-            // `.uiKitSmoothDeceleration` degrades here for the same reason `.custom` does: a
-            // UIView block animation cannot take a spring's parameters without
+        case .easeInOut, .custom, .bounce, .uiKitSmoothDeceleration, .customSpring:
+            // `.uiKitSmoothDeceleration` and `.customSpring` degrade here for the same reason
+            // `.custom` does: a UIView block animation cannot take a spring's parameters without
             // `CALayerSpringParametersOverride`, which is private API CoreList cannot reach. Layer
             // animations (the path scrolling actually uses) get the real spring.
             options = [.curveEaseInOut]

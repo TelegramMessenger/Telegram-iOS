@@ -65,12 +65,65 @@ public extension ContainedViewLayoutTransitionCurve {
             return listViewAnimationCurveEaseIn(offset)
         case .spring:
             return listViewAnimationCurveSystem(offset)
-        case .customSpring:
-            return listViewAnimationCurveSystem(offset)
+        case let .customSpring(mass, stiffness, damping, initialVelocity):
+            return customSpringCurveValue(mass: mass, stiffness: stiffness, damping: damping, initialVelocity: initialVelocity, at: offset)
         case let .custom(c1x, c1y, c2x, c2y):
             return bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), offset)
         }
     }
+}
+
+/// Caches one solver `CASpringAnimation` per distinct parameter set: `solve(at:)` is sampled per frame by
+/// display-link driven animations, and building a spring animation each time would be wasteful.
+private final class CustomSpringCurveSolverCache {
+    private struct Key: Hashable {
+        let mass: CGFloat
+        let stiffness: CGFloat
+        let damping: CGFloat
+        let initialVelocity: CGFloat
+    }
+    
+    private let lock = NSLock()
+    private var animations: [Key: CASpringAnimation] = [:]
+    
+    func animation(mass: CGFloat, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat) -> CASpringAnimation {
+        let key = Key(mass: mass, stiffness: stiffness, damping: damping, initialVelocity: initialVelocity)
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        if let animation = self.animations[key] {
+            return animation
+        }
+        let animation = CASpringAnimation(keyPath: "position")
+        animation.mass = mass
+        animation.stiffness = stiffness
+        animation.damping = damping
+        animation.initialVelocity = initialVelocity
+        // `springAnimationValueAt` takes a fraction of the animation's duration; `CALayer.makeAnimation` runs
+        // custom springs with `duration = settlingDuration` (then time-scales them), so sampling the same
+        // normalized time here reproduces the on-screen curve.
+        animation.duration = animation.settlingDuration
+        if self.animations.count >= 32 {
+            self.animations.removeAll()
+        }
+        self.animations[key] = animation
+        return animation
+    }
+}
+
+private let customSpringCurveSolverCache = CustomSpringCurveSolverCache()
+
+/// Value of a `.customSpring` curve at normalized time `t` (0.0 ... 1.0 maps onto the spring's settling duration).
+func customSpringCurveValue(mass: CGFloat, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat, at t: CGFloat) -> CGFloat {
+    if t <= 0.0 {
+        return 0.0
+    }
+    if t >= 1.0 {
+        return 1.0
+    }
+    let animation = customSpringCurveSolverCache.animation(mass: mass, stiffness: stiffness, damping: damping, initialVelocity: initialVelocity)
+    return springAnimationValueAt(animation, t)
 }
 
 public extension ContainedViewLayoutTransitionCurve {
@@ -2545,6 +2598,8 @@ public final class ControlledTransition {
             switch self.curve {
             case .spring:
                 mappedFraction = springAnimationSolver(progress)
+            case .customSpring:
+                mappedFraction = self.curve.solve(at: progress)
             case let .custom(c1x, c1y, c2x, c2y):
                 mappedFraction = bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), progress)
             default:

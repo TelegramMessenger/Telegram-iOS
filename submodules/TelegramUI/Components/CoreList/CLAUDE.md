@@ -528,6 +528,18 @@ and emitted springs agree only at duration 0.5 — CoreList is analytic-first, s
 emitted curve. `.bounce` is not a unit curve (ComponentFlow's own `solve` asserts on it) and degrades
 to `.spring`.
 
+`.customSpring(mass:stiffness:damping:initialVelocity:)` is CoreList's counterpart of Display's
+`ContainedViewLayoutTransitionCurve.customSpring`, and the one curve here with no ComponentFlow case —
+it exists so the chat's send transition scrolls the history on the bubble's own spring. It emits the
+object `CAAnimationUtils`' custom-spring branch builds (parameters quantized to `Float` as Display's
+string parsing does, `duration = settlingDuration`, linear timing) down the shared `isSystemSpring`
+path, so the settle reaches the pass as `speed`. Its `solve(at:)` is a **closed form**, not
+`_solveForInput:`, keyed to CA's cached `settlingDuration`. Two traps: `settlingDuration` is reported
+in the PARENT's time, so reading it back off an emitted animation divides it by `speed`; and the
+closed form has **no overdamped branch** because CA renders none — Display never sets
+`allowsOverdamping`, and at its default `false` a damping ratio above 1 plays as exactly critical.
+`CustomSpringParityTests` pins the closed form against `_solveForInput:` across both regimes.
+
 CoreList uses **no `CATransaction` at all**. Every layer it writes is UIView-backed — it creates no
 standalone `CALayer` — and a UIView's layer returns a null action by default outside an animation
 block, so there is no implicit animation to suppress. (`SimpleLayer`/`nullAction` exists for
