@@ -423,14 +423,40 @@ func networkEngineRustDisabled(appConfiguration: AppConfiguration) -> Bool {
     }
 }
 
-private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext, factory: NetworkEngineFactory?, settings: NetworkEngineSettings?, appConfiguration: AppConfiguration, isAppExtension: Bool) -> NetworkEngine {
+/// What an account's app configuration says about the Rust engine; nil while it was never fetched.
+func networkEngineServerFlag(appConfiguration: AppConfiguration) -> Bool? {
+    if appConfiguration.data == nil {
+        return nil
+    }
+    return networkEngineRustDisabled(appConfiguration: appConfiguration)
+}
+
+/// Why the Rust engine may not run for this network, nil when it may: the account's own app
+/// configuration, or while it has none (a login, a fresh account) what other accounts got from the
+/// server; and the local crash-loop fallback.
+func networkEngineRustDisabledReason(appConfiguration: AppConfiguration, engineState: NetworkEngineState?, appVersion: String, timestamp: Int32) -> String? {
+    let build = networkEngineStateBuild(appVersion: appVersion)
+    if let rustDisabled = networkEngineServerFlag(appConfiguration: appConfiguration) {
+        if rustDisabled {
+            return "mtproto_engine_rust_disabled"
+        }
+    } else if let engineState = engineState, engineState.serverDisabledRust(build: build) {
+        return "mtproto_engine_rust_disabled for another account"
+    }
+    if let engineState = engineState, engineState.locallyDisabledRust(build: build, timestamp: timestamp) {
+        return "engine crash loop"
+    }
+    return nil
+}
+
+private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext, factory: NetworkEngineFactory?, settings: NetworkEngineSettings?, rustDisabledReason: String?, isAppExtension: Bool) -> NetworkEngine {
     let preferredEngine = settings?.engine ?? NetworkEngineSettings.defaultSettings.engine
     guard let factory = factory else {
         Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (no factory, preferred \(preferredEngine.rawValue))")
         return MtProtoKitEngine(context: context)
     }
-    if networkEngineRustDisabled(appConfiguration: appConfiguration) {
-        Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (mtproto_engine_rust_disabled, preferred \(preferredEngine.rawValue))")
+    if let rustDisabledReason = rustDisabledReason {
+        Logger.shared.log("Network", "Account \(accountId.int64): engine mtProtoKit (\(rustDisabledReason), preferred \(preferredEngine.rawValue))")
         return MtProtoKitEngine(context: context)
     }
     switch preferredEngine {
@@ -451,12 +477,31 @@ private func resolveNetworkEngine(accountId: AccountRecordId, context: MTContext
 private final class NetworkMainSessionDelegate: NetworkEngineSessionDelegate {
     private weak var connectionStatus: Promise<ConnectionStatus>?
     weak var network: Network?
+    private let livenessLock = NSLock()
+    private var lastState: NetworkEngineConnectionState?
+    private weak var livenessMonitor: NetworkLivenessMonitor?
     
     init(connectionStatus: Promise<ConnectionStatus>) {
         self.connectionStatus = connectionStatus
     }
     
+    /// The monitor hears every state from now on, starting with the latest one.
+    func attach(_ monitor: NetworkLivenessMonitor) {
+        self.livenessLock.lock()
+        self.livenessMonitor = monitor
+        let state = self.lastState
+        self.livenessLock.unlock()
+        if let state = state {
+            monitor.connectionStateChanged(state)
+        }
+    }
+    
     func networkSessionConnectionStateChanged(_ state: NetworkEngineConnectionState) {
+        self.livenessLock.lock()
+        self.lastState = state
+        let monitor = self.livenessMonitor
+        self.livenessLock.unlock()
+        monitor?.connectionStateChanged(state)
         let connectionStatus = self.connectionStatus
         if state.isConnected {
             if state.isUpdatingConnectionContext || state.isPerformingServiceTasks {
@@ -486,7 +531,7 @@ private final class NetworkMainSessionDelegate: NetworkEngineSessionDelegate {
     }
 }
 
-func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, networkEngineSettings: NetworkEngineSettings?, phoneNumber: String?, useRequestTimeoutTimers: Bool, appConfiguration: AppConfiguration) -> Signal<Network, NoError> {
+func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, networkEngine: NetworkEngineInputs, phoneNumber: String?, useRequestTimeoutTimers: Bool, appConfiguration: AppConfiguration) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
@@ -653,14 +698,21 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             context.beginExplicitBackupAddressDiscovery()
             #endif*/
             
-            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngineSettings, appConfiguration: appConfiguration, isAppExtension: isAppExtension)
-            let rustEngineDisabled = networkEngineRustDisabled(appConfiguration: appConfiguration)
+            var rustDisabledReason = networkEngineRustDisabledReason(appConfiguration: appConfiguration, engineState: networkEngine.state, appVersion: arguments.appVersion, timestamp: Int32(Date().timeIntervalSince1970))
+            #if os(macOS)
+            if rustDisabledReason == nil {
+                rustDisabledReason = networkLivenessDisabledReason()
+            }
+            #endif
+            let resolvedEngine = resolveNetworkEngine(accountId: accountId, context: context, factory: arguments.networkEngineFactory, settings: networkEngine.settings, rustDisabledReason: rustDisabledReason, isAppExtension: isAppExtension)
+            resolvedEngine.activate()
+            let rustEngineDisabled = rustDisabledReason != nil
             // Live engine switching (the server kill switch, a WEB proxy turned on and off) is macOS only.
             // On iOS the engine changes only through the Debug Settings switch, at the next launch: no
             // wrapper is created, so switchEngine/disableRustEngine have nothing to act on and the
             // network runs the resolved engine directly, exactly as without a factory.
             #if os(macOS)
-            let prefersRustEngine = (networkEngineSettings?.engine ?? NetworkEngineSettings.defaultSettings.engine) == .rust
+            let prefersRustEngine = (networkEngine.settings?.engine ?? NetworkEngineSettings.defaultSettings.engine) == .rust
             let rustEngineWaitsForWebProxy = arguments.networkEngineFactory != nil && !rustEngineDisabled && resolvedEngine.kind == .mtProtoKit && prefersRustEngine && initialActiveServer?.isWebProxy == true && arguments.networkEngineFactory?.supportsWebProxy != true
             // Live switching only ever moves a network off Rust, or back to Rust after a WEB proxy, so it
             // is needed only while Rust is in play; otherwise MtProtoKit runs directly.
@@ -742,12 +794,14 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     private let isContextNetworkAccessAllowedImpl: () -> Signal<Bool, NoError>
     private let contextProxyIdUpdated: (NetworkContextProxyId?) -> Void
     private let contextLoggedOutUpdated: () -> Void
+    private let contextPermanentKeyUnknown: (Int, Int64) -> Void
     
-    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void, contextLoggedOutUpdated: @escaping () -> Void) {
+    init(requestPublicKeys: @escaping (Int) -> Signal<NSArray, NoError>, isContextNetworkAccessAllowed: @escaping () -> Signal<Bool, NoError>, contextProxyIdUpdated: @escaping (NetworkContextProxyId?) -> Void, contextLoggedOutUpdated: @escaping () -> Void, contextPermanentKeyUnknown: @escaping (Int, Int64) -> Void) {
         self.requestPublicKeys = requestPublicKeys
         self.isContextNetworkAccessAllowedImpl = isContextNetworkAccessAllowed
         self.contextProxyIdUpdated = contextProxyIdUpdated
         self.contextLoggedOutUpdated = contextLoggedOutUpdated
+        self.contextPermanentKeyUnknown = contextPermanentKeyUnknown
     }
     
     deinit {
@@ -786,6 +840,10 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
     
     func contextLoggedOut(_ context: MTContext) {
         self.contextLoggedOutUpdated()
+    }
+    
+    func contextDatacenterPermanentKeyUnknown(_ context: MTContext, datacenterId: Int, authKeyId: Int64) {
+        self.contextPermanentKeyUnknown(datacenterId, authKeyId)
     }
 }
 
@@ -867,6 +925,8 @@ public final class Network: NSObject {
     private let webProxyLeaseToken = UUID()
     private let webProxyActive: ValuePromise<Bool>
     private let webProxyCarrierDemandDisposable = MetaDisposable()
+    /// macOS, Rust with live switching: the local health check (`NetworkLivenessMonitor`).
+    private var livenessMonitor: NetworkLivenessMonitor?
     public let useBetaFeatures: Bool
     public let useExperimentalFeatures: Bool
     
@@ -918,6 +978,10 @@ public final class Network: NSObject {
     }
     
     var loggedOut: (() -> Void)?
+    /// The logout check found that the server no longer knows this permanent key of the datacenter (called
+    /// on the context queue right before `loggedOut`, with the key still in place). A login replaces the
+    /// key instead of logging out.
+    var permanentKeyUnknown: ((Int, Int64) -> Void)?
     var didReceiveSoftAuthResetError: (() -> Void)?
     
     override public var description: String {
@@ -1002,6 +1066,8 @@ public final class Network: NSObject {
         }, contextLoggedOutUpdated: { [weak self] in
             Logger.shared.log("Network", "contextLoggedOut")
             self?.loggedOut?()
+        }, contextPermanentKeyUnknown: { [weak self] datacenterId, authKeyId in
+            self?.permanentKeyUnknown?(datacenterId, authKeyId)
         })
         self.networkHelper = networkHelper
         context.add(networkHelper)
@@ -1029,10 +1095,54 @@ public final class Network: NSObject {
             return nil
         })
         
+        #if os(macOS)
+        if let switchingEngine = switchingEngine, !isAppExtension {
+            let monitor = NetworkLivenessMonitor(queue: queue, datacenterId: datacenterId, dependencies: NetworkLivenessMonitor.Dependencies(
+                clock: networkLivenessUptime,
+                activity: { [weak mainSession] reply in
+                    guard let mainSession = mainSession else {
+                        reply(nil)
+                        return
+                    }
+                    mainSession.serverActivity(reply)
+                },
+                engineKind: { [weak switchingEngine] in
+                    return switchingEngine?.kind ?? .mtProtoKit
+                },
+                networkIdentity: { [weak switchingEngine] in
+                    return switchingEngine?.networkIdentity()
+                },
+                probeUnavailable: { [weak context] in
+                    return context?.apiEnvironment.socksProxySettings?.webProxy == true ? "a WEB proxy, which MtProtoKit's probe cannot use" : nil
+                },
+                probe: { [weak context] timeout in
+                    guard let context = context else {
+                        return .single(false)
+                    }
+                    return networkLivenessMtProtoKitProbe(context: context, datacenterId: datacenterId, timeout: timeout)
+                },
+                report: { [weak telemetry] report in
+                    telemetry?.engineFallback(report, engine: .rust)
+                },
+                switchToMtProtoKit: { [weak self] reason in
+                    self?.disableRustEngine(reason: reason)
+                },
+                limiter: NetworkLivenessProbeLimiter.shared
+            ))
+            self.livenessMonitor = monitor
+            mainSession.observeConnectionDrops { [weak monitor] drop in
+                monitor?.connectionDropped(drop)
+            }
+            mainSessionDelegate.attach(monitor)
+            monitor.start()
+        }
+        #endif
+
         let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
         |> distinctUntilChanged |> deliverOn(queue)
         self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
             if let strongSelf = self {
+                strongSelf.livenessMonitor?.setResumed(value)
                 if value {
                     Logger.shared.log("Network", "Resume network connection")
                     strongSelf.mainSession.setPaused(false)
@@ -1102,6 +1212,7 @@ public final class Network: NSObject {
     }
     
     deinit {
+        self.livenessMonitor?.stop()
         self.shouldKeepConnectionDisposable.dispose()
         self.isUserOnlineDisposable.dispose()
         self.webProxyCarrierDemandDisposable.dispose()

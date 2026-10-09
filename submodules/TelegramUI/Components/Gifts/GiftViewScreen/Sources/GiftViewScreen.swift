@@ -308,6 +308,48 @@ private final class SelectableGiftMessageTextComponent: Component {
     }
 }
 
+private final class GiftViewLeftControlButtonComponent: CombinedComponent {
+    typealias EnvironmentType = Empty
+
+    let isBackButton: Bool
+    let content: GlassControlPanelComponent
+
+    init(isBackButton: Bool, content: GlassControlPanelComponent) {
+        self.isBackButton = isBackButton
+        self.content = content
+    }
+
+    static func ==(lhs: GiftViewLeftControlButtonComponent, rhs: GiftViewLeftControlButtonComponent) -> Bool {
+        if lhs.isBackButton != rhs.isBackButton {
+            return false
+        }
+        if lhs.content != rhs.content {
+            return false
+        }
+        return true
+    }
+
+    static var body: Body {
+        let closeButton = Child(GlassControlPanelComponent.self)
+        let backButton = Child(GlassControlPanelComponent.self)
+
+        return { context in
+            let button = context.component.isBackButton ? backButton : closeButton
+            let updatedButton = button.update(
+                component: context.component.content,
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            context.add(updatedButton
+                .position(CGPoint(x: updatedButton.size.width * 0.5, y: updatedButton.size.height * 0.5))
+                .appear(.default(scale: true, alpha: true))
+                .disappear(.default(scale: true, alpha: true))
+            )
+            return updatedButton.size
+        }
+    }
+}
+
 private final class GiftViewSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
 
@@ -316,6 +358,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         fileprivate var topOverscrollBackgroundTransition: ComponentTransition = .immediate
         fileprivate var controlPanel: GlassControlPanelComponent?
         fileprivate var controlPanelTransition: ComponentTransition = .immediate
+        fileprivate var leftControlButton: GiftViewLeftControlButtonComponent?
         fileprivate var button: ButtonComponent?
         fileprivate var buttonTransition: ComponentTransition = .immediate
         fileprivate var upgradeNextButton: PlainButtonComponent?
@@ -397,7 +440,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         var inProgress = false
         var canSkip = false
         
-        var testUpgradeAnimation = !"".isEmpty
+        var testUpgradeAnimation = "".isEmpty
                 
         var upgradeForm: BotPaymentForm?
         var upgradeFormDisposable: Disposable?
@@ -3273,19 +3316,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                 headerSubject = nil
             }
             
-            var buttonsBackground: GlassControlGroupComponent.Background = .panel
-            if let uniqueGift, let backdropAttribute = uniqueGift.attributes.first(where: { attribute in
-                if case .backdrop = attribute {
-                    return true
-                } else {
-                    return false
-                }
-            }), case let .backdrop(_, _, _, outerColor, _, _, _) = backdropAttribute {
-                buttonsBackground = .color(UIColor(rgb: UInt32(bitPattern: outerColor)).mixedWith(.white, alpha: 0.2))
-            } else if showUpgradePreview, let backgroundColor = giftCompositionExternalState.backgroundColor {
-                buttonsBackground = .color(backgroundColor.mixedWith(.white, alpha: 0.2))
-            }
-            
             var ownerPeerId: EnginePeer.Id?
             if let uniqueGift {
                 if case let .peerId(peerId) = uniqueGift.owner {
@@ -3436,6 +3466,11 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             originY += headerHeight
             
+            var buttonsBackground: GlassControlGroupComponent.Background = .panel
+            if let backgroundColor = giftCompositionExternalState.backgroundColor {
+                buttonsBackground = .color(backgroundColor.mixedWith(.white, alpha: 0.2))
+            }
+
             let vibrantColor: UIColor
             if let previewPatternColor = giftCompositionExternalState.previewPatternColor {
                 vibrantColor = previewPatternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
@@ -6008,13 +6043,24 @@ private final class GiftViewSheetContent: CombinedComponent {
             if case .color = buttonsBackground {
                 buttonsIsDark = true
             }
+
+            component.externalState.leftControlButton = GiftViewLeftControlButtonComponent(
+                isBackButton: isBackButton,
+                content: GlassControlPanelComponent(
+                    theme: theme,
+                    leftItem: GlassControlPanelComponent.Item(
+                        items: leftControlItems,
+                        background: buttonsBackground
+                    ),
+                    centralItem: nil,
+                    rightItem: nil,
+                    isDark: buttonsIsDark
+                )
+            )
             
             component.externalState.controlPanel = GlassControlPanelComponent(
                 theme: theme,
-                leftItem: GlassControlPanelComponent.Item(
-                    items: leftControlItems,
-                    background: buttonsBackground
-                ),
+                leftItem: nil,
                 centralItem: nil,
                 rightItem: rightControlItems.isEmpty ? nil : GlassControlPanelComponent.Item(
                     items: rightControlItems,
@@ -6081,6 +6127,7 @@ private final class GiftViewSheetContentContainer: Component {
         private let content = ComponentView<EnvironmentType>()
         private let bottomEdgeEffectView: EdgeEffectView
         private let controlPanel = ComponentView<Empty>()
+        private let leftControlButton = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
         private let upgradeNextButton = ComponentView<Empty>()
         private let upgradePriceButton = ComponentView<Empty>()
@@ -6337,6 +6384,24 @@ private final class GiftViewSheetContentContainer: Component {
                             origin: CGPoint(x: controlPanelStripInsets.left + floorToScreenPixels((availableSize.width - controlPanelStripInsets.left - controlPanelStripInsets.right - controlPanelSize.width) * 0.5), y: 16.0),
                             size: controlPanelSize
                         )
+                    )
+                }
+            }
+
+            if let leftControlButtonComponent = self.contentExternalState.leftControlButton {
+                let leftControlButtonSize = self.leftControlButton.update(
+                    transition: self.contentExternalState.controlPanelTransition,
+                    component: AnyComponent(leftControlButtonComponent),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                if let leftControlButtonView = self.leftControlButton.view {
+                    if leftControlButtonView.superview == nil {
+                        self.addSubview(leftControlButtonView)
+                    }
+                    transition.setFrame(
+                        view: leftControlButtonView,
+                        frame: CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: leftControlButtonSize)
                     )
                 }
             }

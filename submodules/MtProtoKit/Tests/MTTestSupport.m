@@ -1,6 +1,7 @@
 #import "MTTestSupport.h"
 
 #import <os/lock.h>
+#import <stdatomic.h>
 
 #import <MtProtoKit/MTApiEnvironment.h>
 #import <MtProtoKit/MTDatacenterAddress.h>
@@ -124,6 +125,7 @@ bool MTTestIsWaiting(MTProto *proto) {
 @implementation MTTestAuthAction {
     __weak MTContext *_context;
     void (^_onExecute)(MTTestAuthAction *);
+    _Atomic(bool) _wasCancelled;
 }
 
 - (instancetype)initWithSelector:(MTDatacenterAuthInfoSelector)selector completion:(void (^)(MTDatacenterAuthAction *, bool))completion onExecute:(void (^)(MTTestAuthAction *))onExecute {
@@ -149,6 +151,15 @@ bool MTTestIsWaiting(MTProto *proto) {
 - (void)failWithBindError:(MTRpcError *)error {
     self.bindError = error;
     [self fail];
+}
+
+- (void)cancel {
+    atomic_store(&_wasCancelled, true);
+    [super cancel];
+}
+
+- (bool)wasCancelled {
+    return atomic_load(&_wasCancelled);
 }
 
 @end

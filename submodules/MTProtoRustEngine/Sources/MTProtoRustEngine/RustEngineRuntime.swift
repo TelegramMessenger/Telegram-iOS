@@ -43,10 +43,15 @@ final class RustEngineLock {
     }
 }
 
+/// Receives the events of one engine session on its mailbox's queue.
+protocol RustEngineEventHandler: AnyObject {
+    func handleEngineEvent(_ event: RustEngineEvent)
+}
+
 final class RustEngineMailbox {
     let queue: Queue
     private let lock = RustEngineLock()
-    private weak var session: RustNetworkSession?
+    private weak var session: RustEngineEventHandler?
     private var isAttached = false
     private var pending: [RustEngineEvent] = []
     private var isDrainScheduled = false
@@ -55,7 +60,7 @@ final class RustEngineMailbox {
         self.queue = queue
     }
 
-    func attach(_ session: RustNetworkSession) {
+    func attach(_ session: RustEngineEventHandler) {
         self.lock.lock()
         self.session = session
         self.isAttached = true
@@ -159,7 +164,7 @@ final class RustEngineRuntime: NSObject, MTNetworkAvailabilityDelegate {
         rustEngineVerifyAssumptions()
 
         let abiVersion = mt_engine_abi_version()
-        if abiVersion != 3 {
+        if abiVersion != 5 {
             rustEngineImportantLog("[MTProtoRust] unsupported engine ABI version \(abiVersion)")
             return
         }
@@ -390,6 +395,9 @@ private func rustEngineVerifyAssumptions() {
     assert(RustEngineEventKind.completed.rawValue == MTEventKindCompleted.rawValue)
     assert(RustEngineEventKind.update.rawValue == MTEventKindUpdate.rawValue)
     assert(RustEngineEventKind.connectionState.rawValue == MTEventKindConnectionState.rawValue)
+    assert(RustEngineEventKind.authKeyCreated.rawValue == MTEventKindAuthKeyCreated.rawValue)
+    assert(RustEngineAuthKeyCreatedFlags.temporary == UInt32(MTAuthKeyCreatedTemporary))
+    assert(RustEngineAuthKeyCreatedFlags.permanent == UInt32(MTAuthKeyCreatedPermanent))
     assert(RustEngineVerificationKind.apns.rawValue == Int32(MTVerificationKindApns))
     assert(RustEngineVerificationKind.recaptcha.rawValue == Int32(MTVerificationKindRecaptcha))
     assert(RustContextListener.instancesRespond(to: NSSelectorFromString("contextDatacenterAuthInfoUpdated:datacenterId:authInfo:selector:")))

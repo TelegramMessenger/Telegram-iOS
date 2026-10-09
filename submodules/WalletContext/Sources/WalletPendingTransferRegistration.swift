@@ -12,6 +12,7 @@ struct WalletPendingTransferRegistrationRecord {
     let requestedAmount: Int64
     let sendAll: Bool
     let comment: String?
+    let backgroundTask: WalletTransferBackgroundTasks.Lease
     var pending: WalletContext.PendingTransfer
     var renewalTask: Task<Void, Never>?
 }
@@ -23,7 +24,7 @@ public extension WalletContext {
         address: String, amount: Int64, sendAll: Bool, estimatedFee: Int64?,
         comment: String?, commentEncrypted: Bool, session: PasscodeSession
     ) -> Signal<PendingTransferRegistration, WalletError> {
-        self.signal(name: "registering_pending_transfer", discardResult: { [impl = self.impl] registration in
+        self.signal(name: "registering_pending_transfer", keepsTransferInBackground: true, discardResult: { [impl = self.impl] registration in
             Task { await impl.discardPendingTransferRegistration(registration) }
         }) { impl, _ in
             try await impl.registerPendingTransfer(
@@ -104,6 +105,7 @@ extension WalletContextImpl {
         self.pendingTransferRegistrations[registration.id] = WalletPendingTransferRegistrationRecord(
             registration: registration, session: session, peerId: peerId, randomId: randomId,
             requestedAmount: resolved.amount, sendAll: resolvedSendAll, comment: resolved.comment,
+            backgroundTask: self.output.transferBackgroundTasks.acquire(),
             pending: pending
         )
         self.publishRegisteredPendingTransfer(pending)
@@ -206,7 +208,9 @@ extension WalletContextImpl {
     }
 
     func stopPendingTransferRegistration(_ id: String) {
-        self.pendingTransferRegistrations.removeValue(forKey: id)?.renewalTask?.cancel()
+        guard let record = self.pendingTransferRegistrations.removeValue(forKey: id) else { return }
+        record.renewalTask?.cancel()
+        record.backgroundTask.dispose()
     }
 
     func discardPendingTransferRegistration(_ registration: WalletContext.PendingTransferRegistration) {

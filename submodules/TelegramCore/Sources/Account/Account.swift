@@ -75,6 +75,7 @@ public class UnauthorizedAccount {
     public let network: Network
     let stateManager: UnauthorizedAccountStateManager
     private let proxySettingsDisposable = MetaDisposable()
+    private let networkEngineStateDisposable = MetaDisposable()
     
     private let updateLoginTokenPipe = ValuePipe<Void>()
     public var updateLoginTokenEvents: Signal<Void, NoError> {
@@ -195,6 +196,10 @@ public class UnauthorizedAccount {
             }
         })
         
+        // The Rust engine makes and binds its own temporary keys, so only the permanent keys are made
+        // ahead (by the engine, over whatever route works); MtProtoKit's temporary keys would only add
+        // TCP connections on a network that blocks it.
+        let prefetchedSelector: MTDatacenterAuthInfoSelector = network.engineKind == .rust ? .persistent : .ephemeralMain
         network.context.performBatchUpdates({
             var datacenterIds: [Int] = [1, 2]
             if testingEnvironment {
@@ -204,11 +209,27 @@ public class UnauthorizedAccount {
             }
             for id in datacenterIds {
                 if network.context.authInfoForDatacenter(withId: id, selector: .persistent) == nil {
-                    network.context.authInfoForDatacenter(withIdRequired: id, isCdn: false, selector: .ephemeralMain, allowUnboundEphemeralKeys: false)
+                    network.context.authInfoForDatacenter(withIdRequired: id, isCdn: false, selector: prefetchedSelector, allowUnboundEphemeralKeys: false)
                 }
             }
             network.context.beginExplicitBackupAddressDiscovery()
         })
+        
+        // Nothing is authorized yet, so a permanent key the server no longer knows is replaced rather than
+        // logging anything out. Only with the Rust engine, whose logout check reaches the server over any
+        // route; MtProtoKit keeps its behaviour.
+        network.permanentKeyUnknown = { [weak network] datacenterId, authKeyId in
+            guard let network = network, network.engineKind == .rust, datacenterId == network.datacenterId else {
+                return
+            }
+            let context = network.context
+            guard context.authInfoForDatacenter(withId: datacenterId, selector: .persistent)?.authKeyId == authKeyId else {
+                return
+            }
+            Logger.shared.log("Network", "the server does not know permanent key \(authKeyId) of dc\(datacenterId) before login; making a new one")
+            context.updateAuthInfoForDatacenter(withId: datacenterId, authInfo: nil, selector: .persistent)
+            context.authInfoForDatacenter(withIdRequired: datacenterId, isCdn: false, selector: .persistent, allowUnboundEphemeralKeys: false)
+        }
         
         self.stateManager.reset()
 
@@ -219,10 +240,24 @@ public class UnauthorizedAccount {
         |> distinctUntilChanged).start(next: { [weak network] activeServer in
             network?.updateProxySettings(activeServer)
         }))
+        
+        #if os(macOS)
+        // A login has no app configuration of its own: the server's kill switch reaches it through the
+        // state authorized accounts share. Live switching is macOS only, as for authorized accounts.
+        self.networkEngineStateDisposable.set((networkEngineStateView(accountManager: accountManager)
+        |> map { engineState -> String? in
+            return networkEngineRustDisabledReason(appConfiguration: .defaultValue, engineState: engineState, appVersion: networkArguments.appVersion, timestamp: Int32(Date().timeIntervalSince1970))
+        }
+        |> filter { $0 != nil }
+        |> take(1)).start(next: { [weak network] reason in
+            network?.disableRustEngine(reason: reason ?? "")
+        }))
+        #endif
     }
 
     deinit {
         self.proxySettingsDisposable.dispose()
+        self.networkEngineStateDisposable.dispose()
     }
     
     public func changedMasterDatacenterId(accountManager: AccountManager<TelegramAccountManagerTypes>, masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
@@ -231,16 +266,16 @@ public class UnauthorizedAccount {
         } else {
             let keychain = makeExclusiveKeychain(id: self.id, postbox: self.postbox)
             
-            return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkEngineSettings?) in
-                return (transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self), transaction.getSharedData(SharedDataKeys.networkEngineSettings)?.get(NetworkEngineSettings.self))
+            return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkEngineInputs) in
+                return (transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self), networkEngineInputs(transaction: transaction))
             }
-            |> mapToSignal { localizationSettings, proxySettings, networkEngineSettings -> Signal<(LocalizationSettings?, ProxySettings?, NetworkSettings?, AppConfiguration, NetworkEngineSettings?), NoError> in
-                return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?, AppConfiguration, NetworkEngineSettings?) in
-                    return (localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self), transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue, networkEngineSettings)
+            |> mapToSignal { localizationSettings, proxySettings, networkEngine -> Signal<(LocalizationSettings?, ProxySettings?, NetworkSettings?, AppConfiguration, NetworkEngineInputs), NoError> in
+                return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?, AppConfiguration, NetworkEngineInputs) in
+                    return (localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self), transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue, networkEngine)
                 }
             }
-            |> mapToSignal { localizationSettings, proxySettings, networkSettings, appConfiguration, networkEngineSettings -> Signal<UnauthorizedAccount, NoError> in
-                return initializedNetwork(accountId: self.id, arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngineSettings: networkEngineSettings, phoneNumber: nil, useRequestTimeoutTimers: false, appConfiguration: appConfiguration)
+            |> mapToSignal { localizationSettings, proxySettings, networkSettings, appConfiguration, networkEngine -> Signal<UnauthorizedAccount, NoError> in
+                return initializedNetwork(accountId: self.id, arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngine: networkEngine, phoneNumber: nil, useRequestTimeoutTimers: false, appConfiguration: appConfiguration)
                 |> map { network in
                     let updated = UnauthorizedAccount(accountManager: accountManager, networkArguments: self.networkArguments, id: self.id, rootPath: self.rootPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
@@ -289,14 +324,14 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
             case .error:
                 return .single(.upgrading(0.0))
             case let .postbox(postbox):
-                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkEngineSettings?) in
+                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkEngineInputs) in
                     var localizationSettings: LocalizationSettings?
                     if !supplementary {
                         localizationSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self)
                     }
-                    return (localizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self), transaction.getSharedData(SharedDataKeys.networkEngineSettings)?.get(NetworkEngineSettings.self))
+                    return (localizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self), networkEngineInputs(transaction: transaction))
                 }
-                |> mapToSignal { localizationSettings, proxySettings, networkEngineSettings -> Signal<AccountResult, NoError> in
+                |> mapToSignal { localizationSettings, proxySettings, networkEngine -> Signal<AccountResult, NoError> in
                     return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?, AppConfiguration) in
                         var state = transaction.getState()
                         if state == nil, let backupData = backupData {
@@ -338,7 +373,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                         if let accountState = accountState {
                             switch accountState {
                                 case let unauthorizedState as UnauthorizedAccountState:
-                                    return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngineSettings: networkEngineSettings, phoneNumber: nil, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
+                                    return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngine: networkEngine, phoneNumber: nil, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                                         |> map { network -> AccountResult in
                                             return .unauthorized(UnauthorizedAccount(accountManager: accountManager, networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                         }
@@ -347,7 +382,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                                         return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
                                     }
                                     |> mapToSignal { phoneNumber in
-                                        return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngineSettings: networkEngineSettings, phoneNumber: phoneNumber, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
+                                        return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngine: networkEngine, phoneNumber: phoneNumber, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                                         |> map { network -> AccountResult in
                                             return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isSupportUser: isSupportUser))
                                         }
@@ -363,7 +398,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                         let initialDatacenterId: Int = 2
                         #endif
                         
-                        return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: initialDatacenterId, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngineSettings: networkEngineSettings, phoneNumber: nil, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
+                        return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: initialDatacenterId, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, networkEngine: networkEngine, phoneNumber: nil, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                         |> map { network -> AccountResult in
                             return .unauthorized(UnauthorizedAccount(accountManager: accountManager, networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: beginWithTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
@@ -963,6 +998,7 @@ public struct AccountRunningImportantTasks: Equatable {
         }
         
         public static let other = TaskTypes(rawValue: 1 << 0)
+        public static let walletTransfer = TaskTypes(rawValue: 1 << 1)
     }
     
     public var taskTypes: TaskTypes
@@ -1258,6 +1294,7 @@ public class Account {
         return self._loggedOut.get()
     }
     
+    public let walletTransferTasksRunning = Promise<Bool>(false)
     private let _importantTasksRunning = ValuePromise<AccountRunningImportantTasks>(AccountRunningImportantTasks(taskTypes: [], pendingMessageCount: 0, pendingStoryCount: 0), ignoreRepeated: true)
     public var importantTasksRunning: Signal<AccountRunningImportantTasks, NoError> {
         return self._importantTasksRunning.get()
@@ -1317,6 +1354,7 @@ public class Account {
         }
         
         self.taskManager = AccountTaskManager(
+            accountId: id,
             stateManager: self.stateManager,
             accountManager: accountManager,
             networkArguments: networkArguments,
@@ -1468,6 +1506,13 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
         
         let extractedExpr1: [Signal<AccountRunningImportantTasks, NoError>] = [
+            self.walletTransferTasksRunning.get() |> map { hasTasks in
+                return AccountRunningImportantTasks(
+                    taskTypes: hasTasks ? .walletTransfer : [],
+                    pendingMessageCount: 0,
+                    pendingStoryCount: 0
+                )
+            },
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network, messageMediaPreuploadManager: self.messageMediaPreuploadManager, auxiliaryMethods: self.auxiliaryMethods) |> map { inputStates in
                 return AccountRunningImportantTasks(
                     taskTypes: inputStates ? .other : [],
@@ -1541,14 +1586,18 @@ public class Account {
         #if os(macOS)
         // The live kill switch is macOS only. On iOS the engine changes only through the Debug Settings
         // switch; mtproto_engine_rust_disabled is honoured when the network starts (resolveNetworkEngine).
-        self.managedOperationsDisposable.add((postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        |> map { view -> Bool in
-            let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
-            return networkEngineRustDisabled(appConfiguration: appConfiguration)
+        // Once the account has a configuration of its own, other accounts' values no longer count.
+        let appConfigurationView = postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { view -> AppConfiguration in
+            return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
         }
-        |> distinctUntilChanged
-        |> filter { $0 }).start(next: { _ in
-            network.disableRustEngine(reason: "mtproto_engine_rust_disabled")
+        self.managedOperationsDisposable.add((combineLatest(appConfigurationView, networkEngineStateView(accountManager: accountManager))
+        |> map { appConfiguration, engineState -> String? in
+            return networkEngineRustDisabledReason(appConfiguration: appConfiguration, engineState: engineState, appVersion: networkArguments.appVersion, timestamp: Int32(Date().timeIntervalSince1970))
+        }
+        |> filter { $0 != nil }
+        |> take(1)).start(next: { reason in
+            network.disableRustEngine(reason: reason ?? "")
         }))
         #endif
         if !supplementary {
@@ -1779,10 +1828,10 @@ public func standaloneStateManager(
         case let .postbox(postbox):
             Logger.shared.log("StandaloneStateManager", "Received postbox: valid")
             
-            return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkEngineSettings?) in
-                return (nil, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self), transaction.getSharedData(SharedDataKeys.networkEngineSettings)?.get(NetworkEngineSettings.self))
+            return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkEngineInputs) in
+                return (nil, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self), networkEngineInputs(transaction: transaction))
             }
-            |> mapToSignal { localizationSettings, proxySettings, networkEngineSettings -> Signal<AccountStateManager?, NoError> in
+            |> mapToSignal { localizationSettings, proxySettings, networkEngine -> Signal<AccountStateManager?, NoError> in
                 Logger.shared.log("StandaloneStateManager", "Received settings")
                 
                 return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
@@ -1826,7 +1875,7 @@ public func standaloneStateManager(
                                     languageCode: localizationSettings?.primaryComponent.languageCode,
                                     proxySettings: proxySettings,
                                     networkSettings: networkSettings,
-                                    networkEngineSettings: networkEngineSettings,
+                                    networkEngine: networkEngine,
                                     phoneNumber: phoneNumber,
                                     useRequestTimeoutTimers: false,
                                     appConfiguration: .defaultValue

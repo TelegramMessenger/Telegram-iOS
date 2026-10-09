@@ -127,6 +127,29 @@ public final class NetworkEngineRequest {
         self.completedImpl = completed
     }
     
+    /// A request an engine sends on its own behalf, outside `Network` (an authorization transfer it runs
+    /// for `MTContext`): logged as `name`, no dependency, no quick ack, no progress.
+    public convenience init(
+        payload: Data,
+        name: String,
+        parse: @escaping (Data) -> Any?,
+        shouldContinueAfterError: @escaping (NetworkEngineErrorContext) -> Bool,
+        completed: @escaping (Result<NetworkEngineResponse, NetworkEngineRequestFailure>) -> Void
+    ) {
+        self.init(
+            payload: payload,
+            metadata: WrappedRequestMetadata(metadata: name, tag: nil),
+            shortMetadata: WrappedRequestShortMetadata(shortMetadata: name),
+            parse: parse,
+            options: NetworkEngineRequestOptions(),
+            shouldContinueAfterError: shouldContinueAfterError,
+            dependsOn: nil,
+            acknowledged: nil,
+            progress: nil,
+            completed: completed
+        )
+    }
+    
     /// Asked on `FLOOD_WAIT_X`, `FLOOD_PREMIUM_WAIT_X` and `500`/`-500` errors. `true` retries the
     /// request after the wait (2 seconds for server errors), `false` completes it with the error.
     public func shouldContinueAfterError(_ context: NetworkEngineErrorContext) -> Bool {
@@ -217,17 +240,91 @@ public protocol NetworkEngineSession: AnyObject {
     func addUpdateSink(_ sink: NetworkEngineUpdateSink)
     /// Tears a worker session down. The main session is never stopped explicitly.
     func stop()
-    /// Moves every request that has not completed to `service`, as if it had been added there:
-    /// the session never calls back for a moved request, and disposing the disposable `add`
-    /// returned for it cancels it on `service`. `completion` runs once every request has moved.
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void)
+    /// Moves every request that has not completed to `service` without running any of them twice (a
+    /// live engine switch), as if it had been added there: the session never calls back for a moved
+    /// request, and disposing the disposable `add` returned for it cancels it on `service`. A request
+    /// that never reached the server moves at once (after what is left of a flood wait it was serving);
+    /// one the server may have stays until its answer comes, which completes it as usual, for `deadline`
+    /// seconds at most (an engine may extend it while answers keep arriving, to 30 s), and then follows
+    /// `networkEngineReleaseDecision`. Requests added to the session afterwards move at once.
+    /// `completion` runs once nothing is left; the session is then stopped.
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void)
     /// Calls `observer` whenever the engine gives up on one of the session's connections. Engines
     /// that cannot tell why need not call it.
     func observeConnectionDrops(_ observer: @escaping (NetworkEngineConnectionDrop) -> Void)
+    /// What the session heard from the server lately, for the local health check
+    /// (`NetworkLivenessMonitor`); nil from engines that do not tell, which the check never judges.
+    func serverActivity(_ reply: @escaping (NetworkEngineServerActivity?) -> Void)
 }
 
 public extension NetworkEngineSession {
     func observeConnectionDrops(_ observer: @escaping (NetworkEngineConnectionDrop) -> Void) {
+    }
+
+    func serverActivity(_ reply: @escaping (NetworkEngineServerActivity?) -> Void) {
+        reply(nil)
+    }
+}
+
+/// What a session heard from the server lately, in seconds of a clock that also runs while the device
+/// sleeps (the Rust bridge's monotonic clock).
+public struct NetworkEngineServerActivity: Equatable {
+    /// Since the server last sent the session anything (an answer, an update, a pong, a bind's answer);
+    /// nil if it never did.
+    public var silentFor: Double?
+    /// How long the session has had requests waiting for answers without a break; nil while none waits.
+    public var waitingFor: Double?
+    /// The session's connection is up and the server answered on it.
+    public var connected: Bool
+
+    public init(silentFor: Double?, waitingFor: Double?, connected: Bool) {
+        self.silentFor = silentFor
+        self.waitingFor = waitingFor
+        self.connected = connected
+    }
+}
+
+/// What a session that hands its requests over to another (`movePendingRequests`) does with one it let go.
+public enum NetworkEngineReleaseDecision: Equatable {
+    /// Send it on the other session, after this many seconds.
+    case move(after: Double)
+    /// Complete it with `networkEngineSwitchedError`.
+    case fail
+}
+
+/// The error a request fails with when it may have run under the session it was on and its policy
+/// does not allow running it again: `500 ENGINE_SWITCHED`, as `500 TEMP_KEY_ROTATED` after a key
+/// rotation.
+public let networkEngineSwitchedError: MTRpcError = MTRpcError(errorCode: 500, errorDescription: "ENGINE_SWITCHED")
+
+/// A request that never reached the server moves, after what is left of the wait it was serving. One
+/// that may have reached it moves only if `allowsServerError` (the request's
+/// `shouldContinueAfterError` with one more internal server error) allows it: the server may have run it
+/// and its answer is lost with the old session.
+public func networkEngineReleaseDecision(mayHaveRun: Bool, retryAfter: Double, allowsServerError: () -> Bool) -> NetworkEngineReleaseDecision {
+    if !mayHaveRun {
+        return .move(after: retryAfter.isFinite ? max(0.0, retryAfter) : 0.0)
+    }
+    return allowsServerError() ? .move(after: 0.0) : .fail
+}
+
+/// Adds `request` to `service` now, or after `delay` seconds. The returned disposable cancels it in
+/// either case; disposed before the delay ends, the request never reaches `service`.
+public func networkEngineMove(_ request: NetworkEngineRequest, to service: NetworkEngineRequestService, after delay: Double) -> Disposable {
+    if !(delay > 0.0) {
+        return service.add(request)
+    }
+    let cancelled = Atomic<Bool>(value: false)
+    let moved = MetaDisposable()
+    Queue.concurrentDefaultQueue().after(delay, {
+        if cancelled.with({ $0 }) {
+            return
+        }
+        moved.set(service.add(request))
+    })
+    return ActionDisposable {
+        let _ = cancelled.swap(true)
+        moved.dispose()
     }
 }
 
@@ -259,6 +356,27 @@ public protocol NetworkEngine: AnyObject {
     var kind: NetworkEngineKind { get }
     /// `delegate` is held weakly and must be set before the session can report anything.
     func makeSession(datacenterId: Int, role: NetworkEngineSessionRole, usageCalculationInfo: MTNetworkUsageCalculationInfo?, delegate: NetworkEngineSessionDelegate?) -> NetworkEngineSession
+    /// The engine carries the network from now on: it may take over what `MTContext` does on the network
+    /// besides sessions (making auth keys, transferring authorizations). Called once when the network
+    /// starts on it and whenever a live switch moves the network to it.
+    func activate()
+    /// The network moved to another engine: what `activate` took over goes back to `MTContext`'s own.
+    func deactivate()
+    /// A name for the network the device is on now (no address in it), which the local health check
+    /// rate-limits its probes by; nil when the engine cannot tell.
+    func networkIdentity() -> String?
+}
+
+public extension NetworkEngine {
+    func activate() {
+    }
+
+    func deactivate() {
+    }
+
+    func networkIdentity() -> String? {
+        return nil
+    }
 }
 
 /// Supplies an alternative engine. Passed through `NetworkInitializationArguments`, so a process

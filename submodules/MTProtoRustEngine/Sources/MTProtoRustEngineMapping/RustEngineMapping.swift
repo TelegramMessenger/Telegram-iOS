@@ -240,11 +240,12 @@ public func rustEngineMissingKeyAction(isCdn: Bool, requiresForeignAuthToken: Bo
 /// It logs the account out, exactly as `MtProtoKitEngine` does, because that is how a session
 /// terminated from another device drops the account and its local data.
 ///
-/// Do not route it through `MTContext.checkIfLoggedOut` (integration.md R1's suggestion): that probe
-/// runs an `EphemeralMain` auth action, and `-[MTDatacenterAuthAction execute:]` completes at once,
-/// without contacting the server, when the context already stores a key for that selector, which the
-/// main session's own temporary key always is. The probe then reports "not removed" every time, and
-/// a terminated session never logs out.
+/// Do not route it through `MTContext.checkIfLoggedOut` (integration.md R1's suggestion). The `401`
+/// is already the server's verdict, and the probe, a fresh key exchange and bind, can only say less:
+/// it gives no verdict when it gets no answer, and with the Rust engine it logs out only with the
+/// evidence of `rustEnginePermanentKeyUnknownDenial`, so a session terminated from another device could
+/// stay logged in. (Until 2026-10 the probe was worse: it completed on the stored `EphemeralMain` key
+/// without contacting the server and always answered "not removed".)
 public enum RustEngineAuthorizationRequiredAction: Equatable {
     case logOut
     /// Workers re-transfer their authorization through `authTokenRequired` instead.
@@ -261,8 +262,10 @@ public func rustEngineWorkerShouldTransferAuthToken(code: Int32, text: String) -
     return code == 401 && !text.contains("SESSION_PASSWORD_NEEDED")
 }
 
-public func rustEngineRequiresForeignAuthToken(isMain: Bool, isCdn: Bool, datacenterId: Int, masterDatacenterId: Int) -> Bool {
-    return !isMain && !isCdn && datacenterId != masterDatacenterId
+/// A session that imports the authorization itself (`auth.importAuthorization`, the bridge's own transfer)
+/// needs no token: the token is what it brings about.
+public func rustEngineRequiresForeignAuthToken(isMain: Bool, isCdn: Bool, datacenterId: Int, masterDatacenterId: Int, importsAuthorization: Bool = false) -> Bool {
+    return !isMain && !isCdn && !importsAuthorization && datacenterId != masterDatacenterId
 }
 
 /// Whether a session's clock becomes the app's (`MTContext.globalTimeDifference`). A CDN is run by a
@@ -272,12 +275,12 @@ public func rustEngineSharesTimeDifference(isCdn: Bool) -> Bool {
     return !isCdn
 }
 
-public func rustEngineSessionRole(isMain: Bool, isCdn: Bool, datacenterId: Int, masterDatacenterId: Int) -> RustEngineSessionRole {
+public func rustEngineSessionRole(isMain: Bool, isCdn: Bool, datacenterId: Int, masterDatacenterId: Int, importsAuthorization: Bool = false) -> RustEngineSessionRole {
     if isMain {
         return .main
     } else if isCdn {
         return .cdn
-    } else if rustEngineRequiresForeignAuthToken(isMain: isMain, isCdn: isCdn, datacenterId: datacenterId, masterDatacenterId: masterDatacenterId) {
+    } else if rustEngineRequiresForeignAuthToken(isMain: isMain, isCdn: isCdn, datacenterId: datacenterId, masterDatacenterId: masterDatacenterId, importsAuthorization: importsAuthorization) {
         return .workerRequiringAuthToken
     } else {
         return .worker
@@ -502,4 +505,276 @@ public func rustEngineNetworkFingerprint(interfaces: [RustEngineNetworkInterface
         parts.append("router \(router.interface) \(router.address)")
     }
     return Array(Set(parts)).sorted().joined(separator: "\n")
+}
+
+/// The engine's own threads are `mtproto-main`, `mtproto-worker-N` and `mtproto-resolver`. The engine
+/// aborts on a panic (`panic = "abort"`) on the panicking thread. The app counts a crash on an engine
+/// thread or queue (`rustEngineOwnsQueue(label:)`), including the bridge callbacks that run there, as an
+/// engine crash and reports it with `recordRustEngineCrash` to fall back to MtProtoKit after repeated
+/// crashes.
+public func rustEngineOwnsThread(named name: String) -> Bool {
+    return name.hasPrefix("mtproto-")
+}
+
+/// The bridge's own dispatch queues: `org.telegram.MTProtoRust.streams` (`RustStreamHost`),
+/// `.carrier` (`RustCarrierStreams`), `.session` (each `RustNetworkSession`) and `.network`
+/// (`RustEngineRuntime`'s network watcher). A crash while one of them is the current queue is an engine
+/// crash, as for `rustEngineOwnsThread(named:)`.
+public func rustEngineOwnsQueue(label: String) -> Bool {
+    return label.hasPrefix("org.telegram.MTProtoRust.")
+}
+
+/// Bits of `MTEvent.flags` for `MTEventKindAuthKeyCreated` (ABI 4): exactly one is set.
+public enum RustEngineAuthKeyCreatedFlags {
+    public static let temporary: UInt32 = 1 << 0
+    public static let permanent: UInt32 = 1 << 1
+}
+
+public enum RustEngineCreatedKeyKind: Equatable {
+    case permanent
+    case temporary
+}
+
+/// Which key an `AuthKeyCreated` event carries; nil when its flags say neither (an engine older than ABI 4,
+/// which the runtime refuses to start).
+public func rustEngineCreatedKeyKind(flags: UInt32) -> RustEngineCreatedKeyKind? {
+    let permanent = (flags & RustEngineAuthKeyCreatedFlags.permanent) != 0
+    let temporary = (flags & RustEngineAuthKeyCreatedFlags.temporary) != 0
+    switch (permanent, temporary) {
+    case (true, false):
+        return .permanent
+    case (false, true):
+        return .temporary
+    default:
+        return nil
+    }
+}
+
+/// What a bind made only to check a permanent key (`MTContext.checkIfLoggedOut`) says.
+public enum RustEngineKeyProbeOutcome: Equatable {
+    /// The server refused the fresh temporary key with `ENCRYPTED_MESSAGE_INVALID`: as far as this probe
+    /// goes, it does not know the permanent key.
+    case keyUnknown
+    /// A transient failure (`5xx`, `420`): the engine binds the same key again.
+    case retrying
+    /// Any other refusal says nothing about the permanent key.
+    case noVerdict
+}
+
+public func rustEngineKeyProbeOutcome(code: Int32, text: String) -> RustEngineKeyProbeOutcome {
+    if code == 400 && text == "ENCRYPTED_MESSAGE_INVALID" {
+        return .keyUnknown
+    }
+    if code >= 500 || code == 420 || code < 0 {
+        return .retrying
+    }
+    return .noVerdict
+}
+
+/// Transient bind failures a key probe waits through before it gives up without a verdict, as
+/// MtProtoKit's probe binds one key three times.
+public let rustEngineKeyProbeTransientFailures = 3
+
+/// The evidence that the home datacenter's permanent key is unknown to the server. With it, the bridge asks
+/// the server under the key itself, and only that call's `AuthKeyInvalid` logs the account out. A false
+/// logout is the worst outcome there is, so every one of these must hold first:
+/// - the engine reported the key unknown (two fresh temporary keys refused with `ENCRYPTED_MESSAGE_INVALID`
+///   while the key was older than the engine's 60 s immunity), and the bridge took the report, which it
+///   does not for a key installed into the session less than a minute ago, since the session last had
+///   none (`reportedKeyId`, `reportedAt`);
+/// - the report is recent (`maximumReportAge`);
+/// - a separate probe, with its own fresh temporary key on its own connection, was refused the same way
+///   (the caller only asks once that happened, for `probedKeyId`);
+/// - a session saw the key's first refusal at least `observationWindow` ago (`firstRefusalAt`): the
+///   engine's two refusals and the probe can all come within a few round trips, too soon for calls in
+///   flight on other sessions to answer;
+/// - the server has not shown in this context, within `immunity`, that it knows the key (`lastKnownAt`:
+///   an answered call, a server error that `rustEngineFailureIsServerAnswer` takes, an update, or an
+///   accepted bind under it, and any answer to an earlier validation call, a 401 included). This is
+///   tdlib's immunity (`Session::on_bind_result`): a key the server bound or answered under within the last
+///   day is never validated, so refusals during a datacenter incident, even with -404s for the key, log
+///   nobody out. tdlib also requires the key to be older than a day. MTContext keeps no creation date, so
+///   the bridge gives the immunity to younger keys too. tdlib (with PFS) counts only accepted binds; the
+///   bridge also counts answers because a launch reuses the stored temporary key and binds nothing. One
+///   consequence: a temporary key of a permanent key the server destroyed still answers calls that need
+///   no authorization (R5-2), which keeps the immunity going until that key expires. An authorized account
+///   is logged out by its main session's 401 meanwhile; a key before login waits for a restart or the
+///   immunity's end.
+public struct RustEnginePermanentKeyEvidence: Equatable {
+    public var reportedKeyId: Int64?
+    public var reportedAt: Double?
+    public var firstRefusalAt: Double?
+    public var lastKnownAt: Double?
+
+    public init(reportedKeyId: Int64?, reportedAt: Double?, firstRefusalAt: Double?, lastKnownAt: Double?) {
+        self.reportedKeyId = reportedKeyId
+        self.reportedAt = reportedAt
+        self.firstRefusalAt = firstRefusalAt
+        self.lastKnownAt = lastKnownAt
+    }
+
+    public static let maximumReportAge: Double = 300.0
+    public static let observationWindow: Double = 10.0
+    /// Refused binds further apart than this start a new episode: a refusal long ago, with the key working
+    /// since, says nothing about the refusals now.
+    public static let refusalEpisodeGap: Double = 300.0
+    /// How long the server showing it knows a key keeps the key from being validated (tdlib: a day).
+    public static let immunity: Double = 24.0 * 60.0 * 60.0
+}
+
+/// Whether a refusal at `at` continues the episode of refusals that last saw one at `lastRefusalAt`.
+public func rustEngineRefusalContinuesEpisode(lastRefusalAt: Double, at: Double) -> Bool {
+    return at >= lastRefusalAt && at - lastRefusalAt <= RustEnginePermanentKeyEvidence.refusalEpisodeGap
+}
+
+/// Seconds to wait before deciding, so that the decision covers `observationWindow` after the first refusal.
+public func rustEnginePermanentKeyDecisionDelay(firstRefusalAt: Double?, now: Double) -> Double {
+    guard let firstRefusalAt = firstRefusalAt else {
+        return 0.0
+    }
+    return min(RustEnginePermanentKeyEvidence.observationWindow, max(0.0, firstRefusalAt + RustEnginePermanentKeyEvidence.observationWindow - now))
+}
+
+/// Nil when the probe's refusal is confirmed, and the key is to be validated with a call under it.
+/// Otherwise the reason it is not confirmed.
+public func rustEnginePermanentKeyUnknownDenial(_ evidence: RustEnginePermanentKeyEvidence, probedKeyId: Int64, now: Double) -> String? {
+    guard let reportedKeyId = evidence.reportedKeyId, let reportedAt = evidence.reportedAt else {
+        return "the engine did not report the key unknown"
+    }
+    if reportedKeyId != probedKeyId {
+        return "the engine reported another key unknown"
+    }
+    if now - reportedAt > RustEnginePermanentKeyEvidence.maximumReportAge || now < reportedAt {
+        return "the engine's report is too old"
+    }
+    guard let firstRefusalAt = evidence.firstRefusalAt, firstRefusalAt <= now else {
+        return "no refused bind was seen for the key"
+    }
+    if now - firstRefusalAt < RustEnginePermanentKeyEvidence.observationWindow {
+        return "the key was watched for less than \(Int(RustEnginePermanentKeyEvidence.observationWindow)) s since its first refusal"
+    }
+    if let lastKnownAt = evidence.lastKnownAt, now - lastKnownAt < RustEnginePermanentKeyEvidence.immunity {
+        return "the server answered under the key or bound it \(Int(max(0.0, now - lastKnownAt))) s ago"
+    }
+    return nil
+}
+
+/// What a failed `auth.importAuthorization` leads to. Whether Telegram takes the same exported bytes twice
+/// is not known, so after a failure the bridge never sends them again (a flood wait, which the server
+/// answers without running the call, is waited out; the engine retransmits under the same message id,
+/// which the server runs once): `AUTH_BYTES_INVALID` and server errors (`500`, the engine's
+/// `500 TEMP_KEY_ROTATED` when the import may have reached the server under a key that had to go) get one
+/// fresh export; anything else, and a second failure, fails the transfer, which MTContext retries with its
+/// backoff. Importing an authorization twice is harmless.
+public enum RustEngineImportFailureAction: Equatable {
+    case exportAgain
+    case fail
+}
+
+public let rustEngineTransferExportsPerAttempt = 2
+
+public func rustEngineImportFailureAction(code: Int32, text: String, exportsSoFar: Int) -> RustEngineImportFailureAction {
+    if exportsSoFar >= rustEngineTransferExportsPerAttempt {
+        return .fail
+    }
+    if (code == 400 && text == "AUTH_BYTES_INVALID") || code == 500 || code == -500 {
+        return .exportAgain
+    }
+    return .fail
+}
+
+/// Whether a transfer request is retried after an error the engine delegates: flood waits are always waited
+/// out (as MtProtoKit's transfer does); a server error is retried for the export, which carries nothing
+/// single-use, and never for the import, whose bytes are not sent again after a server error.
+public func rustEngineTransferRetries(isImport: Bool, floodWaitErrorText: String?) -> Bool {
+    if floodWaitErrorText != nil {
+        return true
+    }
+    return !isImport
+}
+
+/// Errors the engine or the bridge make up for a call that may never have reached the server, or that
+/// they gave up on: none of them is the server's answer.
+private let rustEngineUnansweredErrorTexts: Set<String> = [
+    "TEMP_KEY_ROTATED",
+    "SESSION_RESET",
+    "REQUEST_INVALID_SIZE",
+    "REQUEST_ID_INVALID",
+    "SESSION_CLOSED",
+    "APNS_PUSH_TIMEOUT",
+    "RECAPTCHA_TIMEOUT"
+]
+
+/// Whether a failed call's error comes from the server, under the key the call went under, as opposed to
+/// a transport failure (code ≤ 0) or an error the engine or the bridge made up for a call that may never
+/// have reached it. `PROTOCOL_ERROR_*` counts: the engine raises it after service messages the server
+/// encrypted under the key (`bad_msg_notification` and the like). `RESPONSE_UNPACK_FAILED: …` and
+/// `TL_PARSING_ERROR` count too: they are answers the server encrypted under the key, just unreadable.
+/// The logout check's validation call takes any such error as the server knowing the permanent key, as
+/// tdlib keeps the key on any answer but `-404`.
+public func rustEngineFailureIsAnswerUnderKey(code: Int32, text: String) -> Bool {
+    if code <= 0 || text.isEmpty {
+        return false
+    }
+    return !rustEngineUnansweredErrorTexts.contains(text)
+}
+
+/// Whether a failed call on an account session shows that the server knows the permanent key, which gives
+/// the key the logout check's day-long immunity. It counts less than the validation call does:
+/// - not a `401`: a temporary key bound to a permanent key the server destroyed still answers
+///   `401 AUTH_KEY_UNREGISTERED` (real-server probe R5-2);
+/// - not `PROTOCOL_ERROR_*`, which is the engine's own reading of service messages.
+public func rustEngineFailureIsServerAnswer(code: Int32, text: String) -> Bool {
+    return code != 401 && !text.hasPrefix("PROTOCOL_ERROR_") && rustEngineFailureIsAnswerUnderKey(code: code, text: text)
+}
+
+/// `MTEventKindReleased` (ABI 5): the bit of `MTEvent.flags` saying the request may have reached the
+/// server under the draining session (`MTReleasedMayHaveRun`).
+public let rustEngineReleasedMayHaveRunFlag: UInt32 = 1 << 0
+
+public func rustEngineReleasedMayHaveRun(flags: UInt32) -> Bool {
+    return (flags & rustEngineReleasedMayHaveRunFlag) != 0
+}
+
+/// The session has a connection the server answered on (connected and past the connection's context
+/// update, or only waiting for its temporary key's bind): what the local health check calls connected.
+public func rustEngineHasAnsweredConnection(_ flags: RustEngineConnectionFlags) -> Bool {
+    return flags.isConnected && (!flags.isUpdatingConnectionContext || flags.isAwaitingKeyBinding)
+}
+
+/// Whether the local health check's silence starts again at this connection state: the server answered
+/// on the connection just now, or the session just lost a connection the server had answered on (an idle
+/// session pings rarely, so its last packet can be long ago while it worked until this moment).
+public func rustEngineConnectionStateRestartsSilence(previous: RustEngineConnectionFlags?, current: RustEngineConnectionFlags) -> Bool {
+    if current.isConnected && !current.isUpdatingConnectionContext {
+        return true
+    }
+    return previous.map(rustEngineHasAnsweredConnection) == true && !rustEngineHasAnsweredConnection(current)
+}
+
+/// The context's temporary key is one the engine made and bound (`rustEngineBoundToAttribute`), not one
+/// MtProtoKit made.
+public func rustEngineMadeTemporaryKey(attributes: [AnyHashable: Any]?) -> Bool {
+    return attributes?[rustEngineBoundToAttribute] != nil
+}
+
+/// What a session does with the engine's `PermanentKeyInvalid`.
+public enum RustEnginePermanentKeyReportAction: Equatable {
+    /// The session drains into another (a live switch): the logout check is the replacement's to start,
+    /// with whatever engine then runs the context (B2 review L7: after a switch to MtProtoKit, MtProtoKit's
+    /// probe would judge the old session's report on a single refusal).
+    case leaveToReplacement
+    /// The key replaced another less than the immunity ago: the report is about the old one.
+    case keepYoungKey
+    case handle
+}
+
+public func rustEnginePermanentKeyReportAction(draining: Bool, keyAge: Double, immunity: Double) -> RustEnginePermanentKeyReportAction {
+    if draining {
+        return .leaveToReplacement
+    }
+    if keyAge < immunity {
+        return .keepYoungKey
+    }
+    return .handle
 }

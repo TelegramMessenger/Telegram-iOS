@@ -391,12 +391,12 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.imageNode.image = nil
                     }
                     
-                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel)))
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel)), aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.deleteAction != nil {
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]))
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
                     }
@@ -409,7 +409,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         self.isHighlighted = highlighted && (self.item?.enabled ?? false)
-        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted || self.isRevealOptionsActive, transition: (animated && !highlighted) ? .animated(duration: 0.4, curve: .easeInOut) : .immediate, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted, transition: (animated && !highlighted) ? .animated(duration: 0.4, curve: .easeInOut) : .immediate, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
@@ -429,7 +429,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
     override public func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
         super.revealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
 
-        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted || self.isRevealOptionsActive, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
 
     override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {

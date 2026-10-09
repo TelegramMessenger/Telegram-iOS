@@ -74,6 +74,10 @@
 - (void)contextApiEnvironmentUpdated:(MTContext * _Nonnull)context apiEnvironment:(MTApiEnvironment * _Nonnull)apiEnvironment;
 - (MTSignal * _Nonnull)isContextNetworkAccessAllowed:(MTContext * _Nonnull)context;
 - (void)contextLoggedOut:(MTContext * _Nonnull)context;
+// The logout check found that the server no longer knows this permanent key
+// of the datacenter. Sent right before contextLoggedOut:, on the context queue,
+// while the key is still the context's.
+- (void)contextDatacenterPermanentKeyUnknown:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authKeyId:(int64_t)authKeyId;
 
 @end
 

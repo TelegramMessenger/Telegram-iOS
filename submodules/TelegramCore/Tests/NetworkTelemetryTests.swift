@@ -138,7 +138,12 @@ private final class FakeSession: NetworkEngineSession {
         self.stopped = true
     }
 
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
+    /// As a draining engine does with requests the server may have: kept until their answers, or moved
+    /// at once with no time to wait (`deadline` 0).
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
+        if deadline > 0.0 {
+            return
+        }
         for request in self.service.removeAll() {
             let _ = service.add(request)
         }
@@ -1696,7 +1701,7 @@ final class NetworkTelemetryTests: XCTestCase {
         let target = h.worker(datacenterId: 2, isMedia: false, isCdn: false)
         let request = getConfigRequest()
         h.send(request)
-        h.mainSession.movePendingRequests(to: target.session.requestService, completion: {})
+        h.mainSession.movePendingRequests(to: target.session.requestService, deadline: 0.0, completion: {})
         XCTAssertTrue(h.fakeMain.service.pending.isEmpty)
         XCTAssertTrue(target.fake.service.pending.first === request)
         target.fake.service.succeed(request)

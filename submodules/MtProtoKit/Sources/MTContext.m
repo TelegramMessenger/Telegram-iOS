@@ -304,6 +304,7 @@ static NSTimeInterval MTRetryDelayForFailureCount(NSUInteger failureCount) {
         _tempKeysInUse = [[NSMutableSet alloc] init];
         _datacenterCheckKeyRemovedActionTimestamps = [[NSMutableDictionary alloc] init];
         _datacenterCheckKeyRemovedActions = [[NSMutableDictionary alloc] init];
+        _loggedOutCheckTimeout = 120.0;
         
         _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] init];
         _currentSessionInfos = [[NSMutableArray alloc] init];
@@ -1586,8 +1587,9 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
 }
 
 - (MTDatacenterAuthAction *)makeAuthActionWithSelector:(MTDatacenterAuthInfoSelector)selector isCdn:(bool)isCdn skipBind:(bool)skipBind completion:(void (^)(MTDatacenterAuthAction *, bool))completion {
-    if (_authActionFactory != nil) {
-        return _authActionFactory(selector, isCdn, skipBind, completion);
+    MTDatacenterAuthAction * _Nonnull (^authActionFactory)(MTDatacenterAuthInfoSelector, bool, bool, void (^ _Nonnull)(MTDatacenterAuthAction * _Nonnull, bool)) = self.authActionFactory;
+    if (authActionFactory != nil) {
+        return authActionFactory(selector, isCdn, skipBind, completion);
     }
     return [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:selector isCdn:isCdn skipBind:skipBind completion:completion];
 }
@@ -1640,7 +1642,8 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
         
         if (_datacenterTransferAuthActions[@(datacenterId)] == nil && _datacenterTransferAuthRetryTimers[@(datacenterId)] == nil && masterDatacenterId != datacenterId)
         {
-            MTDatacenterTransferAuthAction *transferAction = _transferAuthActionFactory != nil ? _transferAuthActionFactory() : [[MTDatacenterTransferAuthAction alloc] init];
+            MTDatacenterTransferAuthAction * _Nonnull (^transferAuthActionFactory)(void) = self.transferAuthActionFactory;
+            MTDatacenterTransferAuthAction *transferAction = transferAuthActionFactory != nil ? transferAuthActionFactory() : [[MTDatacenterTransferAuthAction alloc] init];
             transferAction.delegate = self;
             _datacenterTransferAuthActions[@(datacenterId)] = transferAction;
             [transferAction execute:self masterDatacenterId:masterDatacenterId destinationDatacenterId:datacenterId authToken:authToken];
@@ -1940,7 +1943,9 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
             _datacenterCheckKeyRemovedActionTimestamps[@(datacenterId)] = @(timestamp);
             [_datacenterCheckKeyRemovedActions[@(datacenterId)] dispose];
             __weak MTContext *weakSelf = self;
-            _datacenterCheckKeyRemovedActions[@(datacenterId)] = [[MTDiscoverConnectionSignals checkIfAuthKeyRemovedWithContext:self datacenterId:datacenterId authKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId validUntilTimestamp:authInfo.validUntilTimestamp notBound:false]] startWithNextStrict:^(NSNumber* isRemoved) {
+            int64_t probedAuthKeyId = authInfo.authKeyId;
+            MTSignal *check = [[MTDiscoverConnectionSignals checkIfAuthKeyRemovedWithContext:self datacenterId:datacenterId authKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId validUntilTimestamp:authInfo.validUntilTimestamp notBound:false]] timeout:self->_loggedOutCheckTimeout onQueue:[MTContext contextQueue] orSignal:[MTSignal single:@false]];
+            _datacenterCheckKeyRemovedActions[@(datacenterId)] = [check startWithNextStrict:^(NSNumber* isRemoved) {
                 [[MTContext contextQueue] dispatchOnQueue:^{
                     __strong MTContext *strongSelf = weakSelf;
                     if (strongSelf == nil) {
@@ -1948,12 +1953,20 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
                     }
                     
                     if ([isRemoved boolValue]) {
+                        if ([strongSelf authInfoForDatacenterWithId:datacenterId selector:MTDatacenterAuthInfoSelectorPersistent].authKeyId != probedAuthKeyId) {
+                            if (MTLogEnabled()) {
+                                MTLog(@"[MTContext#%" PRIxPTR ": permanent key %lld for %d was replaced while the logout check ran, ignoring its verdict]", (intptr_t)strongSelf, probedAuthKeyId, (int)datacenterId);
+                            }
+                            return;
+                        }
                         NSArray *changeListeners = [[NSArray alloc] initWithArray:strongSelf->_changeListeners];
                         for (MTWeakContextChangeListener *value in changeListeners) {
                             id<MTContextChangeListener> listener = value.target;
                             if (!listener) {
                                 continue;
                             }
+                            if ([listener respondsToSelector:@selector(contextDatacenterPermanentKeyUnknown:datacenterId:authKeyId:)])
+                                [listener contextDatacenterPermanentKeyUnknown:strongSelf datacenterId:datacenterId authKeyId:probedAuthKeyId];
                             if ([listener respondsToSelector:@selector(contextLoggedOut:)])
                                 [listener contextLoggedOut:strongSelf];
                         }

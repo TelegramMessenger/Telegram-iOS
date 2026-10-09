@@ -378,7 +378,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             let packRevealOptions: [ItemListRevealOption]
             if item.editing.editable && item.enabled && !item.editing.editing {
-                packRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]
+                packRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]
             } else {
                 packRevealOptions = []
             }
@@ -879,7 +879,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.imageNode.setSignal(updatedImageSignal)
                     }
                     
-                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel)), transition: transition)
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel)), transition: transition, aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
@@ -898,7 +898,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         self.isHighlighted = highlighted
-        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted || self.isRevealOptionsActive, transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted, transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
@@ -942,7 +942,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
         super.revealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
 
-        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted || self.isRevealOptionsActive, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
     
     override func revealOptionsInteractivelyOpened() {

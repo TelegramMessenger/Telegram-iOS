@@ -59,9 +59,10 @@ final class RustRequestService: NetworkEngineRequestService {
     }
 }
 
-final class RustNetworkSession: NetworkEngineSession {
+final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
     let datacenterId: Int
     let requestService: NetworkEngineRequestService
+    let queue: Queue
 
     private let runtime: RustEngineRuntime
     private let engine: OpaquePointer?
@@ -73,7 +74,6 @@ final class RustNetworkSession: NetworkEngineSession {
     private let requiresForeignAuthToken: Bool
     private let requiredAuthToken: NSNumber?
     private let withoutUpdates: Bool
-    private let queue: Queue
     private let mailbox: RustEngineMailbox
     private let listener: RustContextListener
     private weak var delegate: NetworkEngineSessionDelegate?
@@ -98,8 +98,23 @@ final class RustNetworkSession: NetworkEngineSession {
     private var holdForReplacementKey = false
     private var holdForUnsupportedProxy = false
 
+    /// Set by `movePendingRequests`: the session is leaving, and its requests go there.
+    private var drainTarget: NetworkEngineRequestService?
+    private var drainCompletions: [() -> Void] = []
+    private var drainBackstop: SwiftSignalKit.Timer?
+
+    private let registry: RustContextRegistry
+    private let importsAuthorization: Bool
+    private let exportable = Atomic<Bool>(value: false)
+    private var lastCompletedKeyId: Int64?
+    private var lastCompletedAt: Double = 0.0
+    /// When the server last sent anything but a completion (`rustEngineMonotonicNow`), and since when
+    /// requests have waited without a break: the local health check's view (`serverActivity`).
+    private var lastHeardAt: Double = -Double.infinity
+    private var busySince: Double?
+
     private var installedKeyId: Int64?
-    private var installedKeyAt: CFAbsoluteTime = 0.0
+    private var installedKeyAt: Double = -Double.infinity
     private var awaitingKey = false
     private var rejectedKeyId: Int64?
     private var authTokenReady: Bool
@@ -128,13 +143,17 @@ final class RustNetworkSession: NetworkEngineSession {
     private static let permanentKeyImmunity: Double = 60.0
     private static let temporaryKeyMinimumLifetime: Int32 = 300
 
-    init(runtime: RustEngineRuntime, context: MTContext, datacenterId: Int, role: NetworkEngineSessionRole, usageCalculationInfo: MTNetworkUsageCalculationInfo?, delegate: NetworkEngineSessionDelegate?, serverPublicKeys: [String], httpPort: UInt16) {
+    /// `importsAuthorization`: a worker that imports the account's authorization to `datacenterId` itself
+    /// (`RustDatacenterTransferAuthAction`), so it waits for no token.
+    init(runtime: RustEngineRuntime, context: MTContext, datacenterId: Int, role: NetworkEngineSessionRole, usageCalculationInfo: MTNetworkUsageCalculationInfo?, delegate: NetworkEngineSessionDelegate?, serverPublicKeys: [String], httpPort: UInt16, importsAuthorization: Bool = false) {
         self.runtime = runtime
         self.httpPort = httpPort
         self.engine = runtime.engine
         self.context = context
         self.datacenterId = datacenterId
         self.delegate = delegate
+        self.registry = RustContextRegistry.of(context)
+        self.importsAuthorization = importsAuthorization
 
         let roleName: String
         switch role {
@@ -146,12 +165,12 @@ final class RustNetworkSession: NetworkEngineSession {
             roleName = "main"
         case let .worker(masterDatacenterId, isMedia, isCdn):
             self.isMain = false
-            self.isCdn = isCdn
-            self.isMedia = isMedia
+            self.isCdn = isCdn && !importsAuthorization
+            self.isMedia = isMedia && !importsAuthorization
             self.masterDatacenterId = masterDatacenterId
-            roleName = isCdn ? "cdn" : (isMedia ? "media" : "worker")
+            roleName = importsAuthorization ? "transfer" : (isCdn ? "cdn" : (isMedia ? "media" : "worker"))
         }
-        self.requiresForeignAuthToken = rustEngineRequiresForeignAuthToken(isMain: self.isMain, isCdn: self.isCdn, datacenterId: datacenterId, masterDatacenterId: self.masterDatacenterId)
+        self.requiresForeignAuthToken = rustEngineRequiresForeignAuthToken(isMain: self.isMain, isCdn: self.isCdn, datacenterId: datacenterId, masterDatacenterId: self.masterDatacenterId, importsAuthorization: importsAuthorization)
         self.runsPfs = rustEngineRunsPfs(isCdn: self.isCdn, useTempAuthKeys: context.useTempAuthKeys, publicKeyCount: serverPublicKeys.count)
         self.requiredAuthToken = self.requiresForeignAuthToken ? (datacenterId as NSNumber) : nil
 
@@ -185,7 +204,7 @@ final class RustNetworkSession: NetworkEngineSession {
         var setup = MTSessionSetup()
         setup.datacenter_id = Int32(datacenterId)
         setup.obfuscation_dc_id = self.obfuscationDatacenterId
-        setup.role = rustEngineSessionRole(isMain: self.isMain, isCdn: self.isCdn, datacenterId: datacenterId, masterDatacenterId: self.masterDatacenterId).rawValue
+        setup.role = rustEngineSessionRole(isMain: self.isMain, isCdn: self.isCdn, datacenterId: datacenterId, masterDatacenterId: self.masterDatacenterId, importsAuthorization: importsAuthorization).rawValue
         setup.framing = UInt8(MTFramingAbridged)
         let addresses = RustNetworkSession.makeAddresses(schemes, arena: arena)
         setup.addresses = arena.array(addresses)
@@ -232,6 +251,9 @@ final class RustNetworkSession: NetworkEngineSession {
         requestService.session = self
 
         context.add(self.listener)
+        if !self.isCdn {
+            self.registry.register(self)
+        }
 
         if handle == 0 {
             rustEngineImportantLog("\(self.logPrefix) mt_session_create failed, requests on this session will never complete")
@@ -269,11 +291,39 @@ final class RustNetworkSession: NetworkEngineSession {
     }
 
     private func teardown() {
+        let _ = self.exportable.swap(false)
+        self.registry.unregister(self)
         self.runtime.destroySession(handle: self.handle)
         self.context.remove(self.listener)
     }
 
+    /// A running main session: the account's authorization can be exported through it.
+    var servesExports: Bool {
+        return self.exportable.with { $0 }
+    }
+
+    /// The permanent key the session's last answered call ran under, and when (`rustEngineMonotonicNow`),
+    /// replied on the session's queue.
+    func lastCompletion(_ reply: @escaping ((keyId: Int64, at: Double)?) -> Void) {
+        self.queue.async { [weak self] in
+            guard let self = self, let keyId = self.lastCompletedKeyId else {
+                reply(nil)
+                return
+            }
+            reply((keyId, self.lastCompletedAt))
+        }
+    }
+
+    /// The permanent key the session talks for (under PFS) or under. Only on `queue`, where requests
+    /// complete.
+    var installedPermanentKeyId: Int64? {
+        return self.installedKeyId
+    }
+
     private func releaseQueueResources() {
+        if let keyId = self.lastCompletedKeyId {
+            self.registry.noteAnswered(datacenterId: self.datacenterId, keyId: keyId, at: self.lastCompletedAt)
+        }
         for request in self.activeRequests {
             request.releaseResources()
         }
@@ -282,6 +332,9 @@ final class RustNetworkSession: NetworkEngineSession {
         }
         self.connectionWatchdog?.invalidate()
         self.connectionWatchdog = nil
+        self.drainBackstop?.invalidate()
+        self.drainBackstop = nil
+        self.drainTarget = nil
     }
 
     func setPaused(_ paused: Bool) {
@@ -293,13 +346,16 @@ final class RustNetworkSession: NetworkEngineSession {
                 return
             }
             self.externallyPaused = paused
+            if self.isMain {
+                let _ = self.exportable.swap(!paused && !self.isDraining)
+            }
             rustEngineImportantLog("\(self.logPrefix) \(paused ? "pause" : "resume")")
             if !paused {
                 self.refreshSchemes()
                 self.resetConnectionWatchdogBackoff()
             }
             self.applyPaused()
-            if !paused {
+            if !paused && !self.isDraining {
                 if self.awaitingKey {
                     self.requestAwaitedKey()
                 }
@@ -339,6 +395,20 @@ final class RustNetworkSession: NetworkEngineSession {
         }
     }
 
+    func serverActivity(_ reply: @escaping (NetworkEngineServerActivity?) -> Void) {
+        self.queue.async { [weak self] in
+            guard let self = self, !self.isStopped.with({ $0 }), !self.isDraining else {
+                reply(nil)
+                return
+            }
+            let now = rustEngineMonotonicNow()
+            let heard = max(self.lastHeardAt, self.lastCompletedAt > 0.0 ? self.lastCompletedAt : -Double.infinity)
+            let flags = self.lastConnectionFlags
+            let connected = flags.map(rustEngineHasAnsweredConnection) ?? false
+            reply(NetworkEngineServerActivity(silentFor: heard.isFinite ? max(0.0, now - heard) : nil, waitingFor: self.busySince.map { max(0.0, now - $0) }, connected: connected))
+        }
+    }
+
     func add(_ request: NetworkEngineRequest) -> Disposable {
         let flags = rustEngineRequestFlags(wantsQuickAck: request.acknowledged != nil, wantsProgress: request.progress != nil, needsTimeoutTimer: request.options.needsTimeoutTimer, withoutUpdates: self.withoutUpdates)
         let localId = self.runtime.nextRequestId()
@@ -366,35 +436,141 @@ final class RustNetworkSession: NetworkEngineSession {
         }
     }
 
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
+    /// The engine drains the session (`mt_session_drain`): a request that never reached the server comes
+    /// back at once and moves to `service`; one the server may have stays until its answer, which completes
+    /// it here, or until the deadline, after which it moves only if its policy allows a server error
+    /// (`networkEngineReleaseDecision`), as after a key rotation. `completion` runs when the engine closes
+    /// the session, with nothing left.
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
+        let _ = self.exportable.swap(false)
         self.queue.async { [weak self] in
-            guard let self = self else {
+            guard let self = self, !self.isStopped.with({ $0 }) else {
                 completion()
                 return
             }
-            let pendings = self.activeRequests.filter { !$0.isFinished && !$0.isCancelled }
-            for pending in pendings {
-                let engineId = pending.engineId
-                let wasInEngine = pending.isInEngine
-                self.finish(pending)
-                if wasInEngine, engineId != 0, let engine = self.engine, self.handle != 0 {
-                    mt_session_cancel(engine, self.handle, engineId)
-                }
-                let disposable = service.add(pending.request)
-                var isCancelled = false
-                let _ = pending.control.modify { current in
-                    var updated = current
-                    updated.moved = disposable
-                    isCancelled = current.isCancelled
-                    return updated
-                }
-                if isCancelled {
-                    disposable.dispose()
-                }
+            let _ = self.exportable.swap(false)
+            self.drainCompletions.append(completion)
+            if self.drainTarget != nil {
+                return
             }
-            if !pendings.isEmpty {
-                rustEngineImportantLog("\(self.logPrefix) moved \(pendings.count) unanswered requests to another engine")
+            self.drainTarget = service
+            self.connectionWatchdog?.invalidate()
+            self.connectionWatchdog = nil
+            rustEngineImportantLog("\(self.logPrefix) draining into another session: \(self.activeRequests.count) requests, deadline \(deadline) s")
+            for pending in self.activeRequests where !pending.isInEngine && !pending.isFinished && !pending.isCancelled {
+                self.moveToDrainTarget(pending, after: 0.0)
             }
+            guard let engine = self.engine, self.handle != 0 else {
+                self.finishDrain()
+                return
+            }
+            mt_session_drain(engine, self.handle, deadline)
+            let backstop = SwiftSignalKit.Timer(timeout: RustNetworkSession.drainLongest + RustNetworkSession.drainBackstopMargin, repeat: false, completion: { [weak self] in
+                guard let self = self else {
+                    return
+                }
+                rustEngineImportantLog("\(self.logPrefix) the engine did not finish draining; the requests left move now")
+                self.finishDrain()
+            }, queue: self.queue)
+            self.drainBackstop = backstop
+            backstop.start()
+        }
+    }
+
+    /// The engine's longest drain (`DRAIN_MAX`): it extends the deadline while answers keep coming.
+    private static let drainLongest: Double = 30.0
+    private static let drainBackstopMargin: Double = 15.0
+
+    /// The session hands its requests over (`movePendingRequests`): it no longer speaks for the context.
+    private var isDraining: Bool {
+        return self.drainTarget != nil
+    }
+
+    private func moveToDrainTarget(_ pending: RustPendingRequest, after delay: Double) {
+        guard let target = self.drainTarget else {
+            return
+        }
+        let engineId = pending.engineId
+        self.finish(pending)
+        let disposable = networkEngineMove(pending.request, to: target, after: delay)
+        var isCancelled = false
+        let _ = pending.control.modify { current in
+            var updated = current
+            updated.moved = disposable
+            isCancelled = current.isCancelled
+            return updated
+        }
+        if isCancelled {
+            disposable.dispose()
+        }
+        rustEngineLog("\(self.logPrefix) moved #\(engineId) \(pending.request.shortMetadata.description)\(delay > 0.0 ? " after \(delay) s" : "")")
+    }
+
+    private func handleReleased(_ event: RustEngineEvent) {
+        guard let pending = self.pendingById[event.requestId] else {
+            return
+        }
+        self.pendingById.removeValue(forKey: event.requestId)
+        pending.isInEngine = false
+        if pending.isCancelled || pending.isFinished {
+            self.finish(pending)
+            return
+        }
+        if self.drainTarget == nil {
+            rustEngineImportantLog("\(self.logPrefix) #\(event.requestId) released without a drain; it cannot move")
+            self.finish(pending)
+            pending.request.completed(.failure(NetworkEngineRequestFailure(error: networkEngineSwitchedError, info: NetworkEngineResponseInfo(timestamp: 0.0, networkType: self.lastNetworkIsCellular ? 1 : 0, duration: 0.0))))
+            return
+        }
+        let mayHaveRun = rustEngineReleasedMayHaveRun(flags: event.flags)
+        let decision = networkEngineReleaseDecision(mayHaveRun: mayHaveRun, retryAfter: event.value1, allowsServerError: {
+            let errorContext = pending.errorState.applyServerError()
+            return pending.request.shouldContinueAfterError(NetworkEngineErrorContext(floodWaitSeconds: errorContext.floodWaitSeconds, floodWaitErrorText: errorContext.floodWaitErrorText, internalServerErrorCount: errorContext.internalServerErrorCount))
+        })
+        if pending.isCancelled || pending.isFinished {
+            self.finish(pending)
+            return
+        }
+        switch decision {
+        case let .move(delay):
+            self.moveToDrainTarget(pending, after: delay)
+        case .fail:
+            rustEngineImportantLog("\(self.logPrefix) #\(event.requestId) \(pending.request.shortMetadata.description) may have run here and may not run again: \(networkEngineSwitchedError.errorDescription ?? "")")
+            self.finish(pending)
+            pending.request.completed(.failure(NetworkEngineRequestFailure(error: networkEngineSwitchedError, info: NetworkEngineResponseInfo(timestamp: 0.0, networkType: self.lastNetworkIsCellular ? 1 : 0, duration: 0.0))))
+        }
+    }
+
+    /// The engine closed the drained session (or never would): whatever is left follows the same rule,
+    /// as possibly run if the engine had it, and the switch completes.
+    private func finishDrain() {
+        if self.drainCompletions.isEmpty {
+            return
+        }
+        self.drainBackstop?.invalidate()
+        self.drainBackstop = nil
+        let left = self.activeRequests.filter { !$0.isFinished && !$0.isCancelled }
+        for pending in left {
+            if pending.isInEngine, pending.engineId != 0 {
+                if let engine = self.engine, self.handle != 0 {
+                    mt_session_cancel(engine, self.handle, pending.engineId)
+                }
+                var event = MTEvent()
+                event.kind = MTEventKindReleased
+                event.request_id = pending.engineId
+                event.flags = rustEngineReleasedMayHaveRunFlag
+                self.handleReleased(withUnsafePointer(to: &event) { RustEngineEvent($0) })
+            } else {
+                self.moveToDrainTarget(pending, after: 0.0)
+            }
+        }
+        if !left.isEmpty {
+            rustEngineImportantLog("\(self.logPrefix) \(left.count) requests were left when the drain ended")
+        }
+        let completions = self.drainCompletions
+        self.drainCompletions.removeAll()
+        rustEngineImportantLog("\(self.logPrefix) drained")
+        for completion in completions {
             completion()
         }
     }
@@ -410,13 +586,24 @@ final class RustNetworkSession: NetworkEngineSession {
         if pending.isCancelled || self.isStopped.with({ $0 }) {
             return
         }
+        if self.activeRequests.isEmpty {
+            self.busySince = rustEngineMonotonicNow()
+        }
         self.activeRequests.append(pending)
         self.activeByLocalId[pending.localId] = pending
+        if self.isDraining {
+            self.moveToDrainTarget(pending, after: 0.0)
+            return
+        }
         self.sendToEngine(pending)
         self.updateConnectionWatchdog()
     }
 
     private func sendToEngine(_ pending: RustPendingRequest) {
+        if self.isDraining {
+            self.moveToDrainTarget(pending, after: 0.0)
+            return
+        }
         guard let engine = self.engine, self.handle != 0 else {
             return
         }
@@ -486,6 +673,9 @@ final class RustNetworkSession: NetworkEngineSession {
         if let index = self.heldRequests.firstIndex(where: { $0 === pending }) {
             self.heldRequests.remove(at: index)
         }
+        if self.activeRequests.isEmpty {
+            self.busySince = nil
+        }
         self.updateConnectionWatchdog()
     }
 
@@ -510,6 +700,9 @@ final class RustNetworkSession: NetworkEngineSession {
         }
         let previousKind = self.lastEventKind
         self.lastEventKind = kind
+        if kind.isServerActivity {
+            self.lastHeardAt = rustEngineMonotonicNow()
+        }
 
         switch kind {
         case .completed:
@@ -517,6 +710,9 @@ final class RustNetworkSession: NetworkEngineSession {
         case .failed:
             self.handleFailed(event, previousKind: previousKind)
         case .retryDecisionRequired:
+            if rustEngineFailureIsServerAnswer(code: event.code, text: event.text) {
+                self.noteAnswered()
+            }
             self.handleRetryDecision(event)
         case .acknowledged:
             if let pending = self.pendingById[event.requestId], !pending.isCancelled {
@@ -577,6 +773,7 @@ final class RustNetworkSession: NetworkEngineSession {
                 sink.networkSessionDidReset()
             }
         case .update:
+            self.noteAnswered()
             self.handleUpdate(event, previousWasUpdatesReset: previousKind == .updatesReset)
         case .timeDifferenceUpdated:
             if rustEngineSharesTimeDifference(isCdn: self.isCdn) {
@@ -587,7 +784,11 @@ final class RustNetworkSession: NetworkEngineSession {
         case .pong:
             break
         case .connectionState:
-            self.lastConnectionFlags = RustEngineConnectionFlags(rawValue: event.flags)
+            let flags = RustEngineConnectionFlags(rawValue: event.flags)
+            if rustEngineConnectionStateRestartsSilence(previous: self.lastConnectionFlags, current: flags) {
+                self.lastHeardAt = rustEngineMonotonicNow()
+            }
+            self.lastConnectionFlags = flags
             self.lastEngineProxyAddress = event.text.isEmpty ? nil : event.text
             self.updateConnectionWatchdog()
             self.reportConnectionState()
@@ -620,8 +821,14 @@ final class RustNetworkSession: NetworkEngineSession {
             }
         case .temporaryKeyBound:
             rustEngineLog("\(self.logPrefix) temporary key bound")
+            if self.runsPfs, let keyId = self.installedKeyId {
+                self.registry.noteBound(datacenterId: self.datacenterId, keyId: keyId, at: rustEngineMonotonicNow())
+            }
         case .temporaryKeyBindFailed:
             rustEngineImportantLog("\(self.logPrefix) binding the temporary key failed: \(event.code) \(event.text)")
+            if self.runsPfs, let keyId = self.installedKeyId, rustEngineKeyProbeOutcome(code: event.code, text: event.text) == .keyUnknown {
+                self.registry.noteRefusedBind(datacenterId: self.datacenterId, keyId: keyId, at: rustEngineMonotonicNow())
+            }
         case .permanentKeyInvalid:
             rustEngineImportantLog("\(self.logPrefix) the server does not know the permanent key \(self.installedKeyId.map(String.init) ?? "none")")
             self.handlePermanentKeyInvalid()
@@ -642,7 +849,11 @@ final class RustNetworkSession: NetworkEngineSession {
                 observer(drop)
             }
         case .closed:
-            break
+            if self.isDraining {
+                self.finishDrain()
+            }
+        case .released:
+            self.handleReleased(event)
         }
     }
 
@@ -651,6 +862,7 @@ final class RustNetworkSession: NetworkEngineSession {
     }
 
     private func handleCompleted(_ event: RustEngineEvent) {
+        self.noteAnswered()
         guard let pending = self.pendingById[event.requestId] else {
             return
         }
@@ -700,7 +912,17 @@ final class RustNetworkSession: NetworkEngineSession {
         }
     }
 
+    /// The server answered under the installed key (a call's result, cancelled or not, a server error other
+    /// than a `401`, an update): evidence for the logout check that the server knows it (`RustContextRegistry`).
+    private func noteAnswered() {
+        self.lastCompletedKeyId = self.installedKeyId
+        self.lastCompletedAt = rustEngineMonotonicNow()
+    }
+
     private func handleFailed(_ event: RustEngineEvent, previousKind: RustEngineEventKind?) {
+        if rustEngineFailureIsServerAnswer(code: event.code, text: event.text) {
+            self.noteAnswered()
+        }
         guard let pending = self.pendingById[event.requestId] else {
             return
         }
@@ -932,22 +1154,40 @@ final class RustNetworkSession: NetworkEngineSession {
 
     /// The engine's binds say the server no longer knows the permanent key (a session terminated from
     /// another device, a key the server dropped). On another datacenter the key and its authorization
-    /// token are made anew. On the home datacenter it is MtProtoKit's call, as with MtProtoKit:
-    /// `checkIfLoggedOut` probes the key and logs an authorized account out once the probe confirms it is
-    /// gone; until then the session waits, reported as updating. A key that replaced another less than a
-    /// minute ago is left alone: the engine reports a key it just got only after it kept failing past
-    /// that, so the report is about the key it replaced.
+    /// token are made anew. On the home datacenter, refused binds alone are no verdict: a server can refuse
+    /// fresh temporary keys for a while and still know the permanent one, and a logout wipes the account's
+    /// local data. The report starts MTContext's `checkIfLoggedOut` only while the engine's actions run
+    /// the context's key actions (`rustEngineStartLogoutCheck`, decided on MTContext's queue in the block
+    /// where the check reads the factory). Its probe is then `RustDatacenterAuthAction`'s, and the probe's
+    /// refusal counts only with the context registry's evidence (`rustEnginePermanentKeyUnknownDenial`):
+    /// this report, the probe's own `ENCRYPTED_MESSAGE_INVALID`, and no answer, update or accepted bind
+    /// under the key within the last day. Even then, the account is logged out only if a call under the
+    /// permanent key itself gets `AuthKeyInvalid`. While MtProtoKit runs them (a session still draining
+    /// after a switch to MtProtoKit), the report starts nothing: its probe would decide on a refused bind
+    /// alone. Until then the session waits, reported as updating, and keeps binding. A key installed into
+    /// the session less than a minute ago, since the session last had none (any key but the one it was
+    /// created with, until `AuthKeyRequired` or the context dropping the key clears it), is left alone:
+    /// the engine reports a key it just got only after it kept failing past that, so the report is about
+    /// the key it replaced.
     private func handlePermanentKeyInvalid() {
         guard self.runsPfs, let keyId = self.installedKeyId else {
             return
         }
-        if CFAbsoluteTimeGetCurrent() - self.installedKeyAt < RustNetworkSession.permanentKeyImmunity {
+        switch rustEnginePermanentKeyReportAction(draining: self.isDraining, keyAge: rustEngineMonotonicNow() - self.installedKeyAt, immunity: RustNetworkSession.permanentKeyImmunity) {
+        case .leaveToReplacement:
+            rustEngineImportantLog("\(self.logPrefix) draining: the report is left to the session that replaced this one")
+            return
+        case .keepYoungKey:
             rustEngineLog("\(self.logPrefix) permanent key reported unknown right after it was installed; keeping it")
             return
+        case .handle:
+            break
         }
-        if self.requiresForeignAuthToken {
-            self.context.removeTokenForDatacenter(withId: self.datacenterId)
-            if self.authTokenReady {
+        if self.requiresForeignAuthToken || self.importsAuthorization {
+            if self.requiresForeignAuthToken {
+                self.context.removeTokenForDatacenter(withId: self.datacenterId)
+            }
+            if self.authTokenReady && self.requiresForeignAuthToken {
                 self.authTokenReady = false
                 if let engine = self.engine, self.handle != 0 {
                     mt_session_set_auth_token_ready(engine, self.handle, 0)
@@ -955,7 +1195,7 @@ final class RustNetworkSession: NetworkEngineSession {
             }
             self.dropAndRequireKey(isCdn: false, rejectedKeyId: keyId, engineStillHoldsKey: true, selector: .persistent)
         } else {
-            self.context.checkIfLoggedOut(self.datacenterId)
+            rustEngineStartLogoutCheck(context: self.context, registry: self.registry, datacenterId: self.datacenterId, keyId: keyId, reportedAt: rustEngineMonotonicNow(), logPrefix: self.logPrefix)
         }
     }
 
@@ -1006,7 +1246,7 @@ final class RustNetworkSession: NetworkEngineSession {
         }
         rustEngineLog("\(self.logPrefix) installed auth key \(authInfo.authKeyId) selector \(self.keySelector.rawValue)")
         if self.installedKeyId != authInfo.authKeyId {
-            self.installedKeyAt = CFAbsoluteTimeGetCurrent()
+            self.installedKeyAt = rustEngineMonotonicNow()
         }
         self.installedKeyId = authInfo.authKeyId
         self.awaitingKey = false
@@ -1038,10 +1278,11 @@ final class RustNetworkSession: NetworkEngineSession {
             return
         }
         let keyId = RustNetworkSession.authKeyId(key)
-        if event.integer2 == 0 {
-            rustEngineImportantLog("\(self.logPrefix) unexpected engine-made permanent key \(keyId) ignored")
-        } else {
+        switch rustEngineCreatedKeyKind(flags: event.flags) {
+        case .temporary:
             self.madeTemporaryKey = (keyId, key, event.integer1)
+        case .permanent, nil:
+            rustEngineImportantLog("\(self.logPrefix) unexpected engine-made permanent key \(keyId) ignored")
         }
     }
 
@@ -1050,7 +1291,7 @@ final class RustNetworkSession: NetworkEngineSession {
         let adopted = (event.flags & 1) != 0
         self.temporaryKeyId = keyId
         rustEngineLog("\(self.logPrefix) talking under temporary key \(keyId)\(adopted ? " from the context" : "")")
-        guard !adopted else {
+        guard !adopted, !self.isDraining else {
             return
         }
         guard let made = self.madeTemporaryKey, made.keyId == keyId else {
@@ -1469,7 +1710,7 @@ final class RustNetworkSession: NetworkEngineSession {
             self.connectionWatchdog = nil
             return
         }
-        let wantsConnection = !self.appliedPaused && self.installedKeyId != nil && !self.schemes.isEmpty && (self.isMain || !self.activeRequests.isEmpty) && self.runtime.isNetworkAvailable
+        let wantsConnection = !self.isDraining && !self.appliedPaused && self.installedKeyId != nil && !self.schemes.isEmpty && (self.isMain || !self.activeRequests.isEmpty) && self.runtime.isNetworkAvailable
         if !wantsConnection {
             self.connectionWatchdog?.invalidate()
             self.connectionWatchdog = nil
@@ -1539,7 +1780,7 @@ final class RustNetworkSession: NetworkEngineSession {
     }
 }
 
-private struct RustKeyMaterial {
+struct RustKeyMaterial {
     let key: MTBytes
     let salts: UnsafePointer<MTSaltEntry>?
     let saltCount: Int
@@ -1548,11 +1789,11 @@ private struct RustKeyMaterial {
 }
 
 extension RustNetworkSession {
-    fileprivate static func currentLayer(_ context: MTContext) -> Int32 {
+    static func currentLayer(_ context: MTContext) -> Int32 {
         return Int32(clamping: context.serialization.currentLayer())
     }
 
-    fileprivate static func authKeyId(_ key: Data) -> Int64 {
+    static func authKeyId(_ key: Data) -> Int64 {
         let hash = MTSha1(key)
         var keyId: Int64 = 0
         _ = withUnsafeMutableBytes(of: &keyId) { buffer in
@@ -1586,7 +1827,7 @@ extension RustNetworkSession {
         )
     }
 
-    fileprivate static func makeKeyMaterial(_ authInfo: MTDatacenterAuthInfo, includeInitHash: Bool, arena: RustEngineArena) -> RustKeyMaterial? {
+    static func makeKeyMaterial(_ authInfo: MTDatacenterAuthInfo, includeInitHash: Bool, arena: RustEngineArena) -> RustKeyMaterial? {
         guard let authKey = authInfo.authKey, authKey.count == 256 else {
             return nil
         }
@@ -1614,7 +1855,7 @@ extension RustNetworkSession {
         return preferForMedia ? .ephemeralMedia : .ephemeralMain
     }
 
-    fileprivate static func loadSchemes(context: MTContext, datacenterId: Int, isMedia: Bool, apiEnvironment: MTApiEnvironment) -> [MTTransportScheme] {
+    static func loadSchemes(context: MTContext, datacenterId: Int, isMedia: Bool, apiEnvironment: MTApiEnvironment) -> [MTTransportScheme] {
         let schemes = context.transportSchemesForDatacenter(withId: datacenterId, media: isMedia, enforceMedia: false, isProxy: apiEnvironment.socksProxySettings != nil)
         if schemes.isEmpty {
             return []
@@ -1632,14 +1873,14 @@ extension RustNetworkSession {
         return rustEngineAddressOrder(isIpv6: isIpv6, preferredIndex: preferredIndex, allowIpv6: allowIpv6).map { schemes[$0] }
     }
 
-    fileprivate static func fingerprint(_ schemes: [MTTransportScheme]) -> [String] {
+    static func fingerprint(_ schemes: [MTTransportScheme]) -> [String] {
         return schemes.map { scheme in
             let address = scheme.address
             return "\(address.ip ?? address.host ?? ""):\(address.port)\(address.secret != nil ? "+s" : "")\(address.preferForMedia ? "+m" : "")"
         }
     }
 
-    fileprivate static func makeAddresses(_ schemes: [MTTransportScheme], arena: RustEngineArena) -> [MTAddress] {
+    static func makeAddresses(_ schemes: [MTTransportScheme], arena: RustEngineArena) -> [MTAddress] {
         return schemes.map { scheme in
             let address = scheme.address
             return MTAddress(host: arena.string(address.ip ?? address.host), port: address.port, secret: arena.bytes(address.secret))
@@ -1648,7 +1889,7 @@ extension RustNetworkSession {
 
     static var webEndpointOverride: (host: String, port: UInt16, path: String, wsPath: String, address: String)?
 
-    fileprivate static func setWebEndpoint(engine: OpaquePointer, handle: MTSessionHandle, isTestingEnvironment: Bool) {
+    static func setWebEndpoint(engine: OpaquePointer, handle: MTSessionHandle, isTestingEnvironment: Bool) {
         guard let override = RustNetworkSession.webEndpointOverride else {
             mt_session_use_telegram_web(engine, handle, isTestingEnvironment ? 1 : 0)
             return
@@ -1660,7 +1901,7 @@ extension RustNetworkSession {
         }
     }
 
-    fileprivate static func makeProxy(_ settings: MTSocksProxySettings?, arena: RustEngineArena) -> MTProxy {
+    static func makeProxy(_ settings: MTSocksProxySettings?, arena: RustEngineArena) -> MTProxy {
         var proxy = MTProxy()
         proxy.kind = UInt8(MTProxyKindNone)
         guard let settings = settings else {
@@ -1682,7 +1923,7 @@ extension RustNetworkSession {
         return proxy
     }
 
-    fileprivate static func isSameProxy(_ lhs: MTSocksProxySettings?, _ rhs: MTSocksProxySettings?) -> Bool {
+    static func isSameProxy(_ lhs: MTSocksProxySettings?, _ rhs: MTSocksProxySettings?) -> Bool {
         switch (lhs, rhs) {
         case (nil, nil):
             return true
@@ -1693,7 +1934,7 @@ extension RustNetworkSession {
         }
     }
 
-    fileprivate static func makeEnvironment(_ apiEnvironment: MTApiEnvironment, layer: Int32, arena: RustEngineArena) -> MTEnvironment {
+    static func makeEnvironment(_ apiEnvironment: MTApiEnvironment, layer: Int32, arena: RustEngineArena) -> MTEnvironment {
         var environment = MTEnvironment()
         environment.layer = layer
         environment.api_id = apiEnvironment.apiId

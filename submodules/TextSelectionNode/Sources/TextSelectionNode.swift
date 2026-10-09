@@ -282,6 +282,7 @@ public final class TextSelectionNode: ASDisplayNode {
     public var enableCopy: Bool = true
     public var enableLookup: Bool = true
     public var enableQuote: Bool = false
+    public var selectAllAfterCopy: Bool = false
     public var enableTranslate: Bool = true
     public var enableSpeak: Bool = false
     public var enableShare: Bool = true
@@ -806,13 +807,18 @@ public final class TextSelectionNode: ASDisplayNode {
         
         let realFullRange = NSRange(location: 0, length: attributedString.length)
         if range != realFullRange {
-            actions.append(ContextMenuAction(content: .text(title: self.strings.TextSelection_SelectAll, accessibilityLabel: self.strings.TextSelection_SelectAll), action: { [weak self] in
+            let selectAllAction = ContextMenuAction(content: .text(title: self.strings.TextSelection_SelectAll, accessibilityLabel: self.strings.TextSelection_SelectAll), action: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.contextMenu?.dismiss()
                 self.setSelection(range: realFullRange, displayMenu: true)
-            }))
+            })
+            if self.selectAllAfterCopy {
+                actions.insert(selectAllAction, at: self.enableCopy ? 1 : 0)
+            } else {
+                actions.append(selectAllAction)
+            }
         } else if self.enableShare {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
                 self?.performAction(string, .share)

@@ -13,7 +13,6 @@ import ContextUI
 import TelegramStringFormatting
 import StorageUsageScreen
 import SettingsUI
-import DeleteChatPeerActionSheetItem
 import OverlayStatusController
 
 fileprivate struct InitialBannedRights {
@@ -761,30 +760,24 @@ extension ChatControllerImpl {
         }
         self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
         
-        let actionSheet = ActionSheetController(presentationData: self.presentationData)
-        var items: [ActionSheetItem] = []
-        
-        items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: EnginePeer(peer), chatPeer: EnginePeer(peer), action: .clearCacheSuggestion, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
-        
         var presented = false
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ClearCache_FreeSpace, color: .accent, action: { [weak self, weak actionSheet] in
-           actionSheet?.dismissAnimated()
-            if let strongSelf = self, !presented {
+        let alertScreen = clearCacheSuggestionAlertScreen(
+            context: self.context,
+            updatedPresentationData: self.updatedPresentationData,
+            peer: EnginePeer(peer),
+            openStorage: { [weak self] in
+                guard let self, !presented else {
+                    return
+                }
                 presented = true
-                let context = strongSelf.context
-                strongSelf.push(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                let context = self.context
+                self.push(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
                     return storageUsageExceptionsScreen(context: context, category: category)
                 }))
-           }
-        }))
-    
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-            })
-        ])])
+            }
+        )
         self.chatDisplayNode.dismissInput()
-        self.presentInGlobalOverlay(actionSheet)
+        self.presentInGlobalOverlay(alertScreen)
     }
     
     func openDeleteMonoforumPeer(peerId: EnginePeer.Id) {

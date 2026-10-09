@@ -95,6 +95,7 @@ final class WebBrowserDomainExceptionItem: ListViewItem, ItemListItem {
 }
 
 final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
+    private let highlightedBackgroundNode = ASDisplayNode()
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -237,6 +238,9 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
+                    var revealTopSeparatorIsHidden = false
+                    var revealBottomSeparatorIsHidden = false
+
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
@@ -248,6 +252,7 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         strongSelf.iconPlaceholderNode.backgroundColor = item.presentationData.theme.list.mediaPlaceholderColor
                     }
                     
@@ -322,20 +327,20 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                         var hasBottomCorners = false
                         switch neighbors.top {
                             case .sameSection(false):
-                                strongSelf.topStripeNode.isHidden = true
+                                revealTopSeparatorIsHidden = true
                             default:
                                 hasTopCorners = true
-                                strongSelf.topStripeNode.isHidden = hasCorners
+                                revealTopSeparatorIsHidden = hasCorners
                         }
                         let bottomStripeInset: CGFloat
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
-                                strongSelf.bottomStripeNode.isHidden = false
+                                revealBottomSeparatorIsHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true
-                                strongSelf.bottomStripeNode.isHidden = hasCorners
+                                revealBottomSeparatorIsHidden = hasCorners
                         }
                         
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
@@ -365,10 +370,12 @@ final class WebBrowserDomainExceptionItemNode: ItemListRevealOptionsItemNode, It
                     
                     strongSelf.iconNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 7.0), imageSize: imageSize, boundingSize: iconSize, intrinsicInsets: .zero))()
                     
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: .zero, size: contentSize), aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
+                    strongSelf.updateRevealOptionsSeparatorNodes(top: strongSelf.topStripeNode, bottom: strongSelf.bottomStripeNode, topIsHidden: revealTopSeparatorIsHidden, bottomIsHidden: revealBottomSeparatorIsHidden)
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     var revealOptions: [ItemListRevealOption] = []
-                    revealOptions.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor))
+                    revealOptions.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true))
                     strongSelf.setRevealOptions((left: [], right: revealOptions))
                 }
             })

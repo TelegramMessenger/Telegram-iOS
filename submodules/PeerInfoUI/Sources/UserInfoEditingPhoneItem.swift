@@ -82,6 +82,7 @@ class UserInfoEditingPhoneItem: ListViewItem, ItemListItem {
 }
 
 class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemNode, ItemListItemFocusableNode {
+    private let highlightedBackgroundNode = ASDisplayNode()
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -232,6 +233,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         strongSelf.labelSeparatorNode.backgroundColor = itemSeparatorColor
                         
                         strongSelf.phoneNode.numberField?.textField.textColor = updatedTheme.list.itemPrimaryTextColor
@@ -282,9 +284,11 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                         strongSelf.clearButton.frame = CGRect(origin: CGPoint(x: phoneFrame.maxX - image.size.width - 23.0, y: phoneFrame.minY + floor((phoneFrame.size.height - image.size.height) / 2.0) - 1.0 + UIScreenPixel), size: image.size)
                     }
                     
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: .zero, size: contentSize), aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
+                    strongSelf.updateRevealOptionsSeparatorNodes(top: strongSelf.topStripeNode, bottom: strongSelf.bottomStripeNode, topIsHidden: false, bottomIsHidden: false)
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor)]))
+                    strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.presentationData.theme.list.itemSecondaryTextColor, isDestructive: true)]))
                 }
             })
         }

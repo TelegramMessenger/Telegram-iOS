@@ -363,6 +363,13 @@
                 [subscriber putNext:@(!success && [MTDatacenterAuthAction bindErrorMeansPermanentKeyIsUnknown:action.bindError])];
                 [subscriber putCompletion];
             }];
+            // The context usually holds a temporary key for this selector (the
+            // main session's own, or a stale copy of an expired one). Without
+            // these the action would complete on that key at once and report
+            // "not removed" without asking the server, and a successful probe
+            // would replace the key the sessions use.
+            action.replacesExistingKey = true;
+            action.probedPermanentKey = authKey;
             [action execute:context datacenterId:datacenterId];
             
             [disposable setDisposable:[[MTBlockDisposable alloc] initWithBlock:^{

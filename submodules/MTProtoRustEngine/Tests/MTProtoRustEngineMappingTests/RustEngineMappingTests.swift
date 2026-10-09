@@ -309,4 +309,194 @@ final class RustEngineMappingTests: XCTestCase {
         XCTAssertFalse(rustEngineNetworkRouterCounts(RustEngineNetworkRouter(interface: "pdp_ip0", address: "10.64.0.1")))
         XCTAssertFalse(rustEngineNetworkRouterCounts(RustEngineNetworkRouter(interface: "en0", address: "")))
     }
+
+    func testEngineThreadsAreToldApartByName() {
+        XCTAssertTrue(rustEngineOwnsThread(named: "mtproto-main"))
+        XCTAssertTrue(rustEngineOwnsThread(named: "mtproto-worker-3"))
+        XCTAssertTrue(rustEngineOwnsThread(named: "mtproto-resolver"))
+        XCTAssertFalse(rustEngineOwnsThread(named: ""))
+        XCTAssertFalse(rustEngineOwnsThread(named: "main"))
+        XCTAssertFalse(rustEngineOwnsThread(named: "com.apple.NSURLSession-work"))
+        XCTAssertFalse(rustEngineOwnsThread(named: "MTProto"))
+    }
+
+    private static let bridgeQueueLabels: Set<String> = [
+        "org.telegram.MTProtoRust.streams",
+        "org.telegram.MTProtoRust.carrier",
+        "org.telegram.MTProtoRust.session",
+        "org.telegram.MTProtoRust.network",
+    ]
+
+    func testBridgeQueuesAreToldApartByLabel() {
+        for label in RustEngineMappingTests.bridgeQueueLabels {
+            XCTAssertTrue(rustEngineOwnsQueue(label: label), label)
+        }
+        XCTAssertFalse(rustEngineOwnsQueue(label: ""))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "com.apple.main-thread"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "com.apple.root.default-qos"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "org.telegram.Telegram.trace"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "org.telegram.MTProtoRust"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "org.telegram.MTProtoRustX.session"))
+        XCTAssertFalse(rustEngineOwnsQueue(label: "mtproto-main"))
+    }
+
+    /// Pins the labels the bridge really creates its queues with: every queue made anywhere under
+    /// `Sources/MTProtoRustEngine` has a literal label, the labels are these four, and each is recognized.
+    func testEveryBridgeQueueIsRecognized() throws {
+        let sources = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Sources/MTProtoRustEngine")
+        let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil))
+        let files = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        XCTAssertGreaterThan(files.count, 5)
+        let creation = try NSRegularExpression(pattern: #"\b(?:DispatchQueue|Queue)\(|dispatch_queue_create\("#)
+        let labelled = try NSRegularExpression(pattern: #"\b(?:DispatchQueue\(label|Queue\(name): "([^"\\]*)"[,)]"#)
+        var creations: [String] = []
+        var labels: [String] = []
+        for file in files {
+            let text = try String(contentsOf: file, encoding: .utf8)
+            let range = NSRange(text.startIndex..., in: text)
+            for match in creation.matches(in: text, range: range) {
+                creations.append("\(file.lastPathComponent) at \(match.range.location)")
+            }
+            for match in labelled.matches(in: text, range: range) {
+                labels.append(String(text[Range(match.range(at: 1), in: text)!]))
+            }
+        }
+        XCTAssertEqual(labels.count, creations.count, "every bridge queue needs a literal label: \(creations)")
+        XCTAssertEqual(Set(labels), RustEngineMappingTests.bridgeQueueLabels)
+        for label in labels {
+            XCTAssertTrue(rustEngineOwnsQueue(label: label), label)
+        }
+    }
+
+    func testCreatedKeysAreToldApartByTheirFlags() {
+        XCTAssertEqual(RustEngineAuthKeyCreatedFlags.temporary, 1)
+        XCTAssertEqual(RustEngineAuthKeyCreatedFlags.permanent, 2)
+        XCTAssertEqual(rustEngineCreatedKeyKind(flags: 1), .temporary)
+        XCTAssertEqual(rustEngineCreatedKeyKind(flags: 2), .permanent)
+        XCTAssertNil(rustEngineCreatedKeyKind(flags: 0), "an engine before ABI 4 says neither")
+        XCTAssertNil(rustEngineCreatedKeyKind(flags: 3))
+    }
+
+    func testOnlyEncryptedMessageInvalidSaysTheProbedKeyIsUnknown() {
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: 400, text: "ENCRYPTED_MESSAGE_INVALID"), .keyUnknown)
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: 500, text: "INTERNAL_SERVER_ERROR"), .retrying)
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: 420, text: "FLOOD_WAIT_3"), .retrying)
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: -503, text: "Timeout"), .retrying)
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: 400, text: "TEMP_AUTH_KEY_EMPTY"), .noVerdict)
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: 400, text: "CONNECTION_NOT_INITED"), .noVerdict)
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: 401, text: "ENCRYPTED_MESSAGE_INVALID"), .noVerdict)
+        XCTAssertEqual(rustEngineKeyProbeOutcome(code: 406, text: "AUTH_KEY_DUPLICATED"), .noVerdict)
+    }
+
+    func testAnUnknownPermanentKeyNeedsEveryPieceOfEvidence() {
+        let now = 10_000.0
+        let window = RustEnginePermanentKeyEvidence.observationWindow
+        let confirmed = RustEnginePermanentKeyEvidence(reportedKeyId: 7, reportedAt: now - 1.0, firstRefusalAt: now - window - 1.0, lastKnownAt: nil)
+        XCTAssertNil(rustEnginePermanentKeyUnknownDenial(confirmed, probedKeyId: 7, now: now))
+
+        var noReport = confirmed
+        noReport.reportedKeyId = nil
+        noReport.reportedAt = nil
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(noReport, probedKeyId: 7, now: now), "the engine did not report the key")
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(confirmed, probedKeyId: 8, now: now), "the report is about another key")
+        var oldReport = confirmed
+        oldReport.reportedAt = now - RustEnginePermanentKeyEvidence.maximumReportAge - 1.0
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(oldReport, probedKeyId: 7, now: now), "the report is too old")
+        var futureReport = confirmed
+        futureReport.reportedAt = now + 30.0
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(futureReport, probedKeyId: 7, now: now), "a clock set back is no evidence")
+        var noRefusal = confirmed
+        noRefusal.firstRefusalAt = nil
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(noRefusal, probedKeyId: 7, now: now), "no session saw a refused bind")
+        var tooSoon = confirmed
+        tooSoon.firstRefusalAt = now - window + 1.0
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(tooSoon, probedKeyId: 7, now: now), "the key was not watched long enough")
+        var answered = confirmed
+        answered.lastKnownAt = now - 5.0
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(answered, probedKeyId: 7, now: now), "a call was answered under the key")
+    }
+
+    func testAKeyTheServerKnewWithinADayIsNeverValidated() {
+        let now = 1_000_000.0
+        let immunity = RustEnginePermanentKeyEvidence.immunity
+        var evidence = RustEnginePermanentKeyEvidence(reportedKeyId: 7, reportedAt: now - 1.0, firstRefusalAt: now - 20.0, lastKnownAt: now - 25.0)
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(evidence, probedKeyId: 7, now: now), "answered just before the refusals: tdlib's immunity")
+        evidence.lastKnownAt = now - immunity + 60.0
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(evidence, probedKeyId: 7, now: now), "answered almost a day ago")
+        evidence.lastKnownAt = now + 5.0
+        XCTAssertNotNil(rustEnginePermanentKeyUnknownDenial(evidence, probedKeyId: 7, now: now), "answered while the decision was made")
+        evidence.lastKnownAt = now - immunity - 1.0
+        XCTAssertNil(rustEnginePermanentKeyUnknownDenial(evidence, probedKeyId: 7, now: now), "more than a day ago: validated")
+        evidence.lastKnownAt = nil
+        XCTAssertNil(rustEnginePermanentKeyUnknownDenial(evidence, probedKeyId: 7, now: now), "never in this context: validated")
+    }
+
+    func testRefusalsLongApartStartANewEpisode() {
+        let gap = RustEnginePermanentKeyEvidence.refusalEpisodeGap
+        XCTAssertTrue(rustEngineRefusalContinuesEpisode(lastRefusalAt: 100.0, at: 100.0 + gap))
+        XCTAssertFalse(rustEngineRefusalContinuesEpisode(lastRefusalAt: 100.0, at: 100.0 + gap + 1.0), "a refusal long ago, with the key working since, is another episode")
+        XCTAssertFalse(rustEngineRefusalContinuesEpisode(lastRefusalAt: 100.0, at: 50.0), "a clock set back starts over")
+    }
+
+    func testTheVerdictWaitsForTheObservationWindow() {
+        let window = RustEnginePermanentKeyEvidence.observationWindow
+        XCTAssertEqual(rustEnginePermanentKeyDecisionDelay(firstRefusalAt: nil, now: 100.0), 0.0)
+        XCTAssertEqual(rustEnginePermanentKeyDecisionDelay(firstRefusalAt: 100.0, now: 100.0), window)
+        XCTAssertEqual(rustEnginePermanentKeyDecisionDelay(firstRefusalAt: 100.0, now: 104.0), window - 4.0)
+        XCTAssertEqual(rustEnginePermanentKeyDecisionDelay(firstRefusalAt: 100.0, now: 100.0 + window + 5.0), 0.0)
+        XCTAssertEqual(rustEnginePermanentKeyDecisionDelay(firstRefusalAt: 1_000.0, now: 100.0), window, "a clock set back never waits longer than the window")
+    }
+
+    func testImportedBytesAreNeverSentTwice() {
+        XCTAssertEqual(rustEngineImportFailureAction(code: 400, text: "AUTH_BYTES_INVALID", exportsSoFar: 1), .exportAgain)
+        XCTAssertEqual(rustEngineImportFailureAction(code: 500, text: "TEMP_KEY_ROTATED", exportsSoFar: 1), .exportAgain)
+        XCTAssertEqual(rustEngineImportFailureAction(code: 500, text: "INTERDC_2_CALL_ERROR", exportsSoFar: 1), .exportAgain)
+        XCTAssertEqual(rustEngineImportFailureAction(code: 400, text: "AUTH_BYTES_INVALID", exportsSoFar: rustEngineTransferExportsPerAttempt), .fail, "one fresh export per attempt; MTContext's backoff does the rest")
+        XCTAssertEqual(rustEngineImportFailureAction(code: 401, text: "AUTH_KEY_UNREGISTERED", exportsSoFar: 1), .fail)
+        XCTAssertEqual(rustEngineImportFailureAction(code: 400, text: "DC_ID_INVALID", exportsSoFar: 1), .fail)
+        XCTAssertTrue(rustEngineTransferRetries(isImport: false, floodWaitErrorText: nil), "a server error on the export is retried")
+        XCTAssertFalse(rustEngineTransferRetries(isImport: true, floodWaitErrorText: nil), "the same import bytes are not sent again")
+        XCTAssertTrue(rustEngineTransferRetries(isImport: true, floodWaitErrorText: "FLOOD_WAIT_2"), "flood waits are waited out")
+    }
+
+    func testTheImportingSessionWaitsForNoToken() {
+        XCTAssertTrue(rustEngineRequiresForeignAuthToken(isMain: false, isCdn: false, datacenterId: 4, masterDatacenterId: 2))
+        XCTAssertFalse(rustEngineRequiresForeignAuthToken(isMain: false, isCdn: false, datacenterId: 4, masterDatacenterId: 2, importsAuthorization: true))
+        XCTAssertEqual(rustEngineSessionRole(isMain: false, isCdn: false, datacenterId: 4, masterDatacenterId: 2, importsAuthorization: true), .worker)
+        XCTAssertEqual(rustEngineSessionRole(isMain: false, isCdn: false, datacenterId: 4, masterDatacenterId: 2), .workerRequiringAuthToken)
+    }
+
+    func testOnlyTheServersOwnAnswersCountAsEvidence() {
+        XCTAssertTrue(rustEngineFailureIsServerAnswer(code: 400, text: "PEER_ID_INVALID"))
+        XCTAssertTrue(rustEngineFailureIsServerAnswer(code: 420, text: "FLOOD_WAIT_3"))
+        XCTAssertTrue(rustEngineFailureIsServerAnswer(code: 500, text: "INTERDC_2_CALL_ERROR"))
+        XCTAssertTrue(rustEngineFailureIsServerAnswer(code: 403, text: "CHAT_WRITE_FORBIDDEN"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 401, text: "AUTH_KEY_UNREGISTERED"), "a temporary key of a destroyed permanent key still answers 401")
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 500, text: "TEMP_KEY_ROTATED"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 500, text: "SESSION_RESET"), "the engine's, for a call retired with its session")
+        XCTAssertTrue(rustEngineFailureIsServerAnswer(code: 500, text: "RESPONSE_UNPACK_FAILED: gzip"), "an answer the server encrypted under the key, though unreadable")
+        XCTAssertTrue(rustEngineFailureIsServerAnswer(code: 500, text: "TL_PARSING_ERROR"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 500, text: "PROTOCOL_ERROR_ANSWER_LOST"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 500, text: "PROTOCOL_ERROR_BAD_MSG_32"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 400, text: "REQUEST_INVALID_SIZE"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 403, text: "APNS_PUSH_TIMEOUT"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: -503, text: "Timeout"))
+        XCTAssertFalse(rustEngineFailureIsServerAnswer(code: 403, text: ""))
+    }
+
+    func testAnyAnswerUnderThePermanentKeyItselfCountsForItsValidation() {
+        XCTAssertTrue(rustEngineFailureIsAnswerUnderKey(code: 401, text: "AUTH_KEY_UNREGISTERED"), "under the permanent key itself, a 401 is the server's answer")
+        XCTAssertTrue(rustEngineFailureIsAnswerUnderKey(code: 420, text: "FLOOD_WAIT_3"))
+        XCTAssertTrue(rustEngineFailureIsAnswerUnderKey(code: 500, text: "INTERNAL_SERVER_ERROR"))
+        XCTAssertFalse(rustEngineFailureIsAnswerUnderKey(code: 400, text: "REQUEST_INVALID_SIZE"), "the engine's own refusal to send")
+        XCTAssertFalse(rustEngineFailureIsAnswerUnderKey(code: 400, text: "REQUEST_ID_INVALID"))
+        XCTAssertFalse(rustEngineFailureIsAnswerUnderKey(code: 500, text: "SESSION_RESET"))
+        XCTAssertFalse(rustEngineFailureIsAnswerUnderKey(code: -404, text: "AUTH_KEY_INVALID"), "a transport error")
+        XCTAssertTrue(rustEngineFailureIsAnswerUnderKey(code: 500, text: "PROTOCOL_ERROR_BAD_MSG_32"), "raised after the server's bad_msg_notifications under the key")
+        XCTAssertTrue(rustEngineFailureIsAnswerUnderKey(code: 500, text: "RESPONSE_UNPACK_FAILED: gzip"))
+    }
 }

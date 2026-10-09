@@ -237,7 +237,7 @@ private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
             
             let peerRevealOptions: [ItemListRevealOption]
             if item.editing.editable {
-                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.theme.list.itemSecondaryTextColor)]
+                peerRevealOptions = [ItemListRevealOption(key: 0, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, iconColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor, textColor: item.theme.list.itemSecondaryTextColor, isDestructive: true)]
             } else {
                 peerRevealOptions = []
             }
@@ -449,7 +449,7 @@ private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.infoButtonNode.isUserInteractionEnabled = revealOffset.isZero && !item.editing.editing
                     strongSelf.infoButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 55.0, y: 0.0), size: CGSize(width: 55.0, height: layout.contentSize.height))
                     
-                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel)), transition: transition)
+                    strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel)), transition: transition, aboveNodes: [strongSelf.bottomStripeNode, strongSelf.topStripeNode, strongSelf.backgroundNode])
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
@@ -464,7 +464,7 @@ private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         self.isHighlighted = highlighted
-        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted || self.isRevealOptionsActive, transition: (animated && !highlighted) ? .animated(duration: 0.4, curve: .easeInOut) : .immediate, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted, transition: (animated && !highlighted) ? .animated(duration: 0.4, curve: .easeInOut) : .immediate, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
@@ -515,7 +515,7 @@ private final class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
     override func revealOptionsActiveStateUpdated(isActive: Bool, transition: ContainedViewLayoutTransition) {
         super.revealOptionsActiveStateUpdated(isActive: isActive, transition: transition)
 
-        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted || self.isRevealOptionsActive, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
+        self.updateRevealOptionsHighlightedBackgroundNode(self.highlightedBackgroundNode, isHighlighted: self.isHighlighted, transition: transition, aboveNodes: [self.bottomStripeNode, self.topStripeNode, self.backgroundNode])
     }
 
     override func revealOptionsInteractivelyOpened() {

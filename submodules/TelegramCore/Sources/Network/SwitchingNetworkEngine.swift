@@ -174,34 +174,29 @@ private final class SwitchingCore {
         replacement.setPaused(isPaused)
         replacement.setOnline(isOnline)
 
-        Queue.concurrentDefaultQueue().after(max(drainTimeout, 0.0), { [core = self] in
-            core.finishDraining(generation: previousGeneration)
+        previous.movePendingRequests(to: SwitchingForwardingService(core: self), deadline: max(drainTimeout, 0.0), completion: { [weak self] in
+            self?.finishDraining(generation: previousGeneration)
         })
     }
 
+    /// The old session handed every request over: it stops, and the sinks resynchronize, since updates
+    /// may have been lost between the two sessions.
     private func finishDraining(generation drainedGeneration: Int) {
         self.lock.lock()
         guard let session = self.state.pointee.draining.removeValue(forKey: drainedGeneration) else {
             self.lock.unlock()
             return
         }
-        let target = self.state.pointee.isStopped ? nil : self.state.pointee.currentService
-        let sinks = self.state.pointee.sinks
+        let sinks = self.state.pointee.isStopped ? [] : self.state.pointee.sinks
         self.lock.unlock()
 
-        guard let target = target else {
-            session.stop()
-            return
+        session.stop()
+        for sink in sinks {
+            sink.networkSessionDidReset()
         }
-        session.movePendingRequests(to: target, completion: {
-            session.stop()
-            for sink in sinks {
-                sink.networkSessionDidReset()
-            }
-        })
     }
 
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
         self.lock.lock()
         let sessions = (self.state.pointee.current.map { [$0] } ?? []) + Array(self.state.pointee.draining.values)
         self.lock.unlock()
@@ -211,7 +206,7 @@ private final class SwitchingCore {
         }
         let remaining = Atomic<Int>(value: sessions.count)
         for session in sessions {
-            session.movePendingRequests(to: service, completion: {
+            session.movePendingRequests(to: service, deadline: deadline, completion: {
                 if remaining.modify({ $0 - 1 }) == 0 {
                     completion()
                 }
@@ -263,6 +258,17 @@ private final class SwitchingCore {
         session?.observeConnectionDrops(observer)
     }
 
+    func serverActivity(_ reply: @escaping (NetworkEngineServerActivity?) -> Void) {
+        self.lock.lock()
+        let session = self.state.pointee.isStopped ? nil : self.state.pointee.current
+        self.lock.unlock()
+        guard let session = session else {
+            reply(nil)
+            return
+        }
+        session.serverActivity(reply)
+    }
+
     func stop() {
         self.lock.lock()
         if self.state.pointee.isStopped {
@@ -281,6 +287,21 @@ private final class SwitchingCore {
         for session in sessions {
             session.stop()
         }
+    }
+}
+
+/// Where a draining session hands its requests: the session current when each one moves, so a request
+/// released after a further switch skips the session that is draining in turn. Holds the core weakly: a
+/// session that never finishes draining must not keep the network alive.
+private final class SwitchingForwardingService: NetworkEngineRequestService {
+    private weak var core: SwitchingCore?
+
+    init(core: SwitchingCore) {
+        self.core = core
+    }
+
+    func add(_ request: NetworkEngineRequest) -> Disposable {
+        return self.core?.add(request) ?? EmptyDisposable
     }
 }
 
@@ -331,12 +352,16 @@ final class SwitchingNetworkSession: NetworkEngineSession {
         self.core.observeConnectionDrops(observer)
     }
 
+    func serverActivity(_ reply: @escaping (NetworkEngineServerActivity?) -> Void) {
+        self.core.serverActivity(reply)
+    }
+
     func stop() {
         self.core.stop()
     }
 
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
-        self.core.movePendingRequests(to: service, completion: completion)
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
+        self.core.movePendingRequests(to: service, deadline: deadline, completion: completion)
     }
 }
 
@@ -384,6 +409,13 @@ final class SwitchingNetworkEngine: NetworkEngine {
         return session
     }
 
+    func networkIdentity() -> String? {
+        self.lock.lock()
+        let engine = self.engine
+        self.lock.unlock()
+        return engine.networkIdentity()
+    }
+
     func switchEngine(to kind: NetworkEngineKind, drainTimeout: Double, makeEngine: () -> NetworkEngine?) -> Bool {
         self.switchLock.lock()
         defer {
@@ -396,10 +428,13 @@ final class SwitchingNetworkEngine: NetworkEngine {
             return false
         }
         self.lock.lock()
+        let previous = self.engine
         self.engine = engine
         self.sessions.removeAll(where: { $0.value == nil })
         let sessions = self.sessions.compactMap(\.value)
         self.lock.unlock()
+        previous.deactivate()
+        engine.activate()
         for session in sessions {
             session.switchEngine(to: engine, drainTimeout: drainTimeout)
         }

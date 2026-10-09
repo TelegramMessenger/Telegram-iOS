@@ -67,16 +67,20 @@
     [self cleanup];
 }
 
-- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId {
+- (void)attachToContext:(MTContext *)context datacenterId:(NSInteger)datacenterId {
     _datacenterId = datacenterId;
     _context = context;
+}
+
+- (void)execute:(MTContext *)context datacenterId:(NSInteger)datacenterId {
+    [self attachToContext:context datacenterId:datacenterId];
     
     if (_datacenterId != 0 && context != nil)
     {
         bool alreadyCompleted = false;
         
         MTDatacenterAuthInfo *currentAuthInfo = [context authInfoForDatacenterWithId:_datacenterId selector:_authKeyInfoSelector];
-        if (currentAuthInfo != nil && !self.replacesExistingKey) {
+        if (currentAuthInfo != nil && !self.replacesExistingKey && self.probedPermanentKey == nil) {
             alreadyCompleted = true;
         }
         
@@ -125,8 +129,20 @@
         case MTDatacenterAuthInfoSelectorPersistent: {
             MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId validUntilTimestamp:INT32_MAX saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:serverSalt firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
             
+            // A permanent key that appeared while this handshake ran (another
+            // maker, a restored backup) is the one sessions already use:
+            // replacing it would leave them under a key the account is not
+            // authorized with. The new key is dropped instead.
             MTContext *context = _context;
-            [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
+            NSInteger datacenterId = _datacenterId;
+            [context performBatchUpdates:^{
+                MTDatacenterAuthInfo *currentAuthInfo = [context authInfoForDatacenterWithId:datacenterId selector:MTDatacenterAuthInfoSelectorPersistent];
+                if (currentAuthInfo == nil) {
+                    [context updateAuthInfoForDatacenterWithId:datacenterId authInfo:authInfo selector:MTDatacenterAuthInfoSelectorPersistent];
+                } else if (MTLogEnabled()) {
+                    MTLog(@"[MTDatacenterAuthAction@%p: datacenter %d got persistent key %lld meanwhile, dropping the new key %lld]", context, (int)datacenterId, currentAuthInfo.authKeyId, authInfo.authKeyId);
+                }
+            }];
             [self complete];
         }
         break;
@@ -135,7 +151,7 @@
         case MTDatacenterAuthInfoSelectorEphemeralMedia: {
             MTContext *mainContext = _context;
             if (mainContext != nil) {
-                if (_skipBind) {
+                if (_skipBind && self.probedPermanentKey == nil) {
                     MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId validUntilTimestamp:authKey.validUntilTimestamp saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:serverSalt firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
                     
                     [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
@@ -143,6 +159,10 @@
                     [self complete];
                 } else {
                     MTDatacenterAuthInfo *persistentAuthInfo = [mainContext authInfoForDatacenterWithId:_datacenterId selector:MTDatacenterAuthInfoSelectorPersistent];
+                    MTDatacenterAuthKey *probedPermanentKey = self.probedPermanentKey;
+                    if (probedPermanentKey != nil) {
+                        persistentAuthInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:probedPermanentKey.authKey authKeyId:probedPermanentKey.authKeyId validUntilTimestamp:probedPermanentKey.validUntilTimestamp saltSet:@[] authKeyAttributes:nil];
+                    }
                     if (persistentAuthInfo != nil) {
                         _bindAttempts = 0;
                         [self bindAuthKey:authKey persistentAuthInfo:persistentAuthInfo timestamp:timestamp serverSalt:serverSalt connection:[_authMtProto takeConnectionForReusing]];
@@ -200,11 +220,7 @@
         [bindMtProto stop];
         
         if (success) {
-            MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId validUntilTimestamp:authKey.validUntilTimestamp saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:serverSalt firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
-            
-            [strongSelf->_context updateAuthInfoForDatacenterWithId:strongSelf->_datacenterId authInfo:authInfo selector:strongSelf->_authKeyInfoSelector];
-            
-            [strongSelf complete];
+            [strongSelf completeWithBoundAuthKey:authKey timestamp:timestamp serverSalt:serverSalt];
         } else if ([MTDatacenterAuthAction bindErrorIsTransient:error] && strongSelf->_bindAttempts < 3 && !atomic_load(&strongSelf->_cancelled)) {
             NSTimeInterval delay = (NSTimeInterval)strongSelf->_bindAttempts;
             if (MTLogEnabled()) {
@@ -226,6 +242,16 @@
         }
     }]];
     [_bindMtProto resume];
+}
+
+- (void)completeWithBoundAuthKey:(MTDatacenterAuthKey *)authKey timestamp:(int64_t)timestamp serverSalt:(int64_t)serverSalt {
+    if (self.probedPermanentKey == nil) {
+        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId validUntilTimestamp:authKey.validUntilTimestamp saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:serverSalt firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
+        
+        [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
+    }
+    
+    [self complete];
 }
 
 - (void)cleanup

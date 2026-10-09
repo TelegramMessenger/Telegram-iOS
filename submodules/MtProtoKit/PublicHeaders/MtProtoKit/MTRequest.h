@@ -29,6 +29,10 @@
 @property (nonatomic) int32_t transactionResetStateVersion;
 @property (nonatomic, strong) MTRequestContext *requestContext;
 @property (nonatomic, strong) MTRequestErrorContext *errorContext;
+/// The request went out under a message id and the server may have run it; cleared when the server
+/// answers it with an error after which it goes again. Kept when its message id is forgotten (a
+/// transaction that may have failed, a session change), for a handover (`handOverRequests:`).
+@property (nonatomic, direct) bool mayHaveReachedServer;
 @property (nonatomic) bool hasHighPriority;
 @property (nonatomic) bool dependsOnPasswordEntry;
 @property (nonatomic) bool passthroughPasswordEntryError;
@@ -41,6 +45,10 @@
 
 @property (nonatomic, copy) bool (^shouldContinueExecutionWithErrorContext)(MTRequestErrorContext *errorContext);
 @property (nonatomic, copy) bool (^shouldDependOnRequest)(MTRequest *anotherRequest);
+
+- (bool)scanNeedsTimeoutTimer __attribute__((objc_direct));
+- (MTRequestErrorContext *)scanErrorContext __attribute__((objc_direct));
+- (id)scanInternalId __attribute__((objc_direct));
 
 - (void)setPayload:(NSData *)payload metadata:(id)metadata shortMetadata:(id)shortMetadata responseParser:(id (^)(NSData *))responseParser;
 

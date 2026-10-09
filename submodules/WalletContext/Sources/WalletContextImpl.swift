@@ -208,6 +208,7 @@ actor WalletContextImpl {
 
     func shutdown() async {
         guard !self.isShutdown else { return }
+        self.output.transferBackgroundTasks.shutdown()
         self.discardPendingTransferRegistrations()
         self.isShutdown = true
         self.resetTonConnect()

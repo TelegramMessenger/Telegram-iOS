@@ -6,7 +6,7 @@ import MTProtoRustEngineMapping
 @testable import MTProtoRustEngine
 
 final class RustEngineBridgeTests: XCTestCase {
-    private static let logger: Logger = {
+    static let logger: Logger = {
         let path = NSTemporaryDirectory() + "mtproto-rust-tests-\(getpid())"
         try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
         let logger = Logger(rootPath: path, basePath: path)
@@ -100,10 +100,15 @@ final class RustEngineBridgeTests: XCTestCase {
             (.temporaryKeyBound, MTEventKindTemporaryKeyBound), (.temporaryKeyBindFailed, MTEventKindTemporaryKeyBindFailed),
             (.permanentKeyInvalid, MTEventKindPermanentKeyInvalid), (.temporaryKeyInUse, MTEventKindTemporaryKeyInUse),
             (.temporaryKeyDropped, MTEventKindTemporaryKeyDropped), (.routeMemoryChanged, MTEventKindRouteMemoryChanged),
+            (.released, MTEventKindReleased),
         ]
         for (kind, raw) in pairs {
             XCTAssertEqual(kind.rawValue, raw.rawValue)
         }
+    }
+
+    func testReleasedFlagMatchesHeader() {
+        XCTAssertEqual(rustEngineReleasedMayHaveRunFlag, UInt32(MTReleasedMayHaveRun))
     }
 
     func testFlagsMatchHeader() {
@@ -146,11 +151,39 @@ final class RustEngineBridgeTests: XCTestCase {
             return
         }
         XCTAssertNotNil(runtime.engine)
-        XCTAssertEqual(mt_engine_abi_version(), 3)
+        XCTAssertEqual(mt_engine_abi_version(), 5)
         let first = runtime.nextRequestId()
         let second = runtime.nextRequestId()
         XCTAssertNotEqual(first, 0)
         XCTAssertGreaterThan(second, first)
+    }
+
+    /// The app tells an engine crash by the crashed thread's name; the engine must name its threads so.
+    func testTheEnginesThreadsAreRecognizedByName() {
+        guard RustEngineRuntime.shared != nil else {
+            XCTFail("engine did not start")
+            return
+        }
+        var threads: thread_act_array_t?
+        var count: mach_msg_type_number_t = 0
+        guard task_threads(mach_task_self_, &threads, &count) == KERN_SUCCESS, let threads = threads else {
+            XCTFail("no thread list")
+            return
+        }
+        var names: [String] = []
+        for index in 0 ..< Int(count) {
+            if let thread = pthread_from_mach_thread_np(threads[index]) {
+                var buffer = [CChar](repeating: 0, count: 64)
+                if pthread_getname_np(thread, &buffer, buffer.count) == 0 {
+                    names.append(String(cString: buffer))
+                }
+            }
+            mach_port_deallocate(mach_task_self_, threads[index])
+        }
+        vm_deallocate(mach_task_self_, vm_address_t(bitPattern: threads), vm_size_t(Int(count) * MemoryLayout<thread_t>.stride))
+        let engineThreads = names.filter(rustEngineOwnsThread(named:))
+        XCTAssertTrue(engineThreads.contains("mtproto-main"), "\(names)")
+        XCTAssertEqual(names.filter { $0.hasPrefix("mtproto") }.count, engineThreads.count)
     }
 
     func testRawSessionEventsAreRoutedAndFreed() {

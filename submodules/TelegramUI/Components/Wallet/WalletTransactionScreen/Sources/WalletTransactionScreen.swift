@@ -235,6 +235,7 @@ private final class TransactionCommentComponent: Component {
                     }
                 )
                 textSelectionNode.enableQuote = false
+                textSelectionNode.selectAllAfterCopy = true
                 textSelectionNode.enableSpeak = isSpeakSelectionEnabled()
                 textSelectionNode.cancelSelectionOnOutsideTap = true
 

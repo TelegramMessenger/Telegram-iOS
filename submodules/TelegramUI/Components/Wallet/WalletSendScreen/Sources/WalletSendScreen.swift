@@ -598,6 +598,10 @@ private final class WalletSendScreenComponent: Component {
             return self.amountField.isInputActive
         }
 
+        var hasUnsavedInput: Bool {
+            return self.amount > 0 || self.amountField.hasInputText || self.comment?.isEmpty == false
+        }
+
         private var component: WalletSendScreenComponent?
         private var environment: EnvironmentType?
         private weak var componentState: EmptyComponentState?
@@ -1157,20 +1161,55 @@ private final class WalletSendScreenComponent: Component {
             self.requestUpdate(transition: .easeInOut(duration: 0.25))
         }
 
-        private func dismiss() {
-            Haptics.cancelRefusal()
-            self.abandonRestoration()
-            self.cancelPendingSend()
-            self.isVisible = false
-            self.peerAddressResolution.state = .cancelled
-            self.peerAddressDisposable.set(nil)
-            guard let controller = self.environment?.controller() as? WalletSendScreen else {
+        func requestDismiss(completion: @escaping () -> Void) {
+            guard self.hasUnsavedInput, let component = self.component, let controller = self.environment?.controller() else {
+                completion()
                 return
             }
-            if let parentController = controller.parentController() {
-                parentController.dismiss(animated: true)
-            } else {
-                controller.dismiss()
+
+            let presentationData = self.currentPresentationData(for: component)
+            var restoreInputFocus = self.amountField.isInputActive
+            let alertController = AlertScreen(
+                title: nil,
+                text: presentationData.initial.strings.Wallet_Send_DiscardAlertText,
+                actions: [
+                    .init(title: presentationData.initial.strings.Attachment_CancelSelectionAlertNo),
+                    .init(title: presentationData.initial.strings.Attachment_CancelSelectionAlertYes, type: .default, action: {
+                        restoreInputFocus = false
+                        completion()
+                    })
+                ],
+                updatedPresentationData: presentationData
+            )
+            alertController.dismissed = { [weak self, weak controller] _ in
+                DispatchQueue.main.async { [weak self, weak controller] in
+                    guard let self, restoreInputFocus, self.isVisible, self.window != nil,
+                          let controller, self.environment?.controller() === controller, !controller.isBeingDismissed,
+                          !self.isPreparingTransfer, !self.isResolvingSigningAccess, !self.isSubmittingTransfer else {
+                        return
+                    }
+                    self.amountField.activateInput()
+                }
+            }
+            controller.present(alertController, in: .window(.root))
+        }
+
+        private func dismiss() {
+            self.requestDismiss { [weak self] in
+                guard let self, let controller = self.environment?.controller() as? WalletSendScreen else {
+                    return
+                }
+                Haptics.cancelRefusal()
+                self.abandonRestoration()
+                self.cancelPendingSend()
+                self.isVisible = false
+                self.peerAddressResolution.state = .cancelled
+                self.peerAddressDisposable.set(nil)
+                if let parentController = controller.parentController() {
+                    parentController.dismiss(animated: true)
+                } else {
+                    controller.dismiss()
+                }
             }
         }
 
@@ -3163,6 +3202,21 @@ public final class WalletSendScreen: ViewControllerComponentContainer, Attachmen
         (self.node.hostView.componentView as? WalletSendScreenComponent.View)?.viewWillDisappear()
 
         super.viewWillDisappear(animated)
+    }
+
+    public func requestDismiss(completion: @escaping () -> Void) {
+        guard self.isNodeLoaded, let componentView = self.node.hostView.componentView as? WalletSendScreenComponent.View else {
+            completion()
+            return
+        }
+        componentView.requestDismiss(completion: completion)
+    }
+
+    public func shouldDismissImmediately() -> Bool {
+        guard self.isNodeLoaded, let componentView = self.node.hostView.componentView as? WalletSendScreenComponent.View else {
+            return true
+        }
+        return !componentView.hasUnsavedInput
     }
 
     override public func dismiss(completion: (() -> Void)? = nil) {
