@@ -1608,6 +1608,11 @@ extension WalletContextImpl {
     ) async {
         let events = await client.events(rawAddress: rawAddress)
         for await event in events {
+            var presentationEvent = event
+            if case let .transactionsChanged(traceId, finality, transactions, _, balanceEvidence) = event {
+                let transactions = await self.streamingTransactionsForPresentation(transactions)
+                presentationEvent = .transactionsChanged(traceId: traceId, finality: finality, transactions: transactions, balanceEvidence: balanceEvidence)
+            }
             guard !Task.isCancelled,
                   !self.isShutdown,
                   self.streamingGeneration == generation,
@@ -1653,7 +1658,7 @@ extension WalletContextImpl {
                 if self.streamingRefreshTracker.requiresRefresh(event) {
                     self.scheduleStreamingRefresh(generation: generation, rawAddress: rawAddress)
                 }
-            case let .transactionsChanged(traceId, finality, transactions, evidence, balanceEvidence):
+            case let .transactionsChanged(traceId, finality, _, evidence, balanceEvidence):
                 if finality == .pending,
                    self.expiredPendingStreamingTraceIds.contains(traceId) {
                     continue
@@ -1664,18 +1669,15 @@ extension WalletContextImpl {
                 if self.streamingRefreshTracker.hasFinalizedTrace(traceId) {
                     self.streamingPresentationOverlay.rememberBalanceTransactions(balanceEvidence, traceId: traceId, finality: finality)
                     let changed = pending != self.currentState.pendingTransfers
-                        && self.streamingPresentationOverlay.apply(event, updatedAt: currentWalletTimestamp())
+                        && self.streamingPresentationOverlay.apply(presentationEvent, updatedAt: currentWalletTimestamp())
                     self.applyStreamingPendingTransfers(pending, overlayChanged: changed)
                     continue
                 }
                 if finality != .pending {
                     self.expiredPendingStreamingTraceIds.remove(traceId)
                 }
-                let filteredTransactions = transactions.filter {
-                    $0.direction != .incoming || $0.amount >= self.transferMinAmount
-                }
                 let changed = self.streamingPresentationOverlay.apply(
-                    .transactionsChanged(traceId: traceId, finality: finality, transactions: filteredTransactions, balanceEvidence: balanceEvidence),
+                    presentationEvent,
                     updatedAt: currentWalletTimestamp()
                 )
                 self.applyStreamingPendingTransfers(pending, overlayChanged: changed)
@@ -1708,6 +1710,62 @@ extension WalletContextImpl {
             self.streamingConnectionState = .inactive
             self.streamingHasSubscribed = false
             self.evaluatePollingDemand()
+        }
+    }
+
+    private func streamingTransactionsForPresentation(_ transactions: [Transaction]) async -> [Transaction] {
+        let transactions = transactions.filter {
+            $0.direction != .incoming || $0.amount >= self.transferMinAmount
+        }
+        var addresses = Set<String>()
+        for transaction in transactions {
+            guard case let .address(address, _) = transaction.peer,
+                  let key = walletAddressMappingKey(address),
+                  self.peerByWalletAddress[key] == nil else { continue }
+            addresses.insert(address)
+            addresses.insert(key)
+            for bounceable in [false, true] {
+                if let friendlyAddress = try? convertTonAddress(value: address, format: .userFriendly(bounceable: bounceable, testnet: false)) {
+                    addresses.insert(friendlyAddress)
+                }
+            }
+        }
+        let cachedPeers: [WalletTransactionPeer]
+        if addresses.isEmpty {
+            cachedPeers = []
+        } else {
+            cachedPeers = (try? await WalletSignalRequestContext<[WalletTransactionPeer]>().run(
+                self.engine.wallet.getCachedUserAddressPeers(addresses: Array(addresses))
+                |> castError(WalletError.self)
+            )) ?? []
+        }
+        var peerByAddress = self.peerByWalletAddress
+        var peerlessAddresses = Set<String>()
+        for peer in cachedPeers {
+            switch peer {
+            case let .user(peer, address, _):
+                if let key = walletAddressMappingKey(address), peerByAddress[key] == nil {
+                    peerByAddress[key] = peer
+                }
+            case let .address(address, _):
+                if let key = walletAddressMappingKey(address) {
+                    peerlessAddresses.insert(key)
+                }
+            case .onramp, .unsupported:
+                break
+            }
+        }
+        return transactions.compactMap { transaction in
+            let transaction = transactionWithResolvedPeer(transaction, peerByAddress: peerByAddress)
+            switch transaction.peer {
+            case .user:
+                return transaction
+            case let .address(address, _):
+                guard let key = walletAddressMappingKey(address), peerlessAddresses.contains(key) else { return nil }
+                return transaction
+            case .onramp, .unsupported:
+                return nil
+            }
         }
     }
 

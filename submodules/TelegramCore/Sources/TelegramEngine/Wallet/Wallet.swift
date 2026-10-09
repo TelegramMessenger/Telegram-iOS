@@ -433,6 +433,27 @@ private struct CachedWalletUserAddresses: Codable {
     }
 }
 
+func _internal_getCachedWalletUserAddressPeers(account: Account, addresses: [String]) -> Signal<[WalletTransactionPeer], NoError> {
+    guard !addresses.isEmpty else { return .single([]) }
+    return account.postbox.transaction { transaction -> [WalletTransactionPeer] in
+        var result: [WalletTransactionPeer] = []
+        for address in Set(addresses) {
+            let cacheId = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWalletUserAddresses, key: ValueBoxKey("address:\(address)"))
+            guard let cached = transaction.retrieveItemCacheEntry(id: cacheId)?.get(CachedWalletUserAddresses.self) else { continue }
+            for value in cached.userAddresses {
+                if let userId = value.userId {
+                    if let peer = transaction.getPeer(userId) {
+                        result.append(.user(EnginePeer(peer), address: value.address, domain: nil))
+                    }
+                } else if value.publicKey.count == 32 {
+                    result.append(.address(value.address, domain: nil))
+                }
+            }
+        }
+        return result
+    }
+}
+
 func _internal_getWalletUserAddresses(
     account: Account,
     userIds: [EnginePeer.Id],
@@ -500,10 +521,16 @@ func _internal_getWalletUserAddresses(
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: data.users)
                     updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
                     let addresses = data.addresses.map { WalletUserAddress(apiAddress: $0) }
+                    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                     if let cacheId {
-                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                         if let entry = CodableEntry(CachedWalletUserAddresses(addresses: addresses, timestamp: timestamp)) {
                             transaction.putItemCacheEntry(id: cacheId, entry: entry)
+                        }
+                    }
+                    for address in addresses {
+                        let addressCacheId = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWalletUserAddresses, key: ValueBoxKey("address:\(address.address)"))
+                        if let entry = CodableEntry(CachedWalletUserAddresses(addresses: [address], timestamp: timestamp)) {
+                            transaction.putItemCacheEntry(id: addressCacheId, entry: entry)
                         }
                     }
                     return addresses
