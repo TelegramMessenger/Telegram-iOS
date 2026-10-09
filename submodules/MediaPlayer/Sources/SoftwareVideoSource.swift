@@ -671,6 +671,10 @@ final class SoftwareVideoReader {
     
     public private(set) var reportedDuration: CMTime = .invalid
     
+    var videoRotationAngle: Double {
+        return self.videoStream?.rotationAngle ?? 0.0
+    }
+
     public var hasStream: Bool {
         return self.videoStream != nil
     }
