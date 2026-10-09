@@ -15,6 +15,8 @@ public final class EmojiSelectionComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let sideInset: CGFloat
+    /// The right side's inset, which differs from `sideInset` beside iPhone Duo's side strip.
+    public let rightSideInset: CGFloat
     public let bottomInset: CGFloat
     public let deviceMetrics: DeviceMetrics
     public let emojiContent: EmojiPagerContentComponent?
@@ -23,11 +25,13 @@ public final class EmojiSelectionComponent: Component {
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
     public let backspace: (() -> Void)?
-    
+
+    /// `rightSideInset` defaults to `sideInset`, the same inset on both sides.
     public init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         sideInset: CGFloat,
+        rightSideInset: CGFloat? = nil,
         bottomInset: CGFloat,
         deviceMetrics: DeviceMetrics,
         emojiContent: EmojiPagerContentComponent?,
@@ -40,6 +44,7 @@ public final class EmojiSelectionComponent: Component {
         self.theme = theme
         self.strings = strings
         self.sideInset = sideInset
+        self.rightSideInset = rightSideInset ?? sideInset
         self.bottomInset = bottomInset
         self.deviceMetrics = deviceMetrics
         self.emojiContent = emojiContent
@@ -58,6 +63,9 @@ public final class EmojiSelectionComponent: Component {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.rightSideInset != rhs.rightSideInset {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
@@ -220,7 +228,8 @@ public final class EmojiSelectionComponent: Component {
                 })
             }
             self.backspaceBackgroundView.frame = CGRect(origin: CGPoint(), size: backspaceButtonSize).insetBy(dx: -12.0, dy: -12.0)
-            let backspaceButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - component.sideInset - backspaceButtonInset.right - backspaceButtonSize.width, y: resolvedHeight - component.bottomInset - backspaceButtonInset.bottom), size: backspaceButtonSize)
+            // The right inset is its own (iPhone Duo: the side strip, with a corner block at its end, may be on the right).
+            let backspaceButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - component.rightSideInset - backspaceButtonInset.right - backspaceButtonSize.width, y: resolvedHeight - component.bottomInset - backspaceButtonInset.bottom), size: backspaceButtonSize)
             
             if let backspaceButtonView = self.backspaceButton.view {
                 if backspaceButtonView.superview == nil {
@@ -246,7 +255,7 @@ public final class EmojiSelectionComponent: Component {
                     theme: component.theme,
                     strings: component.strings,
                     isContentInFocus: true,
-                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: component.sideInset, bottom: component.bottomInset + 16.0, right: component.sideInset),
+                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: component.sideInset, bottom: component.bottomInset + 16.0, right: component.rightSideInset),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.emojiContent?.withCustomTintColor(component.theme.list.itemPrimaryTextColor),
                     stickerContent: component.stickerContent?.withCustomTintColor(component.theme.list.itemPrimaryTextColor),

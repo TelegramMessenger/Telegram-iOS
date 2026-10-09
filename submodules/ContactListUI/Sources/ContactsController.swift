@@ -36,7 +36,7 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -787,7 +787,7 @@ private final class ContactsTabBarContextReferenceContentSource: ContextReferenc
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView.contentView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .top
         )
     }
@@ -808,10 +808,10 @@ private final class ChatListHeaderBarContextExtractedContentSource: ContextExtra
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

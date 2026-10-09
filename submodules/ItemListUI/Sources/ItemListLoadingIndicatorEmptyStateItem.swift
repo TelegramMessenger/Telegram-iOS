@@ -52,6 +52,6 @@ public final class ItemListLoadingIndicatorEmptyStateItemNode: ItemListControlle
         insets.top += navigationBarHeight
         
         let size = CGSize(width: 22.0, height: 22.0)
-        transition.updateFrame(node: self.indicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - size.width) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - size.height) / 2.0)), size: size))
+        transition.updateFrame(node: self.indicator, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - size.width) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - size.height) / 2.0)), size: size))
     }
 }

@@ -245,7 +245,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                 
-                let coverFrame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
+                let coverFrame = backgroundFrame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                 
                 let avatarSize: CGFloat = 104.0
                 let avatarFrame = CGRect(origin: CGPoint(x: floor((coverFrame.width - avatarSize) * 0.5), y: coverFrame.minY + item.topInset + 24.0), size: CGSize(width: avatarSize, height: avatarSize))
@@ -463,7 +463,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                     subtitleView.frame = subtitleFrame
                 }
                 
-                self.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
+                self.maskNode.frame = backgroundFrame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                 self.backgroundNode.frame = backgroundFrame
             })
         }

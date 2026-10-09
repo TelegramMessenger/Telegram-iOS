@@ -531,6 +531,6 @@ private final class StickerPaneSearchHeaderContextReferenceContentSource: Contex
         guard let sourceView = self.sourceView else {
             return nil
         }
-        return ContextControllerReferenceViewInfo(referenceView: sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

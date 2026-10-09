@@ -207,16 +207,20 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         var containerSize: CGSize
         var containerInset: CGFloat
         var containerCornerRadius: CGFloat
+        /// The container's bottom corners where they differ (iPhone Duo's cover screen, each its own screen corner);
+        /// nil elsewhere, where `containerCornerRadius` rounds both.
+        var containerBottomCornerRadii: CornerRadii?
         var bottomInset: CGFloat
         var topInset: CGFloat
         var fillingSize: CGFloat
         let isTablet: Bool
         let isCentered: Bool
 
-        init(containerSize: CGSize, containerInset: CGFloat, containerCornerRadius: CGFloat, bottomInset: CGFloat, topInset: CGFloat, fillingSize: CGFloat, isTablet: Bool, isCentered: Bool) {
+        init(containerSize: CGSize, containerInset: CGFloat, containerCornerRadius: CGFloat, containerBottomCornerRadii: CornerRadii? = nil, bottomInset: CGFloat, topInset: CGFloat, fillingSize: CGFloat, isTablet: Bool, isCentered: Bool) {
             self.containerSize = containerSize
             self.containerInset = containerInset
             self.containerCornerRadius = containerCornerRadius
+            self.containerBottomCornerRadii = containerBottomCornerRadii
             self.bottomInset = bottomInset
             self.topInset = topInset
             self.fillingSize = fillingSize
@@ -266,6 +270,38 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         private var leftItemView: ComponentView<Empty>?
         private var rightItemView: ComponentView<Empty>?
         private var bottomItemView: ComponentView<Empty>?
+        /// Beside iPhone Duo's status island (unfolded portrait): the header's title and right item as laid out at the
+        /// sheet's edge, and the island they slide clear of as the sheet's top rises beside it (see `updateScrolling`).
+        private var headerIslandLayout: HeaderIslandLayout?
+        private var headerIslandShift: CGFloat = 0.0
+
+        private struct HeaderIslandLayout {
+            var islandHeight: CGFloat
+            var inset: CGFloat
+            var titleMinX: CGFloat
+            var titleMaxX: CGFloat
+            var titleFrame: CGRect?
+            var rightItemFrame: CGRect?
+
+            /// The title and right item moved `shift` clear of the island: the right item by all of it, the title only as far
+            /// as it needs to stay left of the right item, while it stays centered where it fits.
+            func frames(shift: CGFloat) -> (title: CGRect?, rightItem: CGRect?) {
+                let titleFrame = self.titleFrame.map { frame -> CGRect in
+                    var x = min(frame.minX, self.titleMaxX - shift - frame.width)
+                    x = max(x, self.titleMinX)
+                    return CGRect(origin: CGPoint(x: x, y: frame.minY), size: frame.size)
+                }
+                return (titleFrame, self.rightItemFrame?.offsetBy(dx: -shift, dy: 0.0))
+            }
+
+            /// The header row the island shift is measured against (in the navigation bar container's coordinates).
+            var rowFrame: CGRect {
+                if let rightItemFrame = self.rightItemFrame {
+                    return rightItemFrame
+                }
+                return self.titleFrame ?? CGRect(x: 0.0, y: 16.0, width: 0.0, height: 44.0)
+            }
+        }
 
         private let backgroundHandleView: UIImageView
 
@@ -280,6 +316,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
         private var isUpdating: Bool = false
         private var environment: ResizableSheetComponentEnvironment?
         private var itemLayout: ItemLayout?
+        private var containerUsesCornerRadii = false
         private var registeredExternalState: ExternalState?
         private weak var trackedScrollView: UIScrollView?
         private var trackedScrollViewWasAtTopOnGestureBegan = false
@@ -655,6 +692,19 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             transition.setTransform(layer: self.backgroundLayer, transform: CATransform3DMakeTranslation(0.0, topOffset + itemLayout.containerInset, 0.0))
 
             transition.setPosition(view: self.navigationBarContainer, position: CGPoint(x: 0.0, y: topOffset + itemLayout.containerInset))
+            if let islandLayout = self.headerIslandLayout {
+                // Slides clear of the status island as the sheet's top rises beside it.
+                let rowFrame = islandLayout.rowFrame
+                let shift = statusIslandTrailingShift(rowMinY: topOffset + itemLayout.containerInset + rowFrame.minY, rowHeight: rowFrame.height, islandHeight: islandLayout.islandHeight, inset: islandLayout.inset)
+                self.headerIslandShift = shift
+                let frames = islandLayout.frames(shift: shift)
+                if let titleFrame = frames.title, let view = self.titleItemView?.view {
+                    transition.setPosition(view: view, position: titleFrame.center)
+                }
+                if let rightItemFrame = frames.rightItem, let view = self.rightItemView?.view {
+                    transition.setPosition(view: view, position: rightItemFrame.center)
+                }
+            }
 
             var topOffsetFraction = self.scrollView.bounds.minY / 100.0
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
@@ -682,7 +732,17 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             containerTransform = CATransform3DScale(containerTransform, scale, scale, scale)
             containerTransform = CATransform3DTranslate(containerTransform, 0.0, self.dismissTranslation, 0.0)
             transition.setTransform(view: self.containerView, transform: containerTransform)
-            transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
+            if let bottomCornerRadii = itemLayout.containerBottomCornerRadii, CALayer.cornerRadiiSupported {
+                self.containerUsesCornerRadii = true
+                self.containerView.layer.setCornerRadii(bottomCornerRadii)
+            } else {
+                let cornerRadius = itemLayout.containerBottomCornerRadii.map { max($0.bottomLeft, $0.bottomRight) } ?? scaledCornerRadius
+                if self.containerUsesCornerRadii {
+                    self.containerUsesCornerRadii = false
+                    self.containerView.layer.setCornerRadii(CornerRadii(uniform: cornerRadius))
+                }
+                transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: cornerRadius)
+            }
 
             var bounds = self.scrollView.bounds
             bounds.size.width = itemLayout.fillingSize
@@ -736,6 +796,15 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
 
             let screenSize = availableSize
             let isCentered = component.centeredSize != nil
+            // iPhone Duo's cover screen: the bottom corners of the container (each its own screen corner, see below);
+            // the clips inside it keep their bottom corners within those. Nil where the screen's corners are uniform.
+            var screenBottomCornerRadii: (left: CGFloat, right: CGFloat)?
+            if !isCentered, let controllerEnvironment = environment[ChildEnvironmentType.self].value as? ViewControllerComponentContainer.Environment {
+                screenBottomCornerRadii = controllerEnvironment.screenCornerRadii.sheetBottomCornerRadii(inset: 0.0)
+            }
+            func clipCornerRadii(_ radius: CGFloat) -> CornerRadii? {
+                return screenBottomCornerRadii.map { CornerRadii(topLeft: radius, topRight: radius, bottomLeft: min(radius, $0.left), bottomRight: min(radius, $0.right)) }
+            }
             let layoutSize: CGSize
             if let centeredSize = component.centeredSize {
                 layoutSize = CGSize(width: min(screenSize.width, centeredSize.width), height: min(screenSize.height, centeredSize.height))
@@ -746,14 +815,40 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             let resetScrolling = self.scrollView.bounds.width != layoutSize.width
 
             let fillingSize: CGFloat
+            // The sheet's distance from each side of the screen. Equal (the sheet centered on the screen) unless
+            // it keeps to the band beside iPhone Duo's side strip.
+            let rawSideInset: CGFloat
+            let rawRightSideInset: CGFloat
+            // The content's environment, with side insets relative to the sheet rather than the screen: in the
+            // band the sheet is clear of the strip, so its content has no strip to avoid.
+            let contentEnvironment: ChildEnvironmentType
             if isCentered {
                 fillingSize = layoutSize.width
-            } else if case .regular = sheetEnvironment.metrics.widthClass {
-                fillingSize = min(layoutSize.width, 414.0) - sheetEnvironment.safeInsets.left * 2.0
+                rawSideInset = 0.0
+                rawRightSideInset = 0.0
+                contentEnvironment = environment[ChildEnvironmentType.self].value
             } else {
-                fillingSize = min(availableSize.width, availableSize.height) - sheetEnvironment.safeInsets.left * 2.0
+                var maxWidth: CGFloat?
+                if case .regular = sheetEnvironment.metrics.widthClass {
+                    maxWidth = 414.0
+                }
+                let placement = resizableSheetHorizontalPlacement(containerSize: layoutSize, safeInsets: sheetEnvironment.safeInsets, maxWidth: maxWidth)
+                fillingSize = placement.width
+                rawSideInset = placement.minX
+                if sheetEnvironment.safeInsets.left != sheetEnvironment.safeInsets.right {
+                    rawRightSideInset = layoutSize.width - placement.minX - placement.width
+                    if let controllerEnvironment = environment[ChildEnvironmentType.self].value as? ViewControllerComponentContainer.Environment, let adjusted = controllerEnvironment.withSideSafeInsets(left: placement.contentSideInsets.left, right: placement.contentSideInsets.right) as? ChildEnvironmentType {
+                        contentEnvironment = adjusted
+                    } else {
+                        contentEnvironment = environment[ChildEnvironmentType.self].value
+                    }
+                } else {
+                    rawRightSideInset = rawSideInset
+                    contentEnvironment = environment[ChildEnvironmentType.self].value
+                }
             }
-            let rawSideInset: CGFloat = floor((layoutSize.width - fillingSize) * 0.5)
+            // The background is centered on the screen unless the sheet keeps to a band.
+            let backgroundCenterX: CGFloat = rawSideInset == rawRightSideInset ? layoutSize.width / 2.0 : rawSideInset + fillingSize / 2.0
 
             self.component = component
             self.state = state
@@ -795,7 +890,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 transition: transition,
                 component: component.content,
                 environment: {
-                    environment[ChildEnvironmentType.self]
+                    contentEnvironment
                 },
                 containerSize: containerSize
             )
@@ -807,6 +902,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 }
                 contentView.clipsToBounds = component.clipsContent
                 contentView.layer.cornerRadius = 40.0
+                let _ = contentView.layer.applyCornerRadiiIfNeeded(clipCornerRadii(40.0))
                 
                 transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: rawSideInset, y: 0.0), size: contentViewSize))
             }
@@ -819,6 +915,34 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 initialContentHeight = min(contentHeight, max(0.0, defaultHeight))
             } else {
                 initialContentHeight = contentHeight
+            }
+
+            // A tall sheet's header can rise under a top corner block (iPhone Duo's status corner, folded
+            // portrait), so its controls keep clear of it; a short sheet's header never reaches it.
+            var headerCornerInsets = UIEdgeInsets()
+            if !isCentered, let controllerEnvironment = environment[ChildEnvironmentType.self].value as? ViewControllerComponentContainer.Environment {
+                let sheetMinY = component.isFullscreen ? 0.0 : containerInset + max(0.0, layoutSize.height - containerInset - contentHeight - sheetEnvironment.inputHeight)
+                headerCornerInsets = sheetHeaderCornerInsets(containerWidth: layoutSize.width, sheetMinX: rawSideInset, sheetWidth: fillingSize, sheetMinY: sheetMinY, reservedCorners: controllerEnvironment.reservedCorners)
+            }
+            // Beside a status island (iPhone Duo, unfolded portrait) the sheet can be low, with nothing to avoid, or risen
+            // beside the island: the right item and the title are laid out at the edge and slide clear of the island by the
+            // sheet's current top in `updateScrolling` (the title is measured to fit the risen row).
+            var islandHeaderInset: CGFloat = 0.0
+            var islandHeight: CGFloat = 0.0
+            if !isCentered, !component.isFullscreen, let controllerEnvironment = environment[ChildEnvironmentType.self].value as? ViewControllerComponentContainer.Environment, controllerEnvironment.navigationBarTrailingButtonsInset > 0.0, let island = controllerEnvironment.reservedCorners.topRight, headerCornerInsets.right > 0.0 {
+                islandHeaderInset = headerCornerInsets.right
+                islandHeight = island.height
+            }
+            var islandHeaderLayout: HeaderIslandLayout?
+            if islandHeaderInset > 0.0 {
+                islandHeaderLayout = HeaderIslandLayout(
+                    islandHeight: islandHeight,
+                    inset: islandHeaderInset,
+                    titleMinX: rawSideInset + headerCornerInsets.left + 72.0,
+                    titleMaxX: layoutSize.width - rawRightSideInset - (headerCornerInsets.right - islandHeaderInset) - 72.0,
+                    titleFrame: nil,
+                    rightItemFrame: nil
+                )
             }
 
             let edgeEffectHeight: CGFloat = 80.0
@@ -843,9 +967,16 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                     transition: transition,
                     component: titleItem,
                     environment: {},
-                    containerSize: CGSize(width: containerSize.width - 72.0 * 2.0, height: 66.0)
+                    containerSize: CGSize(width: containerSize.width - 72.0 * 2.0 - headerCornerInsets.left - headerCornerInsets.right, height: 66.0)
                 )
-                let titleItemFrame = CGRect(origin: CGPoint(x: rawSideInset + floorToScreenPixels((containerSize.width - titleItemSize.width)) / 2.0, y: floorToScreenPixels(38.0 - titleItemSize.height * 0.5)), size: titleItemSize)
+                let titleCenteringRightInset = headerCornerInsets.right - islandHeaderInset
+                var titleItemFrame = CGRect(origin: CGPoint(x: rawSideInset + headerCornerInsets.left + floorToScreenPixels((containerSize.width - headerCornerInsets.left - titleCenteringRightInset - titleItemSize.width)) / 2.0, y: floorToScreenPixels(38.0 - titleItemSize.height * 0.5)), size: titleItemSize)
+                if islandHeaderLayout != nil {
+                    islandHeaderLayout?.titleFrame = titleItemFrame
+                    if let shifted = islandHeaderLayout?.frames(shift: self.headerIslandShift).title {
+                        titleItemFrame = shifted
+                    }
+                }
                 if let view = titleItemView.view {
                     if view.superview == nil {
                         self.navigationBarContainer.addSubview(view)
@@ -874,7 +1005,7 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                     environment: {},
                     containerSize: CGSize(width: 66.0, height: 66.0)
                 )
-                let leftItemFrame = CGRect(origin: CGPoint(x: rawSideInset + 16.0, y: 16.0), size: leftItemSize)
+                let leftItemFrame = CGRect(origin: CGPoint(x: rawSideInset + 16.0 + headerCornerInsets.left, y: 16.0), size: leftItemSize)
                 if let view = leftItemView.view {
                     if view.superview == nil {
                         self.navigationBarContainer.addSubview(view)
@@ -915,7 +1046,13 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                     environment: {},
                     containerSize: CGSize(width: 66.0, height: 66.0)
                 )
-                let rightItemFrame = CGRect(origin: CGPoint(x: layoutSize.width - rawSideInset - 16.0 - rightItemSize.width, y: 16.0), size: rightItemSize)
+                var rightItemFrame = CGRect(origin: CGPoint(x: layoutSize.width - rawRightSideInset - 16.0 - (headerCornerInsets.right - islandHeaderInset) - rightItemSize.width, y: 16.0), size: rightItemSize)
+                if islandHeaderLayout != nil {
+                    islandHeaderLayout?.rightItemFrame = rightItemFrame
+                    if let shifted = islandHeaderLayout?.frames(shift: self.headerIslandShift).rightItem {
+                        rightItemFrame = shifted
+                    }
+                }
                 if let view = rightItemView.view {
                     if view.superview == nil {
                         self.navigationBarContainer.addSubview(view)
@@ -937,6 +1074,11 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
                 } else {
                     rightItemView.view?.removeFromSuperview()
                 }
+            }
+
+            self.headerIslandLayout = islandHeaderLayout
+            if islandHeaderLayout == nil {
+                self.headerIslandShift = 0.0
             }
 
             var bottomInsets = ContainerViewLayout.concentricInsets(bottomInset: isCentered ? 0.0 : sheetEnvironment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
@@ -992,7 +1134,9 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             let bottomEdgeEffectExtension = max(0.0, component.bottomEdgeEffectExtension)
             let bottomEdgeEffectFrame = CGRect(origin: CGPoint(x: rawSideInset, y: layoutSize.height - bottomInsets.bottom - bottomEdgeEffectHeight - bottomEdgeEffectExtension), size: CGSize(width: fillingSize, height: bottomEdgeEffectHeight + bottomInsets.bottom))
             transition.setFrame(view: self.bottomEdgeEffectView, frame: bottomEdgeEffectFrame)
-            transition.setCornerRadius(layer: self.bottomEdgeEffectView.layer, cornerRadius: bottomEdgeEffectExtension > 0.0 ? 0.0 : 40.0)
+            if !self.bottomEdgeEffectView.layer.applyCornerRadiiIfNeeded(bottomEdgeEffectExtension > 0.0 ? nil : clipCornerRadii(40.0).map { CornerRadii(topLeft: 0.0, topRight: 0.0, bottomLeft: $0.bottomLeft, bottomRight: $0.bottomRight) }) {
+                transition.setCornerRadius(layer: self.bottomEdgeEffectView.layer, cornerRadius: bottomEdgeEffectExtension > 0.0 ? 0.0 : 40.0)
+            }
             self.bottomEdgeEffectView.update(content: backgroundColor, blur: true, alpha: 1.0, rect: bottomEdgeEffectFrame, edge: .bottom, edgeSize: bottomEdgeEffectHeight, transition: transition)
             if self.bottomEdgeEffectView.superview == nil {
                 self.bottomContainer.insertSubview(self.bottomEdgeEffectView, at: 0)
@@ -1017,14 +1161,18 @@ public final class ResizableSheetComponent<ChildEnvironmentType: Sendable & Equa
             let scrollContentHeight = max(topInset + contentHeight + containerInset + sheetEnvironment.inputHeight, layoutSize.height - containerInset)
 
             self.scrollContentClippingView.layer.cornerRadius = 40.0
+            let _ = self.scrollContentClippingView.layer.applyCornerRadiiIfNeeded(clipCornerRadii(40.0))
 
             let containerCornerRadius: CGFloat = isCentered ? 40.0 : max(22.0, sheetEnvironment.deviceMetrics.screenCornerRadius)
+            // iPhone Duo's cover screen: the container's bottom corners, which reach the screen's, follow each screen
+            // corner (8pt on the hinge side, 59pt outside) instead of one radius. Nil where the corners are uniform.
+            let containerBottomCornerRadii: CornerRadii? = screenBottomCornerRadii.map { CornerRadii(topLeft: 0.0, topRight: 0.0, bottomLeft: $0.left, bottomRight: $0.right) }
             self.containerView.layer.maskedCorners = isCentered ? [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner] : [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-            self.itemLayout = ItemLayout(containerSize: layoutSize, containerInset: containerInset, containerCornerRadius: containerCornerRadius, bottomInset: sheetEnvironment.safeInsets.bottom, topInset: topInset, fillingSize: fillingSize, isTablet: sheetEnvironment.metrics.isTablet, isCentered: isCentered)
+            self.itemLayout = ItemLayout(containerSize: layoutSize, containerInset: containerInset, containerCornerRadius: containerCornerRadius, containerBottomCornerRadii: containerBottomCornerRadii, bottomInset: sheetEnvironment.safeInsets.bottom, topInset: topInset, fillingSize: fillingSize, isTablet: sheetEnvironment.metrics.isTablet, isCentered: isCentered)
 
             transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: layoutSize.width, height: contentHeight)))
 
-            transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: layoutSize.width / 2.0, y: layoutSize.height / 2.0))
+            transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: backgroundCenterX, y: layoutSize.height / 2.0))
             transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: CGSize(width: fillingSize, height: layoutSize.height)))
 
             let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset), size: CGSize(width: layoutSize.width, height: clippingY - containerInset))

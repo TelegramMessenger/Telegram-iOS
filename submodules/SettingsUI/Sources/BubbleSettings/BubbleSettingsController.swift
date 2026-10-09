@@ -498,6 +498,14 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
     
     func updateLayout(width: CGFloat, bottomInset: CGFloat, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
         var contentHeight: CGFloat = 0.0
+        // The rows keep the side safe insets too (iPhone Duo's side strip is a safe inset, not an intrinsic one).
+        let itemLeftInset = max(layout.intrinsicInsets.left, layout.safeInsets.left)
+        let itemRightInset = max(layout.intrinsicInsets.right, layout.safeInsets.right)
+        // Beside a strip the bottom buttons split the band instead of the full width: they span iPhone Duo's side strip
+        // and keep clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let buttonsMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? bottomInsets.left : 0.0
+        let buttonsWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? width - bottomInsets.left - bottomInsets.right : width
         
         let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_BubbleCorners_AdjustAdjacent, value: self.presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
             self?.updateMergeBubbleCorners?(value)
@@ -510,7 +518,7 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
             f()
         }, node: {
             return self.switchItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: layout.intrinsicInsets.left, rightInset: layout.intrinsicInsets.right, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: nil, next: cornerRadiusItem.neighborDescriptor), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: nil, next: cornerRadiusItem.neighborDescriptor), animation: .None, completion: { layout, apply in
             self.switchItemNode.contentSize = layout.contentSize
             self.switchItemNode.insets = layout.insets
             transition.updateFrame(node: self.switchItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
@@ -522,7 +530,7 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
             f()
         }, node: {
             return self.cornerRadiusItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: layout.intrinsicInsets.left, rightInset: layout.intrinsicInsets.right, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
             self.cornerRadiusItemNode.contentSize = layout.contentSize
             self.cornerRadiusItemNode.insets = layout.insets
             transition.updateFrame(node: self.cornerRadiusItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
@@ -530,8 +538,8 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
             apply(ListViewItemApply())
         })
         
-        self.cancelButton.frame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: floor(width / 2.0), height: 49.0))
-        self.doneButton.frame = CGRect(origin: CGPoint(x: floor(width / 2.0), y: contentHeight), size: CGSize(width: width - floor(width / 2.0), height: 49.0))
+        self.cancelButton.frame = CGRect(origin: CGPoint(x: buttonsMinX, y: contentHeight), size: CGSize(width: floor(buttonsWidth / 2.0), height: 49.0))
+        self.doneButton.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: contentHeight), size: CGSize(width: buttonsWidth - floor(buttonsWidth / 2.0), height: 49.0))
         
         contentHeight += 49.0
         
@@ -539,7 +547,7 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
         
         let resultHeight = contentHeight + bottomInset
         
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: floor(width / 2.0), y: self.cancelButton.frame.minY), size: CGSize(width: UIScreenPixel, height: resultHeight - self.cancelButton.frame.minY))
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: self.cancelButton.frame.minY), size: CGSize(width: UIScreenPixel, height: resultHeight - self.cancelButton.frame.minY))
         
         return resultHeight
     }

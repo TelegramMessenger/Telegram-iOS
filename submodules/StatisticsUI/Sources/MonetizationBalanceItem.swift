@@ -293,7 +293,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
@@ -308,12 +308,12 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                     }
                                         
                     let balanceTotalWidth: CGFloat = emojiItemSize.width + balanceLayout.size.width
-                    let balanceTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - balanceTotalWidth) / 2.0) + emojiItemSize.width, y: verticalInset), size: balanceLayout.size)
+                    let balanceTextFrame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - balanceTotalWidth) / 2.0) + emojiItemSize.width, y: verticalInset), size: balanceLayout.size)
                     strongSelf.balanceTextNode.frame = balanceTextFrame
                     
                     strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: balanceTextFrame.minX - emojiItemSize.width - 7.0, y: floorToScreenPixels(balanceTextFrame.midY - emojiItemSize.height / 2.0) - 3.0), size: emojiItemSize)
                     
-                    strongSelf.valueTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - valueLayout.size.width) / 2.0), y: balanceTextFrame.maxY - 5.0), size: valueLayout.size)
+                    strongSelf.valueTextNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - valueLayout.size.width) / 2.0), y: balanceTextFrame.maxY - 5.0), size: valueLayout.size)
                                       
                     strongSelf.buttonLayout = (isStars: isStars, origin: strongSelf.valueTextNode.frame.maxY + buttonSpacing + 3.0, width: params.width, leftInset: leftInset, rightInset: rightInset)
                     strongSelf.updateButton()

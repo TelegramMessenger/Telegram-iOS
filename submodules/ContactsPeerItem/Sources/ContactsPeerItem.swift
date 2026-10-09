@@ -1292,7 +1292,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                             
                             let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: nodeLayout.contentSize.width - 16.0, height: nodeLayout.contentSize.height))
-                            let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
+                            let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).inset(by: UIEdgeInsets(top: 0.0, left: 16.0 + params.leftInset, bottom: 0.0, right: 16.0 + params.rightInset))
                             strongSelf.extractedRect = extractedRect
                             strongSelf.nonExtractedRect = nonExtractedRect
                             
@@ -2010,15 +2010,20 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             let separatorHeight = UIScreenPixel
-                            let separatorRightInset: CGFloat = item.systemStyle == .glass ? 16.0 : 0.0
-                            
+                            // iPhone Duo: the part of one side's inset beyond the other's is the side strip; the
+                            // separator and the highlight stop at it instead of running under it. Equal insets give
+                            // today's frames.
+                            let stripExcessLeft = max(0.0, params.leftInset - params.rightInset)
+                            let stripExcessRight = max(0.0, params.rightInset - params.leftInset)
+                            let separatorRightInset: CGFloat = (item.systemStyle == .glass ? 16.0 : 0.0) + stripExcessRight
+
                             strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
-                            
+
                             var topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             topHighlightInset -= nodeLayout.insets.top
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
-                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
-                            strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset)), aboveNodes: [strongSelf.separatorNode, strongSelf.backgroundNode])
+                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
+                            strongSelf.updateRevealOptionsHighlightedBackgroundFrame(strongSelf.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: stripExcessLeft, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width - stripExcessLeft - stripExcessRight, height: nodeLayout.size.height + topHighlightInset)), aboveNodes: [strongSelf.separatorNode, strongSelf.backgroundNode])
                             strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(nodeLayout.insets.top, separatorHeight)), size: CGSize(width: nodeLayout.contentSize.width, height: separatorHeight))
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - leftInset - separatorRightInset), height: separatorHeight))
                             if !item.alwaysShowLastSeparator && item.style != .blocks {
@@ -2055,7 +2060,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     adButton.setImage(searchAdIcon, for: .normal)
                                 }
                                 if let icon = adButton.image(for: .normal) {
-                                    adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - icon.size.width - 13.0, y: 11.0), size: icon.size).insetBy(dx: -11.0, dy: -11.0)
+                                    adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - icon.size.width - 13.0 - max(0.0, params.rightInset - params.leftInset), y: 11.0), size: icon.size).insetBy(dx: -11.0, dy: -11.0)
                                 }
                             } else if let adButton = strongSelf.adButton {
                                 strongSelf.adButton = nil

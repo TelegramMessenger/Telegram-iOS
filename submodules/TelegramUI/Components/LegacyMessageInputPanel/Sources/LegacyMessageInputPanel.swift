@@ -941,6 +941,6 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.position)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: self.position)
     }
 }

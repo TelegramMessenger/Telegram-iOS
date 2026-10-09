@@ -486,7 +486,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                         backgroundNode.frame = backgroundFrame
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, displayMode: displayMode, transition: .immediate)
                     }
-                    strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = backgroundFrame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                 }
             })
         }

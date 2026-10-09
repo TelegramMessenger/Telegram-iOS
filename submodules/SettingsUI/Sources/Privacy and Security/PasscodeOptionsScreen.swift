@@ -66,7 +66,7 @@ private final class PasscodeOptionsScreenContextSource: ContextReferenceContentS
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
     }
 }
 
@@ -717,8 +717,9 @@ private final class PasscodeOptionsScreenComponent: Component {
             let presentationData = component.model.presentationData
             let actionFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
             let footerFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
-            let sideInset = 16.0 + max(environment.safeInsets.left, environment.safeInsets.right)
-            let sectionWidth = availableSize.width - sideInset * 2.0
+            // Each side keeps its own safe inset (beside iPhone Duo's side strip only one side has one).
+            let sideInset = 16.0 + environment.safeInsets.left
+            let sectionWidth = availableSize.width - sideInset - 16.0 - environment.safeInsets.right
             var contentHeight = environment.navigationHeight + 16.0
 
             func updateSection(_ section: ComponentView<Empty>, header: String?, footer: String?, items: [AnyComponentWithIdentity<Empty>]) {

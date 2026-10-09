@@ -1971,7 +1971,10 @@ private final class CommunityEditScreenComponent: Component {
 
             let theme = environment.theme
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
             let sectionSpacing: CGFloat = 24.0
 
             self.backgroundColor = theme.list.blocksBackgroundColor
@@ -2022,13 +2025,14 @@ private final class CommunityEditScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: 120.0)
+                    // The band between the side insets (iPhone Duo's side strip): the avatar centers in it.
+                    containerSize: CGSize(width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right, height: 120.0)
                 )
                 if let avatarHeaderView = self.avatarHeader.view {
                     if avatarHeaderView.superview == nil {
                         self.scrollView.addSubview(avatarHeaderView)
                     }
-                    transition.setFrame(view: avatarHeaderView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: avatarHeaderSize))
+                    transition.setFrame(view: avatarHeaderView, frame: CGRect(origin: CGPoint(x: environment.safeInsets.left, y: contentHeight), size: avatarHeaderSize))
                 }
             }
             contentHeight += 179.0
@@ -2061,7 +2065,7 @@ private final class CommunityEditScreenComponent: Component {
                     ]
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
             if let titleSectionView = self.titleSection.view {
                 if titleSectionView.superview == nil {
@@ -2114,7 +2118,7 @@ private final class CommunityEditScreenComponent: Component {
                     ]
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
             if let permissionsSectionView = self.permissionsSection.view {
                 if permissionsSectionView.superview == nil {
@@ -2180,7 +2184,7 @@ private final class CommunityEditScreenComponent: Component {
                         items: managementItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
                 )
                 if let managementSectionView = self.managementSection.view {
                     if managementSectionView.superview == nil {
@@ -2247,7 +2251,7 @@ private final class CommunityEditScreenComponent: Component {
                     items: chatItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
             if let chatsSectionView = self.chatsSection.view {
                 if chatsSectionView.superview == nil {
@@ -2280,7 +2284,7 @@ private final class CommunityEditScreenComponent: Component {
                         ]
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
                 )
                 if let deleteSectionView = self.deleteSection.view {
                     if deleteSectionView.superview == nil {

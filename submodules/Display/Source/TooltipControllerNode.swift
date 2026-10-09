@@ -86,8 +86,12 @@ final class TooltipControllerNode: ASDisplayNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
-        let maxWidth = layout.size.width - 20.0 - self.padding * 2.0
-        
+        // Beside a side strip (iPhone Duo) the tooltip keeps clear of the strip's status corner block; equal side
+        // insets keep the screen-wide clamp.
+        let sideInsetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let stripInsets: (left: CGFloat, right: CGFloat) = sideInsetsDiffer ? (layout.safeInsets.left, layout.safeInsets.right) : (0.0, 0.0)
+        let maxWidth = layout.size.width - 20.0 - self.padding * 2.0 - stripInsets.left - stripInsets.right
+
         let contentSize: CGSize
         
         if let contentNode = self.contentNode {
@@ -131,7 +135,9 @@ final class TooltipControllerNode: ASDisplayNode {
         }
         self.arrowOnBottom = arrowOnBottom
         
-        let horizontalOrigin: CGFloat = floor(min(max(self.padding, sourceRect.midX - contentSize.width / 2.0), layout.size.width - contentSize.width - self.padding))
+        // Only the rows the tooltip spans: beside a free part of the strip it may reach the edge (a control in the strip).
+        let bandInsets: (left: CGFloat, right: CGFloat) = sideInsetsDiffer ? layout.sideInsets(forBandFrom: verticalOrigin, to: verticalOrigin + contentSize.height) : (0.0, 0.0)
+        let horizontalOrigin: CGFloat = floor(min(max(self.padding + bandInsets.left, sourceRect.midX - contentSize.width / 2.0), layout.size.width - bandInsets.right - contentSize.width - self.padding))
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin), size: contentSize))
         self.containerNode.relativeArrowPosition = (sourceRect.midX - horizontalOrigin, arrowOnBottom)

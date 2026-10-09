@@ -290,6 +290,6 @@ private final class AuthorizationContextReferenceContentSource: ContextReference
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

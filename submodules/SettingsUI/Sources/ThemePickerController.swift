@@ -1108,8 +1108,10 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
             }
             
             let sectionInset = max(16.0, floor((controller.displayNode.frame.width - 674.0) / 2.0))
+            // iPhone Duo: the list's margins are per side beside the side strip.
+            let sectionMargins = controller.currentlyAppliedLayout?.listSideMargins(base: sectionInset) ?? (left: sectionInset, right: sectionInset)
             
-            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset, sideInset: sectionInset)
+            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset, sideInset: sectionMargins.left, rightSideInset: sectionMargins.right)
             crossfadeController.didAppear = { [weak themeItemNode, weak colorItemNode] in
                 if view != nil {
                     themeItemNode?.animateCrossfadeTransition()

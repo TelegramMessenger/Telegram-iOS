@@ -609,7 +609,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         self.updateMessagesLayout(layout: layout, bottomInset: toolbarHeight + bottomInset, transition: transition)
         
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
-        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 28.0), size: pageControlSize)
+        let pageControlFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((bounds.width - layout.safeInsets.left - layout.safeInsets.right - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 28.0), size: pageControlSize)
         self.pageControlNode.frame = pageControlFrame
         self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 7.0, y: pageControlFrame.minY - 7.0, width: pageControlFrame.width + 14.0, height: 21.0)
         
@@ -826,6 +826,14 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
     
     func updateLayout(width: CGFloat, bottomInset: CGFloat, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
         var contentHeight: CGFloat = 0.0
+        // The rows keep the side safe insets too (iPhone Duo's side strip is a safe inset, not an intrinsic one).
+        let itemLeftInset = max(layout.intrinsicInsets.left, layout.safeInsets.left)
+        let itemRightInset = max(layout.intrinsicInsets.right, layout.safeInsets.right)
+        // Beside a strip the bottom buttons split the band instead of the full width: they span iPhone Duo's side strip
+        // and keep clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let buttonsMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? bottomInsets.left : 0.0
+        let buttonsWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? width - bottomInsets.left - bottomInsets.right : width
         
         let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_TextSize_UseSystem, value: self.presentationThemeSettings.useSystemFont, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
             self?.updateUseSystemFont?(value)
@@ -838,7 +846,7 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
             f()
         }, node: {
             return self.switchItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: layout.intrinsicInsets.left, rightInset: layout.intrinsicInsets.right, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: nil, next: fontSizeItem.neighborDescriptor), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: nil, next: fontSizeItem.neighborDescriptor), animation: .None, completion: { layout, apply in
             self.switchItemNode.contentSize = layout.contentSize
             self.switchItemNode.insets = layout.insets
             transition.updateFrame(node: self.switchItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
@@ -850,7 +858,7 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
             f()
         }, node: {
             return self.fontSizeItemNode
-        }, params: ListViewItemLayoutParams(width: width, leftInset: layout.intrinsicInsets.left, rightInset: layout.intrinsicInsets.right, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
+        }, params: ListViewItemLayoutParams(width: width, leftInset: itemLeftInset, rightInset: itemRightInset, availableHeight: 1000.0), neighbors: ListViewItemNeighbors(previous: switchItem.neighborDescriptor, next: nil), animation: .None, completion: { layout, apply in
             self.fontSizeItemNode.contentSize = layout.contentSize
             self.fontSizeItemNode.insets = layout.insets
             transition.updateFrame(node: self.fontSizeItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: layout.contentSize))
@@ -858,8 +866,8 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
             apply(ListViewItemApply())
         })
         
-        self.cancelButton.frame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: floor(width / 2.0), height: 49.0))
-        self.doneButton.frame = CGRect(origin: CGPoint(x: floor(width / 2.0), y: contentHeight), size: CGSize(width: width - floor(width / 2.0), height: 49.0))
+        self.cancelButton.frame = CGRect(origin: CGPoint(x: buttonsMinX, y: contentHeight), size: CGSize(width: floor(buttonsWidth / 2.0), height: 49.0))
+        self.doneButton.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: contentHeight), size: CGSize(width: buttonsWidth - floor(buttonsWidth / 2.0), height: 49.0))
         
         contentHeight += 49.0
         
@@ -867,7 +875,7 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         
         let resultHeight = contentHeight + bottomInset
         
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: floor(width / 2.0), y: self.cancelButton.frame.minY), size: CGSize(width: UIScreenPixel, height: resultHeight - self.cancelButton.frame.minY))
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: buttonsMinX + floor(buttonsWidth / 2.0), y: self.cancelButton.frame.minY), size: CGSize(width: UIScreenPixel, height: resultHeight - self.cancelButton.frame.minY))
         
         return resultHeight
     }

@@ -219,8 +219,12 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, ASScrollVi
         
         let maximumContentHeight = layout.size.height - insets.top - max(bottomInset, insets.bottom)
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
-        let sideInset = floor((layout.size.width - width) / 2.0)
+        // Centered, or in the band beside a side strip (iPhone Duo). The sheet is anchored at the bottom: placed as
+        // `horizontalContainerFillingPlacementForLayout(anchoredAtBottom:)` describes (it spans iPhone Duo's side strip
+        // in compact width, clear only of a corner block at the bottom).
+        let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: false, anchoredAtBottom: true)
+        let width = placement.width
+        let sideInset = placement.left
         
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
         let contentFrame = contentContainerFrame
@@ -252,8 +256,10 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, ASScrollVi
                 bottomInset -= 12.0
             }
             
-            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
-            let sideInset = floor((layout.size.width - width) / 2.0)
+            // Must match `containerLayoutUpdated`: the sheet is anchored at the bottom.
+            let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: false, anchoredAtBottom: true)
+            let width = placement.width
+            let sideInset = placement.left
             
             let maximumContentHeight = layout.size.height - insets.top - max(bottomInset, insets.bottom)
             let contentFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
@@ -272,7 +278,11 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, ASScrollVi
             transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
             
             let cancelSize = CGSize(width: 44.0, height: 44.0)
-            let cancelFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - cancelSize.width - 3.0, y: backgroundFrame.minY + 6.0), size: cancelSize)
+            var cancelFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - cancelSize.width - 3.0, y: backgroundFrame.minY + 6.0), size: cancelSize)
+            // The card spans iPhone Duo's side strip, so a card risen to the camera's corner block slides its close
+            // button in clear of the block.
+            let cancelStripOverlap = max(0.0, layout.safeInsets.right - (layout.size.width - backgroundFrame.maxX))
+            cancelFrame.origin.x -= statusIslandTrailingShift(rowMinY: cancelFrame.minY, rowHeight: cancelFrame.height, islandHeight: layout.reservedCorners.topRight?.height ?? 0.0, inset: cancelStripOverlap)
             transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
             
             if let animateContentNodeOffsetFromBackgroundOffset = self.animateContentNodeOffsetFromBackgroundOffset {

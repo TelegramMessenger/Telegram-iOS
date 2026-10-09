@@ -2354,11 +2354,11 @@ private final class ItemExtractedContentSource: ContextExtractedContentSource {
         
         return ContextControllerTakeViewInfo(
             containingItem: .node(self.sourceNode),
-            contentAreaInScreenSpace: contentArea ?? UIScreen.main.bounds
+            contentAreaInScreenSpace: contentArea ?? mainWindowScreenBounds
         )
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

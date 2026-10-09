@@ -404,8 +404,7 @@ public final class VoiceChatJoinScreen: ViewController {
             
             let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
             
-            let width = min(layout.size.width, layout.size.height) - 20.0
-            let sideInset = floor((layout.size.width - width) / 2.0)
+            let (sideInset, width) = voiceChatJoinPreviewPlacement(layout: layout)
             
             let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
             let contentFrame = contentContainerFrame.insetBy(dx: 0.0, dy: 0.0)
@@ -450,9 +449,7 @@ public final class VoiceChatJoinScreen: ViewController {
                 let buttonHeight: CGFloat = 57.0
                 let sectionSpacing: CGFloat = 8.0
                 
-                let width = min(layout.size.width, layout.size.height) - 20.0
-                
-                let sideInset = floor((layout.size.width - width) / 2.0)
+                let (sideInset, width) = voiceChatJoinPreviewPlacement(layout: layout)
                 
                 let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
                 let contentFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
@@ -721,4 +718,20 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
     
     func updateSelectedPeers(animated: Bool) {
     }
+}
+
+/// The preview's left edge and width: `min(width, height) - 20` centered on the screen, or, beside a side strip (iPhone
+/// Duo), no wider than the band at the bottom edge less 10pt a side and centered in it. Equal side insets keep the old
+/// placement.
+private func voiceChatJoinPreviewPlacement(layout: ContainerViewLayout) -> (CGFloat, CGFloat) {
+    var width = min(layout.size.width, layout.size.height) - 20.0
+    if layout.safeInsets.left != layout.safeInsets.right {
+        // The preview and its cancel button are anchored at the bottom: they span iPhone Duo's side strip and keep clear
+        // only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let bandWidth = layout.size.width - bottomInsets.left - bottomInsets.right
+        width = min(width, bandWidth - 20.0)
+        return (bottomInsets.left + floor((bandWidth - width) / 2.0), width)
+    }
+    return (floor((layout.size.width - width) / 2.0), width)
 }

@@ -105,6 +105,9 @@ public final class StoryItemSetContainerComponent: Component {
     public let containerInsets: UIEdgeInsets
     public let safeInsets: UIEdgeInsets
     public let statusBarHeight: CGFloat
+    /// How much further in the header's right controls start, to clear a top-right status island beside the header
+    /// (iPhone Duo, unfolded portrait); 0 elsewhere.
+    public let headerTrailingInset: CGFloat
     public let inputHeight: CGFloat
     public let metrics: LayoutMetrics
     public let deviceMetrics: DeviceMetrics
@@ -146,6 +149,7 @@ public final class StoryItemSetContainerComponent: Component {
         containerInsets: UIEdgeInsets,
         safeInsets: UIEdgeInsets,
         statusBarHeight: CGFloat,
+        headerTrailingInset: CGFloat = 0.0,
         inputHeight: CGFloat,
         metrics: LayoutMetrics,
         deviceMetrics: DeviceMetrics,
@@ -186,6 +190,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.containerInsets = containerInsets
         self.safeInsets = safeInsets
         self.statusBarHeight = statusBarHeight
+        self.headerTrailingInset = headerTrailingInset
         self.inputHeight = inputHeight
         self.metrics = metrics
         self.deviceMetrics = deviceMetrics
@@ -240,6 +245,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.statusBarHeight != rhs.statusBarHeight {
+            return false
+        }
+        if lhs.headerTrailingInset != rhs.headerTrailingInset {
             return false
         }
         if lhs.inputHeight != rhs.inputHeight {
@@ -4031,7 +4039,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             transition.setCornerRadius(layer: self.controlsClippingView.layer, cornerRadius: 12.0 * (1.0 / contentVisualScale))
             
-            var headerRightOffset: CGFloat = availableSize.width
+            var headerRightOffset: CGFloat = availableSize.width - component.headerTrailingInset
             
             if self.closeButtonIconView.image == nil {
                 self.closeButtonIconView.image = UIImage(bundleImageName: "Stories/Close")?.withRenderingMode(.alwaysTemplate)
@@ -7844,7 +7852,7 @@ final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.position)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: self.position)
     }
 }
 
@@ -7860,11 +7868,11 @@ final class ListContextExtractedContentSource: ContextExtractedContentSource {
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

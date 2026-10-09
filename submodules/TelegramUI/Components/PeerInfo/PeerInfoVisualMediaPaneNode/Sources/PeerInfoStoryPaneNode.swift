@@ -3704,6 +3704,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 deviceMetrics: deviceMetrics,
                 intrinsicInsets: UIEdgeInsets(top: mapOverscrollInset, left: 0.0, bottom: 0.0, right: 0.0),
                 safeInsets: UIEdgeInsets(),
+                reservedCorners: .none,
+                division: nil,
                 additionalInsets: UIEdgeInsets(),
                 statusBarHeight: nil,
                 inputHeight: nil,
@@ -5566,11 +5568,11 @@ private final class ExtractedContentSourceImpl: ContextExtractedContentSource {
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -5801,11 +5803,11 @@ private final class ItemExtractedContentSource: ContextExtractedContentSource {
         
         return ContextControllerTakeViewInfo(
             containingItem: .node(self.sourceNode),
-            contentAreaInScreenSpace: contentArea ?? UIScreen.main.bounds
+            contentAreaInScreenSpace: contentArea ?? mainWindowScreenBounds
         )
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

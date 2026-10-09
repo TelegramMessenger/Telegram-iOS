@@ -239,16 +239,21 @@ final class GiftAuctionAccessoryPanel: ASDisplayNode {
             }
             buttonView.frame = buttonFrame
         }
-        
+
+        // Beside iPhone Duo's side strip the texts keep to the band between the side insets: clear of a left strip, and
+        // stopping before the button, which keeps its right inset. Equal insets keep the texts as they were.
+        let textLeftInset: CGFloat = leftInset != rightInset ? leftInset : 0.0
+        let textRightInset: CGFloat = leftInset != rightInset ? rightInset : 0.0
+
         let titleSize = self.title.update(
             transition: .immediate,
             component: AnyComponent(
                 HStack(titleItems, spacing: 3.0, alignment: .left)
             ),
             environment: {},
-            containerSize: CGSize(width: size.width - buttonSize.width - 48.0, height: size.height)
+            containerSize: CGSize(width: size.width - textLeftInset - textRightInset - buttonSize.width - 48.0, height: size.height)
         )
-        let titleFrame = CGRect(origin: CGPoint(x: 16.0, y: 9.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: textLeftInset + 16.0, y: 9.0), size: titleSize)
         if let titleView = self.title.view {
             if titleView.superview == nil {
                 self.contentNode.view.addSubview(titleView)
@@ -260,9 +265,9 @@ final class GiftAuctionAccessoryPanel: ASDisplayNode {
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleTextColor)))),
             environment: {},
-            containerSize: CGSize(width: size.width - buttonSize.width - 40.0, height: size.height)
+            containerSize: CGSize(width: size.width - textLeftInset - textRightInset - buttonSize.width - 40.0, height: size.height)
         )
-        let subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: 29.0), size: subtitleSize)
+        let subtitleFrame = CGRect(origin: CGPoint(x: textLeftInset + 16.0, y: 29.0), size: subtitleSize)
         if let subtitleView = self.subtitle.view {
             if subtitleView.superview == nil {
                 self.contentNode.view.addSubview(subtitleView)

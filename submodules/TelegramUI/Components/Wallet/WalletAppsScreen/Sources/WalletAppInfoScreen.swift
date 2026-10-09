@@ -259,7 +259,7 @@ private final class WalletAppInfoSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -285,8 +285,12 @@ private final class WalletAppInfoSheetComponent: CombinedComponent {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: max(sideInset, environment.safeInsets.left), bottom: 0.0, right: max(sideInset, environment.safeInsets.right)),
+                    // iPhone Duo: the full status height and the status corner, so what this sheet presents clears the
+                    // status island (unfolded portrait) and the status corner; equal to the old values elsewhere.
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
                     inVoiceOver: false,

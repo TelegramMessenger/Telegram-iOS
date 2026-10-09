@@ -636,17 +636,23 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
-        async {
+        // The node holds a ListView, whose view is created in its init and so has to be created on the main thread; only
+        // the layout runs in `async`. (A row loaded while scrolling, rather than in the first layout, is configured on a
+        // background queue: that crashed on iPhone Duo's shorter folded screen, where this row starts below the fold.)
+        Queue.mainQueue().async {
             let node = ThemeSettingsAccentColorItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
-            
-            node.contentSize = layout.contentSize
-            node.insets = layout.insets
-            
-            Queue.mainQueue().async {
-                completion(node, {
-                    return (nil, { _ in apply() })
-                })
+            let makeLayout = node.asyncLayout()
+            async {
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
+                
+                node.contentSize = layout.contentSize
+                node.insets = layout.insets
+                
+                Queue.mainQueue().async {
+                    completion(node, {
+                        return (nil, { _ in apply() })
+                    })
+                }
             }
         }
     }
@@ -853,7 +859,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     

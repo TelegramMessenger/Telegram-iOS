@@ -500,7 +500,7 @@ private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchPar
                 return false
             }
         case let .brightness(threshold):
-            return UIScreen.main.brightness <= CGFloat(threshold)
+            return mainWindowScreen.brightness <= CGFloat(threshold)
     }
 }
 

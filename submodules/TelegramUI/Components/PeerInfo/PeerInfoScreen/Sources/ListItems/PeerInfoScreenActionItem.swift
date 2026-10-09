@@ -102,13 +102,14 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.selectionNode.pressed = item.action
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
+        let sideInsetRight: CGFloat = 16.0 + safeInsets.right
         var leftInset = (item.icon == nil && item.iconSignal == nil ? sideInset : sideInset + 29.0 + 16.0)
         var iconInset = sideInset
         if case .peerList = item.alignment {
             leftInset += 5.0
             iconInset += 5.0
         }
-        let rightInset = sideInset
+        let rightInset = sideInsetRight
         let separatorInset = item.icon == nil ? sideInset : leftInset - 1.0
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         

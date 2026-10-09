@@ -357,9 +357,10 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 context: self.context,
                 theme: self.presentationData.theme,
                 strings: self.presentationData.strings,
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
                 leftInset: layout.safeInsets.left,
                 rightInset: layout.safeInsets.right,
+                trailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 search: ChatListNavigationBar.Search(isEnabled: true),
                 activeSearch: self.isSearchDisplayControllerActive,
                 primaryContent: primaryContent,
@@ -436,7 +437,7 @@ final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         var headerInsets = layout.insets(options: [.input])
         headerInsets.top = navigationBarLayout.navigationHeight - navigationBarLayout.storiesInset - ChatListNavigationBar.searchScrollHeight
         
-        let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
+        let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(innerLayout, navigationBarHeight: navigationBarLayout.navigationHeight, transition: transition)
@@ -543,11 +544,11 @@ private final class ContactContextExtractedContentSource: ContextExtractedConten
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

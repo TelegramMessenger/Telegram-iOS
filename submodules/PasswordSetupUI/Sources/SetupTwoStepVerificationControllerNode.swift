@@ -443,7 +443,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                 }, leftAction: leftAction, rightAction: rightAction)
                 self.insertSubnode(contentNode, at: 0)
                 contentNode.updateIsEnabled(!state.data.activity)
-                contentNode.updateLayout(size: contentFrame.size, insets: insets, visibleInsets: visibleInsets, transition: .immediate)
+                contentNode.updateLayout(size: contentFrame.size, insets: insets, visibleInsets: visibleInsets, safeInsets: state.layout.layout.safeInsets, reservedCorners: state.layout.layout.reservedCorners, transition: .immediate)
                 contentNode.frame = contentFrame
                 contentNode.activate()
                 if let currentContentNode = self.contentNode {
@@ -480,7 +480,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
         } else if let contentNode = self.contentNode {
             contentNode.updateIsEnabled(!state.data.activity)
             transition.updateFrame(node: contentNode, frame: contentFrame)
-            contentNode.updateLayout(size: contentFrame.size, insets: insets, visibleInsets: visibleInsets, transition: transition)
+            contentNode.updateLayout(size: contentFrame.size, insets: insets, visibleInsets: visibleInsets, safeInsets: state.layout.layout.safeInsets, reservedCorners: state.layout.layout.reservedCorners, transition: transition)
         }
     }
     

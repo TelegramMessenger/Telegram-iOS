@@ -114,6 +114,116 @@ func coreListSmoothDecelerationProgress(phase: CGFloat) -> CGFloat {
     return CGFloat(1.0 - (1.0 + x) * exp(-x))
 }
 
+// MARK: - Custom springs
+
+/// The parameters of a `.customSpring` as Display's `CALayer.makeAnimation` applies them: it parses
+/// them out of the timing-function string as `Float` (`CAAnimationUtils.swift:80`), so they are
+/// quantized to float32 there. CoreList quantizes the same way, so a list playing a spring and content
+/// playing it through Display build the identical `CASpringAnimation`.
+private func coreListDisplaySpringParameter(_ value: CGFloat) -> CGFloat {
+    CGFloat(Float(value))
+}
+
+/// The `CASpringAnimation` a `.customSpring` curve emits — the object Display's `makeAnimation` builds
+/// for `ContainedViewLayoutTransitionCurve.customSpring`: the given parameters, run to the spring's own
+/// `settlingDuration` on a linear timing function. `makeCoreListAnimation` maps that settle onto the
+/// pass duration through `speed`, exactly as Display does, so the two play the same function on the
+/// same clock.
+func makeCoreListCustomSpringAnimation(_ keyPath: String,
+                                       mass: CGFloat,
+                                       stiffness: CGFloat,
+                                       damping: CGFloat,
+                                       initialVelocity: CGFloat) -> CASpringAnimation {
+    let animation = CASpringAnimation(keyPath: keyPath)
+    animation.mass = coreListDisplaySpringParameter(mass)
+    animation.stiffness = coreListDisplaySpringParameter(stiffness)
+    animation.damping = coreListDisplaySpringParameter(damping)
+    animation.initialVelocity = coreListDisplaySpringParameter(initialVelocity)
+    animation.duration = animation.settlingDuration
+    animation.timingFunction = CAMediaTimingFunction(name: .linear)
+    return animation
+}
+
+/// Core Animation's own settle time for each custom spring, cached: the closed form below needs it to
+/// put unit phase on the spring's time axis exactly as the emitted animation does, and the model
+/// samples a curve many times per pass.
+private final class CoreListCustomSpringSettlingDurations {
+    private struct Key: Hashable {
+        let mass: CGFloat
+        let stiffness: CGFloat
+        let damping: CGFloat
+        let initialVelocity: CGFloat
+    }
+
+    private let lock = NSLock()
+    private var durations: [Key: Double] = [:]
+
+    func duration(mass: CGFloat, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat) -> Double {
+        let key = Key(mass: mass, stiffness: stiffness, damping: damping, initialVelocity: initialVelocity)
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        if let duration = self.durations[key] {
+            return duration
+        }
+        let duration = makeCoreListCustomSpringAnimation("", mass: mass, stiffness: stiffness,
+                                                         damping: damping,
+                                                         initialVelocity: initialVelocity).duration
+        if self.durations.count >= 32 {
+            self.durations.removeAll()
+        }
+        self.durations[key] = duration
+        return duration
+    }
+}
+
+private let coreListCustomSpringSettlingDurations = CoreListCustomSpringSettlingDurations()
+
+/// Closed-form progress of a custom spring at unit `phase`, which spans the spring's
+/// `settlingDuration` (the axis the emitted animation runs on before `speed` maps it onto the pass).
+///
+/// The damped harmonic oscillator Core Animation renders, released from rest at 0 (or with
+/// `initialVelocity`) towards 1: `m·x″ = −k·(x − 1) − c·x′`. Both solutions are exact, so the model
+/// needs no private API — `CustomSpringParityTests` checks it against Core Animation's own solver.
+/// Like the smooth-deceleration spring it lands a hair short of 1 at `phase == 1` (or past it,
+/// mid-oscillation, for a bouncy spring), because that is what is rendered when the animation ends.
+///
+/// **There is no overdamped branch, because Core Animation does not render one.** Display never sets
+/// `allowsOverdamping`, and with its default of `false` CA clamps the damping ratio to 1: a spring
+/// with `ζ ≈ 1.9` plays exactly the critically damped curve (measured to 5.5e-8), while the true
+/// overdamped solution is 0.27 away from it.
+func coreListCustomSpringProgress(mass: CGFloat,
+                                  stiffness: CGFloat,
+                                  damping: CGFloat,
+                                  initialVelocity: CGFloat,
+                                  phase: CGFloat) -> CGFloat {
+    let x = min(max(Double(phase), 0.0), 1.0)
+    let m = Double(coreListDisplaySpringParameter(mass))
+    let k = Double(coreListDisplaySpringParameter(stiffness))
+    let c = Double(coreListDisplaySpringParameter(damping))
+    let v0 = Double(coreListDisplaySpringParameter(initialVelocity))
+    guard m > 0.0, k > 0.0 else {
+        return CGFloat(x)
+    }
+    let t = x * coreListCustomSpringSettlingDurations.duration(mass: mass, stiffness: stiffness,
+                                                               damping: damping,
+                                                               initialVelocity: initialVelocity)
+
+    // Displacement from the target: starts at −1, moving at v0 (towards the target when positive).
+    let omega0 = (k / m).squareRoot()
+    let zeta = min(c / (2.0 * (k * m).squareRoot()), 1.0)
+    let displacement: Double
+    if zeta > 1.0 - 1e-9 {
+        displacement = exp(-omega0 * t) * (-1.0 + (v0 - omega0) * t)
+    } else {
+        let omegaD = omega0 * (1.0 - zeta * zeta).squareRoot()
+        let b = (v0 - zeta * omega0) / omegaD
+        displacement = exp(-zeta * omega0 * t) * (-cos(omegaD * t) + b * sin(omegaD * t))
+    }
+    return CGFloat(1.0 + displacement)
+}
+
 /// Which of `CAAnimationUtils.swift:119`'s three `kCAMediaTimingFunctionSpring` branches a duration
 /// selects.
 ///

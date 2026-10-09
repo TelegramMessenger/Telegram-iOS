@@ -467,7 +467,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                 }
                                 strongSelf.avatarListNode?.controlsContainerNode.alpha = 0.0
                                 let pinchController = makePinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
-                                    return UIScreen.main.bounds
+                                    return mainWindowScreenBounds
                                 })
                                 item.context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
                             }
@@ -916,7 +916,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     animationFrame = CGRect(x: params.width - animationSize.width - 6.0 - params.rightInset, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     titleFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset + verticalOffset), size: titleLayout.size)
                                        
-                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset, dy: 0.0)
+                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     var extractedHeight = extractedRect.height + expandedStatusLayout.height - statusLayout.height
                     var extractedVerticalOffset: CGFloat = 0.0
                     if item.peer.smallProfileImage != nil {

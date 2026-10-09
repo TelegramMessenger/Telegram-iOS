@@ -17,6 +17,7 @@ import InviteLinksUI
 import UndoUI
 import TelegramCallsUI
 import TelegramUIPreferences
+import SideColumnLayout
 
 public enum CallListControllerMode {
     case tab
@@ -108,6 +109,9 @@ public final class CallListController: TelegramBaseController {
     
     private var isEmpty: Bool?
     private var editingMode: Bool = false
+    /// iPhone Duo: the tab's side strip region, and whether the new-call button sits there instead of the bar.
+    private var currentSideColumn: SideColumnRegion?
+    private var callButtonInSideColumn: Bool = false
     
     private let createActionDisposable = MetaDisposable()
     private let clearDisposable = MetaDisposable()
@@ -133,7 +137,7 @@ public final class CallListController: TelegramBaseController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         if case .tab = self.mode {
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
+            self.navigationItem.rightBarButtonItem = self.tabCallBarButtonItem()
             
             let icon: UIImage?
             if useSpecialTabBarIcons() {
@@ -216,7 +220,7 @@ public final class CallListController: TelegramBaseController {
                     }
                 }
                 
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed))
+                self.navigationItem.rightBarButtonItem = self.tabCallBarButtonItem()
             case .navigation:
                 if self.editingMode {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "___done", style: .done, target: self, action: #selector(self.donePressed))
@@ -409,7 +413,7 @@ public final class CallListController: TelegramBaseController {
                                     })
                                 } else {
                                     strongSelf.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed)), animated: strongSelf.controllerNode.didSetReady)
-                                    strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.callPressed)), animated: strongSelf.controllerNode.didSetReady)
+                                    strongSelf.navigationItem.setRightBarButton(strongSelf.tabCallBarButtonItem(), animated: strongSelf.controllerNode.didSetReady)
                                 }
                             case .navigation:
                                 if strongSelf.editingMode {
@@ -464,6 +468,30 @@ public final class CallListController: TelegramBaseController {
         
         let navigationLayout = self.navigationLayout(layout: layout)
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: navigationLayout.navigationFrame.maxY, transition: transition)
+        
+        // iPhone Duo: the tab's new-call button goes into the side strip, above the vertical tab bar.
+        var sideColumn: SideColumnRegion?
+        if case .tab = self.mode {
+            sideColumn = sideColumnRegion(layout: layout, minY: (layout.statusBarHeight ?? 0.0) + 8.0, reservedBelow: (self.parent as? TabBarController)?.verticalTabBarFrame(for: layout))
+        }
+        self.currentSideColumn = sideColumn
+        let callButtonInSideColumn = sideColumn != nil
+        if self.callButtonInSideColumn != callButtonInSideColumn {
+            self.callButtonInSideColumn = callButtonInSideColumn
+            if case .tab = self.mode, !self.editingMode {
+                self.navigationItem.setRightBarButton(self.tabCallBarButtonItem(), animated: false)
+            }
+        }
+        self.controllerNode.updateSideColumn(region: sideColumn, isHidden: self.editingMode, transition: transition)
+    }
+    
+    /// The tab's new-call button for the navigation bar: a template image, so the glass bar draws it in its
+    /// primary button colour like its other buttons; nil while the button is in iPhone Duo's side strip.
+    private func tabCallBarButtonItem() -> UIBarButtonItem? {
+        if self.callButtonInSideColumn {
+            return nil
+        }
+        return UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme)?.withRenderingMode(.alwaysTemplate), style: .plain, target: self, action: #selector(self.callPressed))
     }
     
     @objc func callPressed() {
@@ -541,11 +569,11 @@ public final class CallListController: TelegramBaseController {
             }
             
             func takeView() -> ContextControllerTakeViewInfo? {
-                return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+                return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
             }
             
             func putBack() -> ContextControllerPutBackViewInfo? {
-                return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+                return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
             }
         }
     
@@ -694,6 +722,7 @@ public final class CallListController: TelegramBaseController {
         self.controllerNode.updateState { state in
             return state.withUpdatedEditing(true)
         }
+        self.controllerNode.updateSideColumn(region: self.currentSideColumn, isHidden: true, transition: .animated(duration: 0.3, curve: .easeInOut))
     }
     
     @objc func donePressed() {
@@ -701,7 +730,7 @@ public final class CallListController: TelegramBaseController {
         switch self.mode {
             case .tab:
                 self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
-                self.navigationItem.setRightBarButton(UIBarButtonItem(image: PresentationResourcesRootController.navigationCallIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.callPressed)), animated: true)
+                self.navigationItem.setRightBarButton(self.tabCallBarButtonItem(), animated: true)
             case .navigation:
                 self.navigationItem.setLeftBarButton(nil, animated: true)
                 self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed)), animated: true)
@@ -710,6 +739,7 @@ public final class CallListController: TelegramBaseController {
         self.controllerNode.updateState { state in
             return state.withUpdatedEditing(false).withUpdatedMessageIdWithRevealedOptions(nil)
         }
+        self.controllerNode.updateSideColumn(region: self.currentSideColumn, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
     }
     
     private func call(_ peerId: EnginePeer.Id, isVideo: Bool, began: (() -> Void)? = nil) {
@@ -836,7 +866,7 @@ private final class CallListTabBarContextReferenceContentSource: ContextReferenc
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView.contentView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .top
         )
     }

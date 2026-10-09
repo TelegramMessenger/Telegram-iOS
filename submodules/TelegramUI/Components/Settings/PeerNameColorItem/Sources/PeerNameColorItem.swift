@@ -487,7 +487,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     
                     let action: (PeerNameColor?) -> Void = { color in
@@ -521,7 +521,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     let sideInset: CGFloat = params.leftInset + 10.0
                     let iconSize = CGSize(width: 32.0, height: 32.0)
                     
-                    let spacing = floorToScreenPixels((params.width - sideInset * 2.0 - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1))
+                    let spacing = floorToScreenPixels((params.width - sideInset - (params.rightInset + 10.0) - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1))
                     
                     var origin = CGPoint(x: sideInset, y: 10.0 + verticalInset)
                     

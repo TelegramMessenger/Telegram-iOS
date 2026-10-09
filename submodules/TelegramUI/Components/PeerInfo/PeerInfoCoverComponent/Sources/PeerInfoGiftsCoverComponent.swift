@@ -13,6 +13,7 @@ import EmojiTextAttachmentView
 import LokiRng
 import TextFormat
 import HierarchyTrackingLayer
+import PeerInfoPaneNode
 
 public final class PeerInfoGiftsCoverComponent: Component {
     public let context: AccountContext
@@ -27,6 +28,10 @@ public final class PeerInfoGiftsCoverComponent: Component {
     public let topLeftButtonsSize: CGSize
     public let topRightButtonsSize: CGSize
     public let titleWidth: CGFloat
+    /// The title's center on a layout with a side strip (iPhone Duo); nil centers on the full width.
+    public let titleCenterX: CGFloat?
+    /// Keeps the icons off the navigation buttons and out of a side strip (iPhone Duo).
+    public let sideInsets: PeerInfoSideInsets
     public let bottomHeight: CGFloat
     public let action: (ProfileGiftsContext.State.StarGift) -> Void
     
@@ -43,6 +48,8 @@ public final class PeerInfoGiftsCoverComponent: Component {
         topLeftButtonsSize: CGSize,
         topRightButtonsSize: CGSize,
         titleWidth: CGFloat,
+        titleCenterX: CGFloat?,
+        sideInsets: PeerInfoSideInsets,
         bottomHeight: CGFloat,
         action: @escaping (ProfileGiftsContext.State.StarGift) -> Void
     ) {
@@ -58,6 +65,8 @@ public final class PeerInfoGiftsCoverComponent: Component {
         self.topLeftButtonsSize = topLeftButtonsSize
         self.topRightButtonsSize = topRightButtonsSize
         self.titleWidth = titleWidth
+        self.titleCenterX = titleCenterX
+        self.sideInsets = sideInsets
         self.bottomHeight = bottomHeight
         self.action = action
     }
@@ -94,6 +103,12 @@ public final class PeerInfoGiftsCoverComponent: Component {
             return false
         }
         if lhs.titleWidth != rhs.titleWidth {
+            return false
+        }
+        if lhs.titleCenterX != rhs.titleCenterX {
+            return false
+        }
+        if lhs.sideInsets != rhs.sideInsets {
             return false
         }
         if lhs.bottomHeight != rhs.bottomHeight {
@@ -233,7 +248,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
             }
             
-            if !giftIds.isEmpty && (self.iconPositions.isEmpty || previousCurrentSize?.width != availableSize.width || (previousComponent != nil && previousComponent?.hasBackground != component.hasBackground) || self.appliedGiftIds != giftIds) {
+            if !giftIds.isEmpty && (self.iconPositions.isEmpty || previousCurrentSize?.width != availableSize.width || (previousComponent != nil && (previousComponent?.sideInsets.stripLeft != component.sideInsets.stripLeft || previousComponent?.sideInsets.stripRight != component.sideInsets.stripRight)) || (previousComponent != nil && previousComponent?.hasBackground != component.hasBackground) || self.appliedGiftIds != giftIds) {
                 var avatarCenter = component.avatarCenter
                 if avatarCenter.y < 0.0 {
                     avatarCenter.y = component.statusBarHeight + 75.0
@@ -243,9 +258,8 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 if component.statusBarHeight > 0.0 {
                     excludeRects.append(CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: component.statusBarHeight + 4.0)))
                 }
-                excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.statusBarHeight), size: component.topLeftButtonsSize))
-                excludeRects.append(CGRect(origin: CGPoint(x: availableSize.width - component.topRightButtonsSize.width, y: component.statusBarHeight), size: component.topRightButtonsSize))
-                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: avatarCenter.y + component.avatarSize.height / 2.0 + 6.0), size: CGSize(width: component.titleWidth, height: 100.0)))
+                excludeRects.append(contentsOf: peerInfoGiftsCoverSideExclusionRects(width: availableSize.width, height: component.defaultHeight, statusBarHeight: component.statusBarHeight, topLeftButtonsSize: component.topLeftButtonsSize, topRightButtonsSize: component.topRightButtonsSize, sideInsets: component.sideInsets))
+                excludeRects.append(CGRect(origin: CGPoint(x: component.titleCenterX.map { floor($0 - component.titleWidth / 2.0) } ?? floor((availableSize.width - component.titleWidth) / 2.0), y: avatarCenter.y + component.avatarSize.height / 2.0 + 6.0), size: CGSize(width: component.titleWidth, height: 100.0)))
                 if component.bottomHeight > 0.0 {
                     excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.defaultHeight - component.bottomHeight), size: CGSize(width: availableSize.width, height: component.bottomHeight)))
                 }

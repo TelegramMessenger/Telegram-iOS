@@ -97,4 +97,11 @@ typedef enum {
 
 - (id<LegacyComponentsOverlayWindowManager>)makeOverlayWindowManager;
 
+@optional
+
+// How much further left than the right safe inset a control at the top right of a full-screen interface sits to clear
+// a status island beside its top row (iPhone Duo's unfolded screen in portrait); 0 elsewhere. Such an interface keeps
+// its top row at the top, beside the island, rather than below it.
+- (CGFloat)statusIslandTrailingInset;
+
 @end

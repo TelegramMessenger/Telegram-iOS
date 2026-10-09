@@ -679,6 +679,9 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             
             let sideInset: CGFloat = 16.0
             let topInset: CGFloat = 16.0 + environment.navigationHeight
+            // Sections are centered in the band between the side insets, where their labels are laid out (the
+            // screen's center unless one inset is iPhone Duo's strip).
+            let bandCenterX = environment.safeInsets.left + (context.availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             let headerSpacing: CGFloat = 6.0
             let sectionSpacing: CGFloat = 30.0
             
@@ -698,8 +701,11 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0  - environment.safeInsets.left - environment.safeInsets.right, height: CGFloat.greatestFiniteMagnitude),
                 transition: .immediate
             )
+            // iPhone Duo: beside a left side strip the header starts with its section, past the strip. With equal side
+            // insets it keeps its old position.
+            let titleHeaderStripInset: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? environment.safeInsets.left : 0.0
             context.add(titleHeader
-                .position(CGPoint(x: sideInset * 2.0 + titleHeader.size.width / 2.0, y: contentHeight + titleHeader.size.height / 2.0))
+                .position(CGPoint(x: titleHeaderStripInset + sideInset * 2.0 + titleHeader.size.width / 2.0, y: contentHeight + titleHeader.size.height / 2.0))
             )
             contentHeight += titleHeader.size.height + headerSpacing
             
@@ -712,7 +718,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(titleBackground
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + titleBackground.size.height / 2.0))
+                .position(CGPoint(x: bandCenterX, y: contentHeight + titleBackground.size.height / 2.0))
             )
             
             var isEditing = false
@@ -743,7 +749,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(titleField
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + titleBackground.size.height / 2.0))
+                .position(CGPoint(x: bandCenterX, y: contentHeight + titleBackground.size.height / 2.0))
             )
             
             contentHeight += titleBackground.size.height + sectionSpacing
@@ -758,7 +764,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(hideBackground
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + hideBackground.size.height / 2.0))
+                    .position(CGPoint(x: bandCenterX, y: contentHeight + hideBackground.size.height / 2.0))
                 )
                 
                 let hideTitle = hideTitle.update(
@@ -858,7 +864,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(iconBackground
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + iconBackground.size.height / 2.0))
+                    .position(CGPoint(x: bandCenterX, y: contentHeight + iconBackground.size.height / 2.0))
                 )
                 
                 if let emojiContent = state.emojiContent {
@@ -878,7 +884,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         transition: context.transition
                     )
                     context.add(iconSelector
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + iconSelector.size.height / 2.0))
+                        .position(CGPoint(x: bandCenterX, y: contentHeight + iconSelector.size.height / 2.0))
                         .cornerRadius(10.0)
                         .clipsToBounds(true)
                     )

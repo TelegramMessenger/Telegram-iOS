@@ -85,8 +85,13 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         self.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top))
         
         let sideInset: CGFloat = 10.0
+        // Beside iPhone Duo's side strip (the side insets differ) the content keeps to the band between them; elsewhere it
+        // keeps the full width, as before.
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
         
-        var imageSize = CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.width - sideInset * 2.0)
+        var imageSize = CGSize(width: bandWidth - sideInset * 2.0, height: bandWidth - sideInset * 2.0)
         if imageSize.height > layout.size.height - insets.top - sideInset * 2.0 - 100.0 {
             let side = layout.size.height - insets.top - sideInset * 2.0 - 100.0
             imageSize = CGSize(width: side, height: side)
@@ -117,7 +122,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         
         let text: String = "\(processHexString(s1))\n\(processHexString(s2))\n\(processHexString(s3))\n\(processHexString(s4))"
         
-        let (keyTextLayout, keyTextApply) = makeKeyTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.semiboldMonospace(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let (keyTextLayout, keyTextApply) = makeKeyTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.semiboldMonospace(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: bandWidth - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
         let infoString = self.presentationData.strings.EncryptionKey_Description(self.peer.compactDisplayTitle, self.peer.compactDisplayTitle)
         let infoText = NSMutableAttributedString(string: infoString.string, attributes: [.font: Font.regular(14.0), .foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor])
@@ -131,7 +136,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
             infoText.addAttributes([.foregroundColor: self.presentationData.theme.list.itemAccentColor, NSAttributedString.Key(rawValue: TelegramTextAttributes.URL): "https://telegram.org/faq#secret-chats"], range: linkRange)
         }
         
-        let (infoLayout, infoApply) = makeInfoLayout(TextNodeLayoutArguments(attributedString: infoText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let (infoLayout, infoApply) = makeInfoLayout(TextNodeLayoutArguments(attributedString: infoText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: bandWidth - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
         let _ = keyTextApply()
         let _ = infoApply()
@@ -144,13 +149,13 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight + sideInset * 2.0)
         
-        let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
+        let imageFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - imageSize.width) / 2.0), y: contentOrigin), size: imageSize)
         transition.updateFrame(node: self.imageNode, frame: imageFrame)
         
-        let keyTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - keyTextLayout.size.width) / 2.0), y: imageFrame.maxY + imageSpacing), size: keyTextLayout.size)
+        let keyTextFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - keyTextLayout.size.width) / 2.0), y: imageFrame.maxY + imageSpacing), size: keyTextLayout.size)
         transition.updateFrame(node: self.keyTextNode, frame: keyTextFrame)
         
-        let infoFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - infoLayout.size.width) / 2.0), y: keyTextFrame.maxY + textSpacing), size: infoLayout.size)
+        let infoFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - infoLayout.size.width) / 2.0), y: keyTextFrame.maxY + textSpacing), size: infoLayout.size)
         transition.updateFrame(node: self.infoNode, frame: infoFrame)
     }
     

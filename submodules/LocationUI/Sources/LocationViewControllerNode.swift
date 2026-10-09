@@ -286,6 +286,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     
     private let topEdgeEffectView = EdgeEffectView()
     private let buttons = ComponentView<Empty>()
+    private let sideColumnCloseButton = ComponentView<Empty>()
     private let title = ComponentView<Empty>()
     
     private let listNode: ListView
@@ -905,14 +906,16 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         let backgroundSize = CGSize(width: layout.size.width - glassInset * 2.0, height: backgroundHeight)
 
         let bottomCornerRadius = max(24.0, layout.deviceMetrics.screenCornerRadius) - 2.0
+        // iPhone Duo's cover screen: each bottom corner follows its own screen corner (nil where they are uniform).
+        let bottomCornerRadii = layout.screenCornerRadii.sheetBottomCornerRadii(inset: 2.0)
 
         self.backgroundView.update(
             size: backgroundSize,
             cornerRadii: .init(
                 topLeft: 38.0,
                 topRight: 38.0,
-                bottomLeft: bottomCornerRadius,
-                bottomRight: bottomCornerRadius
+                bottomLeft: bottomCornerRadii?.left ?? bottomCornerRadius,
+                bottomRight: bottomCornerRadii?.right ?? bottomCornerRadius
             ),
             isDark: self.presentationData.theme.overallDarkAppearance,
             tintColor: .init(kind: .panel),
@@ -1148,12 +1151,16 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 )
             }
                 
+            // iPhone Duo: with a side strip the close leaves the top row for the strip, where a standard bar's close goes
+            // (folded landscape shows this screen full screen, and in landscape-right the row's left end is the status block).
+            let sideColumnCloseFrame = layout.sideColumnNavigationButtonFrame
+            
             let barButtonSideInset: CGFloat = 16.0
             let buttonsSize = self.buttons.update(
                 transition: ComponentTransition(transition),
                 component: AnyComponent(GlassControlPanelComponent(
                     theme: self.presentationData.theme,
-                    leftItem: GlassControlPanelComponent.Item(
+                    leftItem: sideColumnCloseFrame != nil ? nil : GlassControlPanelComponent.Item(
                         items: leftControlItems,
                         background: .panel
                     ),
@@ -1175,6 +1182,34 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 }
                 view.bounds = CGRect(origin: .zero, size: buttonsFrame.size)
                 view.center = buttonsFrame.center
+            }
+            
+            if let sideColumnCloseFrame {
+                let closeButtonSize = self.sideColumnCloseButton.update(
+                    transition: ComponentTransition(transition),
+                    component: AnyComponent(GlassControlPanelComponent(
+                        theme: self.presentationData.theme,
+                        leftItem: GlassControlPanelComponent.Item(
+                            items: leftControlItems,
+                            background: .panel
+                        ),
+                        centralItem: nil,
+                        rightItem: nil,
+                        isDark: self.presentationData.theme.overallDarkAppearance
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                let closeButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sideColumnCloseFrame.midX - closeButtonSize.width * 0.5), y: floorToScreenPixels(sideColumnCloseFrame.midY - closeButtonSize.height * 0.5)), size: closeButtonSize)
+                if let view = self.sideColumnCloseButton.view {
+                    if view.superview == nil {
+                        self.view.addSubview(view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: closeButtonFrame.size)
+                    view.center = closeButtonFrame.center
+                }
+            } else if let view = self.sideColumnCloseButton.view {
+                view.removeFromSuperview()
             }
             
             let titleSize = self.title.update(

@@ -57,6 +57,39 @@ import GlassBackgroundComponent
 import Weather
 import UniformTypeIdentifiers
 
+/// iPhone Duo, sticker editor: the square sticker frame (0.97 of the preview's width), the undo button above it and the
+/// cut-out and outline buttons below it have to fit between the top of the screen and the editor's bottom bar, and keep
+/// to the band beside a side strip. Around a full-width 9:16 preview they do not on these screens, which are wide for
+/// their height (466x678 folded: the outline button fell below the screen; 669x951 unfolded: so did cut-out), so the
+/// preview is narrowed and placed with the frame in that space. The sticker is the canvas-centred square either way, so
+/// only the preview's scale changes. Returns the preview's frame on iPhone Duo (reserved corners), nil elsewhere, where
+/// the usual placement is kept.
+func mediaEditorStickerPreviewFrame(screenSize: CGSize, safeInsets: UIEdgeInsets, reservedCorners: ContainerViewLayoutCorners, statusBarHeight: CGFloat, hasStatusIsland: Bool) -> CGRect? {
+    if reservedCorners == .none {
+        return nil
+    }
+    let frameFraction: CGFloat = 0.97
+    let spaceAboveFrame: CGFloat = 35.0 + 40.0
+    let spaceBelowFrame: CGFloat = 35.0 + 40.0 + 16.0 + 40.0
+    // The bottom bar's buttons start 8pt above where the editor's controls inset puts them (see the component's
+    // `controlsBottomInset`: mirrored on the status island's clock line beside the island, 62pt up otherwise).
+    let controlsBottomInset: CGFloat = hasStatusIsland ? -(statusBarHeight + 31.0 + 30.0) : -62.0
+    let bottomLimit = screenSize.height + 8.0 + controlsBottomInset - 8.0
+    let topLimit = statusBarHeight + 8.0
+    let available = bottomLimit - topLimit
+    
+    let bandMinX = safeInsets.left
+    let bandWidth = screenSize.width - safeInsets.left - safeInsets.right
+    let frameWidth = max(100.0, min(floor(bandWidth * frameFraction), available - spaceAboveFrame - spaceBelowFrame))
+    let previewWidth = min(bandWidth, floorToScreenPixels(frameWidth / frameFraction))
+    let previewHeight = floorToScreenPixels(previewWidth * 1.77778)
+    let actualFrameWidth = floorToScreenPixels(previewWidth * frameFraction)
+    let slack = max(0.0, available - spaceAboveFrame - spaceBelowFrame - actualFrameWidth)
+    let frameMinY = topLimit + spaceAboveFrame + floorToScreenPixels(slack / 2.0)
+    let previewMinY = frameMinY - floorToScreenPixels((previewHeight - actualFrameWidth) / 2.0)
+    return CGRect(origin: CGPoint(x: bandMinX + floorToScreenPixels((bandWidth - previewWidth) / 2.0), y: previewMinY), size: CGSize(width: previewWidth, height: previewHeight))
+}
+
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
 private let saveButtonTag = GenericComponentViewTag()
@@ -772,6 +805,14 @@ final class MediaEditorScreenComponent: Component {
                 return availableSize
             }
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            // iPhone Duo unfolded portrait: the top row sits on the status island's clock line (as the drawing
+            // screen's does), its right buttons left of the island; elsewhere the row keeps its usual place.
+            func topRowY(height: CGFloat) -> CGFloat {
+                if environment.navigationBarTrailingButtonsInset > 0.0 {
+                    return environment.statusBarHeight + 31.0 - height / 2.0
+                }
+                return max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)
+            }
             guard let controller = environment.controller() as? MediaEditorScreenImpl else {
                 return availableSize
             }
@@ -810,7 +851,7 @@ final class MediaEditorScreenComponent: Component {
             let buttonSideInset: CGFloat
             let buttonBottomInset: CGFloat = 8.0
             var controlsBottomInset: CGFloat = 0.0
-            let previewSize: CGSize
+            var previewSize: CGSize
             var topInset: CGFloat = environment.statusBarHeight + 5.0
             if isTablet {
                 let previewHeight = availableSize.height - topInset - 75.0
@@ -822,7 +863,14 @@ final class MediaEditorScreenComponent: Component {
                 if availableSize.height < previewSize.height + 30.0 {
                     topInset = 0.0
                     controlsBottomInset = -62.0
-                    buttonSideInset = 9.0
+                    if environment.navigationBarTrailingButtonsInset > 0.0 {
+                        // Beside a status island the bottom bar mirrors the top row (see topRowY): its 44pt buttons
+                        // centred compact status height + 31 above the bottom edge, as the drawing screen's are.
+                        controlsBottomInset = min(controlsBottomInset, -(environment.statusBarHeight + 31.0 + 30.0))
+                    }
+                    // Beside a status island the bottom buttons keep the top rows' 16pt side inset; so do they on the folded
+                    // screen, whose outer corners (59pt) would clip a button 9pt from the edge (iPhone Duo).
+                    buttonSideInset = (environment.navigationBarTrailingButtonsInset > 0.0 || environment.reservedCorners != .none) ? 16.0 : 9.0
                 } else {
                     if availableSize.width > 320.0 {
                         buttonSideInset = 16.0
@@ -834,6 +882,15 @@ final class MediaEditorScreenComponent: Component {
             var previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: topInset), size: previewSize)
             if availableSize.height < 680.0, case .stickerEditor = controller.mode {
                 previewFrame = previewFrame.offsetBy(dx: 0.0, dy: -44.0)
+            }
+            // The sticker frame's buttons centre on the frame, which beside a side strip is the band's centre, not the screen's
+            // (iPhone Duo folded: an erase and restore pair centred on the screen reached 16pt into the strip).
+            var stickerButtonsCenterX: CGFloat = availableSize.width / 2.0
+            if !isTablet, case .stickerEditor = controller.mode, let stickerPreviewFrame = mediaEditorStickerPreviewFrame(screenSize: availableSize, safeInsets: environment.safeInsets, reservedCorners: environment.reservedCorners, statusBarHeight: environment.statusBarHeight, hasStatusIsland: environment.navigationBarTrailingButtonsInset > 0.0) {
+                // iPhone Duo: see `mediaEditorStickerPreviewFrame` (the node places the preview the same way).
+                previewSize = stickerPreviewFrame.size
+                previewFrame = stickerPreviewFrame
+                stickerButtonsCenterX = stickerPreviewFrame.midX
             }
             let topButtonsAlpha: CGFloat = isRecordingAdditionalVideo ? 0.3 : 1.0
             let bottomButtonsAlpha: CGFloat = isRecordingAdditionalVideo ? 0.3 : 1.0
@@ -963,7 +1020,9 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: 44.0)
             )
             let doneButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - buttonSideInset - doneButtonSize.width, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset),
+                // The wide (tablet) layout keeps the button clear of the right inset. A bottom button spans iPhone Duo's
+                // side strip; it keeps clear only of a corner block at the bottom.
+                origin: CGPoint(x: availableSize.width - (isTablet ? environment.bottomEdgeSideInsets().right : 0.0) - buttonSideInset - doneButtonSize.width, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset),
                 size: doneButtonSize
             )
             if let doneButtonView = self.doneButton.view {
@@ -1272,6 +1331,10 @@ final class MediaEditorScreenComponent: Component {
             }
             
             var inputPanelAvailableWidth = previewSize.width
+            if environment.navigationBarTrailingButtonsInset > 0.0 {
+                // Beside a status island the caption field keeps the top rows' 16pt side inset (its own is 9pt).
+                inputPanelAvailableWidth -= 7.0 * 2.0
+            }
             var inputPanelAvailableHeight = 103.0
             if case .regular = environment.metrics.widthClass {
                 if (self.inputPanelExternalState.isEditing || self.inputPanelExternalState.hasText) {
@@ -1730,7 +1793,7 @@ final class MediaEditorScreenComponent: Component {
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let saveButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - 20.0 - saveButtonSize.width, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                    origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - 20.0 - saveButtonSize.width, y: topRowY(height: saveButtonSize.height)),
                     size: saveButtonSize
                 )
                 if let saveButtonView = self.saveButton.view {
@@ -1828,7 +1891,7 @@ final class MediaEditorScreenComponent: Component {
                         containerSize: CGSize(width: 44.0, height: 44.0)
                     )
                     let dayNightButtonFrame = CGRect(
-                        origin: CGPoint(x: availableSize.width - 20.0 - dayNightButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                        origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - 20.0 - dayNightButtonSize.width - 50.0, y: topRowY(height: dayNightButtonSize.height)),
                         size: dayNightButtonSize
                     )
                     if let dayNightButtonView = self.dayNightButton.view {
@@ -1923,7 +1986,7 @@ final class MediaEditorScreenComponent: Component {
                     }
                     
                     let muteButtonFrame = CGRect(
-                        origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width + xOffset, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0) + yOffset),
+                        origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - 20.0 - muteButtonSize.width + xOffset, y: topRowY(height: muteButtonSize.height) + yOffset),
                         size: muteButtonSize
                     )
                     if let muteButtonView = self.muteButton.view {
@@ -2013,7 +2076,7 @@ final class MediaEditorScreenComponent: Component {
                     }
                     
                     let playbackButtonFrame = CGRect(
-                        origin: CGPoint(x: availableSize.width - 20.0 - playbackButtonSize.width + xOffset, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0) + yOffset),
+                        origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - 20.0 - playbackButtonSize.width + xOffset, y: topRowY(height: playbackButtonSize.height) + yOffset),
                         size: playbackButtonSize
                     )
                     if let playbackButtonView = self.playbackButton.view {
@@ -2561,7 +2624,7 @@ final class MediaEditorScreenComponent: Component {
                         containerSize: CGSize(width: availableSize.width, height: 44.0)
                     )
                     let undoButtonFrame = CGRect(
-                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - undoButtonSize.width) / 2.0), y: stickerFrameRect.minY - 35.0 - undoButtonSize.height),
+                        origin: CGPoint(x: floorToScreenPixels(stickerButtonsCenterX - undoButtonSize.width / 2.0), y: stickerFrameRect.minY - 35.0 - undoButtonSize.height),
                         size: undoButtonSize
                     )
                     if let undoButtonView = self.undoButton.view {
@@ -2607,7 +2670,7 @@ final class MediaEditorScreenComponent: Component {
                         containerSize: CGSize(width: availableSize.width, height: 44.0)
                     )
                     let cutoutButtonFrame = CGRect(
-                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - cutoutButtonSize.width) / 2.0), y: stickerFrameRect.maxY + 35.0),
+                        origin: CGPoint(x: floorToScreenPixels(stickerButtonsCenterX - cutoutButtonSize.width / 2.0), y: stickerFrameRect.maxY + 35.0),
                         size: cutoutButtonSize
                     )
                     if let cutoutButtonView = self.cutoutButton.view {
@@ -2662,7 +2725,7 @@ final class MediaEditorScreenComponent: Component {
                     )
                     totalButtonsWidth += eraseButtonSize.width
                     
-                    var buttonOriginX = floorToScreenPixels((availableSize.width - totalButtonsWidth) / 2.0)
+                    var buttonOriginX = floorToScreenPixels(stickerButtonsCenterX - totalButtonsWidth / 2.0)
                        
                     if hasRestoreButton {
                         let restoreButtonSize = self.restoreButton.update(
@@ -2685,7 +2748,7 @@ final class MediaEditorScreenComponent: Component {
                         )
                         totalButtonsWidth += restoreButtonSize.width
                         
-                        buttonOriginX = floorToScreenPixels((availableSize.width - totalButtonsWidth) / 2.0)
+                        buttonOriginX = floorToScreenPixels(stickerButtonsCenterX - totalButtonsWidth / 2.0)
                         let restoreButtonFrame = CGRect(
                             origin: CGPoint(x: buttonOriginX + eraseButtonSize.width + buttonSpacing, y: stickerFrameRect.maxY + 35.0),
                             size: restoreButtonSize
@@ -2774,7 +2837,7 @@ final class MediaEditorScreenComponent: Component {
                     )
                     
                     let outlineButtonFrame = CGRect(
-                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - outlineButtonSize.width) / 2.0), y: stickerFrameRect.maxY + 35.0 + 40.0 + 16.0),
+                        origin: CGPoint(x: floorToScreenPixels(stickerButtonsCenterX - outlineButtonSize.width / 2.0), y: stickerFrameRect.maxY + 35.0 + 40.0 + 16.0),
                         size: outlineButtonSize
                     )
                     if let outlineButtonView = self.outlineButton.view {
@@ -2821,7 +2884,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 100.0, height: 30.0)
             )
             let textCancelButtonFrame = CGRect(
-                origin: CGPoint(x: 13.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                origin: CGPoint(x: 13.0, y: topRowY(height: textCancelButtonSize.height)),
                 size: textCancelButtonSize
             )
             if let textCancelButtonView = self.textCancelButton.view {
@@ -2850,7 +2913,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 100.0, height: 30.0)
             )
             let textDoneButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - textDoneButtonSize.width - 13.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - textDoneButtonSize.width - 13.0, y: topRowY(height: textDoneButtonSize.height)),
                 size: textDoneButtonSize
             )
             if let textDoneButtonView = self.textDoneButton.view {
@@ -5554,7 +5617,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 0.0, y: -3.0))), items: .single(ContextController.Items(content: .list(items))))
+            let contextController = makeContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: mainWindowScreenBounds, customPosition: CGPoint(x: 0.0, y: -3.0))), items: .single(ContextController.Items(content: .list(items))))
             self.controller?.present(contextController, in: .window(.root))
         }
         
@@ -5874,7 +5937,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             let progress = 1.0 - value
             let maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
             
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
+            var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
+            if floorToScreenPixels(layout.size.width * 1.77778) > layout.size.height + 30.0 {
+                // A 9:16 preview much taller than the whole screen (iPhone Duo) starts at the top (see `containerLayoutUpdated`).
+                topInset = 0.0
+            }
             let targetTopInset = ceil((layout.statusBarHeight ?? 0.0) - (layout.size.height - layout.size.height * maxScale) / 2.0)
             let deltaOffset = (targetTopInset - topInset)
             
@@ -6002,7 +6069,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             let isTablet = layout.metrics.isTablet
 
             var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
-            let previewSize: CGSize
+            var previewSize: CGSize
             if isTablet {
                 let previewHeight = layout.size.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
@@ -6013,6 +6080,14 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             }
             let bottomInset = max(0.0, layout.size.height - previewSize.height - topInset)
+            // iPhone Duo, sticker editor: a narrowed preview that fits the sticker frame and its buttons (see
+            // `mediaEditorStickerPreviewFrame`; the component places them the same way). The insets above stay those of
+            // the full-width preview, so the bottom bar keeps its place.
+            var stickerPreviewOrigin: CGPoint?
+            if !isTablet, case .stickerEditor = controller.mode, let stickerPreviewFrame = mediaEditorStickerPreviewFrame(screenSize: layout.size, safeInsets: layout.safeInsets, reservedCorners: layout.reservedCorners, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, hasStatusIsland: layout.navigationBarTrailingButtonsInset > 0.0) {
+                previewSize = stickerPreviewFrame.size
+                stickerPreviewOrigin = stickerPreviewFrame.origin
+            }
             
             var layoutInputHeight = layout.inputHeight ?? 0.0
             if self.stickerScreen != nil {
@@ -6020,7 +6095,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
             
             let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                // Beside iPhone Duo's status island (unfolded portrait) the top row sits at the compact status height,
+                // its right buttons clear of the island (`navigationBarTrailingButtonsInset`).
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                fullStatusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,
                 safeInsets: UIEdgeInsets(
                     top: topInset,
@@ -6028,6 +6106,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
+                reservedCorners: layout.reservedCorners,
+                navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layoutInputHeight,
                 metrics: layout.metrics,
@@ -6533,6 +6613,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             var previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: topInset - bottomInputOffset + self.dismissOffset), size: previewSize)
             if layout.size.height < 680.0, case .stickerEditor = controller.mode {
                 previewFrame = previewFrame.offsetBy(dx: 0.0, dy: -44.0)
+            }
+            if let stickerPreviewOrigin {
+                previewFrame = CGRect(origin: CGPoint(x: stickerPreviewOrigin.x, y: stickerPreviewOrigin.y - bottomInputOffset + self.dismissOffset), size: previewSize)
             }
             
             var previewScale: CGFloat = 1.0
@@ -9028,7 +9111,7 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: .top)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .top)
     }
 }
 

@@ -1487,7 +1487,7 @@ private final class DemoSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: nil,
                         dismiss: { animated in

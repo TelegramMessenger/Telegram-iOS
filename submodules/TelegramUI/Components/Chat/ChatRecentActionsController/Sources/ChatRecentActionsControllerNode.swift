@@ -1043,8 +1043,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             width -= layout.additionalInsets.right
         }
 
-        var leftInset = layout.safeInsets.left + 8.0
-        var rightInset = layout.safeInsets.right + 8.0
+        // The bottom panel's buttons span iPhone Duo's side strip; they keep clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        var leftInset = bottomInsets.left + 8.0
+        var rightInset = bottomInsets.right + 8.0
         if cleanInsets.bottom <= 32.0 && layout.deviceMetrics.screenCornerRadius > 0.0 {
             leftInset += 18.0
             rightInset += 18.0
@@ -1848,7 +1850,7 @@ final class ChatMessageContextLocationContentSource: ContextLocationContentSourc
     }
     
     func transitionInfo() -> ContextControllerLocationViewInfo? {
-        return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

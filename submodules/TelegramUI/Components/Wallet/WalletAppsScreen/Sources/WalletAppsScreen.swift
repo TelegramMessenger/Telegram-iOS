@@ -379,7 +379,10 @@ private final class WalletAppsScreenComponent: Component {
             let theme = environment.theme
             self.backgroundColor = theme.list.blocksBackgroundColor
             let apps = connectedAppSessions(self.sessions ?? [])
-            let sideInset = 16.0 + max(environment.safeInsets.left, environment.safeInsets.right)
+            // Per side, so beside iPhone Duo's side strip only that side keeps clear of it; with equal insets both
+            // margins are the same as before.
+            let leftSideInset = 16.0 + environment.safeInsets.left
+            let rightSideInset = 16.0 + environment.safeInsets.right
             var items: [AnyComponentWithIdentity<Empty>] = []
             if apps.count > 1 {
                 items.append(AnyComponentWithIdentity(id: "disconnectAll", component: AnyComponent(ListActionItemComponent(
@@ -443,14 +446,14 @@ private final class WalletAppsScreenComponent: Component {
                     isModal: true
                 )),
                 environment: {},
-                containerSize: CGSize(width: max(1.0, availableSize.width - sideInset * 2.0), height: 10000.0)
+                containerSize: CGSize(width: max(1.0, availableSize.width - leftSideInset - rightSideInset), height: 10000.0)
             )
             let contentY = environment.navigationHeight + 32.0
             if let sectionView = self.section.view {
                 if sectionView.superview == nil {
                     self.scrollView.addSubview(sectionView)
                 }
-                transition.setFrame(view: sectionView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentY), size: sectionSize))
+                transition.setFrame(view: sectionView, frame: CGRect(origin: CGPoint(x: leftSideInset, y: contentY), size: sectionSize))
             }
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: .zero, size: availableSize))
             let contentSize = CGSize(width: availableSize.width, height: max(availableSize.height + 1.0, contentY + sectionSize.height + 24.0 + environment.safeInsets.bottom))

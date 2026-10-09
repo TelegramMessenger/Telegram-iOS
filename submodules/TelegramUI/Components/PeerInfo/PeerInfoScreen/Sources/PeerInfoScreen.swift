@@ -115,6 +115,7 @@ import EdgeEffect
 import Pasteboard
 import AccountPeerContextItem
 import UrlWhitelist
+import SideColumnLayout
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -5383,7 +5384,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.scrollNode.view.isScrollEnabled = isScrollEnabled
         }
         
-        let navigationHeight = self.updateNavigationHeight(width: layout.size.width, defaultHeight: navigationHeight, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), transition: transition)
+        let navigationHeight = self.updateNavigationHeight(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, defaultHeight: navigationHeight, insets: UIEdgeInsets(), transition: transition)
         
         if self.headerNode.isAvatarExpanded && layout.size.width > layout.size.height {
             self.headerNode.updateIsAvatarExpanded(false, transition: transition)
@@ -5412,15 +5413,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         var contentHeight: CGFloat = 0.0
         
-        let sectionInset: CGFloat
-        if layout.size.width >= 320.0 {
-            sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-        } else {
-            sectionInset = 0.0
-        }
-        let headerInset = sectionInset
+        let sideInsets = peerInfoSideInsets(layout: layout)
+        let headerInset = sideInsets.base
         
-        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: transition.isAnimated && self.headerNode.navigationTransition == nil)
+        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: transition.isAnimated && self.headerNode.navigationTransition == nil)
         
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: layout.size.height))
         if additive {
@@ -5435,8 +5431,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         var validRegularSections: [AnyHashable] = []
         if !self.isMediaOnly {
             var insets = UIEdgeInsets()
-            insets.left += sectionInset
-            insets.right += sectionInset
+            insets.left += sideInsets.sectionLeft
+            insets.right += sideInsets.sectionRight
             
             let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, reactionSourceMessageId: self.reactionSourceMessageId, canDeleteReaction: self.canDeleteReaction, callMessages: self.callMessages, chatLocation: self.chatLocation, isOpenedFromChat: self.isOpenedFromChat, isMyProfile: self.isMyProfile)
             
@@ -5517,8 +5513,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
 
             for (sectionId, sectionItems) in editItems {
                 var insets = UIEdgeInsets()
-                insets.left += sectionInset
-                insets.right += sectionInset
+                insets.left += sideInsets.sectionLeft
+                insets.right += sideInsets.sectionRight
 
                 validEditingSections.append(sectionId)
                 
@@ -5823,18 +5819,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
                 
         if let (layout, navigationHeight) = self.validLayout {
-            let navigationHeight = self.updateNavigationHeight(width: layout.size.width, defaultHeight: navigationHeight, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), transition: transition)
+            let navigationHeight = self.updateNavigationHeight(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, defaultHeight: navigationHeight, insets: UIEdgeInsets(), transition: transition)
             
             if !additive {
-                let sectionInset: CGFloat
-                if layout.size.width >= 320.0 {
-                    sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-                } else {
-                    sectionInset = 0.0
-                }
-                let headerInset = sectionInset
+                let sideInsets = peerInfoSideInsets(layout: layout)
+                let headerInset = sideInsets.base
 
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: animateHeader && self.headerNode.navigationTransition == nil)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, sideInsets: sideInsets, statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0, navigationHeight: navigationHeight, presentedInFormSheet: layout.presentedInFormSheet, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.savedMessagesPeer ?? self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, profileGiftsContext: self.data?.profileGiftsContext, screenData: self.data, isSearching: self.searchDisplayController != nil, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: self.headerNode.navigationTransition == nil ? transition : .immediate, additive: additive, animateHeader: animateHeader && self.headerNode.navigationTransition == nil)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
@@ -5866,13 +5857,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
                         
             let navigationBarHeight: CGFloat = !self.isSettings && layout.presentedInFormSheet ? 68.0 : 60.0
-            let paneContainerTopInset = navigationBarHeight + (layout.statusBarHeight ?? 0.0)
-            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, topInset: paneContainerTopInset, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: self.initialExpandPanes ? 1.0 : effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, disableTabSwitching: disableTabSwitching, navigationHeight: navigationHeight, transition: transition)
+            let paneContainerTopInset = navigationBarHeight + (layout.navigationBarStatusBarHeight ?? 0.0)
+            // iPhone Duo: the panes and tabs stay out of the side strip; the container stays full width.
+            let paneSideInsets = peerInfoSideInsets(layout: layout)
+            self.paneContainerNode.stripInsets = (paneSideInsets.stripLeft, paneSideInsets.stripRight)
+            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: paneSideInsets.paneSideInset, topInset: paneContainerTopInset, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: self.initialExpandPanes ? 1.0 : effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, disableTabSwitching: disableTabSwitching, navigationHeight: navigationHeight, transition: transition)
           
-            transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
-            var searchBarContainerY: CGFloat = layout.statusBarHeight ?? 0.0
+            // iPhone Duo unfolded portrait: the buttons and the search field end left of the status island.
+            let navigationButtonsWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.navigationBarTrailingButtonsInset
+            transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.navigationBarStatusBarHeight ?? 0.0), size: CGSize(width: navigationButtonsWidth, height: navigationBarHeight)))
+            var searchBarContainerY: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
             searchBarContainerY += floor((navigationBarHeight - 44.0) * 0.5) + 2.0
-            transition.updateFrame(node: self.headerNode.searchBarContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: searchBarContainerY), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
+            transition.updateFrame(node: self.headerNode.searchBarContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: searchBarContainerY), size: CGSize(width: navigationButtonsWidth, height: navigationBarHeight)))
             transition.updateFrame(node: self.headerNode.searchContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
                         
             var leftNavigationButtons: [PeerInfoHeaderNavigationButtonSpec] = []
@@ -5950,7 +5946,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .back, isForExpandedView: true))
                 }
             }
-            self.headerNode.navigationButtonContainer.update(size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight), presentationData: self.presentationData, leftButtons: leftNavigationButtons, rightButtons: rightNavigationButtons, expandFraction: effectiveAreaExpansionFraction, shouldAnimateIn: animateHeader, transition: transition)
+            // iPhone Duo: the navigation buttons go into the side strip, above the vertical tab bar in the
+            // Settings tab (spec 2026-10-06, profile side column). A form sheet's layout is not the screen's.
+            var navigationSideColumn: SideColumnRegion?
+            if !layout.presentedInFormSheet, var region = sideColumnRegion(layout: layout, minY: (layout.navigationBarStatusBarHeight ?? 0.0) + 8.0, reservedBelow: (self.controller?.parent as? TabBarController)?.verticalTabBarFrame(for: layout)) {
+                // The container sits at (safeInsets.left, statusBarHeight).
+                region.frame = region.frame.offsetBy(dx: -layout.safeInsets.left, dy: -(layout.navigationBarStatusBarHeight ?? 0.0))
+                navigationSideColumn = region
+            }
+            self.headerNode.navigationButtonContainer.update(size: CGSize(width: navigationButtonsWidth, height: navigationBarHeight), presentationData: self.presentationData, leftButtons: leftNavigationButtons, rightButtons: rightNavigationButtons, expandFraction: effectiveAreaExpansionFraction, shouldAnimateIn: animateHeader, sideColumn: navigationSideColumn, transition: transition)
         }
     }
     
@@ -6359,6 +6363,11 @@ public struct PeerInfoSwitchToMediaTarget {
 }
 
 public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
+    /// iPhone Duo: this screen lays out its own side column, back button included.
+    override public var placesNavigationButtonInSideColumn: Bool {
+        return false
+    }
+    
     let context: AccountContext
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let peerId: PeerId
@@ -7340,7 +7349,7 @@ final class SettingsTabBarContextReferenceContentSource: ContextReferenceContent
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView.contentView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .top
         )
     }
@@ -7406,11 +7415,11 @@ final class MessageContextExtractedContentSource: ContextExtractedContentSource 
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -7428,11 +7437,11 @@ final class PeerInfoContextExtractedContentSource: ContextExtractedContentSource
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -7451,7 +7460,7 @@ final class PeerInfoContextReferenceContentSource: ContextReferenceContentSource
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

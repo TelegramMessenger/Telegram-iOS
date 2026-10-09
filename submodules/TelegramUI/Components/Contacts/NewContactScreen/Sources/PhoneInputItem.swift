@@ -376,14 +376,19 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.countryButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: 52.0 + 6.0))
                     
+                    //Beside a side strip the margins differ: the fields and trailing content move in by the surplus on their side.
+                    let leftShift = max(0.0, params.leftInset - params.rightInset)
+                    let rightShift = max(0.0, params.rightInset - params.leftInset)
+                    let trailingEdge = rightShift > 0.0 ? params.width - params.rightInset : params.width
+                    
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - arrowImage.size.width - 8.0, y: floorToScreenPixels((countryButtonHeight - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: trailingEdge - arrowImage.size.width - 8.0, y: floorToScreenPixels((countryButtonHeight - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
                     
-                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: 52.0), size: CGSize(width: params.width, height: 52.0))
+                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: leftShift, y: 52.0), size: CGSize(width: params.width - leftShift, height: 52.0))
                     
-                    let countryCodeFrame = CGRect(origin: CGPoint(x: 7.0, y: 52.0), size: CGSize(width: 67.0, height: 52.0))
-                    let numberFrame = CGRect(origin: CGPoint(x: 88.0, y: 52.0), size: CGSize(width: layout.size.width - 70.0 - 8.0, height: 52.0))
+                    let countryCodeFrame = CGRect(origin: CGPoint(x: 7.0 + leftShift, y: 52.0), size: CGSize(width: 67.0, height: 52.0))
+                    let numberFrame = CGRect(origin: CGPoint(x: 88.0 + leftShift, y: 52.0), size: CGSize(width: layout.size.width - 70.0 - 8.0 - leftShift - rightShift, height: 52.0))
                     let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 8.0)
                     
                     let phoneInputFrame = countryCodeFrame.union(numberFrame)
@@ -399,7 +404,7 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.checkNode.isHidden = true
                     }
                     if let checkImage = strongSelf.checkNode.image {
-                        strongSelf.checkNode.frame = CGRect(origin: CGPoint(x: params.width - checkImage.size.width - 10.0, y: countryButtonHeight + floorToScreenPixels((inputFieldHeight - checkImage.size.height) / 2.0)), size: checkImage.size)
+                        strongSelf.checkNode.frame = CGRect(origin: CGPoint(x: trailingEdge - checkImage.size.width - 10.0, y: countryButtonHeight + floorToScreenPixels((inputFieldHeight - checkImage.size.height) / 2.0)), size: checkImage.size)
                     }
                     
                     if case .activity = item.accessory {
@@ -419,7 +424,7 @@ final class PhoneInputItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         
                         let activityIndicatorSize = activityIndicatorView.bounds.size
-                        let activityIndicatorFrame = CGRect(origin: CGPoint(x: params.width - 16.0 - activityIndicatorSize.width, y: countryButtonHeight + floor((inputFieldHeight - activityIndicatorSize.height) * 0.5)), size: activityIndicatorSize)
+                        let activityIndicatorFrame = CGRect(origin: CGPoint(x: trailingEdge - 16.0 - activityIndicatorSize.width, y: countryButtonHeight + floor((inputFieldHeight - activityIndicatorSize.height) * 0.5)), size: activityIndicatorSize)
                         
                         activityIndicatorView.tintColor = item.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.5)
                         

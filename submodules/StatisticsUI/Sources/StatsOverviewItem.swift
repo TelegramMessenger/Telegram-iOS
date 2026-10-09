@@ -967,12 +967,13 @@ class StatsOverviewItemNode: ListViewItemNode {
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                                                 
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
                     let firstColumnX = sideInset + leftInset
+                    let bandMidX = leftInset + (layout.size.width - leftInset - params.rightInset) / 2.0
                     var secondColumnX = firstColumnX
                     
                     if twoColumnLayout {
@@ -990,9 +991,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                             maxLeftWidth = max(maxLeftWidth, bottomLeftItemLayout.width)
                         }
                         if useMinLeftColumnWidth {
-                            secondColumnX = min(layout.size.width / 2.0, firstColumnX + maxLeftWidth + horizontalSpacing * 3.0)
+                            secondColumnX = min(bandMidX, firstColumnX + maxLeftWidth + horizontalSpacing * 3.0)
                         } else {
-                            secondColumnX = max(layout.size.width / 2.0, firstColumnX + maxLeftWidth + horizontalSpacing)
+                            secondColumnX = max(bandMidX, firstColumnX + maxLeftWidth + horizontalSpacing)
                         }
                     }
                                         

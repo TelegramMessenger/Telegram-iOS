@@ -861,7 +861,9 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         let scrubberVerticalOrigin: CGFloat = infoVerticalOrigin + 58.0
         let scrubberInset: CGFloat = 9.0
         
-        transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: sideInset + scrubberInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - (sideInset + scrubberInset) * 2.0, height: 10.0 + 8.0 * 2.0)))
+        // The scrubber, the info label and the centre buttons keep to the band between the side insets (iPhone Duo's
+        // side strip), like the duration labels and the side buttons.
+        transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: leftInset + sideInset + scrubberInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - leftInset - rightInset - (sideInset + scrubberInset) * 2.0, height: 10.0 + 8.0 * 2.0)))
         
         let leftLabelVerticalOffset: CGFloat = self.leftDurationLabelPushed ? 6.0 : 0.0
         transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset + scrubberInset, y: scrubberVerticalOrigin + 19.0 + leftLabelVerticalOffset), size: CGSize(width: 100.0, height: 20.0)))
@@ -871,9 +873,9 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         
         let infoLabelVerticalOffset: CGFloat = self.infoNodePushed ? 6.0 : 0.0
                 
-        let infoSize = self.infoNode.measure(CGSize(width: width - 60.0 * 2.0 - 100.0, height: 100.0))
+        let infoSize = self.infoNode.measure(CGSize(width: width - leftInset - rightInset - 60.0 * 2.0 - 100.0, height: 100.0))
         self.infoNode.bounds = CGRect(origin: CGPoint(), size: infoSize)
-        transition.updatePosition(node: self.infoNode, position: CGPoint(x: width / 2.0, y: scrubberVerticalOrigin + 14.0 + infoLabelVerticalOffset + infoSize.height / 2.0))
+        transition.updatePosition(node: self.infoNode, position: CGPoint(x: leftInset + (width - leftInset - rightInset) / 2.0, y: scrubberVerticalOrigin + 14.0 + infoLabelVerticalOffset + infoSize.height / 2.0))
         
         
         let rateRightOffset = timestampLabelWidthForDuration(self.currentDuration)
@@ -883,7 +885,7 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
         
         let buttonSize = CGSize(width: 64.0, height: 64.0)
         let buttonsWidth = min(width - leftInset - rightInset - sideButtonsInset * 2.0, 320.0)
-        let buttonsRect = CGRect(origin: CGPoint(x: floor((width - buttonsWidth) / 2.0), y: scrubberVerticalOrigin + 34.0), size: CGSize(width: buttonsWidth, height: buttonSize.height))
+        let buttonsRect = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - buttonsWidth) / 2.0), y: scrubberVerticalOrigin + 34.0), size: CGSize(width: buttonsWidth, height: buttonSize.height))
         
         transition.updateFrame(node: self.orderButton, frame: CGRect(origin: CGPoint(x: leftInset + sideInset - 12.0, y: buttonsRect.minY), size: buttonSize))
         transition.updateFrame(node: self.loopingButton, frame: CGRect(origin: CGPoint(x: width - rightInset - sideInset - buttonSize.width + 12.0, y: buttonsRect.minY), size: buttonSize))
@@ -949,10 +951,11 @@ final class OverlayAudioPlayerControlsNode: ASDisplayNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: width - buttonInsets.left - buttonInsets.right, height: 52.0)
+                containerSize: CGSize(width: width - leftInset - rightInset - buttonInsets.left - buttonInsets.right, height: 52.0)
             )
             let profileAudioOrigin: CGFloat = finalPanelHeight - profileAudioSize.height - buttonInsets.bottom
-            let profileAudioFrame = CGRect(origin: CGPoint(x: floor((width - profileAudioSize.width) / 2.0), y: profileAudioOrigin), size: profileAudioSize)
+            // In the band between the side insets (the bottom-edge insets beside iPhone Duo's strip: clear of a bottom corner block).
+            let profileAudioFrame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - profileAudioSize.width) / 2.0), y: profileAudioOrigin), size: profileAudioSize)
             if let profileAudioView = profileAudio.view {
                 if profileAudioView.superview == nil {
                     self.view.addSubview(profileAudioView)
@@ -1292,6 +1295,6 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

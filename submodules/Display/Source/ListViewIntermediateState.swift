@@ -47,6 +47,10 @@ public enum ListViewAnimationCurve {
     case Spring(duration: Double)
     case Default(duration: Double?)
     case Custom(duration: Double, Float, Float, Float, Float)
+    /// A `CASpringAnimation` with explicit parameters, time-scaled so that it settles within `duration`.
+    /// Mirrors `ContainedViewLayoutTransitionCurve.customSpring`, so list scrolling can share one spring with
+    /// content that is animated through a `ContainedViewLayoutTransition`.
+    case CustomSpring(duration: Double, mass: CGFloat, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat)
 }
 
 public struct ListViewScrollToItem {

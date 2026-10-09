@@ -114,6 +114,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let cropNode: WallpaperCropNode
     
     private let topButtons: ComponentView<Empty>
+    private let sideColumnCloseButton = ComponentView<Empty>()
     private var topCanShare = false
     private var topCanSwitchTheme = false
     private var topCanEdit = false
@@ -1380,9 +1381,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let toolbarHeight = self.arguments.toolbarHeight
         
-        let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        // The buttons center over the toolbar: in its band when the side insets differ (iPhone Duo's strip, which a
+        // bottom toolbar spans, keeping clear only of a corner block at the bottom), the screen's center otherwise.
+        let toolbarBottomInsets = layout.bottomEdgeSideInsets()
+        let buttonsCenterX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? toolbarBottomInsets.left + (layout.size.width - toolbarBottomInsets.left - toolbarBottomInsets.right) / 2.0 : layout.size.width / 2.0
+        let leftButtonFrame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - buttonSize.width - buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        let centerButtonFrame = CGRect(origin: CGPoint(x: floor(buttonsCenterX - buttonSize.width / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(buttonsCenterX + buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
         
         var patternAlpha: CGFloat = 0.0
         var patternFrame = centerButtonFrame
@@ -1567,12 +1572,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             ))
         }
 
+        // iPhone Duo: with a side strip the close button goes in the strip, as every screen's back / close does; the
+        // top row keeps the other controls.
+        let sideColumnCloseFrame = layout.sideColumnNavigationButtonFrame
+
         let topButtonSideInset: CGFloat = 16.0
         let topButtonsSize = self.topButtons.update(
             transition: ComponentTransition(transition),
             component: AnyComponent(GlassControlPanelComponent(
                 theme: self.controlsGlassIsDark ? defaultDarkPresentationTheme : self.presentationData.theme,
-                leftItem: GlassControlPanelComponent.Item(
+                leftItem: sideColumnCloseFrame != nil ? nil : GlassControlPanelComponent.Item(
                     items: leftControlItems,
                     background: .panel
                 ),
@@ -1593,6 +1602,33 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.buttonsContainerNode.view.addSubview(topButtonsView)
             }
             transition.updateFrame(view: topButtonsView, frame: topButtonsFrame)
+        }
+
+        if let sideColumnCloseFrame {
+            let closeButtonSize = self.sideColumnCloseButton.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(GlassControlPanelComponent(
+                    theme: self.controlsGlassIsDark ? defaultDarkPresentationTheme : self.presentationData.theme,
+                    leftItem: GlassControlPanelComponent.Item(
+                        items: leftControlItems,
+                        background: .panel
+                    ),
+                    centralItem: nil,
+                    rightItem: nil,
+                    isDark: self.controlsGlassIsDark
+                )),
+                environment: {},
+                containerSize: CGSize(width: 44.0, height: 44.0)
+            )
+            let closeButtonFrame = CGRect(origin: CGPoint(x: sideColumnCloseFrame.midX - closeButtonSize.width / 2.0 + offset.x, y: sideColumnCloseFrame.midY - closeButtonSize.height / 2.0), size: closeButtonSize)
+            if let closeButtonView = self.sideColumnCloseButton.view {
+                if closeButtonView.superview == nil {
+                    self.buttonsContainerNode.view.addSubview(closeButtonView)
+                }
+                transition.updateFrame(view: closeButtonView, frame: closeButtonFrame)
+            }
+        } else if let closeButtonView = self.sideColumnCloseButton.view, closeButtonView.superview != nil {
+            closeButtonView.removeFromSuperview()
         }
     }
     

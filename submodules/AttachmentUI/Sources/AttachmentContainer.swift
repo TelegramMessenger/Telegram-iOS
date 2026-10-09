@@ -37,6 +37,21 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     let clipNode: ASDisplayNode
     let bottomClipNode: ASDisplayNode
     let container: NavigationContainer
+
+    /// The sheet's visible corner radii in the current layout, each corner independent. The top pair is
+    /// drawn by `clipNode`, the bottom pair by `bottomClipNode` (it hangs 100pt above the sheet, so only
+    /// its bottom corners show), with per-corner `cornerRadii` where the OS has them. The attach-button
+    /// morph starts and ends on this shape.
+    private(set) var sheetCornerRadii = CornerRadii(uniform: 0.0)
+
+    /// Off while the attach-button morph clips the sheet with its own shape.
+    var suppressesBottomCorners = false {
+        didSet {
+            if self.suppressesBottomCorners != oldValue {
+                self.applyBottomCornerRadii()
+            }
+        }
+    }
     private let pillView: UIImageView
     
     private(set) var isReady: Bool = false
@@ -249,7 +264,8 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             return
         }
         
-        let isLandscape = layout.orientation == .landscape
+        // A child that fills the screen beside a status island (iPhone Duo, unfolded portrait) opens like landscape.
+        let isLandscape = layout.orientation == .landscape || (layout.topBarStatusIsland != nil && lastController.fillsScreenBesideStatusIsland)
         let edgeTopInset = isLandscape ? 0.0 : attachmentDefaultTopInset(layout: layout)
     
         let completion = {
@@ -498,14 +514,27 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
     }
                 
+    /// The sheet's bottom corners, each independent where the OS has per-corner radii; otherwise one
+    /// radius for both (the larger).
+    private func applyBottomCornerRadii() {
+        let bottomLeft = self.suppressesBottomCorners ? 0.0 : self.sheetCornerRadii.bottomLeft
+        let bottomRight = self.suppressesBottomCorners ? 0.0 : self.sheetCornerRadii.bottomRight
+        if CALayer.cornerRadiiSupported {
+            self.bottomClipNode.layer.setCornerRadii(CornerRadii(topLeft: 0.0, topRight: 0.0, bottomLeft: bottomLeft, bottomRight: bottomRight))
+        } else {
+            self.bottomClipNode.cornerRadius = max(bottomLeft, bottomRight)
+        }
+    }
+
     func update(layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         if self.isDismissed {
             return
         }
         
-        let containerCornerRadius = max(24.0, layout.deviceMetrics.screenCornerRadius)
-        self.bottomClipNode.cornerRadius = containerCornerRadius - 2.0
-        
+        // The sheet's bottom corners follow the screen's.
+        let screenBottomRadius = max(24.0, layout.deviceMetrics.screenCornerRadius) - 2.0
+        let screenCornerRadii = layout.screenCornerRadii
+
         self.isUpdatingState = true
         
         let isFirstTime = self.validLayout == nil
@@ -514,7 +543,10 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         self.panGestureRecognizer?.isEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0)
 
         let defaultTopInset = attachmentDefaultTopInset(layout: layout)
-        let isLandscape = layout.orientation == .landscape
+        // A child that fills the screen beside a status island (iPhone Duo, unfolded portrait; a mini app) opens to
+        // the whole screen like landscape, its own bar beside the island, instead of a card below the island.
+        let fillsScreenBesideStatusIsland = layout.topBarStatusIsland != nil && (controllers.last?.fillsScreenBesideStatusIsland ?? false)
+        let isLandscape = layout.orientation == .landscape || fillsScreenBesideStatusIsland
         let edgeTopInset = isLandscape ? 0.0 : defaultTopInset
         let isFullSize = self.panGestureArguments?.isFullSize ?? self.isFullSize
         
@@ -541,7 +573,8 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let scaleProgress: CGFloat
         if isLandscape {
             modalProgress = 0.0
-            scaleProgress = 1.0
+            // Filling the screen beside a status island, the sheet's clip is not drawn in as a landscape sheet's is.
+            scaleProgress = fillsScreenBesideStatusIsland ? 0.0 : 1.0
         } else {
             if isFullSize, self.panGestureArguments != nil {
                 modalProgress = 1.0 - min(1.0, max(0.0, -1.0 * self.bounds.minY / defaultTopInset))
@@ -572,16 +605,31 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let isFullscreen = controllers.last?.isFullscreen == true
         if case .compact = layout.metrics.widthClass {
             self.clipNode.clipsToBounds = true
-            if self.roundsTopCornersInRegularLayout, #available(iOS 11.0, *) {
-                self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-            }
-            
-            if isLandscape {
-                self.clipNode.cornerRadius = 0.0
+            let topRadius: CGFloat = isLandscape ? 0.0 : (self.glass ? 38.0 : 10.0)
+            let bottomLeft: CGFloat
+            let bottomRight: CGFloat
+            if !screenCornerRadii.isUniform {
+                // A screen whose corners differ (iPhone Duo's cover screen, 8pt on the hinge side): each
+                // bottom corner follows its own screen corner.
+                bottomLeft = max(0.0, screenCornerRadii.bottomLeft - 2.0)
+                bottomRight = max(0.0, screenCornerRadii.bottomRight - 2.0)
             } else {
-                self.clipNode.cornerRadius = self.glass ? 38.0 : 10.0
+                // clipNode has always rounded all four corners here, so a visible bottom corner is the
+                // larger of its radius and the screen-following one.
+                bottomLeft = max(topRadius, screenBottomRadius)
+                bottomRight = bottomLeft
             }
-            
+            self.sheetCornerRadii = CornerRadii(topLeft: topRadius, topRight: topRadius, bottomLeft: bottomLeft, bottomRight: bottomRight)
+            if CALayer.cornerRadiiSupported {
+                self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                self.clipNode.layer.setCornerRadii(CornerRadii(topLeft: self.sheetCornerRadii.topLeft, topRight: self.sheetCornerRadii.topRight, bottomLeft: 0.0, bottomRight: 0.0))
+            } else {
+                if self.roundsTopCornersInRegularLayout {
+                    self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                }
+                self.clipNode.cornerRadius = topRadius
+            }
+
             if #available(iOS 11.0, *) {
                 if layout.safeInsets.bottom.isZero {
                     self.wrappingNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
@@ -619,7 +667,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 var additionalInsets = layout.additionalInsets
                 additionalInsets.bottom = topInset
                                 
-                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), reservedCorners: layout.reservedCorners.offsettingTop(by: containerTopInset), division: nil, additionalInsets: additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: containerTopInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
@@ -633,22 +681,28 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 clipFrame = CGRect(x: containerFrame.minX + overflowInset, y: containerFrame.minY + clipTopOffset, width: containerFrame.width - overflowInset * 2.0, height: containerFrame.height - topPortion)
             }
         } else {
+            let topRadius: CGFloat = self.roundsTopCornersInRegularLayout && !isFullscreen ? screenBottomRadius : 0.0
+            self.sheetCornerRadii = CornerRadii(topLeft: topRadius, topRight: topRadius, bottomLeft: screenBottomRadius, bottomRight: screenBottomRadius)
             if self.roundsTopCornersInRegularLayout {
                 self.clipNode.clipsToBounds = !isFullscreen
-                self.clipNode.cornerRadius = isFullscreen ? 0.0 : self.bottomClipNode.cornerRadius
-                if #available(iOS 11.0, *) {
+                if CALayer.cornerRadiiSupported {
+                    self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                    self.clipNode.layer.setCornerRadii(CornerRadii(topLeft: self.sheetCornerRadii.topLeft, topRight: self.sheetCornerRadii.topRight, bottomLeft: 0.0, bottomRight: 0.0))
+                } else {
+                    self.clipNode.cornerRadius = topRadius
                     self.clipNode.layer.maskedCorners = isFullscreen
                         ? [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
                         : [.layerMinXMinYCorner, .layerMaxXMinYCorner]
                 }
             }
-            containerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: .zero, additionalInsets: .zero, statusBarHeight: isFullscreen ? layout.statusBarHeight : nil, inputHeight: isFullscreen ? layout.inputHeight : nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
+            containerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: .zero, reservedCorners: .none, division: nil, additionalInsets: .zero, statusBarHeight: isFullscreen ? layout.statusBarHeight : nil, inputHeight: isFullscreen ? layout.inputHeight : nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet)
             
             let unscaledFrame = CGRect(origin: CGPoint(), size: containerLayout.size)
             containerScale = 1.0
             containerFrame = unscaledFrame
             clipFrame = unscaledFrame
         }
+        self.applyBottomCornerRadii()
         transition.updateFrameAsPositionAndBounds(node: self.clipNode, frame: clipFrame)
         
         let clipDeltaScale: CGFloat = 1.0 - (clipFrame.width - 10.0) / clipFrame.width

@@ -528,7 +528,8 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
             return CGRectMake(safeAreaInset.left, 0, parentViewFrame.size.width - panelToolbarLandscapeSize - safeAreaInset.left - safeAreaInset.right, parentViewFrame.size.height - safeAreaInset.bottom);
             
         default:
-            return CGRectMake(0, safeAreaInset.top, parentViewFrame.size.width, parentViewFrame.size.height - panelToolbarPortraitSize - safeAreaInset.top - safeAreaInset.bottom);
+            // Side insets are 0 in portrait except beside iPhone Duo's side strip.
+            return CGRectMake(safeAreaInset.left, safeAreaInset.top, parentViewFrame.size.width - safeAreaInset.left - safeAreaInset.right, parentViewFrame.size.height - panelToolbarPortraitSize - safeAreaInset.top - safeAreaInset.bottom);
     }
 }
 

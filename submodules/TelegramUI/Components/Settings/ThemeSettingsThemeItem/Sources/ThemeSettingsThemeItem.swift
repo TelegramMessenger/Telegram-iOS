@@ -409,17 +409,23 @@ public class ThemeSettingsThemeItem: ListViewItem, ItemListItem, ListItemCompone
     }
 
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, neighbors: ListViewItemNeighbors, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
-        async {
+        // The node holds a ListView, whose view is created in its init and so has to be created on the main thread; only
+        // the layout runs in `async`. (A row loaded while scrolling, rather than in the first layout, is configured on a
+        // background queue, as the Appearance accent colours were on iPhone Duo's shorter folded screen, and crashed.)
+        Queue.mainQueue().async {
             let node = ThemeSettingsThemeItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
-
-            node.contentSize = layout.contentSize
-            node.insets = layout.insets
-
-            Queue.mainQueue().async {
-                completion(node, {
-                    return (nil, { _ in apply() })
-                })
+            let makeLayout = node.asyncLayout()
+            async {
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topFacet: neighbors.previous?.base(ItemListNeighborFacet.self), bottomFacet: neighbors.next?.base(ItemListNeighborFacet.self)))
+                
+                node.contentSize = layout.contentSize
+                node.insets = layout.insets
+                
+                Queue.mainQueue().async {
+                    completion(node, {
+                        return (nil, { _ in apply() })
+                    })
+                }
             }
         }
     }
@@ -672,7 +678,7 @@ public class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
 
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
 
                     var listInsets = UIEdgeInsets()
                     listInsets.top += params.leftInset + 4.0

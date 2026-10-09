@@ -79,7 +79,8 @@ final class BottomPanelComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - component.insets.left - component.insets.right, height: availableSize.height - component.insets.top - component.insets.bottom)
             )
-            let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - contentSize.width) * 0.5), y: contentHeight), size: contentSize)
+            // Centred in the band it is measured for: the side insets differ beside iPhone Duo's side strip.
+            let contentFrame = CGRect(origin: CGPoint(x: floor(component.insets.left + (availableSize.width - component.insets.left - component.insets.right - contentSize.width) * 0.5), y: contentHeight), size: contentSize)
             if let contentView = self.content.view {
                 if contentView.superview == nil {
                     self.addSubview(contentView)

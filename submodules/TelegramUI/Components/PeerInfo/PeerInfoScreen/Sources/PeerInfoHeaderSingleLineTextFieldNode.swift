@@ -87,7 +87,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         self.clearButtonNode.isAccessibilityElement = isHidden
     }
     
-    func update(width: CGFloat, safeInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
+    func update(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         self.textNode.textField.font = titleFont
         
@@ -119,32 +119,32 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
             self.topSeparator.isHidden = true
         }
         self.topSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
-        let separatorX = safeInset + (hasPrevious ? 16.0 : 0.0)
-        self.topSeparator.frame = CGRect(origin: CGPoint(x: separatorX, y: 0.0), size: CGSize(width: width - separatorX - safeInset - separatorRightInset, height: UIScreenPixel))
+        let separatorX = leftInset + (hasPrevious ? 16.0 : 0.0)
+        self.topSeparator.frame = CGRect(origin: CGPoint(x: separatorX, y: 0.0), size: CGSize(width: width - separatorX - rightInset - separatorRightInset, height: UIScreenPixel))
         
         let measureText = "|"
         let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .black)
         self.measureTextNode.attributedText = attributedMeasureText
-        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
+        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - (leftInset + rightInset) - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
         
         let verticalInset: CGFloat = 15.0
         let height = measureTextSize.height + verticalInset * 2.0
         
         let buttonSize = CGSize(width: 38.0, height: height)
-        self.clearButtonNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width, y: 0.0), size: buttonSize)
+        self.clearButtonNode.frame = CGRect(origin: CGPoint(x: width - rightInset - buttonSize.width, y: 0.0), size: buttonSize)
         if let image = self.clearIconNode.image {
-            self.clearIconNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((height - image.size.height) / 2.0)), size: image.size)
+            self.clearIconNode.frame = CGRect(origin: CGPoint(x: width - rightInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((height - image.size.height) / 2.0)), size: image.size)
         }
         
-        self.backgroundNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: max(1.0, width - safeInset * 2.0), height: height))
-        self.textNode.frame = CGRect(origin: CGPoint(x: safeInset + 16.0, y: floor((height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - safeInset * 2.0 - 16.0 * 2.0 - 38.0), height: 40.0))
+        self.backgroundNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: max(1.0, width - (leftInset + rightInset)), height: height))
+        self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: floor((height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - (leftInset + rightInset) - 16.0 * 2.0 - 38.0), height: 40.0))
         
-        let hasCorners = safeInset > 0.0 && (!hasPrevious || !hasNext)
+        let hasCorners = (leftInset > 0.0 || rightInset > 0.0) && (!hasPrevious || !hasNext)
         let hasTopCorners = hasCorners && !hasPrevious
         let hasBottomCorners = hasCorners && !hasNext
         
         self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
-        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: width - safeInset - safeInset, height: height))
+        self.maskNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: height))
         
         self.textNode.isUserInteractionEnabled = isEnabled
         self.textNode.alpha = isEnabled ? 1.0 : 0.6

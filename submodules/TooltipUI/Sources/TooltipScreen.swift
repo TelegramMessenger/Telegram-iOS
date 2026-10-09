@@ -487,6 +487,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.scrollingContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         let sideInset: CGFloat = self.inset + layout.safeInsets.left
+        // Each side keeps its own safe inset (beside iPhone Duo's side strip only one side has one).
+        let rightSideInset: CGFloat = self.inset + layout.safeInsets.right
         let bottomInset: CGFloat = 10.0
         let contentInset: CGFloat = 11.0
         let contentVerticalInset: CGFloat = 8.0
@@ -525,7 +527,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationSpacing = 8.0
         }
         
-        var containerWidth = max(100.0, min(layout.size.width - sideInset * 2.0, 614.0))
+        var containerWidth = max(100.0, min(layout.size.width - sideInset - rightSideInset, 614.0))
         if let constrainWidth = self.constrainWidth, constrainWidth > 100.0 {
             containerWidth = constrainWidth
         }
@@ -754,11 +756,21 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
 
             }
             
-            if backgroundFrame.minX < sideInset {
-                backgroundFrame.origin.x = sideInset
+            // Clamped to the screen's side insets; beside iPhone Duo's side strip (the insets differ) only where a corner
+            // block reaches the bubble's rows, so a tooltip pointing at a control in the free part of the strip (beside the
+            // input panel) keeps its arrow inside the bubble.
+            var pointMinX = sideInset
+            var pointMaxX = layout.size.width - sideInset
+            if layout.safeInsets.left != layout.safeInsets.right {
+                let bandInsets = layout.sideInsets(forBandFrom: backgroundFrame.minY, to: backgroundFrame.maxY)
+                pointMinX = self.inset + bandInsets.left
+                pointMaxX = layout.size.width - self.inset - bandInsets.right
             }
-            if backgroundFrame.maxX > layout.size.width - sideInset {
-                backgroundFrame.origin.x = layout.size.width - sideInset - backgroundFrame.width
+            if backgroundFrame.minX < pointMinX {
+                backgroundFrame.origin.x = pointMinX
+            }
+            if backgroundFrame.maxX > pointMaxX {
+                backgroundFrame.origin.x = pointMaxX - backgroundFrame.width
             }
             if backgroundFrame.minY < layout.insets(options: .statusBar).top {
                 backgroundFrame.origin.y = rect.maxY + bottomInset
@@ -771,10 +783,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             self.isArrowInverted = invertArrow
         case .top:
             let backgroundWidth = containerWidth
-            backgroundFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - backgroundWidth) / 2.0), y: layout.insets(options: [.statusBar]).top + 13.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+            backgroundFrame = CGRect(origin: CGPoint(x: sideInset + floor((layout.size.width - sideInset - rightSideInset - backgroundWidth) / 2.0), y: layout.insets(options: [.statusBar]).top + 13.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
         case .bottom:
             let backgroundWidth = containerWidth
-            backgroundFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - backgroundWidth) / 2.0), y: layout.size.height - layout.insets(options: []).bottom - 12.0 - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+            backgroundFrame = CGRect(origin: CGPoint(x: sideInset + floor((layout.size.width - sideInset - rightSideInset - backgroundWidth) / 2.0), y: layout.size.height - layout.insets(options: []).bottom - 12.0 - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
         }
         
         transition.updateFrame(node: self.containerNode, frame: backgroundFrame)

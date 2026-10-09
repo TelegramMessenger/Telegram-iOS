@@ -102,7 +102,7 @@ class InviteLinkInviteManageItemNode: ListViewItemNode {
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: 1000.0))
 
                     let size = strongSelf.buttonNode.measure(layout.contentSize)
-                    strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.contentSize.width - size.width) / 2.0), y: floorToScreenPixels((layout.contentSize.height - size.height) / 2.0)), size: size)
+                    strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((layout.contentSize.width - params.leftInset - params.rightInset - size.width) / 2.0), y: floorToScreenPixels((layout.contentSize.height - size.height) / 2.0)), size: size)
                 }
             })
         }

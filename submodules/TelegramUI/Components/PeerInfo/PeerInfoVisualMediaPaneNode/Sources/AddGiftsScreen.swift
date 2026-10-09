@@ -156,7 +156,10 @@ final class AddGiftsScreenComponent: Component {
             self.component = component
             self.state = state
             
-            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            // The bottom panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+            let bottomInsets = environment.bottomEdgeSideInsets()
+            let sideInset: CGFloat = 16.0 + bottomInsets.left
+            let rightSideInset: CGFloat = 16.0 + bottomInsets.right
             let buttonString = environment.strings.AddGifts_AddGifts(Int32(max(1, giftsListView.selectedItems.count)))
             let bottomPanelSize = self.buttonPanel.update(
                 transition: transition,
@@ -165,7 +168,7 @@ final class AddGiftsScreenComponent: Component {
                     title: buttonString,
                     label: nil,
                     isEnabled: true,
-                    insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: environment.safeInsets.bottom, right: sideInset),
+                    insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: environment.safeInsets.bottom, right: rightSideInset),
                     action: { [weak self] in
                         guard let self, let controller = self.environment?.controller() as? AddGiftsScreen, let giftsListView = self.giftsListView else {
                             return
@@ -187,14 +190,19 @@ final class AddGiftsScreenComponent: Component {
                 transition.setFrame(view: buttonPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelSize.height + bottomPanelOffset), size: bottomPanelSize))
             }
             
+            // iPhone Duo: when the side insets differ (one is the side strip, whose top holds the status corner), the grid
+            // scrolls in the band between them, as PeerInfoStoryGridScreen's does; equal insets keep the full-width grid.
+            let insetsDiffer = environment.safeInsets.left != environment.safeInsets.right
+            let listFrame = insetsDiffer ? CGRect(x: environment.safeInsets.left, y: 0.0, width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right, height: availableSize.height) : CGRect(origin: CGPoint(), size: availableSize)
+
             let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -10.0)
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-            let _ = giftsListView.update(size: availableSize, sideInset: 0.0, bottomInset: max(environment.safeInsets.bottom, bottomPanelSize.height), deviceMetrics: environment.deviceMetrics, visibleHeight: availableSize.height, isScrollingLockedAtTop: false, expandProgress: 0.0, presentationData: presentationData, synchronous: false, visibleBounds: visibleBounds, transition: transition.containedViewLayoutTransition)
-            
+            let _ = giftsListView.update(size: listFrame.size, sideInset: 0.0, bottomInset: max(environment.safeInsets.bottom, bottomPanelSize.height), deviceMetrics: environment.deviceMetrics, visibleHeight: availableSize.height, isScrollingLockedAtTop: false, expandProgress: 0.0, presentationData: presentationData, synchronous: false, visibleBounds: visibleBounds, transition: transition.containedViewLayoutTransition)
+
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: availableSize))
             self.backgroundView.backgroundColor = environment.theme.list.blocksBackgroundColor
-            
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: .zero, size: availableSize))
+
+            transition.setFrame(view: self.scrollView, frame: listFrame)
             
             self.updateScrolling(transition: transition)
             
@@ -487,6 +495,6 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

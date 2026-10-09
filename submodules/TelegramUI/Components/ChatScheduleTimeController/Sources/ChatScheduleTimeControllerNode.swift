@@ -513,7 +513,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDel
         } else {
             contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight + buttonOffset
         }
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+        if case .iPhoneDuo = layout.deviceMetrics, case .compact = layout.metrics.widthClass {
+            // iPhone Duo's screens are wider than the 440pt cap for compact layouts (466pt folded, 669pt unfolded),
+            // which left the sheet short of both edges. It spans the screen like the other sheets.
+            width = layout.size.width
+        }
         
         let textControlSpacing: CGFloat = -8.0
         let textDoneSpacing: CGFloat = 21.0

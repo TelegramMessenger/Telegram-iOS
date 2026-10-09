@@ -101,6 +101,11 @@ public extension CoreListTransition.Animation.Curve {
             // so the model and the render server evaluate the same function. See
             // `coreListSmoothDecelerationProgress`.
             return coreListSmoothDecelerationProgress(phase: x)
+        case let .customSpring(mass, stiffness, damping, initialVelocity):
+            // Likewise the closed form of the spring the emitter installs; see
+            // `coreListCustomSpringProgress`.
+            return coreListCustomSpringProgress(mass: mass, stiffness: stiffness, damping: damping,
+                                                initialVelocity: initialVelocity, phase: x)
         case .bounce:
             assertionFailure("`.bounce` is not a unit curve; CoreList samples `.spring` instead")
             let (x1, y1, x2, y2) = coreListAdjustedSpring

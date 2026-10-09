@@ -93,6 +93,11 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 }
 
 public class ChatListControllerImpl: TelegramBaseController, ChatListController {
+    /// iPhone Duo: this screen lays out its own side column, back button included.
+    override public var placesNavigationButtonInSideColumn: Bool {
+        return false
+    }
+    
     private var validLayout: ContainerViewLayout?
     
     public let context: AccountContext
@@ -2906,7 +2911,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return
                     }
                     self.navigationBackPressed()
-                } : nil
+                } : nil,
+                overflowInfo: chatListHeaderOverflowInfo(strings: self.presentationData.strings)
             )
         }
         var secondaryContent: ChatListHeaderComponent.Content?
@@ -2923,7 +2929,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return
                     }
                     self.setInlineChatList(location: nil)
-                }
+                },
+                overflowInfo: chatListHeaderOverflowInfo(strings: self.presentationData.strings)
             )
         }
         
@@ -2972,7 +2979,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private weak var storyCameraTooltip: TooltipScreen?
-    fileprivate func openStoryCamera(fromList: Bool, gesturePullOffset: CGFloat? = nil) {
+    fileprivate func openStoryCamera(fromList: Bool, gesturePullOffset: CGFloat? = nil, sourceView: UIView? = nil) {
         guard !self.context.isFrozen else {
             let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
             self.push(controller)
@@ -3050,7 +3057,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                     }
                 } else {
-                    if let rightButtonView = componentView.rightButtonViews["story"] {
+                    if let rightButtonView = componentView.rightButtonViews["story"] ?? sourceView {
                         sourceFrame = rightButtonView.convert(rightButtonView.bounds, to: nil).offsetBy(dx: 5.0, dy: -8.0)
                     }
                 }
@@ -3559,7 +3566,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         var tabContainerOffset: CGFloat = 0.0
         if !self.displayNavigationBar {
-            tabContainerOffset += layout.statusBarHeight ?? 0.0
+            tabContainerOffset += layout.navigationBarStatusBarHeight ?? 0.0
             tabContainerOffset += 44.0 + 20.0
         }
 
@@ -4012,6 +4019,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let contextController = makeContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             self.presentInGlobalOverlay(contextController)
         })
+    }
+    
+    /// iPhone Duo: the side column's "…" menu, the buttons that did not fit; each runs its own action
+    /// from the "…" button.
+    func openSideColumnOverflowMenu(sourceView: UIView, items: [ChatListHeaderComponent.OverflowItem]) {
+        let presentationData = self.presentationData
+        let menuItems: [ContextMenuItem] = items.map { item in
+            return .action(ContextMenuActionItem(text: item.title, icon: { theme in
+                guard let iconName = item.iconName else {
+                    return nil
+                }
+                return generateScaledImage(image: generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor), size: CGSize(width: 24.0, height: 24.0), opaque: false)
+            }, action: { _, f in
+                f(.default)
+                item.action(sourceView)
+            }))
+        }
+        let contextController = makeContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(menuItems))), gesture: nil)
+        self.presentInGlobalOverlay(contextController)
     }
     
     private var initializedFilters = false
@@ -6695,7 +6721,7 @@ private final class ChatListTabBarContextReferenceContentSource: ContextReferenc
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView.contentView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .top
         )
     }
@@ -6716,7 +6742,7 @@ private final class ChatListHeaderBarContextReferenceContentSource: ContextRefer
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView.contentView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .bottom
         )
     }
@@ -6740,14 +6766,14 @@ private final class ChatListHeaderBarContextExtractedContentSource: ContextExtra
     
     func takeView() -> ContextControllerTakeViewInfo? {
         if let sourceNode = self.sourceNode {
-            return ContextControllerTakeViewInfo(containingItem: .node(sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+            return ContextControllerTakeViewInfo(containingItem: .node(sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
         } else {
-            return ContextControllerTakeViewInfo(containingItem: .view(self.sourceView!), contentAreaInScreenSpace: UIScreen.main.bounds)
+            return ContextControllerTakeViewInfo(containingItem: .view(self.sourceView!), contentAreaInScreenSpace: mainWindowScreenBounds)
         }
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -6761,7 +6787,7 @@ private final class ChatListContextLocationContentSource: ContextLocationContent
     }
     
     func transitionInfo() -> ContextControllerLocationViewInfo? {
-        return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -6775,8 +6801,19 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
+}
+
+/// iPhone Duo: titles, menu icons and overflow priorities of the chat list's header buttons in the
+/// side column (spec 2026-10-06): compose stays longest, then proxy (it shows status), then story.
+private func chatListHeaderOverflowInfo(strings: PresentationStrings) -> [AnyHashable: ChatListHeaderComponent.OverflowInfo] {
+    return [
+        "compose": ChatListHeaderComponent.OverflowInfo(title: strings.Compose_NewMessage, iconName: "Chat List/ComposeIcon", priority: 3),
+        "proxy": ChatListHeaderComponent.OverflowInfo(title: strings.SocksProxySetup_Title, iconName: "Chat List/ProxyShieldIcon", priority: 2),
+        "story": ChatListHeaderComponent.OverflowInfo(title: strings.StoryFeed_AddStory, iconName: "Chat List/AddStoryIcon", priority: 1),
+        "more": ChatListHeaderComponent.OverflowInfo(title: strings.Common_More, iconName: nil, priority: nil)
+    ]
 }
 
 private final class ChatListLocationContext {
@@ -7276,7 +7313,7 @@ private final class ChatListLocationContext {
                 if storyPostingAvailable {
                     self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
                         content: .icon(imageName: "Chat List/AddStoryIcon"),
-                        pressed: { [weak self] _ in
+                        pressed: { [weak self] sourceView in
                             guard let self, let parentController = self.parentController else {
                                 return
                             }
@@ -7284,7 +7321,7 @@ private final class ChatListLocationContext {
                             if let componentView = parentController.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView(), storyPeerListView.isLiveStreaming {
                                 parentController.displayContinueLiveStream()
                             } else {
-                                parentController.openStoryCamera(fromList: false)
+                                parentController.openStoryCamera(fromList: false, sourceView: sourceView)
                             }
                         }
                     )))
@@ -7526,7 +7563,7 @@ private final class AdsInfoContextReferenceContentSource: ContextReferenceConten
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets), insets: self.contentInsets)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds.inset(by: self.insets), insets: self.contentInsets)
     }
 }
 

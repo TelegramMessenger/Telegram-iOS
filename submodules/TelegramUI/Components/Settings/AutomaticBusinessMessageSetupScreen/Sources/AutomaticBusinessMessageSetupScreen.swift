@@ -709,7 +709,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
-            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
+            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
@@ -720,7 +720,11 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             }
             
             let bottomContentInset: CGFloat = 24.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             let sectionSpacing: CGFloat = 32.0
             
             var contentHeight: CGFloat = 0.0
@@ -737,7 +741,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 8.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - iconSize.width * 0.5), y: contentHeight + 8.0), size: iconSize)
             if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
@@ -781,9 +785,9 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 1000.0)
             )
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) * 0.5), y: contentHeight), size: subtitleSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor(bandCenterX - subtitleSize.width * 0.5), y: contentHeight), size: subtitleSize)
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     self.scrollView.addSubview(subtitleView)
@@ -828,7 +832,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     items: generalSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let generalSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: generalSectionSize)
             if let generalSectionView = self.generalSection.view {
@@ -904,7 +908,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     items: messagesSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let messagesSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: messagesSectionSize)
             if let messagesSectionView = self.messagesSection.view {
@@ -987,7 +991,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         items: scheduleSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let scheduleSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: scheduleSectionSize)
                 if let scheduleSectionView = self.scheduleSection.view {
@@ -1115,7 +1119,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         items: customScheduleSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let customScheduleSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight + customScheduleSectionsHeight), size: customScheduleSectionSize)
                 if let customScheduleSectionView = self.customScheduleSection.view {
@@ -1186,7 +1190,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         ]
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let sendWhenOfflineSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: sendWhenOfflineSectionSize)
                 if let sendWhenOfflineSectionView = self.sendWhenOfflineSection.view {
@@ -1281,7 +1285,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     ]
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let accessSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: accessSectionSize)
             if let accessSectionView = self.accessSection.view {
@@ -1442,7 +1446,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     items: excludedSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let excludedSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: excludedSectionSize)
             if let excludedSectionView = self.excludedSection.view {
@@ -1515,7 +1519,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         ]
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let periodSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: periodSectionSize)
                 if let periodSectionView = self.periodSection.view {

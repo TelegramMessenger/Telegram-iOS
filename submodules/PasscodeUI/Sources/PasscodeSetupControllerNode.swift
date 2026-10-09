@@ -149,16 +149,28 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         
         self.wrapperNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         
-        let inputFieldFrame = self.inputFieldNode.updateLayout(size: layout.size, topOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 24.0) / 2.0), transition: transition)
-        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        // The field and its texts lay out in the band between the side insets when they differ
+        // (iPhone Duo's side strip: the field ran into the strip at mid-screen); across the screen otherwise.
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        let bandSize = CGSize(width: bandWidth, height: layout.size.height)
         
-        let titleSize = self.titleNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: inputFieldFrame.minY - titleSize.height - 20.0), size: titleSize))
+        let inputFieldFrame = self.inputFieldNode.updateLayout(size: bandSize, topOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 24.0) / 2.0), transition: transition)
+        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(x: bandMinX, y: 0.0), size: bandSize))
         
-        let subtitleSize = self.subtitleNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: inputFieldFrame.maxY + 20.0), size: subtitleSize))
+        let titleSize = self.titleNode.measure(CGSize(width: bandWidth - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - titleSize.width) / 2.0), y: inputFieldFrame.minY - titleSize.height - 20.0), size: titleSize))
         
-        transition.updateFrame(node: self.modeButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - 53.0), size: CGSize(width: layout.size.width, height: 44.0)))
+        let subtitleSize = self.subtitleNode.measure(CGSize(width: bandWidth - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - subtitleSize.width) / 2.0), y: inputFieldFrame.maxY + 20.0), size: subtitleSize))
+        
+        // The options button at the bottom spans iPhone Duo's side strip; it keeps clear only of a corner block at the
+        // bottom.
+        let bottomSideInsets = layout.bottomEdgeSideInsets()
+        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
+        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        transition.updateFrame(node: self.modeButtonNode, frame: CGRect(origin: CGPoint(x: bottomBandMinX, y: layout.size.height - insets.bottom - 53.0), size: CGSize(width: bottomBandWidth, height: 44.0)))
     }
     
     override func didLoad() {
@@ -177,11 +189,16 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             minimumKeyboardHeight = min(minimumKeyboardHeight, 270.0)
         }
         let isEnabled = isVisible && self.authenticationInputEnabled && self.isCustomInputActive
+        // The keyboard at the bottom spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let keyboardSideInsets = layout.bottomEdgeSideInsets()
+        var keyboardSafeInsets = layout.safeInsets
+        keyboardSafeInsets.left = keyboardSideInsets.left
+        keyboardSafeInsets.right = keyboardSideInsets.right
         let keyboardSize = self.keyboard.update(
             transition: .immediate,
             component: AnyComponent(WalletSendKeyboardComponent(
                 theme: self.presentationData.theme,
-                safeInsets: layout.safeInsets,
+                safeInsets: keyboardSafeInsets,
                 isLandscape: layout.size.width > layout.size.height && layout.metrics.widthClass == .compact,
                 minimumHeight: minimumKeyboardHeight,
                 mode: .numeric,

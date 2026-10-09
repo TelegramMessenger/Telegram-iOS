@@ -1941,10 +1941,20 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
     return frame;
 }
 
+// Beside a status island (iPhone Duo's unfolded screen) the top row stays at the top with its right control left of the
+// island, as full-screen viewers do there, instead of moving below the island with the safe area's top inset.
+- (CGFloat)_statusIslandTrailingInset
+{
+    if ([_context respondsToSelector:@selector(statusIslandTrailingInset)])
+        return [_context statusIslandTrailingInset];
+    return 0.0f;
+}
+
 - (CGRect)_checkButtonFrameForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
 {
     CGRect frame = CGRectZero;
-    if (_safeAreaInset.top > 20.0f)
+    CGFloat statusIslandInset = [self _statusIslandTrailingInset];
+    if (_safeAreaInset.top > 20.0f && statusIslandInset < FLT_EPSILON)
         screenEdges.top += _safeAreaInset.top;
     screenEdges.left += _safeAreaInset.left;
     screenEdges.right -= _safeAreaInset.right;
@@ -1960,7 +1970,7 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
             break;
             
         default:
-            frame = CGRectMake(screenEdges.right - 44, screenEdges.top + 5, _checkButton.frame.size.width, _checkButton.frame.size.height);
+            frame = CGRectMake(screenEdges.right - 44 - statusIslandInset, screenEdges.top + 5, _checkButton.frame.size.width, _checkButton.frame.size.height);
             break;
     }
     
@@ -2000,10 +2010,11 @@ static TGMediaLivePhotoMode TGMediaPickerGalleryResolvedLivePhotoMode(NSNumber *
 - (void)_layoutRecipientLabelForOrientation:(UIInterfaceOrientation)orientation screenEdges:(UIEdgeInsets)screenEdges hasHeaderView:(bool)hasHeaderView
 {
     CGFloat screenWidth = MIN(self.frame.size.width, self.frame.size.height);
-    CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 150.0f);
+    CGFloat statusIslandInset = [self _statusIslandTrailingInset];
+    CGFloat recipientWidth = MIN(_recipientLabel.frame.size.width, screenWidth - 150.0f - statusIslandInset);
     
     CGRect frame = CGRectZero;
-    if (_safeAreaInset.top > 20.0f + FLT_EPSILON)
+    if (_safeAreaInset.top > 20.0f + FLT_EPSILON && statusIslandInset < FLT_EPSILON)
         screenEdges.top += _safeAreaInset.top;
     screenEdges.left += _safeAreaInset.left;
     screenEdges.right -= _safeAreaInset.right;

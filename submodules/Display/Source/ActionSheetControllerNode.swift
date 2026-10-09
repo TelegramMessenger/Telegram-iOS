@@ -116,10 +116,9 @@ final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         var insets = layout.insets(options: [.statusBar])
         
-        let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
-        
-        insets.left = floor((layout.size.width - containerWidth) / 2.0)
-        insets.right = insets.left
+        let sideInsets = actionSheetSideInsets(layout: layout)
+        insets.left = sideInsets.left
+        insets.right = sideInsets.right
         if !insets.bottom.isZero {
             insets.bottom -= 12.0
         }
@@ -205,10 +204,9 @@ final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let layout = self.validLayout {
             var insets = layout.insets(options: [.statusBar])
             
-            let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
-            
-            insets.left = floor((layout.size.width - containerWidth) / 2.0)
-            insets.right = insets.left
+            let sideInsets = actionSheetSideInsets(layout: layout)
+            insets.left = sideInsets.left
+            insets.right = sideInsets.right
             
             self.updateScrollDimViews(size: layout.size, insets: insets, transition: .immediate)
         }
@@ -244,4 +242,13 @@ final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
     func setItemGroupOverlayNode(groupIndex: Int, node: ActionSheetGroupOverlayNode) {
         self.itemGroupsContainerNode.setItemGroupOverlayNode(groupIndex: groupIndex, node: node)
     }
+}
+
+/// The action sheet's side insets: the sheet is centered, as wide as `horizontalContainerFillingSizeForLayout`
+/// allows; with equal side insets these are the old values. Beside iPhone Duo's side strip the sheet is placed as
+/// anchored at the bottom (`horizontalContainerFillingPlacementForLayout(anchoredAtBottom:)`): in compact width it
+/// spans the strip and keeps clear only of a corner block at the bottom.
+private func actionSheetSideInsets(layout: ContainerViewLayout) -> (left: CGFloat, right: CGFloat) {
+    let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: true, anchoredAtBottom: true)
+    return (placement.left, placement.right)
 }

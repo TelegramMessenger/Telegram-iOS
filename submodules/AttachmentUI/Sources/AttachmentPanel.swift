@@ -44,7 +44,9 @@ private let smallPanelWidth: CGFloat = 240.0
 private let twoButtonPanelWidth: CGFloat = 160.0
 
 private func glassTabBarFrame(layout: ContainerViewLayout, buttonCount: Int) -> CGRect {
-    let availableWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right
+    // The bottom tab bar spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+    let bottomInsets = layout.bottomEdgeSideInsets()
+    let availableWidth = layout.size.width - bottomInsets.left - bottomInsets.right
     let width: CGFloat
     if buttonCount == 2 {
         width = twoButtonPanelWidth
@@ -55,7 +57,7 @@ private func glassTabBarFrame(layout: ContainerViewLayout, buttonCount: Int) -> 
     } else {
         width = availableWidth - glassPanelInset * 2.0
     }
-    return CGRect(x: layout.safeInsets.left + floorToScreenPixels((availableWidth - width) * 0.5), y: 0.0, width: width, height: glassButtonSize.height)
+    return CGRect(x: bottomInsets.left + floorToScreenPixels((availableWidth - width) * 0.5), y: 0.0, width: width, height: glassButtonSize.height)
 }
 
 private final class IconComponent: Component {
@@ -2605,8 +2607,10 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         let textPanelSideInset: CGFloat = self.panelStyle == .glass && !isTextInputFocused ? glassTextPanelInset : 16.0
         let textInputSideInset = textPanelSideInset - 16.0
         let defaultPanelSideInset: CGFloat = self.panelStyle == .glass ? glassPanelInset : 20.0
-        let panelSideInset: CGFloat = (isSelecting ? textPanelSideInset : defaultPanelSideInset) + layout.safeInsets.left
-        let panelRightInset: CGFloat = (isSelecting ? textPanelSideInset : defaultPanelSideInset) + layout.safeInsets.right
+        // The caption panel and the main button span iPhone Duo's side strip; they keep clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let panelSideInset: CGFloat = (isSelecting ? textPanelSideInset : defaultPanelSideInset) + bottomInsets.left
+        let panelRightInset: CGFloat = (isSelecting ? textPanelSideInset : defaultPanelSideInset) + bottomInsets.right
         var textPanelHeight: CGFloat = 0.0
         var visualTextPanelHeight: CGFloat = 0.0
         var textPanelWidth: CGFloat = 0.0
@@ -2620,7 +2624,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             if textInputPanelNode.frame.width.isZero {
                 panelTransition = .immediate
             }
-            let panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: insets.left + layout.safeInsets.left + textInputSideInset, rightInset: insets.right + layout.safeInsets.right + textInputSideInset, bottomInset: layout.safeInsets.bottom, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), textFieldMaxHeight: layout.size.height / 2.0, availableHeight: layout.size.height, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
+            let panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: insets.left + bottomInsets.left + textInputSideInset, rightInset: insets.right + bottomInsets.right + textInputSideInset, bottomInset: layout.safeInsets.bottom, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), textFieldMaxHeight: layout.size.height / 2.0, availableHeight: layout.size.height, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
             let panelFrame = CGRect(x: 0.0, y: topAccessoryHeight, width: layout.size.width, height: panelHeight)
             if textInputPanelNode.frame.width.isZero {
                 textInputPanelNode.frame = panelFrame
@@ -2914,7 +2918,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
             })
         }
 
-        var buttonSize = CGSize(width: layout.size.width - (buttonSideInset + layout.safeInsets.left) * 2.0, height: buttonHeight)
+        var buttonSize = CGSize(width: layout.size.width - buttonSideInset * 2.0 - bottomInsets.left - bottomInsets.right, height: buttonHeight)
         if isTwoHorizontalButtons {
             buttonSize = CGSize(width: (buttonSize.width - buttonSideInset) / 2.0, height: buttonSize.height)
         }
@@ -2927,7 +2931,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate, ASGestureRecog
         }
 
         if !self.animatingTransition {
-            let buttonOriginX = layout.safeInsets.left + buttonSideInset
+            let buttonOriginX = bottomInsets.left + buttonSideInset
             let buttonOriginY: CGFloat
             if inlineMainButton {
                 buttonOriginY = 0.0

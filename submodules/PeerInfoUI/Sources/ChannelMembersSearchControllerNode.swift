@@ -658,7 +658,13 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
-        
+        // Beside a side strip (iPhone Duo) the member rows keep clear of it, as the search results already do; equal
+        // insets keep the rows as they were.
+        if layout.safeInsets.left != layout.safeInsets.right {
+            insets.left += layout.safeInsets.left
+            insets.right += layout.safeInsets.right
+        }
+
         var headerInsets = layout.insets(options: [.input])
         headerInsets.top += actualNavigationBarHeight
         

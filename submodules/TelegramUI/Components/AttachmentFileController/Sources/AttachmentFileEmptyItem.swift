@@ -142,7 +142,7 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         let topOffset = insets.top + floor((layout.size.height - insets.top - insets.bottom - totalHeight) / 2.0)
         
         transition.updateAlpha(node: self.animationNode, alpha: imageHeight > 0.0 ? 1.0 : 0.0)
-        transition.updateFrame(node: self.animationNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: topOffset), size: imageSize))
+        transition.updateFrame(node: self.animationNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - imageSize.width) / 2.0), y: topOffset), size: imageSize))
         self.animationNode.updateLayout(size: imageSize)
         
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - textSize.width - layout.safeInsets.left - layout.safeInsets.right) / 2.0), y: topOffset + imageHeight + textSpacing), size: textSize))

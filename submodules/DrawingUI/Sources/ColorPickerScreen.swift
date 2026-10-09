@@ -1794,27 +1794,34 @@ private final class ColorPickerContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    /// The screen the sheet rises on: the sheet hands its content no height to keep to.
+    let screenSize: CGSize
     let initialColor: DrawingColor
     let colorChanged: (DrawingColor) -> Void
     let eyedropper: () -> Void
     let dismiss: () -> Void
-    
+
     init(
         context: AccountContext,
+        screenSize: CGSize,
         initialColor: DrawingColor,
         colorChanged: @escaping (DrawingColor) -> Void,
         eyedropper: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.screenSize = screenSize
         self.initialColor = initialColor
         self.colorChanged = colorChanged
         self.eyedropper = eyedropper
         self.dismiss = dismiss
     }
-    
+
     static func ==(lhs: ColorPickerContent, rhs: ColorPickerContent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.screenSize != rhs.screenSize {
             return false
         }
         return true
@@ -1981,9 +1988,37 @@ private final class ColorPickerContent: CombinedComponent {
             contentHeight += modeControl.size.height
             contentHeight += 20.0
             
-            let squareSize = floorToScreenPixels((context.availableSize.width - sideInset * 2.0) / 12.0)
-            let fieldSize = CGSize(width: context.availableSize.width - sideInset * 2.0, height: squareSize * 10.0)
-            
+            let bottomPanelPadding: CGFloat = 12.0
+            var bottomInset: CGFloat
+            if case .regular = environment.metrics.widthClass {
+                bottomInset = bottomPanelPadding
+            } else {
+                bottomInset = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            }
+
+            // The field's squares also keep to the height the screen leaves: a field sized by the width alone made the
+            // sheet taller than iPhone Duo's folded screen (466x678) and its unfolded one in landscape, pushing the
+            // header above the top edge; beside the unfolded screen's status island the sheet stays below the island.
+            // A narrower field, centred, keeps its squares square. Where the width-sized field fits, nothing changes; other
+            // devices keep their layout.
+            var fieldWidth: CGFloat = context.availableSize.width - sideInset * 2.0
+            if !environment.presentsFloatingPanels && environment.reservedCorners != .none {
+                let glassInset: CGFloat = component.screenSize.width < component.screenSize.height ? 6.0 : 0.0
+                var maxContentHeight: CGFloat = component.screenSize.height - glassInset
+                if environment.navigationBarTrailingButtonsInset > 0.0 {
+                    // The island stays while the editor hides the status bar, so its corner block counts as well.
+                    maxContentHeight -= max(environment.fullStatusBarHeight, environment.reservedCorners.topRight?.height ?? 0.0)
+                }
+                // The rows below the field: opacity title and slider, divider, preview and swatches.
+                let belowFieldHeight: CGFloat = 21.0 + 16.0 + 8.0 + 36.0 + 24.0 + 1.0 + 22.0 + 82.0 + 10.0 + bottomInset
+                let maxSquareSize = floorToScreenPixels((maxContentHeight - contentHeight - belowFieldHeight) / 10.0)
+                if maxSquareSize > 0.0 && maxSquareSize < floorToScreenPixels(fieldWidth / 12.0) {
+                    fieldWidth = maxSquareSize * 12.0
+                }
+            }
+            let squareSize = floorToScreenPixels(fieldWidth / 12.0)
+            let fieldSize = CGSize(width: fieldWidth, height: squareSize * 10.0)
+
             if state.selectedMode == 0 {
                 let colorGrid = colorGrid.update(
                     component: ColorGridComponent(
@@ -1992,7 +2027,7 @@ private final class ColorPickerContent: CombinedComponent {
                             state?.updateColor(color, keepAlpha: true)
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                    availableSize: CGSize(width: fieldWidth, height: context.availableSize.height),
                     transition: .immediate
                 )
                 context.add(colorGrid
@@ -2212,15 +2247,7 @@ private final class ColorPickerContent: CombinedComponent {
             
             contentHeight += preview.size.height
             contentHeight += 10.0
-            
-            let bottomPanelPadding: CGFloat = 12.0
-            var bottomInset: CGFloat
-            if case .regular = environment.metrics.widthClass {
-                bottomInset = bottomPanelPadding
-            } else {
-                bottomInset = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
-            }
-            
+
             if environment.inputHeight > 0.0 {
                 bottomInset += environment.inputHeight - bottomInset - 120.0
             }
@@ -2271,6 +2298,7 @@ private final class ColorPickerSheetComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(ColorPickerContent(
                         context: context.component.context,
+                        screenSize: context.availableSize,
                         initialColor: context.component.initialColor,
                         colorChanged: { color in
                             updated(color)
@@ -2302,7 +2330,7 @@ private final class ColorPickerSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in

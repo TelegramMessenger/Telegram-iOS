@@ -105,7 +105,7 @@ final class ItemListControllerTabsContentNode: NavigationBarContentNode {
             environment: {},
             containerSize: CGSize(width: size.width, height: 44.0)
         )
-        let tabSelectorFrame = CGRect(origin: CGPoint(x: floor((size.width - tabSelectorSize.width) / 2.0), y: floor((size.height - tabSelectorSize.height) / 2.0) + 3.0), size: tabSelectorSize)
+        let tabSelectorFrame = CGRect(origin: CGPoint(x: leftInset + floor((size.width - leftInset - rightInset - tabSelectorSize.width) / 2.0), y: floor((size.height - tabSelectorSize.height) / 2.0) + 3.0), size: tabSelectorSize)
         if let tabSelectorView = self.tabSelector.view {
             if tabSelectorView.superview == nil {
                 self.view.addSubview(tabSelectorView)

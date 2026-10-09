@@ -377,9 +377,10 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, ASScroll
         let sectionSpacing: CGFloat = 8.0
         let titleAreaHeight: CGFloat = 51.0
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 10.0 + layout.safeInsets.left)
-        
-        let sideInset = floor((layout.size.width - width) / 2.0)
+        // Centered, or in the band beside a side strip (iPhone Duo).
+        let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 10.0, includesSafeInsets: true)
+        let width = placement.width
+        let sideInset = placement.left
         
         transition.updateFrame(node: self.cancelButtonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: width, height: buttonHeight)))
         
@@ -533,21 +534,22 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, ASScroll
         let radialStatusTextSize = self.radialStatusText.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         
         self.progressText.attributedText = NSAttributedString(string:  self.presentationData.strings.ImportStickerPack_Of(String(count), String(total)).string, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-        let progressTextSize = self.progressText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+        let progressTextSize = self.progressText.updateLayout(CGSize(width: contentContainerFrame.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
         
         self.infoText.attributedText = NSAttributedString(string: self.presentationData.strings.ImportStickerPack_InProgress, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
-        let infoTextSize = self.infoText.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
+        let infoTextSize = self.infoText.updateLayout(CGSize(width: contentContainerFrame.width - 16.0 * 2.0, height: .greatestFiniteMagnitude))
         
-        transition.updateFrame(node: self.radialStatus, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - radialStatusSize.width) / 2.0), y: contentOrigin), size: radialStatusSize))
+        // Centred on the card, which keeps to the band beside a side strip (iPhone Duo).
+        transition.updateFrame(node: self.radialStatus, frame: CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.width - radialStatusSize.width) / 2.0), y: contentOrigin), size: radialStatusSize))
         let checkSize: CGFloat = 130.0
         transition.updateFrame(node: self.radialCheck, frame: CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - checkSize) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
         transition.updateFrame(node: self.radialStatusBackground, frame: self.radialStatus.frame)
         
         transition.updateFrame(node: self.radialStatusText, frame: CGRect(origin: CGPoint(x: self.radialStatus.frame.minX + floor((self.radialStatus.frame.width - radialStatusTextSize.width) / 2.0), y: self.radialStatus.frame.minY + floor((self.radialStatus.frame.height - radialStatusTextSize.height) / 2.0)), size: radialStatusTextSize))
         
-        transition.updateFrame(node: self.progressText, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - progressTextSize.width) / 2.0), y: (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize))
+        transition.updateFrame(node: self.progressText, frame: CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.width - progressTextSize.width) / 2.0), y: (self.radialStatus.frame.maxY + maxProgressTextSpacing)), size: progressTextSize))
         
-        transition.updateFrame(node: self.infoText, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - infoTextSize.width) / 2.0), y: (self.progressText.frame.maxY + maxProgressTextSpacing) + 10.0), size: infoTextSize))
+        transition.updateFrame(node: self.infoText, frame: CGRect(origin: CGPoint(x: contentContainerFrame.minX + floor((contentContainerFrame.width - infoTextSize.width) / 2.0), y: (self.progressText.frame.maxY + maxProgressTextSpacing) + 10.0), size: infoTextSize))
     }
     
     private func gridPresentationLayoutUpdated(_ presentationLayout: GridNodeCurrentPresentationLayout, transition: ContainedViewLayoutTransition) {
@@ -565,9 +567,9 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, ASScroll
             let sectionSpacing: CGFloat = 8.0
             let titleAreaHeight: CGFloat = 51.0
             
-            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 10.0 + layout.safeInsets.left)
-            
-            let sideInset = floor((layout.size.width - width) / 2.0)
+            let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 10.0, includesSafeInsets: true)
+            let width = placement.width
+            let sideInset = placement.left
             
             let maximumContentHeight = layout.size.height - insets.top - bottomInset - buttonHeight - sectionSpacing
             let contentFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))

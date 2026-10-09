@@ -414,7 +414,10 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         let maxBarHeight: CGFloat
-        if !layout.safeInsets.top.isZero {
+        if layout.topBarStatusIsland != nil, let statusBarHeight = layout.navigationBarStatusBarHeight {
+            // iPhone Duo, unfolded portrait: a compact bar beside the status island, whose buttons clear it.
+            maxBarHeight = statusBarHeight + 44.0
+        } else if !layout.safeInsets.top.isZero {
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight > 34.0 {
                 maxBarHeight = statusBarHeight + 44.0
             } else {
@@ -805,7 +808,11 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let maxBarHeight: CGFloat
         let minBarHeight: CGFloat
-        if !containerLayout.safeInsets.top.isZero {
+        if containerLayout.topBarStatusIsland != nil, let statusBarHeight = containerLayout.navigationBarStatusBarHeight {
+            // iPhone Duo, unfolded portrait: a compact bar beside the status island, whose buttons clear it.
+            maxBarHeight = statusBarHeight + 44.0
+            minBarHeight = statusBarHeight + 28.0
+        } else if !containerLayout.safeInsets.top.isZero {
             if let statusBarHeight = containerLayout.statusBarHeight, statusBarHeight > 34.0 {
                 maxBarHeight = statusBarHeight + 44.0
             } else {
@@ -884,7 +891,7 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
-        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, title: title, pageProgress: pageProgress, transition: transition)
+        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right + containerLayout.navigationBarTrailingButtonsInset, title: title, pageProgress: pageProgress, transition: transition)
         
         transition.animateView {
             self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: containerLayout.intrinsicInsets.bottom, right: 0.0)

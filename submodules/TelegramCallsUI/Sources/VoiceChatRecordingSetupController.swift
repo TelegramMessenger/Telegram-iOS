@@ -463,6 +463,11 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
         let innerContentHeight: CGFloat = 287.0
         var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+        if case .iPhoneDuo = layout.deviceMetrics, case .compact = layout.metrics.widthClass {
+            // iPhone Duo's screens are wider than the 440pt cap for compact layouts (466pt folded, 669pt unfolded),
+            // which left the sheet short of both edges. It spans the screen like the other sheets.
+            width = layout.size.width
+        }
         if isLandscape {
             contentHeight = layout.size.height
             width = layout.size.width
@@ -471,6 +476,14 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         }
         
         let inset: CGFloat = 16.0
+        // In landscape the content fills the screen, so beside a side strip (iPhone Duo) its rows keep the side insets,
+        // clear of the strip's status corner block. Equal insets keep the full-width rows.
+        let stripInsets: (left: CGFloat, right: CGFloat) = isLandscape && layout.safeInsets.left != layout.safeInsets.right ? (layout.safeInsets.left, layout.safeInsets.right) : (0.0, 0.0)
+        let leftInset: CGFloat = inset + stripInsets.left
+        let rightInset: CGFloat = inset + stripInsets.right
+        // The full-width cancel button at the bottom spans iPhone Duo's side strip; it keeps clear only of a corner block
+        // at the bottom. The round record button stays centred with the rows above it.
+        let bottomStripInsets: (left: CGFloat, right: CGFloat) = isLandscape && layout.safeInsets.left != layout.safeInsets.right ? layout.bottomEdgeSideInsets() : (0.0, 0.0)
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
         let contentFrame = contentContainerFrame
@@ -492,23 +505,24 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         
         let itemHeight: CGFloat = 44.0
         
-        transition.updateFrame(node: self.modeContainerNode, frame: CGRect(x: inset, y: 56.0, width: contentFrame.width - inset * 2.0, height: itemHeight * 2.0))
+        let rowWidth = contentFrame.width - leftInset - rightInset
+        transition.updateFrame(node: self.modeContainerNode, frame: CGRect(x: leftInset, y: 56.0, width: rowWidth, height: itemHeight * 2.0))
         
-        transition.updateFrame(node: self.videoAudioButton, frame: CGRect(x: inset, y: 56.0, width: contentFrame.width - inset * 2.0, height: itemHeight))
-        transition.updateFrame(node: self.videoAudioCheckNode, frame: CGRect(x: contentFrame.width - inset - 16.0 - 20.0, y: 56.0 + floorToScreenPixels((itemHeight - 16.0) / 2.0), width: 16.0, height: 16.0))
+        transition.updateFrame(node: self.videoAudioButton, frame: CGRect(x: leftInset, y: 56.0, width: rowWidth, height: itemHeight))
+        transition.updateFrame(node: self.videoAudioCheckNode, frame: CGRect(x: contentFrame.width - rightInset - 16.0 - 20.0, y: 56.0 + floorToScreenPixels((itemHeight - 16.0) / 2.0), width: 16.0, height: 16.0))
         self.videoAudioCheckNode.isHidden = self.mediaMode != .videoAndAudio
         
-        let videoAudioSize = self.videoAudioTitleNode.updateLayout(CGSize(width: contentFrame.width - inset * 2.0, height: itemHeight))
-        transition.updateFrame(node: self.videoAudioTitleNode, frame: CGRect(x: inset + 16.0, y: 56.0 + floorToScreenPixels((itemHeight - videoAudioSize.height) / 2.0), width: videoAudioSize.width, height: videoAudioSize.height))
+        let videoAudioSize = self.videoAudioTitleNode.updateLayout(CGSize(width: rowWidth, height: itemHeight))
+        transition.updateFrame(node: self.videoAudioTitleNode, frame: CGRect(x: leftInset + 16.0, y: 56.0 + floorToScreenPixels((itemHeight - videoAudioSize.height) / 2.0), width: videoAudioSize.width, height: videoAudioSize.height))
         
-        transition.updateFrame(node: self.audioButton, frame: CGRect(x: inset, y: 56.0 + itemHeight, width: contentFrame.width - inset * 2.0, height: itemHeight))
-        transition.updateFrame(node: self.audioCheckNode, frame: CGRect(x: contentFrame.width - inset - 16.0 - 20.0, y: 56.0 + itemHeight + floorToScreenPixels((itemHeight - 16.0) / 2.0), width: 16.0, height: 16.0))
+        transition.updateFrame(node: self.audioButton, frame: CGRect(x: leftInset, y: 56.0 + itemHeight, width: rowWidth, height: itemHeight))
+        transition.updateFrame(node: self.audioCheckNode, frame: CGRect(x: contentFrame.width - rightInset - 16.0 - 20.0, y: 56.0 + itemHeight + floorToScreenPixels((itemHeight - 16.0) / 2.0), width: 16.0, height: 16.0))
         self.audioCheckNode.isHidden = self.mediaMode != .audioOnly
         
-        let audioSize = self.audioTitleNode.updateLayout(CGSize(width: contentFrame.width - inset * 2.0, height: itemHeight))
-        transition.updateFrame(node: self.audioTitleNode, frame: CGRect(x: inset + 16.0, y: 56.0 + itemHeight + floorToScreenPixels((itemHeight - audioSize.height) / 2.0), width: audioSize.width, height: audioSize.height))
+        let audioSize = self.audioTitleNode.updateLayout(CGSize(width: rowWidth, height: itemHeight))
+        transition.updateFrame(node: self.audioTitleNode, frame: CGRect(x: leftInset + 16.0, y: 56.0 + itemHeight + floorToScreenPixels((itemHeight - audioSize.height) / 2.0), width: audioSize.width, height: audioSize.height))
         
-        transition.updateFrame(node: self.modeSeparatorNode, frame: CGRect(x: inset + 16.0, y: 56.0 + itemHeight, width: contentFrame.width - inset * 2.0 - 16.0, height: UIScreenPixel))
+        transition.updateFrame(node: self.modeSeparatorNode, frame: CGRect(x: leftInset + 16.0, y: 56.0 + itemHeight, width: rowWidth - 16.0, height: UIScreenPixel))
         
         var buttonsAlpha: CGFloat = 1.0
         if case .audioOnly = self.mediaMode {
@@ -528,8 +542,8 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         self.portraitTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordPortrait, font: Font.semibold(15.0), textColor: self.videoMode == .portrait ? UIColor(rgb: 0xb56df4) : UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
         self.landscapeTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordLandscape, font: Font.semibold(15.0), textColor: self.videoMode == .landscape ? UIColor(rgb: 0xb56df4) : UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
         
-        let buttonWidth = floorToScreenPixels((contentFrame.width - inset * 2.0 - 11.0) / 2.0)
-        let portraitButtonFrame = CGRect(x: inset, y: 56.0 + itemHeight * 2.0 + 25.0, width: buttonWidth, height: 140.0)
+        let buttonWidth = floorToScreenPixels((rowWidth - 11.0) / 2.0)
+        let portraitButtonFrame = CGRect(x: leftInset, y: 56.0 + itemHeight * 2.0 + 25.0, width: buttonWidth, height: 140.0)
         transition.updateFrame(node: self.portraitButton, frame: portraitButtonFrame)
         transition.updateFrame(node: self.portraitIconNode, frame: CGRect(x: portraitButtonFrame.minX + floorToScreenPixels((portraitButtonFrame.width - 72.0) / 2.0), y: portraitButtonFrame.minY + floorToScreenPixels((portraitButtonFrame.height - 122.0) / 2.0), width: 76.0, height: 122.0))
         self.portraitIconNode.updateLayout(landscape: false)
@@ -547,7 +561,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         let centralButtonSize = CGSize(width: centralButtonSide, height: centralButtonSide)
         
         let buttonInset: CGFloat = 16.0
-        let doneButtonPreFrame = CGRect(x: buttonInset, y: contentHeight - 50.0 - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width - buttonInset * 2.0, height: 50.0)
+        let doneButtonPreFrame = CGRect(x: buttonInset + stripInsets.left, y: contentHeight - 50.0 - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width - buttonInset * 2.0 - stripInsets.left - stripInsets.right, height: 50.0)
         let doneButtonFrame = CGRect(origin: CGPoint(x: floor(doneButtonPreFrame.midX - centralButtonSize.width / 2.0), y: floor(doneButtonPreFrame.midY - centralButtonSize.height / 2.0)), size: centralButtonSize)
         transition.updateFrame(node: self.doneButton, frame: doneButtonFrame)
         
@@ -559,8 +573,8 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
                    
         self.doneButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: .button(text: self.presentationData.strings.VoiceChat_RecordStartRecording), title: "", subtitle: "", dark: false, small: false)
         
-        let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: cancelButtonHeight))
+        let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0 - bottomStripInsets.left - bottomStripInsets.right, transition: transition)
+        transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset + bottomStripInsets.left, y: contentHeight - cancelButtonHeight - insets.bottom - 16.0, width: contentFrame.width - bottomStripInsets.left - bottomStripInsets.right, height: cancelButtonHeight))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
     }

@@ -150,8 +150,15 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         strongSelf.addSubnode(peersNode)
                     }
                     
-                    peersNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
-                    peersNode.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    // iPhone Duo: the part of one side's inset beyond the other's is the side strip, whose corner
+                    // holds the status corner; the horizontal list stops at it instead of scrolling under it.
+                    // Equal insets give today's full-width list, with the insets as its content insets.
+                    let stripExcessLeft = max(0.0, params.leftInset - params.rightInset)
+                    let stripExcessRight = max(0.0, params.rightInset - params.leftInset)
+                    let peersFrame = CGRect(x: stripExcessLeft, y: 0.0, width: nodeLayout.contentSize.width - stripExcessLeft - stripExcessRight, height: nodeLayout.contentSize.height)
+                    peersNode.frame = peersFrame
+                    peersNode.clipsToBounds = stripExcessLeft > 0.0 || stripExcessRight > 0.0
+                    peersNode.updateLayout(size: peersFrame.size, leftInset: params.leftInset - stripExcessLeft, rightInset: params.rightInset - stripExcessRight)
                     
                     let separatorHeight = UIScreenPixel
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))

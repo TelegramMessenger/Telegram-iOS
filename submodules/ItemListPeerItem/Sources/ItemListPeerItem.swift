@@ -1485,7 +1485,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight)))
                     
@@ -1593,7 +1593,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 }
                             }
                         }
-                        currentSwitchNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - switchSize.width - 15.0, y: floor((contentSize.height - switchSize.height) / 2.0)), size: switchSize)
+                        currentSwitchNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - switchSize.width - 15.0 - max(0.0, params.rightInset - params.leftInset), y: floor((contentSize.height - switchSize.height) / 2.0)), size: switchSize)
                         if let switchValue = item.switchValue {
                             currentSwitchNode.setOn(switchValue.value, animated: animated)
                         }
@@ -2260,16 +2260,17 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel))
         
         let sideInset: CGFloat = 15.0 + leftInset
+        let rightSideInset: CGFloat = 15.0 + rightInset
         
-        let actionTextSize = self.actionTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
-        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - actionTextSize.width - 8.0, height: size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: max(1.0, size.width - sideInset * 2.0 - actionTextSize.width - 8.0 - additionalTextSize.width), height: size.height))
+        let actionTextSize = self.actionTextNode.updateLayout(CGSize(width: size.width - sideInset - rightSideInset, height: size.height))
+        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: size.width - sideInset - rightSideInset - actionTextSize.width - 8.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: max(1.0, size.width - sideInset - rightSideInset - actionTextSize.width - 8.0 - additionalTextSize.width), height: size.height))
         
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 7.0), size: textSize)
         self.textNode.frame = textFrame
         self.additionalTextNode.frame = CGRect(origin: CGPoint(x: textFrame.maxX, y: 7.0), size: additionalTextSize)
-        self.actionTextNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 7.0), size: actionTextSize)
-        self.actionButton.frame = CGRect(origin: CGPoint(x: size.width - sideInset - actionTextSize.width, y: 0.0), size: CGSize(width: actionTextSize.width, height: size.height))
+        self.actionTextNode.frame = CGRect(origin: CGPoint(x: size.width - rightSideInset - actionTextSize.width, y: 7.0), size: actionTextSize)
+        self.actionButton.frame = CGRect(origin: CGPoint(x: size.width - rightSideInset - actionTextSize.width, y: 0.0), size: CGSize(width: actionTextSize.width, height: size.height))
     }
     
     override public func animateRemoved(duration: Double) {

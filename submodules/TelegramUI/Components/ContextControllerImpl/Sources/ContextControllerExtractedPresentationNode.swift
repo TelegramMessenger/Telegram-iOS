@@ -329,6 +329,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     deviceMetrics: parentLayout.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(),
                     safeInsets: UIEdgeInsets(),
+                    reservedCorners: .none,
+                    division: nil,
                     additionalInsets: UIEdgeInsets(),
                     statusBarHeight: nil,
                     inputHeight: nil,
@@ -1033,14 +1035,18 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
         case let .controller(source):
             if let contentNode = controllerContentNode {
-                var defaultContentSize = CGSize(width: layout.size.width - 12.0 * 2.0, height: layout.size.height - 12.0 * 2.0 - contentTopInset - layout.safeInsets.bottom)
+                // iPhone Duo: a side strip's corner block (the status corner) reaches the preview's height, so the
+                // preview is laid out in the band beside the strip. Without a strip both are 0.
+                let previewStripLeft: CGFloat = layout.sideStrip(edge: .left) != nil ? layout.safeInsets.left : 0.0
+                let previewStripRight: CGFloat = layout.sideStrip(edge: .right) != nil ? layout.safeInsets.right : 0.0
+                var defaultContentSize = CGSize(width: layout.size.width - 12.0 * 2.0 - previewStripLeft - previewStripRight, height: layout.size.height - 12.0 * 2.0 - contentTopInset - layout.safeInsets.bottom)
                 if case .regular = layout.metrics.widthClass {
                     defaultContentSize.width = min(defaultContentSize.width, 400.0)
                 }
                 defaultContentSize.height = min(defaultContentSize.height, 460.0)
                 
                 let contentSize: CGSize
-                if let preferredSize = contentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: defaultContentSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false)) {
+                if let preferredSize = contentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: defaultContentSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), reservedCorners: .none, division: nil, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false)) {
                     contentSize = preferredSize
                 } else if let storedContentHeight = contentNode.storedContentHeight {
                     contentSize = CGSize(width: defaultContentSize.width, height: storedContentHeight)
@@ -1049,7 +1055,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     isContentResizeableVertically = true
                 }
                 
-                if case .regular = layout.metrics.widthClass {
+                // The popover placement belongs to layouts that show floating panels: iPhone Duo's unfolded screen in
+                // landscape is regular width but a phone, so its preview is placed as on a phone, in the band beside the
+                // strip. Elsewhere this is the regular width class.
+                if layout.presentsFloatingPanels {
                     if let transitionInfo = source.transitionInfo(), let (sourceView, sourceRect) = transitionInfo.sourceNode() {
                         let sourcePoint = sourceView.convert(sourceRect.center, to: self.view)
                         
@@ -1070,7 +1079,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                         contentRect = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) * 0.5), y: floor((layout.size.height - contentSize.height) * 0.5)), size: contentSize)
                     }
                 } else {
-                    contentRect = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) * 0.5), y: floor((layout.size.height - contentSize.height) * 0.5)), size: contentSize)
+                    contentRect = CGRect(origin: CGPoint(x: previewStripLeft + floor((layout.size.width - previewStripLeft - previewStripRight - contentSize.width) * 0.5), y: floor((layout.size.height - contentSize.height) * 0.5)), size: contentSize)
                 }
                 
                 contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
@@ -1172,7 +1181,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 contentHeight = min(contentHeight, contentRect.height)
                 contentHeight = max(contentHeight, 200.0)
                 
-                if case .regular = layout.metrics.widthClass {
+                // Paired with the placement above: a phone-placed preview (iPhone Duo included) is re-centred vertically.
+                if layout.presentsFloatingPanels {
                 } else {
                     contentRect = CGRect(origin: CGPoint(x: contentRect.minX, y: floor(contentRect.midY - contentHeight * 0.5)), size: CGSize(width: contentRect.width, height: contentHeight))
                 }
@@ -1335,6 +1345,21 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 actionsFrame.origin.y = morphMenuAnchor.growsUpward ? sourceFrame.maxY - actionsFrame.height : sourceFrame.minY
             } else if case let .reference(reference) = self.source, let transitionInfo = reference.transitionInfo() ?? self.liquidMorphReferenceInfo, let customPosition = transitionInfo.customPosition {
                 actionsFrame = actionsFrame.offsetBy(dx: customPosition.x, dy: customPosition.y)
+            }
+            
+            // iPhone Duo: on a side with a side strip the menu stays out of the strip where a corner block (the
+            // status corner) reaches its height, and may use the strip where none does (the input panel's band
+            // rule). Sides without a strip, and every other device, keep the edge clamp above.
+            do {
+                let band = layout.sideInsets(forBandFrom: actionsFrame.minY, to: actionsFrame.maxY + (additionalActionsSize.height > 0.0 ? additionalActionsSize.height + 10.0 : 0.0))
+                let stripLeft: CGFloat = layout.sideStrip(edge: .left) != nil ? band.left : 0.0
+                let stripRight: CGFloat = layout.sideStrip(edge: .right) != nil ? band.right : 0.0
+                if stripRight > 0.0, actionsFrame.maxX > layout.size.width - stripRight - actionsEdgeInset {
+                    actionsFrame.origin.x = layout.size.width - stripRight - actionsEdgeInset - actionsFrame.width
+                }
+                if stripLeft > 0.0, actionsFrame.minX < stripLeft + actionsEdgeInset {
+                    actionsFrame.origin.x = stripLeft + actionsEdgeInset
+                }
             }
             
             var additionalActionsFrame: CGRect

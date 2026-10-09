@@ -19,6 +19,7 @@ import ItemListPeerActionItem
 import EdgeEffect
 import ComponentFlow
 import ComponentDisplayAdapters
+import SideColumnLayout
 
 private struct CallListNodeListViewTransition {
     let callListView: CallListNodeView
@@ -201,6 +202,10 @@ final class CallListControllerNode: ASDisplayNode {
     var activateSearch: (() -> Void)?
     var deletePeerChat: ((EnginePeer.Id) -> Void)?
     var startNewCall: (() -> Void)?
+    
+    /// iPhone Duo: the new-call button in the side strip, created the first time a layout has one.
+    private var sideColumnView: CallListSideColumnView?
+    private var appliedSideColumn: SideColumnRegion?
     
     private let viewProcessingQueue = Queue()
     private var callListView: CallListNodeView?
@@ -721,6 +726,10 @@ final class CallListControllerNode: ASDisplayNode {
             
             self.emptyButtonIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call List/CallIcon"), color: presentationData.theme.list.itemAccentColor)
             
+            if let sideColumnView = self.sideColumnView, let appliedSideColumn = self.appliedSideColumn {
+                sideColumnView.update(size: appliedSideColumn.frame.size, theme: presentationData.theme, strings: presentationData.strings, transition: .immediate)
+            }
+            
             self.updateEmptyPlaceholder(theme: presentationData.theme, strings: presentationData.strings, type: self.currentLocationAndType.scope, isHidden: self.emptyTextNode.alpha.isZero)
             
             self.updateState {
@@ -906,7 +915,10 @@ final class CallListControllerNode: ASDisplayNode {
         }
         
         let size = layout.size
-        let contentRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
+        // In the band between the side insets when they differ (iPhone Duo's side strip); equal insets keep the full width.
+        let contentMinX: CGFloat = insets.left != insets.right ? insets.left : 0.0
+        let contentWidth: CGFloat = insets.left != insets.right ? size.width - insets.left - insets.right : size.width
+        let contentRect = CGRect(origin: CGPoint(x: contentMinX, y: insets.top), size: CGSize(width: contentWidth, height: size.height - insets.top - insets.bottom))
 
         let sideInset: CGFloat = 64.0
         
@@ -925,13 +937,62 @@ final class CallListControllerNode: ASDisplayNode {
         let emptyButtonSpacing: CGFloat = 14.0
         let emptyButtonIconSize = (self.emptyButtonIconNode.image?.size ?? CGSize())
         let emptyButtonWidth = emptyButtonIconSize.width + emptyButtonSpacing + emptyButtonSize.width
-        let emptyButtonX = floor(contentRect.width - emptyButtonWidth) / 2.0
+        let emptyButtonX = contentRect.minX + floor(contentRect.width - emptyButtonWidth) / 2.0
         textTransition.updateFrame(node: self.emptyButtonIconNode, frame: CGRect(origin: CGPoint(x: emptyButtonX, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTextSize.height + emptyTextSpacing), size: emptyButtonIconSize))
         textTransition.updateFrame(node: self.emptyButtonTextNode, frame: CGRect(origin: CGPoint(x: emptyButtonX + emptyButtonIconSize.width + emptyButtonSpacing, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTextSize.height + emptyTextSpacing + 4.0), size: emptyButtonSize))
         
         textTransition.updateFrame(node: self.emptyButtonNode, frame: CGRect(origin: CGPoint(x: emptyButtonX, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTextSize.height + emptyTextSpacing), size: CGSize(width: emptyButtonWidth, height: 44.0)))
         
         self.emptyAnimationNode.updateLayout(size: self.emptyAnimationSize)
+    }
+    
+    /// iPhone Duo: places the new-call button at the side strip's region (in this node's coordinates), or
+    /// removes it from the strip when `region` is nil (the button is then in the navigation bar). Hidden,
+    /// in place, while editing. Appearing lays out without animating frames and fades in; a rotation or
+    /// the strip switching sides fades the old place out and the new one in.
+    func updateSideColumn(region: SideColumnRegion?, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        let change = sideColumnPlacementChange(from: self.appliedSideColumn, to: region)
+        self.appliedSideColumn = region
+        if region == nil && self.sideColumnView == nil {
+            return
+        }
+        let sideColumnView: CallListSideColumnView
+        if let current = self.sideColumnView {
+            sideColumnView = current
+        } else {
+            sideColumnView = CallListSideColumnView(frame: CGRect())
+            sideColumnView.alpha = 0.0
+            sideColumnView.pressed = { [weak self] in
+                self?.startNewCall?()
+            }
+            self.sideColumnView = sideColumnView
+            self.view.addSubview(sideColumnView)
+        }
+        if let region {
+            var frameTransition = transition
+            switch change {
+            case .appear:
+                frameTransition = .immediate
+            case .move:
+                frameTransition = .immediate
+                if case let .animated(duration, _) = transition, sideColumnView.alpha > 0.0, let snapshotView = sideColumnView.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = sideColumnView.frame
+                    snapshotView.isUserInteractionEnabled = false
+                    self.view.insertSubview(snapshotView, aboveSubview: sideColumnView)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    sideColumnView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5, delay: duration * 0.5)
+                }
+            case .none, .disappear, .animate:
+                break
+            }
+            frameTransition.updateFrame(view: sideColumnView, frame: region.frame)
+            sideColumnView.update(size: region.frame.size, theme: self.presentationData.theme, strings: self.presentationData.strings, transition: frameTransition)
+        }
+        let isVisible = region != nil && !isHidden
+        transition.updateAlpha(layer: sideColumnView.layer, alpha: isVisible ? 1.0 : 0.0)
+        sideColumnView.isUserInteractionEnabled = isVisible
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -947,8 +1008,12 @@ final class CallListControllerNode: ASDisplayNode {
             inset = 0.0
         }
         if case .navigation = self.mode {
-            insets.left += inset
-            insets.right += inset
+            // iPhone Duo: a side with a strip keeps the block 16pt clear of it (the profile's section rule);
+            // without a strip both margins are today's.
+            // `max(inset, 16)`: this list has always kept 16pt, also below 320pt wide.
+            let margins = layout.listSideMargins(base: max(inset, 16.0))
+            insets.left += margins.left
+            insets.right += margins.right
             
             self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: insets.left, height: layout.size.height)
             self.rightOverlayNode.frame = CGRect(x: layout.size.width - insets.right, y: 0.0, width: insets.right, height: layout.size.height)

@@ -1052,7 +1052,11 @@ public final class EmojiStatusSelectionController: ViewController {
                 transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
             }
             
-            var componentWidth = layout.size.width - sideInset * 2.0
+            // iPhone Duo: the panel fits the band beside the side strip, clear of the strip's status corner. With equal
+            // side insets the band is the whole width, as before.
+            let stripInsetLeft: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.safeInsets.left : 0.0
+            let stripInsetRight: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.safeInsets.right : 0.0
+            var componentWidth = layout.size.width - stripInsetLeft - stripInsetRight - sideInset * 2.0
             let nativeItemSize: CGFloat = 40.0
             let minSpacing: CGFloat = 9.0
             let itemsPerRow = Int((componentWidth + minSpacing) / (nativeItemSize + minSpacing))
@@ -1104,13 +1108,22 @@ public final class EmojiStatusSelectionController: ViewController {
                     sourceOrigin = CGPoint(x: layout.size.width / 2.0, y: floor(layout.size.height / 2.0 - componentSize.height))
                 }
                 
+                // Centred on the screen while that keeps it in the band (iPhone Duo: beside the side strip).
+                var componentX = floor((layout.size.width - componentSize.width) / 2.0)
+                if componentX + componentSize.width > layout.size.width - stripInsetRight - sideInset {
+                    componentX = layout.size.width - stripInsetRight - sideInset - componentSize.width
+                }
+                if componentX < stripInsetLeft + sideInset {
+                    componentX = stripInsetLeft + sideInset
+                }
+                
                 var componentFrame: CGRect
                 let pointsToTop: Bool
                 if sourceOrigin.y + 5.0 + componentSize.height > layout.size.height - layout.insets(options: []).bottom {
-                    componentFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - componentSize.width) / 2.0), y: sourceOrigin.y - 25.0 - componentSize.height), size: componentSize)
+                    componentFrame = CGRect(origin: CGPoint(x: componentX, y: sourceOrigin.y - 25.0 - componentSize.height), size: componentSize)
                     pointsToTop = false
                 } else {
-                    componentFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - componentSize.width) / 2.0), y: sourceOrigin.y + 5.0), size: componentSize)
+                    componentFrame = CGRect(origin: CGPoint(x: componentX, y: sourceOrigin.y + 5.0), size: componentSize)
                     pointsToTop = true
                 }
                 if componentFrame.minY < layout.insets(options: [.statusBar]).top {
@@ -1218,7 +1231,7 @@ public final class EmojiStatusSelectionController: ViewController {
                         strings: self.presentationData.strings,
                         dateTimeFormat: self.presentationData.dateTimeFormat,
                         bottomInset: layout.insets(options: []).bottom,
-                        screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
+                        screenCornerRadii: layout.screenCornerRadii,
                         item: EmojiStatusComponent(
                             context: self.context,
                             animationCache: self.context.animationCache,

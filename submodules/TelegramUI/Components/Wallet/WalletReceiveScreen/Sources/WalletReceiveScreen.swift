@@ -1349,6 +1349,9 @@ private final class WalletReceiveSheetContent: Component {
                     ))))
                 )
             ], spacing: 10.0)
+            // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+            let buyButtonSideInsets = environment.bottomEdgeSideInsets()
+            let buyButtonHorizontalInset: CGFloat = 30.0 + max(buyButtonSideInsets.left, buyButtonSideInsets.right)
             let buyButtonSize = self.buyButton.update(
                 transition: .immediate,
                 component: AnyComponent(ButtonComponent(
@@ -1368,7 +1371,7 @@ private final class WalletReceiveSheetContent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: max(1.0, availableWidth - horizontalInset * 2.0), height: 52.0)
+                containerSize: CGSize(width: max(1.0, availableWidth - buyButtonHorizontalInset * 2.0), height: 52.0)
             )
             let buyButtonTop = explanationTop + explanationSize.height + (cardWidth < 230.0 ? 18.0 : 30.0)
 
@@ -1879,7 +1882,7 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -1923,8 +1926,10 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
                         bottom: 0.0,
                         right: max(sideInset, environment.safeInsets.right)
                     ),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
                     inVoiceOver: false,

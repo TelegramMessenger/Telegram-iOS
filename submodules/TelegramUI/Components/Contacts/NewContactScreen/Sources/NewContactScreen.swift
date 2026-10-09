@@ -297,7 +297,11 @@ final class NewContactScreenComponent: Component {
             
             let topInset: CGFloat = 24.0
             let bottomInset: CGFloat = 8.0
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             let sectionSpacing: CGFloat = 24.0
             
             let footerAttributes = MarkdownAttributes(
@@ -378,7 +382,7 @@ final class NewContactScreenComponent: Component {
                     items: nameSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let nameSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: nameSectionSize)
             if let nameSectionView = self.nameSection.view as? ListSectionComponent.View {
@@ -538,7 +542,7 @@ final class NewContactScreenComponent: Component {
                                 }
                             }
                         ),
-                        params: ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true),
+                        params: ListViewItemLayoutParams(width: availableSize.width - sideInset - rightSideInset, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true),
                         tag: self.phoneTag
                     )
                 )))
@@ -605,7 +609,7 @@ final class NewContactScreenComponent: Component {
                     items: phoneSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let phoneSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: phoneSectionSize)
             if let phoneSectionView = self.phoneSection.view as? ListSectionComponent.View {
@@ -684,7 +688,7 @@ final class NewContactScreenComponent: Component {
                     items: optionsSectionItems
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
             )
             let optionsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: optionsSectionSize)
             if let optionsSectionView = self.optionsSection.view {
@@ -744,7 +748,7 @@ final class NewContactScreenComponent: Component {
                         items: noteSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let noteSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: noteSectionSize)
                 if let noteSectionView = self.noteSection.view {
@@ -807,7 +811,7 @@ final class NewContactScreenComponent: Component {
                         items: qrSectionItems
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 10000.0)
                 )
                 let qrSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: qrSectionSize)
                 if let qrSectionView = self.qrSection.view {
@@ -879,7 +883,7 @@ final class NewContactScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 40.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - titleSize.width / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
@@ -911,7 +915,14 @@ final class NewContactScreenComponent: Component {
                 environment: {},
                 containerSize: barButtonSize
             )
-            let cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            // iPhone Duo: with a side strip the screen's own Close leaves the header row for the strip, centred where a
+            // standard bar's back or close goes.
+            let cancelButtonFrame: CGRect
+            if let sideColumnButtonFrame = environment.sideColumnNavigationButtonFrame {
+                cancelButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sideColumnButtonFrame.midX - cancelButtonSize.width * 0.5), y: floorToScreenPixels(sideColumnButtonFrame.midY - cancelButtonSize.height * 0.5)), size: cancelButtonSize)
+            } else {
+                cancelButtonFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: cancelButtonSize)
+            }
             if let cancelButtonView = self.cancelButton.view {
                 if cancelButtonView.superview == nil {
                     self.addSubview(cancelButtonView)

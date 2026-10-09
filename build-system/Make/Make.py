@@ -811,6 +811,67 @@ def build_spm(bazel, arguments):
 
     bazel_command_line.invoke_spm_build()
 
+def add_remote_watch_arguments(current_parser):
+    """The watch app flags of a build that runs in another environment (remote-build, vm-build)."""
+    current_parser.add_argument(
+        '--embedWatchApp',
+        action='store_true',
+        default=False,
+        help='Embed the tgwatch watch app (from the in-repo Telegram/WatchApp snapshot) under Watch/ in the remote device build.'
+    )
+    current_parser.add_argument(
+        '--watchApiId',
+        required=False,
+        type=str,
+        help='TG_API_ID for the watch build.',
+        metavar='api_id'
+    )
+    current_parser.add_argument(
+        '--watchApiHash',
+        required=False,
+        type=str,
+        help='TG_API_HASH for the watch build.',
+        metavar='api_hash'
+    )
+    current_parser.add_argument(
+        '--watchSigningIdentity',
+        required=False,
+        type=str,
+        help='Codesigning identity (SHA1 hash) for the watch app. The matching certificate must be present in the uploaded codesigning material.',
+        metavar='identity'
+    )
+    current_parser.add_argument(
+        '--watchProvisioningProfile',
+        required=False,
+        type=str,
+        help='Local absolute path to the watchkitapp .mobileprovision file; uploaded to the remote build environment.',
+        metavar='path'
+    )
+
+
+def prepare_remote_watch_inputs(arguments, remote_input_path):
+    """Validates the watch flags of a remote build and stages the watch provisioning profile with the other
+    build inputs. Returns the profile's path in the guest, or None."""
+    if not arguments.embedWatchApp:
+        return None
+    if arguments.watchApiId is None or arguments.watchApiHash is None:
+        raise Exception('--embedWatchApp requires --watchApiId and --watchApiHash (the embedded watch app build needs API credentials).')
+    if arguments.watchProvisioningProfile is None:
+        return None
+    shutil.copyfile(arguments.watchProvisioningProfile, remote_input_path + '/watch_provisioning_profile.mobileprovision')
+    # remote_input_path is uploaded to the guest as $HOME/telegram-build-input.
+    return '$HOME/telegram-build-input/watch_provisioning_profile.mobileprovision'
+
+
+def add_vm_lock_arguments(current_parser):
+    current_parser.add_argument(
+        '--waitForLock',
+        action='store_true',
+        default=False,
+        help='Wait for another VM job on this host to finish instead of failing at once. Only one build VM runs at a time per host.'
+    )
+
+
 def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
     configuration_group = current_parser.add_mutually_exclusive_group(required=True)
     configuration_group.add_argument(
@@ -1150,40 +1211,7 @@ if __name__ == '__main__':
         type=str,
         help='Bazel remote cache host address.'
     )
-    remote_build_parser.add_argument(
-        '--embedWatchApp',
-        action='store_true',
-        default=False,
-        help='Embed the tgwatch watch app (from the in-repo Telegram/WatchApp snapshot) under Watch/ in the remote device build.'
-    )
-    remote_build_parser.add_argument(
-        '--watchApiId',
-        required=False,
-        type=str,
-        help='TG_API_ID for the watch build.',
-        metavar='api_id'
-    )
-    remote_build_parser.add_argument(
-        '--watchApiHash',
-        required=False,
-        type=str,
-        help='TG_API_HASH for the watch build.',
-        metavar='api_hash'
-    )
-    remote_build_parser.add_argument(
-        '--watchSigningIdentity',
-        required=False,
-        type=str,
-        help='Codesigning identity (SHA1 hash) for the watch app. The matching certificate must be present in the uploaded codesigning material.',
-        metavar='identity'
-    )
-    remote_build_parser.add_argument(
-        '--watchProvisioningProfile',
-        required=False,
-        type=str,
-        help='Local absolute path to the watchkitapp .mobileprovision file; uploaded to the remote build environment.',
-        metavar='path'
-    )
+    add_remote_watch_arguments(remote_build_parser)
 
     vm_build_parser = subparsers.add_parser('vm-build', help='Build the app using a VM.')
     add_codesigning_common_arguments(vm_build_parser)
@@ -1228,6 +1256,8 @@ if __name__ == '__main__':
         help='Memory in megabytes to give the ephemeral VM clone. Defaults to half of host memory, capped at 32 GB. Not valid with --persistentVM, which uses the VM as it is configured.',
         metavar='megabytes'
     )
+    add_remote_watch_arguments(vm_build_parser)
+    add_vm_lock_arguments(vm_build_parser)
 
     generate_profiles_build_parser = subparsers.add_parser('generate-verification-profiles', help='Generate provisioning profiles that can be used to build a veritication IPA.')
     add_codesigning_common_arguments(generate_profiles_build_parser)
@@ -1296,6 +1326,44 @@ if __name__ == '__main__':
         type=str,
         help='Path to IPA 2 file.'
     )
+
+    vm_deploy_testflight_parser = subparsers.add_parser('vm-deploy-testflight', help='Upload an IPA to TestFlight from a VM.')
+    vm_deploy_testflight_parser.add_argument(
+        '--ipa',
+        required=True,
+        type=str,
+        help='Path to IPA file.'
+    )
+    vm_deploy_testflight_parser.add_argument(
+        '--vmImage',
+        required=False,
+        type=str,
+        help='Name of the Tart image to clone. Defaults to macos-<macos_version>-xcode-<deploy_xcode_version> as declared in versions.json.',
+        metavar='name'
+    )
+    add_vm_lock_arguments(vm_deploy_testflight_parser)
+
+    vm_ipadiff_parser = subparsers.add_parser('vm-ipa-diff', help='Execute ipa-diff in a VM.')
+    vm_ipadiff_parser.add_argument(
+        '--ipa1',
+        required=True,
+        type=str,
+        help='Path to IPA 1 file.'
+    )
+    vm_ipadiff_parser.add_argument(
+        '--ipa2',
+        required=True,
+        type=str,
+        help='Path to IPA 2 file.'
+    )
+    vm_ipadiff_parser.add_argument(
+        '--vmImage',
+        required=False,
+        type=str,
+        help='Name of the Tart image to clone. Defaults to macos-<macos_version>-xcode-<xcode_version> as declared in versions.json.',
+        metavar='name'
+    )
+    add_vm_lock_arguments(vm_ipadiff_parser)
 
     query_parser = subparsers.add_parser('query', help='Run arbitrary bazel queries')
     # Configuration is optional for queries
@@ -1431,14 +1499,7 @@ if __name__ == '__main__':
             
             shutil.copyfile(args.configurationPath, remote_input_path + '/configuration.json')
 
-            watch_provisioning_profile_remote_path = None
-            if args.embedWatchApp:
-                if args.watchApiId is None or args.watchApiHash is None:
-                    raise Exception('--embedWatchApp requires --watchApiId and --watchApiHash (the embedded watch app build needs API credentials).')
-                if args.watchProvisioningProfile is not None:
-                    shutil.copyfile(args.watchProvisioningProfile, remote_input_path + '/watch_provisioning_profile.mobileprovision')
-                    # remote_input_path is uploaded to the guest as $HOME/telegram-build-input.
-                    watch_provisioning_profile_remote_path = '$HOME/telegram-build-input/watch_provisioning_profile.mobileprovision'
+            watch_provisioning_profile_remote_path = prepare_remote_watch_inputs(arguments=args, remote_input_path=remote_input_path)
 
             RemoteBuild.remote_build_darwin_containers(
                 darwin_containers_path=args.darwinContainers,
@@ -1458,6 +1519,8 @@ if __name__ == '__main__':
             # fails at once instead of after a git checkout.
             if args.persistentVM and (args.vmCpu is not None or args.vmMemory is not None):
                 raise Exception('--vmCpu and --vmMemory are not valid with --persistentVM: a persistent VM is used as it is configured.')
+            if args.embedWatchApp and (args.watchApiId is None or args.watchApiHash is None):
+                raise Exception('--embedWatchApp requires --watchApiId and --watchApiHash (the embedded watch app build needs API credentials).')
 
             base_path = os.getcwd()
             versions = BuildEnvironmentVersions(base_path=base_path)
@@ -1470,7 +1533,8 @@ if __name__ == '__main__':
             # build that was already rsyncing it into its VM.
             with TartBuild.exclusive_vm_build(
                 target=args.vmImage if args.vmImage is not None else TartBuild.default_vm_image_name(versions.macos_version, versions.xcode_version),
-                mode='persistent' if args.persistentVM else 'ephemeral'
+                mode='persistent' if args.persistentVM else 'ephemeral',
+                wait=args.waitForLock
             ):
                 remote_input_path = '{}/build-input/remote-input'.format(base_path)
                 if os.path.exists(remote_input_path):
@@ -1488,6 +1552,8 @@ if __name__ == '__main__':
 
                 shutil.copyfile(args.configurationPath, remote_input_path + '/configuration.json')
 
+                watch_provisioning_profile_remote_path = prepare_remote_watch_inputs(arguments=args, remote_input_path=remote_input_path)
+
                 TartBuild.remote_build_tart(
                     macos_version=versions.macos_version,
                     bazel_cache_host=args.cacheHost,
@@ -1497,7 +1563,12 @@ if __name__ == '__main__':
                     override_xcode_version=args.overrideXcodeVersion,
                     ephemeral_vm=not args.persistentVM,
                     vm_cpu=args.vmCpu,
-                    vm_memory=args.vmMemory
+                    vm_memory=args.vmMemory,
+                    embed_watch_app=args.embedWatchApp,
+                    watch_api_id=args.watchApiId,
+                    watch_api_hash=args.watchApiHash,
+                    watch_signing_identity=args.watchSigningIdentity,
+                    watch_provisioning_profile_remote_path=watch_provisioning_profile_remote_path
                 )
         elif args.commandName == 'generate-verification-profiles':
             base_path = os.getcwd()
@@ -1550,6 +1621,37 @@ if __name__ == '__main__':
                 ipa1_path=args.ipa1,
                 ipa2_path=args.ipa2
             )
+        elif args.commandName == 'vm-deploy-testflight':
+            env = os.environ
+            if 'APPSTORE_CONNECT_USERNAME' not in env:
+                print('APPSTORE_CONNECT_USERNAME environment variable is not set')
+                sys.exit(1)
+            if 'APPSTORE_CONNECT_PASSWORD' not in env:
+                print('APPSTORE_CONNECT_PASSWORD environment variable is not set')
+                sys.exit(1)
+
+            versions = BuildEnvironmentVersions(base_path=os.getcwd())
+            # Uploads use their own Xcode (versions.json "deploy_xcode"), as the darwin-containers path did.
+            deploy_xcode_version = TartBuild.deploy_xcode_version()
+            vm_image = args.vmImage if args.vmImage is not None else TartBuild.default_vm_image_name(versions.macos_version, deploy_xcode_version)
+
+            with TartBuild.exclusive_vm_build(target=vm_image, mode='ephemeral', wait=args.waitForLock):
+                TartBuild.remote_deploy_testflight_tart(
+                    vm_image=vm_image,
+                    ipa_path=args.ipa,
+                    username=env['APPSTORE_CONNECT_USERNAME'],
+                    password=env['APPSTORE_CONNECT_PASSWORD']
+                )
+        elif args.commandName == 'vm-ipa-diff':
+            versions = BuildEnvironmentVersions(base_path=os.getcwd())
+            vm_image = args.vmImage if args.vmImage is not None else TartBuild.default_vm_image_name(versions.macos_version, versions.xcode_version)
+
+            with TartBuild.exclusive_vm_build(target=vm_image, mode='ephemeral', wait=args.waitForLock):
+                TartBuild.remote_ipa_diff_tart(
+                    vm_image=vm_image,
+                    ipa1_path=args.ipa1,
+                    ipa2_path=args.ipa2
+                )
         elif args.commandName == 'test':
             test(bazel=bazel_path, arguments=args)
         elif args.commandName == 'query':

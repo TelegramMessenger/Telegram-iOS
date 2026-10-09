@@ -851,6 +851,9 @@ private final class WalletTransactionContentComponent: Component {
     let openExplorer: (String) -> Void
     let animateOut: ActionSlot<Action<Void>>
     let pagerPosition: WalletPagerView.ItemPosition?
+    /// The screen a bottom-anchored `SheetComponent` host spans, for its header controls to keep clear of a top corner
+    /// block (iPhone Duo); nil in a host that places its own header (`ResizableSheetComponent`).
+    let sheetScreenSize: CGSize?
 
     init(
         context: AccountContext,
@@ -860,7 +863,8 @@ private final class WalletTransactionContentComponent: Component {
         maxCommentHeight: CGFloat,
         openExplorer: @escaping (String) -> Void,
         animateOut: ActionSlot<Action<Void>>,
-        pagerPosition: WalletPagerView.ItemPosition? = nil
+        pagerPosition: WalletPagerView.ItemPosition? = nil,
+        sheetScreenSize: CGSize? = nil
     ) {
         self.context = context
         self.mode = mode
@@ -870,6 +874,7 @@ private final class WalletTransactionContentComponent: Component {
         self.openExplorer = openExplorer
         self.animateOut = animateOut
         self.pagerPosition = pagerPosition
+        self.sheetScreenSize = sheetScreenSize
     }
 
     static func ==(lhs: WalletTransactionContentComponent, rhs: WalletTransactionContentComponent) -> Bool {
@@ -877,7 +882,8 @@ private final class WalletTransactionContentComponent: Component {
             || lhs.walletContext !== rhs.walletContext
             || lhs.fromChat != rhs.fromChat
             || lhs.maxCommentHeight != rhs.maxCommentHeight
-            || lhs.pagerPosition !== rhs.pagerPosition {
+            || lhs.pagerPosition !== rhs.pagerPosition
+            || lhs.sheetScreenSize != rhs.sheetScreenSize {
             return false
         }
         switch (lhs.mode, rhs.mode) {
@@ -973,6 +979,9 @@ private final class WalletTransactionContentComponent: Component {
         }
 
         private let controlButtons = ComponentView<Empty>()
+        /// How far the controls' trailing button keeps from a top corner block the sheet has risen beside (iPhone Duo), as
+        /// of the last layout: the controls are laid out with it before the content height that decides it is known.
+        private var controlsCornerRightInset: CGFloat = 0.0
         private let keyUpdateHeader = ComponentView<Empty>()
         private let collectibleHeader = ComponentView<Empty>()
         private var gramAnimation = ComponentView<Empty>()
@@ -2546,41 +2555,42 @@ private final class WalletTransactionContentComponent: Component {
             let displayedDirection: WalletContext.Transaction.Direction = displaysIncomingSelfTransfer ? .incoming : transaction.direction
             let displayedAmount = displaysIncomingSelfTransfer ? abs(transaction.amount) : transaction.amount
             let showsMore = !self.isPreview || (self.isFinishedPreview && self.transaction != nil)
+            let controlsComponent = AnyComponent(GlassControlPanelComponent(
+                theme: theme,
+                leftItem: GlassControlPanelComponent.Item(
+                    items: [GlassControlGroupComponent.Item(
+                        id: AnyHashable("close"),
+                        content: .icon("Navigation/Close"),
+                        action: { [weak self] in
+                            self?.close()
+                        }
+                    )],
+                    background: .panel
+                ),
+                centralItem: nil,
+                rightItem: showsMore ? GlassControlPanelComponent.Item(
+                    items: [GlassControlGroupComponent.Item(
+                        id: AnyHashable("more"),
+                        content: .animation("anim_morewide"),
+                        action: { [weak self] in
+                            guard let self,
+                                  let controlsView = self.controlButtons.view as? GlassControlPanelComponent.View,
+                                  let sourceView = controlsView.rightItemView?.itemView(id: AnyHashable("more")) else {
+                                return
+                            }
+                            self.openExplorer(sourceView: sourceView)
+                        }
+                    )],
+                    background: .panel
+                ) : nil,
+                centerAlignmentIfPossible: true,
+                isDark: theme.overallDarkAppearance
+            ))
             let controlsSize = self.controlButtons.update(
                 transition: transition,
-                component: AnyComponent(GlassControlPanelComponent(
-                    theme: theme,
-                    leftItem: GlassControlPanelComponent.Item(
-                        items: [GlassControlGroupComponent.Item(
-                            id: AnyHashable("close"),
-                            content: .icon("Navigation/Close"),
-                            action: { [weak self] in
-                                self?.close()
-                            }
-                        )],
-                        background: .panel
-                    ),
-                    centralItem: nil,
-                    rightItem: showsMore ? GlassControlPanelComponent.Item(
-                        items: [GlassControlGroupComponent.Item(
-                            id: AnyHashable("more"),
-                            content: .animation("anim_morewide"),
-                            action: { [weak self] in
-                                guard let self,
-                                      let controlsView = self.controlButtons.view as? GlassControlPanelComponent.View,
-                                      let sourceView = controlsView.rightItemView?.itemView(id: AnyHashable("more")) else {
-                                    return
-                                }
-                                self.openExplorer(sourceView: sourceView)
-                            }
-                        )],
-                        background: .panel
-                    ) : nil,
-                    centerAlignmentIfPossible: true,
-                    isDark: theme.overallDarkAppearance
-                )),
+                component: controlsComponent,
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - 32.0, height: 44.0)
+                containerSize: CGSize(width: max(1.0, availableSize.width - 32.0 - self.controlsCornerRightInset), height: 44.0)
             )
             if let controlsView = self.controlButtons.view {
                 if controlsView.superview == nil {
@@ -3271,7 +3281,7 @@ private final class WalletTransactionContentComponent: Component {
                     maximumNumberOfLines: 1
                 ))
             ))
-            let tableWidth = availableSize.width - (20.0 + environment.safeInsets.left) * 2.0
+            let tableWidth = availableSize.width - 20.0 * 2.0 - environment.safeInsets.left - environment.safeInsets.right
             let tableSize = self.table.update(
                 transition: transition,
                 component: AnyComponent(TableComponent(theme: theme, items: tableItems)),
@@ -3283,7 +3293,7 @@ private final class WalletTransactionContentComponent: Component {
                     self.addSubview(tableView)
                 }
                 transition.setFrame(view: tableView, frame: CGRect(
-                    x: floorToScreenPixels((availableSize.width - tableSize.width) / 2.0),
+                    x: floorToScreenPixels(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - tableSize.width) / 2.0),
                     y: contentHeight,
                     width: tableSize.width,
                     height: tableSize.height
@@ -3570,6 +3580,29 @@ private final class WalletTransactionContentComponent: Component {
                 ))
             }
             contentHeight += actionSize.height + 30.0
+
+            // A tall sheet rises beside the status corner (iPhone Duo, folded portrait: 84x170 at the top right): the
+            // trailing button keeps clear of it, which takes the content height, so the controls are laid out again when it
+            // changes (the next pass starts from it, so an animated pass does not move the button twice). The sheet is
+            // bottom-anchored and centred, its top `contentHeight` (and the glass inset) up. In landscape the sheet keeps to
+            // the band beside the strip, where its environment has no side insets, and needs nothing.
+            var cornerRightInset: CGFloat = 0.0
+            if let sheetScreenSize = component.sheetScreenSize, environment.safeInsets.left > 0.0 || environment.safeInsets.right > 0.0 || environment.navigationBarTrailingButtonsInset > 0.0 {
+                cornerRightInset = sheetHeaderCornerInsets(containerWidth: sheetScreenSize.width, sheetMinX: floorToScreenPixels((sheetScreenSize.width - availableSize.width) / 2.0), sheetWidth: availableSize.width, sheetMinY: sheetScreenSize.height - contentHeight - 6.0, reservedCorners: environment.reservedCorners).right
+            }
+            if cornerRightInset != self.controlsCornerRightInset {
+                self.controlsCornerRightInset = cornerRightInset
+                let cornerControlsSize = self.controlButtons.update(
+                    transition: transition,
+                    component: controlsComponent,
+                    environment: {},
+                    containerSize: CGSize(width: max(1.0, availableSize.width - 32.0 - cornerRightInset), height: 44.0)
+                )
+                if let controlsView = self.controlButtons.view {
+                    transition.setFrame(view: controlsView, frame: CGRect(x: 16.0, y: 16.0, width: cornerControlsSize.width, height: cornerControlsSize.height))
+                }
+            }
+
             return CGSize(width: availableSize.width, height: contentHeight)
         }
     }
@@ -3740,7 +3773,8 @@ private final class WalletTransactionSheetComponent: CombinedComponent {
                         maxCommentHeight: floorToScreenPixels(min(150.0, max(80.0, availableCommentHeight * 0.25))),
                         openExplorer: context.component.openExplorer,
                         animateOut: animateOut,
-                        pagerPosition: context.component.pagerPosition
+                        pagerPosition: context.component.pagerPosition,
+                        sheetScreenSize: context.availableSize
                     )),
                     style: .glass,
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
@@ -3766,7 +3800,7 @@ private final class WalletTransactionSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -3800,8 +3834,10 @@ private final class WalletTransactionSheetComponent: CombinedComponent {
                             bottom: 0.0,
                             right: max(sideInset, environment.safeInsets.right)
                         ),
+                        reservedCorners: environment.reservedCorners,
+                        division: nil,
                         additionalInsets: .zero,
-                        statusBarHeight: environment.statusBarHeight,
+                        statusBarHeight: environment.fullStatusBarHeight,
                         inputHeight: nil,
                         inputHeightIsInteractivellyChanging: false,
                         inVoiceOver: false,
@@ -3900,7 +3936,7 @@ private final class WalletTransactionPreviewSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: context.availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -3942,8 +3978,10 @@ private final class WalletTransactionPreviewSheetComponent: CombinedComponent {
                             bottom: 0.0,
                             right: max(sideInset, environment.safeInsets.right)
                         ),
+                        reservedCorners: environment.reservedCorners,
+                        division: nil,
                         additionalInsets: .zero,
-                        statusBarHeight: environment.statusBarHeight,
+                        statusBarHeight: environment.fullStatusBarHeight,
                         inputHeight: nil,
                         inputHeightIsInteractivellyChanging: false,
                         inVoiceOver: false,
@@ -4646,7 +4684,7 @@ private final class WalletTransactionContextReferenceContentSource: ContextRefer
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .bottom
         )
     }

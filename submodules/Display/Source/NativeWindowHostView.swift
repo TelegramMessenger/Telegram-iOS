@@ -385,6 +385,7 @@ private final class NativeWindow: UIWindow, WindowHost {
 
 public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     let window = NativeWindow(frame: UIScreen.main.bounds)
+    registerMainWindowForScreenBounds(window)
     
     let rootViewController = WindowRootViewController()
     window.rootViewController = rootViewController

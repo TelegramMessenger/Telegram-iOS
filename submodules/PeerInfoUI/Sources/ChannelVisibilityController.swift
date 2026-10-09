@@ -2479,6 +2479,6 @@ final class InviteLinkContextReferenceContentSource: ContextReferenceContentSour
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

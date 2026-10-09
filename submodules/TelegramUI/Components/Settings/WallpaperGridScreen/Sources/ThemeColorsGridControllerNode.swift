@@ -231,8 +231,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
 
         self.gridNode.presentationLayoutUpdated = { [weak self] gridLayout, transition in
             if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
-                let sideInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-                let maskSideInset: CGFloat = layout.size.width >= 320.0 ? sideInset : 0.0
+                let sideMargins = layout.listSideMargins(base: max(16.0, floor((layout.size.width - 674.0) / 2.0)))
+                let maskSideInsets: (left: CGFloat, right: CGFloat) = layout.size.width >= 320.0 ? sideMargins : (0.0, 0.0)
 
                 let maskY: CGFloat
                 if let controller = strongSelf.controller, case .default = controller.mode {
@@ -246,7 +246,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                     maskY = 0.0
                 }
 
-                transition.updateFrame(node: strongSelf.maskNode, frame: CGRect(origin: CGPoint(x: maskSideInset, y: maskY), size: CGSize(width: layout.size.width - maskSideInset * 2.0, height: gridLayout.contentSize.height + 10.0)))
+                transition.updateFrame(node: strongSelf.maskNode, frame: CGRect(origin: CGPoint(x: maskSideInsets.left, y: maskY), size: CGSize(width: layout.size.width - maskSideInsets.left - maskSideInsets.right, height: gridLayout.contentSize.height + 10.0)))
             }
         }
     }
@@ -338,8 +338,10 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
             referenceImageSize = CGSize(width: 91.0, height: 91.0)
         }
         
-        let sideInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-        let gridWidth = layout.size.width - sideInset * 2.0
+        // iPhone Duo: a side with a side strip keeps the grid 16pt clear of it; without a strip both margins
+        // are today's.
+        let sideMargins = layout.listSideMargins(base: max(16.0, floor((layout.size.width - 674.0) / 2.0)))
+        let gridWidth = layout.size.width - sideMargins.left - sideMargins.right
         let imageCount = max(2, Int((gridWidth - padding * 2.0) / referenceImageSize.width))
         let itemWidth = floorToScreenPixels((gridWidth - padding * 2.0 - CGFloat(imageCount - 1) * minSpacing) / CGFloat(imageCount))
         let imageSize = CGSize(width: itemWidth, height: itemWidth)
@@ -354,8 +356,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         var listInsets = insets
         if layout.size.width >= 320.0 {
-            listInsets.left = sideInset
-            listInsets.right = sideInset
+            listInsets.left = sideMargins.left
+            listInsets.right = sideMargins.right
 
             if self.leftOverlayNode.supernode == nil {
                 self.gridNode.addSubnode(self.leftOverlayNode)

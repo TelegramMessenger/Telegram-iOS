@@ -1951,9 +1951,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let buttonMinX: CGFloat
         if self.undoButtonNode.supernode != nil {
-            buttonMinX = layout.size.width - layout.safeInsets.left - rightInset - buttonTextSize.width - leftMargin * 2.0
+            buttonMinX = layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - leftMargin * 2.0
         } else {
-            buttonMinX = layout.size.width - layout.safeInsets.left - rightInset
+            buttonMinX = layout.size.width - layout.safeInsets.right - rightInset
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - leftMargin, height: .greatestFiniteMagnitude))
@@ -2017,8 +2017,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             panelWidth = 210.0
         }
         
-        var panelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - panelWidth) / 2.0), y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
-        var panelWrapperFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - panelWidth) / 2.0), y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
+        // Centered in the band between the side safe insets (iPhone Duo's side strip); with equal insets this is
+        // the full width's center.
+        let panelX = floorToScreenPixels(layout.safeInsets.left + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right - panelWidth) / 2.0)
+        var panelFrame = CGRect(origin: CGPoint(x: panelX, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
+        var panelWrapperFrame = CGRect(origin: CGPoint(x: panelX, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: panelWidth, height: contentHeight))
         
         if case .top = self.placementPosition {
             var topInset = insets.top

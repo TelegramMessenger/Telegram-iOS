@@ -913,6 +913,22 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         self.parentController?.presentInGlobalOverlay(contextController)
     }
     
+    /// iPhone Duo: the side strip on each side. The container (and the background it paints) stays full
+    /// width; the tabs and the panes are laid out between the strips.
+    var stripInsets: (left: CGFloat, right: CGFloat) = (0.0, 0.0)
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        // A touch in a strip lands on the container itself; the pane beside it takes it, so a drag there
+        // scrolls the pane rather than the profile.
+        if result === self.view, let currentParams = self.currentParams, let currentPane = self.currentPane, let forwardedPoint = peerInfoStripTouchForwardingPoint(point, containerWidth: currentParams.size.width, stripLeft: self.stripInsets.left, stripRight: self.stripInsets.right, paneFrame: currentPane.node.frame) {
+            if let paneResult = currentPane.node.view.hitTest(self.view.convert(forwardedPoint, to: currentPane.node.view), with: event) {
+                return paneResult
+            }
+        }
+        return result
+    }
+
     func update(size: CGSize, sideInset: CGFloat, topInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?, areTabsHidden: Bool, disableTabSwitching: Bool, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let previousAvailablePanes = self.currentAvailablePanes
         let availablePanes = data?.availablePanes ?? []
@@ -977,7 +993,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         let tabsHeight: CGFloat = 40.0
         let effectiveTabsHeight: CGFloat = areTabsHidden ? 0.0 : (10.0 + tabsHeight + 10.0 + 6.0)
         
-        let paneFrame = CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: CGSize(width: size.width, height: topInset + size.height))
+        let paneFrame = CGRect(origin: CGPoint(x: self.stripInsets.left, y: -topInset), size: CGSize(width: size.width - self.stripInsets.left - self.stripInsets.right, height: topInset + size.height))
         
         var visiblePaneIndices: [Int] = []
         var requiredPendingKeys: [PeerInfoPaneKey] = []
@@ -1257,7 +1273,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         
         let tabsSideInset: CGFloat = sideInset + 16.0
         
-        let tabsContainerSize = CGSize(width: size.width - tabsSideInset * 2.0, height: tabsHeight)
+        let tabsContainerSize = CGSize(width: size.width - self.stripInsets.left - self.stripInsets.right - tabsSideInset * 2.0, height: tabsHeight)
         let tabsContainerEffectiveSize = self.tabsContainer.update(
             transition: ComponentTransition(transition),
             component: AnyComponent(HorizontalTabsComponent(
@@ -1371,7 +1387,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             containerSize: tabsContainerSize
         )
         
-        let tabContainerFrameOriginX = floorToScreenPixels((size.width - tabsContainerEffectiveSize.width) / 2.0)
+        let tabContainerFrameOriginX = self.stripInsets.left + floorToScreenPixels((size.width - self.stripInsets.left - self.stripInsets.right - tabsContainerEffectiveSize.width) / 2.0)
         let tabContainerFrame = CGRect(origin: CGPoint(x: tabContainerFrameOriginX, y: 10.0), size: tabsContainerEffectiveSize)
         
         transition.updateFrame(view: self.tabsBackgroundContainer, frame: tabContainerFrame)
@@ -1454,11 +1470,11 @@ private final class TabsExtractedContentSource: ContextExtractedContentSource {
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 
@@ -1475,7 +1491,7 @@ private final class TabsReferenceContentSource: ContextReferenceContentSource {
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView.contentView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .bottom
         )
     }

@@ -79,6 +79,7 @@ final class PeerInfoScreenNoteListItemNode: PeerInfoScreenItemNode {
         self.theme = presentationData.theme
                 
         let sideInset: CGFloat = 1.0 + safeInsets.left
+        let sideInsetRight: CGFloat = 1.0 + safeInsets.right
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
      
@@ -99,7 +100,7 @@ final class PeerInfoScreenNoteListItemNode: PeerInfoScreenItemNode {
             transition: .immediate,
             component: AnyComponent(TextFieldComponent(context: context, theme: presentationData.theme, strings: presentationData.strings, externalState: self.textFieldExternalState, fontSize: 17.0, textColor: presentationData.theme.list.itemPrimaryTextColor, accentColor: presentationData.theme.list.itemAccentColor, insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: 8.0), hideKeyboard: false, customInputView: nil, placeholder: NSAttributedString(string: presentationData.strings.PeerInfo_AddNotesPlaceholder, font: Font.regular(17.0), textColor: presentationData.theme.list.itemPlaceholderTextColor), resetText: resetText, isOneLineWhenUnfocused: false, characterLimit: characterLimit, formatMenuAvailability: .available([.bold, .italic, .underline, .strikethrough, .spoiler]), lockedFormatAction: {}, present: { c in }, paste: { _ in })),
             environment: {},
-            containerSize: CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude)
+            containerSize: CGSize(width: width - sideInset - sideInsetRight, height: .greatestFiniteMagnitude)
         )
         let textFieldFrame = CGRect(origin: CGPoint(x: sideInset, y: 7.0), size: textFieldSize)
         let height: CGFloat = 12.0 + textFieldSize.height

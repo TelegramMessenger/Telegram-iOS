@@ -29,6 +29,7 @@ import LiveLocationHeaderPanelComponent
 import ChatListHeaderNoticeComponent
 import ChatListFilterTabContainerNode
 import GlassControls
+import SideColumnLayout
 
 public enum ChatListContainerNodeFilter: Equatable {
     case all
@@ -1701,15 +1702,25 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
         }
         
+        // iPhone Duo: the header's back and icon buttons go into the side strip, above the vertical tab
+        // bar when this list is a tab (spec 2026-10-06). A preview's layout is not the screen's.
+        var sideColumn: SideColumnRegion?
+        if let controller = self.controller, !controller.previewing {
+            let reservedBelow = (controller.parent as? TabBarController)?.verticalTabBarFrame(for: layout)
+            sideColumn = sideColumnRegion(layout: layout, minY: (layout.statusBarHeight ?? 0.0) + 8.0, reservedBelow: reservedBelow)
+        }
+        
         let navigationBarSize = self.navigationBarView.update(
             transition: transition,
             component: AnyComponent(ChatListNavigationBar(
                 context: self.context,
                 theme: self.presentationData.theme,
                 strings: self.presentationData.strings,
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                // Beside iPhone Duo's status island the header stays near the top, its right buttons clear of it.
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
                 leftInset: layout.safeInsets.left,
                 rightInset: layout.safeInsets.right,
+                trailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 search: ChatListNavigationBar.Search(isEnabled: true),
                 activeSearch: self.isSearchDisplayControllerActive,
                 primaryContent: headerContent?.primaryContent,
@@ -1753,6 +1764,13 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                         return
                     }
                     controller.allowAutomaticOrder()
+                },
+                sideColumn: sideColumn,
+                openSideColumnOverflow: { [weak self] sourceView, items in
+                    guard let self, let controller = self.controller else {
+                        return
+                    }
+                    controller.openSideColumnOverflowMenu(sourceView: sourceView, items: items)
                 }
             )),
             environment: {},
@@ -1895,8 +1913,14 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             
             let sideInset: CGFloat = 20.0
+            // The bottom toolbar spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom, as the
+            // root list's toolbar does (`tabBarSideToolbarFrame`). Equal insets keep the 20pt margins.
+            let toolbarInsetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+            let toolbarBottomInsets = layout.bottomEdgeSideInsets()
+            let toolbarLeftInset = toolbarInsetsDiffer ? max(sideInset, toolbarBottomInsets.left) : sideInset
+            let toolbarRightInset = toolbarInsetsDiffer ? max(sideInset, toolbarBottomInsets.right) : sideInset
             let toolbarHeight = 44.0
-            let toolbarFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - panelsBottomInset - toolbarHeight), size: CGSize(width: layout.size.width - sideInset * 2.0, height: toolbarHeight))
+            let toolbarFrame = CGRect(origin: CGPoint(x: toolbarLeftInset, y: layout.size.height - panelsBottomInset - toolbarHeight), size: CGSize(width: layout.size.width - toolbarLeftInset - toolbarRightInset, height: toolbarHeight))
             
             let toolbar: ComponentView<Empty>
             var toolbarTransition = ComponentTransition(transition)

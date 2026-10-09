@@ -448,7 +448,7 @@ private final class BotCheckoutPaymentMethodScreenComponent: Component {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: availableSize,
                         regularMetricsSize: nil,
                         dismiss: { animated in

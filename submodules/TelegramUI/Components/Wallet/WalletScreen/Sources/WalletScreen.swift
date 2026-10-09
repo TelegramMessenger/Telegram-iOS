@@ -2860,7 +2860,9 @@ private final class WalletScreenComponent: Component {
             environment: EnvironmentType,
             transition: ComponentTransition
         ) -> (originY: CGFloat, size: CGSize) {
-            let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment> = AnyComponentWithIdentity(
+            // iPhone Duo: the controller shows back in the side strip instead (WalletScreen.containerLayoutUpdated).
+            let backButtonInSideColumn = (environment.controller() as? WalletScreen)?.backButtonInSideColumn ?? false
+            let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>? = backButtonInSideColumn ? nil : AnyComponentWithIdentity(
                 id: "back",
                 component: AnyComponent(NavigationButtonComponent(
                     content: .icon(imageName: environment.metrics.widthClass == .regular ? "Navigation/Close" : "Navigation/Back"),
@@ -2904,6 +2906,7 @@ private final class WalletScreenComponent: Component {
                 component: AnyComponent(ChatListHeaderComponent(
                     leftInset: 16.0 + environment.safeInsets.left,
                     rightInset: 16.0 + environment.safeInsets.right,
+                    trailingButtonsInset: environment.navigationBarTrailingButtonsInset,
                     primaryContent: primaryContent,
                     secondaryContent: nil,
                     secondaryTransition: 0.0,
@@ -2965,7 +2968,7 @@ private final class WalletScreenComponent: Component {
                     view: navigationTitleView,
                     frame: CGRect(
                         origin: CGPoint(
-                            x: floor((availableSize.width - navigationTitleSize.width) * 0.5),
+                            x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - navigationTitleSize.width) * 0.5),
                             y: headerOriginY + floor((headerSize.height - navigationTitleSize.height) * 0.5)
                         ),
                         size: navigationTitleSize
@@ -2992,7 +2995,7 @@ private final class WalletScreenComponent: Component {
             if let navigationBalanceView = self.navigationBalance.view {
                 let navigationBalanceFrame = CGRect(
                     origin: CGPoint(
-                        x: floor((availableSize.width - navigationBalanceSize.width) * 0.5),
+                        x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - navigationBalanceSize.width) * 0.5),
                         y: headerOriginY + floor((headerSize.height - navigationBalanceSize.height) * 0.5)
                     ),
                     size: navigationBalanceSize
@@ -3022,7 +3025,7 @@ private final class WalletScreenComponent: Component {
                     view: self.navigationBalanceButton,
                     frame: CGRect(
                         origin: CGPoint(
-                            x: floor((availableSize.width - hitSize.width) * 0.5),
+                            x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - hitSize.width) * 0.5),
                             y: headerOriginY + floor((headerSize.height - hitSize.height) * 0.5)
                         ),
                         size: hitSize
@@ -3696,7 +3699,7 @@ private final class WalletScreenComponent: Component {
                     layoutTransition.setFrame(
                         view: emptyTransactionsInfoView,
                         frame: CGRect(
-                            origin: CGPoint(x: floor((availableSize.width - emptyTransactionsInfoSize.width) / 2.0), y: emptyTransactionsOriginY),
+                            origin: CGPoint(x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - emptyTransactionsInfoSize.width) / 2.0), y: emptyTransactionsOriginY),
                             size: emptyTransactionsInfoSize
                         )
                     )
@@ -3754,7 +3757,7 @@ private final class WalletScreenComponent: Component {
                         view: emptyTransactionsFooterView,
                         frame: CGRect(
                             origin: CGPoint(
-                                x: floor((availableSize.width - emptyTransactionsFooterSize.width) * 0.5),
+                                x: floor(environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right - emptyTransactionsFooterSize.width) * 0.5),
                                 y: emptyTransactionsFooterOriginY
                             ),
                             size: emptyTransactionsFooterSize
@@ -3839,6 +3842,9 @@ private final class WalletScreenComponent: Component {
 
 public final class WalletScreen: ViewControllerComponentContainer {
     private let walletContext: WalletContext
+    /// iPhone Duo: whether back is the side strip's circle (drawn by the navigation bar's side column button,
+    /// docs/iphone-duo-layout.md) rather than the header's own.
+    fileprivate private(set) var backButtonInSideColumn = false
     private var walletScreenUpdatesDisposable: Disposable?
     private var didAppear = false
 
@@ -3876,6 +3882,17 @@ public final class WalletScreen: ViewControllerComponentContainer {
             }
             componentView.scrollToTop()
         }
+    }
+
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        // The header draws its own back and an empty left item hides the bar's; with a side strip the bar's
+        // back moves into the strip instead, so the empty item goes and the header drops its button.
+        let backButtonInSideColumn = layout.sideColumnNavigationButtonFrame != nil
+        if self.backButtonInSideColumn != backButtonInSideColumn {
+            self.backButtonInSideColumn = backButtonInSideColumn
+            self.navigationItem.setLeftBarButton(backButtonInSideColumn ? nil : UIBarButtonItem(customView: UIView()), animated: false)
+        }
+        super.containerLayoutUpdated(layout, transition: transition)
     }
 
     override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
@@ -3941,7 +3958,7 @@ private final class WalletContextReferenceContentSource: ContextReferenceContent
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             actionsPosition: .bottom
         )
     }

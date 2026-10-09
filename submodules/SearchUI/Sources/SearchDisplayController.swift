@@ -159,7 +159,9 @@ public final class SearchDisplayController {
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let defaultNavigationBarHeight = navigationBarHeight
         
-        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+        // The status height a navigation bar sits under (compact beside iPhone Duo's status island, which the
+        // search bar's trailing inset then clears).
+        let statusBarHeight: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
         let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
         let navigationBarOffset: CGFloat
         if statusBarHeight.isZero {
@@ -191,7 +193,7 @@ public final class SearchDisplayController {
                 navigationBarHeight = navigationBarFrame.maxY + 8.0
             }
             transition.updateFrame(node: searchBar, frame: searchBarFrame)
-            searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right + layout.navigationBarTrailingButtonsInset, transition: transition)
         }
         
         self.containerLayout = (layout, navigationBarHeight)
@@ -207,7 +209,7 @@ public final class SearchDisplayController {
         //safeInsets.left += 20.0
         //safeInsets.right += 20.0
         
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), navigationBarHeight: navigationBarHeight, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver, presentedInFormSheet: layout.presentedInFormSheet), navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
     public func activate(insertSubnode: @escaping (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?, focus: Bool = true) {
@@ -234,7 +236,7 @@ public final class SearchDisplayController {
         let safeInsets = layout.safeInsets
         //safeInsets.left += 20.0
         //safeInsets.right += 20.0
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, reservedCorners: layout.reservedCorners, division: layout.division, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         var contentNavigationBarHeight = navigationBarHeight
         if layout.statusBarHeight == nil {
@@ -266,7 +268,7 @@ public final class SearchDisplayController {
         let navigationBarFrame: CGRect
         switch self.mode {
             case .list:
-                let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+                let statusBarHeight: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
                 let searchBarHeight: CGFloat = max(20.0, statusBarHeight) + 44.0
                 let navigationBarOffset: CGFloat
                 if statusBarHeight.isZero {

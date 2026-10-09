@@ -359,14 +359,14 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             
             if isFrontCamera && isFlashOn {
                 if self.initialBrightness == nil {
-                    self.initialBrightness = UIScreen.main.brightness
-                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, 1.0)
+                    self.initialBrightness = mainWindowScreen.brightness
+                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, mainWindowScreen.brightness, 1.0)
                     self.animateBrightnessChange()
                 }
             } else {
                 if let initialBrightness = self.initialBrightness {
                     self.initialBrightness = nil
-                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
+                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, mainWindowScreen.brightness, initialBrightness)
                     self.animateBrightnessChange()
                 }
             }
@@ -386,7 +386,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                 let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
                 let value = initial + (target - initial) * t
                 
-                UIScreen.main.brightness = value
+                mainWindowScreen.brightness = value
                 
                 if t >= 1.0 {
                     self.brightnessArguments = nil
@@ -485,7 +485,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             
             if let initialBrightness = self.initialBrightness {
                 self.initialBrightness = nil
-                self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
+                self.brightnessArguments = (CACurrentMediaTime(), 0.2, mainWindowScreen.brightness, initialBrightness)
                 self.animateBrightnessChange()
             }
         }
@@ -500,7 +500,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         func cancelVideoRecording() {
             if let initialBrightness = self.initialBrightness {
                 self.initialBrightness = nil
-                self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
+                self.brightnessArguments = (CACurrentMediaTime(), 0.2, mainWindowScreen.brightness, initialBrightness)
                 self.animateBrightnessChange()
             }
         }
@@ -1541,22 +1541,27 @@ public class VideoMessageCameraScreen: ViewController {
             transition.setBounds(view: self.containerView, bounds: CGRect(origin: .zero, size: backgroundFrame.size))
                         
             let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0)
-            let previewSide = min(369.0, layout.size.width - 24.0)
+            // iPhone Duo: the circle keeps to the band beside the side strip (folded portrait: clear of the status
+            // corner at the strip's top). Equal insets keep it centred on the full width.
+            let previewBandInsets: (left: CGFloat, right: CGFloat) = layout.safeInsets.left != layout.safeInsets.right ? (layout.safeInsets.left, layout.safeInsets.right) : (0.0, 0.0)
+            let previewBandWidth = layout.size.width - previewBandInsets.left - previewBandInsets.right
+            let previewSide = min(369.0, previewBandWidth - 24.0)
             let previewFrame: CGRect
             if layout.metrics.isTablet {
                 // Use the scene this view actually lives in; `connectedScenes` is unordered and a
                 // tablet can have several window scenes.
                 let statusBarOrientation = self.containerView.window?.windowScene?.interfaceOrientation ?? .portrait
                 
+                // The side the circle sits at keeps that side's strip inset too (iPhone Duo's unfolded screen in landscape).
                 if statusBarOrientation == .landscapeLeft {
-                    previewFrame = CGRect(origin: CGPoint(x: layout.size.width - 44.0 - previewSide, y: floorToScreenPixels((layout.size.height - previewSide) / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                    previewFrame = CGRect(origin: CGPoint(x: layout.size.width - previewBandInsets.right - 44.0 - previewSide, y: floorToScreenPixels((layout.size.height - previewSide) / 2.0)), size: CGSize(width: previewSide, height: previewSide))
                 } else if statusBarOrientation == .landscapeRight {
-                    previewFrame = CGRect(origin: CGPoint(x: 44.0, y: floorToScreenPixels((layout.size.height - previewSide) / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                    previewFrame = CGRect(origin: CGPoint(x: previewBandInsets.left + 44.0, y: floorToScreenPixels((layout.size.height - previewSide) / 2.0)), size: CGSize(width: previewSide, height: previewSide))
                 } else {
                     previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.2 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
                 }
             } else {
-                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                previewFrame = CGRect(origin: CGPoint(x: previewBandInsets.left + floorToScreenPixels((previewBandWidth - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
             }
             if !self.animatingIn {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)

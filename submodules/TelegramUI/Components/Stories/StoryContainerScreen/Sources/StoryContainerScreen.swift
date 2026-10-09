@@ -1600,8 +1600,16 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         
                         var itemSetContainerSize = availableSize
+                        // iPhone Duo unfolded portrait: the story starts at the compact status height, its header beside
+                        // the status island with the right controls clear of it (headerTrailingInset).
                         var itemSetContainerInsets = UIEdgeInsets(top: environment.statusBarHeight + 5.0, left: 0.0, bottom: 0.0, right: 0.0)
+                        if environment.navigationBarTrailingButtonsInset > 0.0 {
+                            // The header row (avatar, sound, more, close) is centred ~33pt below the card's top: put it on
+                            // the island's clock line (compact status height + 31), as the other rows beside it are.
+                            itemSetContainerInsets.top = environment.statusBarHeight + 31.0 - 33.0
+                        }
                         var itemSetContainerSafeInsets = environment.safeInsets
+                        var itemSetContainerOriginX: CGFloat?
                         if case .regular = environment.metrics.widthClass {
                             let availableHeight = min(1080.0, availableSize.height - max(45.0, environment.safeInsets.bottom) * 2.0)
                             let mediaHeight = availableHeight - 60.0
@@ -1614,6 +1622,18 @@ private final class StoryContainerScreenComponent: Component {
                             presentationContextInsets.left =  floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0)
                             presentationContextInsets.right = presentationContextInsets.left
                             presentationContextInsets.bottom = itemSetContainerInsets.bottom
+                        } else if environment.safeInsets.left != environment.safeInsets.right {
+                            // iPhone Duo: one side's safe inset is the side strip, whose top corner holds the status
+                            // corner. The story (and its close, more and sound buttons) is laid out in the band beside
+                            // it. Equal insets (every phone in portrait) keep the full-width story.
+                            itemSetContainerSize.width = availableSize.width - environment.safeInsets.left - environment.safeInsets.right
+                            itemSetContainerSafeInsets.left = 0.0
+                            itemSetContainerSafeInsets.right = 0.0
+                            itemSetContainerOriginX = environment.safeInsets.left
+
+                            // Toasts and tooltips presented over the story keep to the same band.
+                            presentationContextInsets.left = environment.safeInsets.left
+                            presentationContextInsets.right = environment.safeInsets.right
                         }
                         
                         itemSetView.view.parentState = self.state
@@ -1631,6 +1651,7 @@ private final class StoryContainerScreenComponent: Component {
                                 containerInsets: itemSetContainerInsets,
                                 safeInsets: itemSetContainerSafeInsets,
                                 statusBarHeight: environment.statusBarHeight,
+                                headerTrailingInset: environment.navigationBarTrailingButtonsInset,
                                 inputHeight: environment.inputHeight,
                                 metrics: environment.metrics,
                                 deviceMetrics: environment.deviceMetrics,
@@ -1809,7 +1830,7 @@ private final class StoryContainerScreenComponent: Component {
                             centerDismissFraction = itemSetView.externalState.dismissFraction
                         }
                         
-                        let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)), size: itemSetContainerSize)
+                        let itemFrame = CGRect(origin: CGPoint(x: itemSetContainerOriginX ?? floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)), size: itemSetContainerSize)
                         if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             if itemSetView.superview == nil {
                                 self.addSubview(itemSetView)
@@ -1967,6 +1988,9 @@ private final class StoryContainerScreenComponent: Component {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: environment.statusBarHeight + 54.0, left: 0.0, bottom: contentDerivedBottomInset + presentationContextInsets.bottom, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: presentationContextInsets.left, bottom: 0.0, right: presentationContextInsets.right),
+                    // iPhone Duo: the status corner, for what is presented over the story; `.none` elsewhere.
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: UIEdgeInsets(),
                     statusBarHeight: nil,
                     inputHeight: nil,

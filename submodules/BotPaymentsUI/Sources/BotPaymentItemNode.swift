@@ -41,7 +41,8 @@ class BotPaymentItemNode: ASDisplayNode {
         return 0.0
     }
     
-    final func updateLayout(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, previousItemNode: BotPaymentItemNode?, nextItemNode: BotPaymentItemNode?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    /// `sideInset` is the left margin, `rightSideInset` the right one (they differ beside iPhone Duo's side strip).
+    final func updateLayout(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, rightSideInset: CGFloat, measuredInset: CGFloat, previousItemNode: BotPaymentItemNode?, nextItemNode: BotPaymentItemNode?, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
             self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
@@ -49,7 +50,7 @@ class BotPaymentItemNode: ASDisplayNode {
             self.bottomSeparatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
         }
         
-        let height = self.layoutContents(theme: theme, width: width, sideInset: sideInset, measuredInset: measuredInset, transition: transition)
+        let height = self.layoutContents(theme: theme, width: width, sideInset: sideInset, rightSideInset: rightSideInset, measuredInset: measuredInset, transition: transition)
         
         var topSeparatorInset: CGFloat = 0.0
             
@@ -77,15 +78,15 @@ class BotPaymentItemNode: ASDisplayNode {
         self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: height)))
-        transition.updateFrame(node: self.maskNode, frame: self.backgroundNode.frame.insetBy(dx: sideInset, dy: 0.0))
+        transition.updateFrame(node: self.maskNode, frame: self.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: sideInset, bottom: 0.0, right: rightSideInset)))
         
-        transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: topSeparatorInset + sideInset, y: 0.0), size: CGSize(width: width - topSeparatorInset - sideInset - sideInset, height: UIScreenPixel)))
-        transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset - sideInset, height: UIScreenPixel)))
+        transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: topSeparatorInset + sideInset, y: 0.0), size: CGSize(width: width - topSeparatorInset - sideInset - rightSideInset, height: UIScreenPixel)))
+        transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset - rightSideInset, height: UIScreenPixel)))
         
         return height
     }
     
-    func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, rightSideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         return 0.0
     }
 }

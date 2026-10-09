@@ -26,6 +26,7 @@ import LottieComponent
 import UndoUI
 import WalletContext
 import WalletSendScreen
+import SideColumnLayout
 
 public enum WalletPeerSelectionScreenMode: Equatable {
     case transfer
@@ -48,7 +49,7 @@ private final class WalletPeerSelectionClearRecentSource: ContextReferenceConten
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: .bottom)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: .bottom)
     }
 }
 
@@ -1204,6 +1205,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
             size: CGSize,
             insets: UIEdgeInsets,
             statusBarHeight: CGFloat,
+            trailingButtonsInset: CGFloat,
             isModal: Bool,
             transition: ComponentTransition,
             deferScrollApplication: Bool
@@ -1241,6 +1243,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                     statusBarHeight: statusBarHeight,
                     leftInset: insets.left,
                     rightInset: insets.right,
+                    trailingButtonsInset: trailingButtonsInset,
                     search: ChatListNavigationBar.Search(
                         isEnabled: true,
                         placeholder: strings.Wallet_Recipient_Placeholder,
@@ -1272,7 +1275,9 @@ private final class WalletPeerSelectionScreenComponent: Component {
                     openStatusSetup: { _ in
                     },
                     allowAutomaticOrder: {
-                    }
+                    },
+                    // iPhone Duo: the back and icon buttons go into the side strip, as the chat list's do.
+                    sideColumn: pushedScreenSideColumnRegion(layout: self.environment?.controller()?.currentlyAppliedLayout)
                 )),
                 environment: {},
                 containerSize: size
@@ -1416,6 +1421,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                 size: availableSize,
                 insets: environment.safeInsets,
                 statusBarHeight: statusBarHeight,
+                trailingButtonsInset: environment.navigationBarTrailingButtonsInset,
                 isModal: isModal,
                 transition: transition,
                 deferScrollApplication: true
@@ -1545,7 +1551,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                 searchBarNode.activity = self.isSearching
                 let searchBarFrame = CGRect(
                     origin: CGPoint(x: 0.0, y: environment.statusBarHeight + 16.0),
-                    size: CGSize(width: availableSize.width, height: 54.0)
+                    size: CGSize(width: availableSize.width - environment.navigationBarTrailingButtonsInset, height: 54.0)
                 )
                 searchBarNode.updateThemeAndStrings(
                     theme: SearchBarNodeTheme(theme: environment.theme, hasSeparator: false),
@@ -1816,6 +1822,10 @@ private final class WalletPeerSelectionScreenComponent: Component {
                 let animationHeight: CGFloat = displaysEmptyRecentPeers ? 120.0 : 148.0
                 let animationSpacing: CGFloat = 8.0
                 let textSpacing: CGFloat = displaysEmptyRecentPeers ? 0.0 : 8.0
+                // The empty state wraps and centres in the band between the side insets when they differ (iPhone Duo's
+                // side strip), as the list does; equal insets keep the full width.
+                let emptyResultsBandMinX: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? environment.safeInsets.left : 0.0
+                let emptyResultsBandWidth: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? availableSize.width - environment.safeInsets.left - environment.safeInsets.right : availableSize.width
 
                 let emptyResultsTitleSize: CGSize
                 if displaysEmptyRecentPeers {
@@ -1833,7 +1843,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                             horizontalAlignment: .center
                         )),
                         environment: {},
-                        containerSize: availableSize
+                        containerSize: CGSize(width: emptyResultsBandWidth, height: availableSize.height)
                     )
                 }
 
@@ -1850,7 +1860,7 @@ private final class WalletPeerSelectionScreenComponent: Component {
                     )),
                     environment: {},
                     containerSize: CGSize(
-                        width: max(1.0, availableSize.width - sideInset * 2.0),
+                        width: max(1.0, emptyResultsBandWidth - sideInset * 2.0),
                         height: availableSize.height
                     )
                 )
@@ -1879,19 +1889,19 @@ private final class WalletPeerSelectionScreenComponent: Component {
                     (availableSize.height - topInset - bottomInset - emptyResultsHeight) * 0.5
                 )
                 let emptyResultsAnimationFrame = CGRect(
-                    x: floorToScreenPixels((availableSize.width - emptyResultsAnimationSize.width) * 0.5),
+                    x: emptyResultsBandMinX + floorToScreenPixels((emptyResultsBandWidth - emptyResultsAnimationSize.width) * 0.5),
                     y: animationY,
                     width: emptyResultsAnimationSize.width,
                     height: emptyResultsAnimationSize.height
                 )
                 let emptyResultsTitleFrame = CGRect(
-                    x: floorToScreenPixels((availableSize.width - emptyResultsTitleSize.width) * 0.5),
+                    x: emptyResultsBandMinX + floorToScreenPixels((emptyResultsBandWidth - emptyResultsTitleSize.width) * 0.5),
                     y: emptyResultsAnimationFrame.maxY + animationSpacing,
                     width: emptyResultsTitleSize.width,
                     height: emptyResultsTitleSize.height
                 )
                 let emptyResultsTextFrame = CGRect(
-                    x: floorToScreenPixels((availableSize.width - emptyResultsTextSize.width) * 0.5),
+                    x: emptyResultsBandMinX + floorToScreenPixels((emptyResultsBandWidth - emptyResultsTextSize.width) * 0.5),
                     y: emptyResultsTitleFrame.maxY + textSpacing,
                     width: emptyResultsTextSize.width,
                     height: emptyResultsTextSize.height

@@ -145,6 +145,20 @@ public enum NavigationBarGlassStyle {
     case clear
 }
 
+/// What the bar shows on the left when the screen has no left button: back to the previous screen, or close
+/// for the first screen of a modal stack.
+public enum NavigationSideColumnButtonKind: Equatable {
+    case back
+    case close
+}
+
+/// iPhone Duo: the bar's back or close button drawn as a circle in the side strip, hosted by the controller
+/// outside the bar (docs/iphone-duo-layout.md).
+public protocol NavigationSideColumnButtonNode: ASDisplayNode {
+    var pressed: (() -> Void)? { get set }
+    func update(kind: NavigationSideColumnButtonKind, size: CGSize, transition: ContainedViewLayoutTransition)
+}
+
 public protocol NavigationBar: ASDisplayNode {
     typealias Style = NavigationBarStyle
     typealias GlassStyle = NavigationBarGlassStyle
@@ -170,7 +184,26 @@ public protocol NavigationBar: ASDisplayNode {
     var layoutSuspended: Bool { get set }
     
     var enableAutomaticBackButton: Bool { get set }
+    /// Hides the back or close button without forgetting the previous item (unlike
+    /// `enableAutomaticBackButton`), for a screen that draws its own (iPhone Duo's chat side column).
+    var hidesBackButton: Bool { get set }
     var previousItem: NavigationPreviousAction? { get set }
+    
+    /// iPhone Duo: the back or close button the bar would show in its top row, or nil when it shows a left
+    /// item, has no previous item, or `hidesBackButton` is set (a screen that draws its own column).
+    /// Independent of `displaysNavigationButtonInSideColumn`.
+    var navigationButtonForSideColumn: NavigationSideColumnButtonKind? { get }
+    /// iPhone Duo: hides the top row's back or close button because the controller shows it in the side
+    /// strip. Owned by `ViewController`, separate from `hidesBackButton`.
+    var displaysNavigationButtonInSideColumn: Bool { get set }
+    /// Called when `navigationButtonForSideColumn` may have changed.
+    var navigationButtonForSideColumnUpdated: (() -> Void)? { get set }
+    /// A node drawing the back or close button for the side strip, in the bar's style.
+    func makeSideColumnNavigationButtonNode() -> NavigationSideColumnButtonNode
+    /// iPhone Duo: how much further than the right inset the bar's trailing buttons stay from the right edge, to
+    /// clear the status island beside the bar (`ContainerViewLayout.navigationBarTrailingButtonsInset`). Set before
+    /// `updateLayout`; the title keeps its band.
+    var trailingButtonsInset: CGFloat { get set }
     
     var backgroundNode: NavigationBackgroundNode { get }
     var backButtonNode: NavigationButtonNode { get }

@@ -20,6 +20,7 @@ import MultilineTextComponent
 import ItemListPeerActionItem
 import ComponentDisplayAdapters
 import AppBundle
+import SideColumnLayout
 
 final class PeerSelectionScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -426,6 +427,7 @@ final class PeerSelectionScreenComponent: Component {
             size: CGSize,
             insets: UIEdgeInsets,
             statusBarHeight: CGFloat,
+            trailingButtonsInset: CGFloat,
             isModal: Bool,
             transition: ComponentTransition,
             deferScrollApplication: Bool
@@ -487,6 +489,7 @@ final class PeerSelectionScreenComponent: Component {
                     statusBarHeight: statusBarHeight,
                     leftInset: insets.left,
                     rightInset: insets.right,
+                    trailingButtonsInset: trailingButtonsInset,
                     search: ChatListNavigationBar.Search(isEnabled: true),
                     activeSearch: self.isSearchDisplayControllerActive,
                     primaryContent: headerContent,
@@ -511,7 +514,9 @@ final class PeerSelectionScreenComponent: Component {
                     openStatusSetup: { _ in
                     },
                     allowAutomaticOrder: {
-                    }
+                    },
+                    // iPhone Duo: the back and icon buttons go into the side strip, as the chat list's do.
+                    sideColumn: pushedScreenSideColumnRegion(layout: self.environment?.controller()?.currentlyAppliedLayout)
                 )),
                 environment: {},
                 containerSize: size
@@ -631,6 +636,7 @@ final class PeerSelectionScreenComponent: Component {
                 size: availableSize,
                 insets: environment.safeInsets,
                 statusBarHeight: statusBarHeight,
+                trailingButtonsInset: environment.navigationBarTrailingButtonsInset,
                 isModal: isModal,
                 transition: transition,
                 deferScrollApplication: true

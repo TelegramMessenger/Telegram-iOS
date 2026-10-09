@@ -861,10 +861,14 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         contentSize.height = self.contentTopInset + self.currentContentHeight
         
         let sideInset: CGFloat
+        // The right side's own inset (iPhone Duo's side strip makes them differ); equal insets give `sideInset`.
+        let rightSideInset: CGFloat
         if self.forceTailToRight {
             sideInset = insets.left
+            rightSideInset = insets.right
         } else {
             sideInset = 11.0 + insets.left
+            rightSideInset = 11.0 + insets.right
         }
         let backgroundOffset: CGPoint = CGPoint(x: 22.0, y: -7.0)
         
@@ -882,18 +886,18 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         }
         rect.origin.x = max(sideInset, rect.origin.x)
         rect.origin.y = max(insets.top + sideInset, rect.origin.y)
-        rect.origin.x = min(containerSize.width - contentSize.width - sideInset, rect.origin.x)
+        rect.origin.x = min(containerSize.width - contentSize.width - rightSideInset, rect.origin.x)
         
-        let rightEdge = containerSize.width - sideInset
+        let rightEdge = containerSize.width - rightSideInset
         if rect.maxX > rightEdge {
-            rect.origin.x = containerSize.width - sideInset - rect.width
+            rect.origin.x = containerSize.width - rightSideInset - rect.width
         }
         if rect.minX < sideInset {
             rect.origin.x = sideInset
         }
         
         if centerAligned {
-            rect.origin.x = floor((containerSize.width - rect.width) / 2.0)
+            rect.origin.x = insets.left + floor((containerSize.width - insets.left - insets.right - rect.width) / 2.0)
         }
         
         let cloudSourcePoint: CGFloat

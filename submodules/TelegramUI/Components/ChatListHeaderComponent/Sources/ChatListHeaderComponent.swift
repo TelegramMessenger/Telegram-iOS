@@ -10,6 +10,7 @@ import StoryPeerListComponent
 import TelegramCore
 import MoreHeaderButton
 import GlassBackgroundComponent
+import SideColumnLayout
 
 public final class HeaderNetworkStatusComponent: Component {
     public enum Content: Equatable {
@@ -73,6 +74,49 @@ public final class HeaderNetworkStatusComponent: Component {
 }
 
 public final class ChatListHeaderComponent: Component {
+    /// iPhone Duo: how a button behaves in the side column. Its title also labels the button for
+    /// VoiceOver (Apple: always provide titles for icon items).
+    public struct OverflowInfo: Equatable {
+        public var title: String
+        public var iconName: String?
+        /// Higher overflows later; nil never overflows.
+        public var priority: Int?
+
+        public init(title: String, iconName: String?, priority: Int?) {
+            self.title = title
+            self.iconName = iconName
+            self.priority = priority
+        }
+    }
+
+    /// An item of the side column's "…" menu: a button that did not fit.
+    public struct OverflowItem {
+        public let id: AnyHashable
+        public let title: String
+        public let iconName: String?
+        /// The button's own action; it gets the "…" button as its source view.
+        public let action: (UIView) -> Void
+
+        public init(id: AnyHashable, title: String, iconName: String?, action: @escaping (UIView) -> Void) {
+            self.id = id
+            self.title = title
+            self.iconName = iconName
+            self.action = action
+        }
+    }
+
+    /// iPhone Duo: whether a navigation button goes into the side column. Icon buttons do; text
+    /// buttons stay in the row (Apple: text-only items stay horizontal).
+    static func isColumnItem(_ button: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>) -> Bool {
+        guard let navigationButton = button.component.wrapped as? NavigationButtonComponent else {
+            return false
+        }
+        if case .text = navigationButton.content {
+            return false
+        }
+        return true
+    }
+    
     public final class Content: Equatable {
         public let title: String
         public let navigationBackTitle: String?
@@ -81,6 +125,7 @@ public final class ChatListHeaderComponent: Component {
         public let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
         public let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>]
         public let backPressed: (() -> Void)?
+        public let overflowInfo: [AnyHashable: OverflowInfo]
         
         public init(
             title: String,
@@ -89,7 +134,8 @@ public final class ChatListHeaderComponent: Component {
             chatListTitle: NetworkStatusTitle?,
             leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?,
             rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>],
-            backPressed: (() -> Void)?
+            backPressed: (() -> Void)?,
+            overflowInfo: [AnyHashable: OverflowInfo] = [:]
         ) {
             self.title = title
             self.navigationBackTitle = navigationBackTitle
@@ -98,6 +144,7 @@ public final class ChatListHeaderComponent: Component {
             self.leftButton = leftButton
             self.rightButtons = rightButtons
             self.backPressed = backPressed
+            self.overflowInfo = overflowInfo
         }
         
         public static func ==(lhs: Content, rhs: Content) -> Bool {
@@ -122,6 +169,9 @@ public final class ChatListHeaderComponent: Component {
             if (lhs.backPressed == nil) != (rhs.backPressed == nil) {
                 return false
             }
+            if lhs.overflowInfo != rhs.overflowInfo {
+                return false
+            }
             return true
         }
     }
@@ -143,10 +193,19 @@ public final class ChatListHeaderComponent: Component {
     
     public let openStatusSetup: (UIView) -> Void
     public let toggleIsLocked: () -> Void
+    /// iPhone Duo: the side column's length (`SideColumnRegion.frame.height`); nil lays every
+    /// button out in the row.
+    public let sideColumnLength: CGFloat?
+    public let openSideColumnOverflow: ((UIView, [OverflowItem]) -> Void)?
+    /// iPhone Duo: how much further than `rightInset` the right buttons stay from the right edge, to clear the
+    /// status island beside the bar (`ContainerViewLayout.navigationBarTrailingButtonsInset`). The title keeps
+    /// centering on the bar.
+    public let trailingButtonsInset: CGFloat
     
     public init(
         leftInset: CGFloat,
         rightInset: CGFloat,
+        trailingButtonsInset: CGFloat = 0.0,
         primaryContent: Content?,
         secondaryContent: Content?,
         secondaryTransition: CGFloat,
@@ -160,10 +219,13 @@ public final class ChatListHeaderComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         openStatusSetup: @escaping (UIView) -> Void,
-        toggleIsLocked: @escaping () -> Void
+        toggleIsLocked: @escaping () -> Void,
+        sideColumnLength: CGFloat? = nil,
+        openSideColumnOverflow: ((UIView, [OverflowItem]) -> Void)? = nil
     ) {
         self.leftInset = leftInset
         self.rightInset = rightInset
+        self.trailingButtonsInset = trailingButtonsInset
         self.primaryContent = primaryContent
         self.secondaryContent = secondaryContent
         self.secondaryTransition = secondaryTransition
@@ -178,6 +240,8 @@ public final class ChatListHeaderComponent: Component {
         self.strings = strings
         self.openStatusSetup = openStatusSetup
         self.toggleIsLocked = toggleIsLocked
+        self.sideColumnLength = sideColumnLength
+        self.openSideColumnOverflow = openSideColumnOverflow
     }
     
     public static func ==(lhs: ChatListHeaderComponent, rhs: ChatListHeaderComponent) -> Bool {
@@ -185,6 +249,9 @@ public final class ChatListHeaderComponent: Component {
             return false
         }
         if lhs.rightInset != rhs.rightInset {
+            return false
+        }
+        if lhs.trailingButtonsInset != rhs.trailingButtonsInset {
             return false
         }
         if lhs.primaryContent != rhs.primaryContent {
@@ -221,6 +288,9 @@ public final class ChatListHeaderComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.sideColumnLength != rhs.sideColumnLength {
             return false
         }
         return true
@@ -307,6 +377,13 @@ public final class ChatListHeaderComponent: Component {
         let rightButtonsContainer: UIView
         var rightButtonViews: [AnyHashable: ComponentView<NavigationButtonComponentEnvironment>] = [:]
         var backButtonView: BackButtonView?
+        /// iPhone Duo: this content's part of the side column; the header view hosts them.
+        let columnBackContainer: UIView
+        let columnButtonsContainer: UIView
+        private(set) var columnLayout: SideColumnItemsLayout?
+        private var overflowButtonView: ComponentView<NavigationButtonComponentEnvironment>?
+        private var overflowItems: [OverflowItem] = []
+        private var openOverflow: ((UIView, [OverflowItem]) -> Void)?
         
         let titleOffsetContainer: UIView
         let titleScaleContainer: UIView
@@ -326,10 +403,19 @@ public final class ChatListHeaderComponent: Component {
         private(set) var rightButtonsWidth: CGFloat = 0.0
         
         var leftButtonCount: Int {
-            return (self.backButtonView != nil ? 1 : 0) + self.leftButtonViews.count
+            var count = self.leftButtonViews.values.filter { $0.view?.superview === self.leftButtonsContainer }.count
+            if let backButtonView = self.backButtonView, backButtonView.superview === self.leftButtonsContainer {
+                count += 1
+            }
+            return count
         }
         var rightButtonCount: Int {
-            return self.rightButtonViews.count
+            return self.rightButtonViews.values.filter { $0.view?.superview === self.rightButtonsContainer }.count
+        }
+
+        /// Whether a button view is in the row (the side column is hit-tested by its host).
+        private func isInRow(_ view: UIView) -> Bool {
+            return view.superview === self.leftButtonsContainer || view.superview === self.rightButtonsContainer
         }
         
         init(
@@ -343,6 +429,8 @@ public final class ChatListHeaderComponent: Component {
             
             self.leftButtonsContainer = UIView()            
             self.rightButtonsContainer = UIView()
+            self.columnBackContainer = UIView()
+            self.columnButtonsContainer = UIView()
 
             self.titleOffsetContainer = UIView()
             self.titleScaleContainer = UIView()
@@ -362,18 +450,18 @@ public final class ChatListHeaderComponent: Component {
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if let backButtonView = self.backButtonView {
+            if let backButtonView = self.backButtonView, self.isInRow(backButtonView) {
                 if let result = backButtonView.hitTest(self.convert(point, to: backButtonView), with: event) {
                     return result
                 }
             }
             for (_, buttonView) in self.leftButtonViews {
-                if let view = buttonView.view, let result = view.hitTest(self.convert(point, to: view), with: event) {
+                if let view = buttonView.view, self.isInRow(view), let result = view.hitTest(self.convert(point, to: view), with: event) {
                     return result
                 }
             }
             for (_, buttonView) in self.rightButtonViews {
-                if let view = buttonView.view, let result = view.hitTest(self.convert(point, to: view), with: event) {
+                if let view = buttonView.view, self.isInRow(view), let result = view.hitTest(self.convert(point, to: view), with: event) {
                     return result
                 }
             }
@@ -405,9 +493,13 @@ public final class ChatListHeaderComponent: Component {
             alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: fraction * 10.0)
             alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
             alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: fraction * 10.0)
+            alphaTransition.setAlpha(view: self.columnBackContainer, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setAlpha(view: self.columnButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setBlur(layer: self.columnButtonsContainer.layer, radius: fraction * 10.0)
             
             if let backButtonView = self.backButtonView {
-                transition.setBounds(view: backButtonView, bounds: CGRect(origin: CGPoint(x: fraction * self.bounds.width * 0.5, y: 0.0), size: backButtonView.bounds.size), completion: { _ in
+                let offsetX: CGFloat = backButtonView.superview === self.leftButtonsContainer ? fraction * self.bounds.width * 0.5 : 0.0
+                transition.setBounds(view: backButtonView, bounds: CGRect(origin: CGPoint(x: offsetX, y: 0.0), size: backButtonView.bounds.size), completion: { _ in
                     completion()
                 })
             }
@@ -428,6 +520,9 @@ public final class ChatListHeaderComponent: Component {
 
             alphaTransition.setBlur(layer: self.leftButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
             alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
+            alphaTransition.setAlpha(view: self.columnBackContainer, alpha: pow(fraction, 2.0))
+            alphaTransition.setAlpha(view: self.columnButtonsContainer, alpha: pow(fraction, 2.0))
+            alphaTransition.setBlur(layer: self.columnButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
         }
         
         func updateNavigationTransitionAsPreviousInplace(nextView: ContentView, fraction: CGFloat, transition: ComponentTransition, completion: @escaping () -> Void) {
@@ -439,6 +534,9 @@ public final class ChatListHeaderComponent: Component {
                 completion()
             })
             alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: fraction * 10.0)
+            alphaTransition.setAlpha(view: self.columnBackContainer, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setAlpha(view: self.columnButtonsContainer, alpha: pow(1.0 - fraction, 2.0))
+            alphaTransition.setBlur(layer: self.columnButtonsContainer.layer, radius: fraction * 10.0)
             
             transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: self.titleOffsetContainer.bounds.size))
             transition.setAlpha(view: self.titleOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
@@ -454,13 +552,60 @@ public final class ChatListHeaderComponent: Component {
             alphaTransition.setAlpha(view: self.leftButtonsContainer, alpha: pow(fraction, 2.0))
             alphaTransition.setBlur(layer: self.rightButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
             alphaTransition.setAlpha(view: self.rightButtonsContainer, alpha: pow(fraction, 2.0))
+            alphaTransition.setAlpha(view: self.columnBackContainer, alpha: pow(fraction, 2.0))
+            alphaTransition.setAlpha(view: self.columnButtonsContainer, alpha: pow(fraction, 2.0))
+            alphaTransition.setBlur(layer: self.columnButtonsContainer.layer, radius: (1.0 - fraction) * 10.0)
         }
         
         func openEmojiStatusSetup() {
             self.chatListTitleView?.openEmojiStatusSetup()
         }
         
-        func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: Content, displayBackButton: Bool, leftInset: CGFloat, rightInset: CGFloat, sideContentWidth: CGFloat, sideContentFraction: CGFloat, size: CGSize, transition: ComponentTransition) {
+        /// Updates the view of `button` and puts it into `container` at `frame(size)`; returns its size.
+        /// A view moving between the row and the side column (folding, unfolding) is placed without
+        /// animation, so it never flies across the screen.
+        private func updateButtonView(_ button: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>, isLeft: Bool, container: UIView, accessibilityLabel: String?, theme: PresentationTheme, availableHeight: CGFloat, transition: ComponentTransition, alphaTransition: ComponentTransition, frame: (CGSize) -> CGRect) -> CGSize {
+            var buttonTransition = transition
+            var animateButtonIn = false
+            let buttonView: ComponentView<NavigationButtonComponentEnvironment>
+            if let current = isLeft ? self.leftButtonViews[button.id] : self.rightButtonViews[button.id] {
+                buttonView = current
+            } else {
+                buttonTransition = .immediate
+                animateButtonIn = true
+                buttonView = ComponentView<NavigationButtonComponentEnvironment>()
+                if isLeft {
+                    self.leftButtonViews[button.id] = buttonView
+                } else {
+                    self.rightButtonViews[button.id] = buttonView
+                }
+            }
+            let buttonSize = buttonView.update(
+                transition: buttonTransition,
+                component: button.component,
+                environment: {
+                    NavigationButtonComponentEnvironment(theme: theme)
+                },
+                containerSize: CGSize(width: 100.0, height: availableHeight)
+            )
+            if let buttonComponentView = buttonView.view {
+                if buttonComponentView.superview !== container {
+                    buttonTransition = .immediate
+                    container.addSubview(buttonComponentView)
+                }
+                if let accessibilityLabel {
+                    buttonComponentView.accessibilityLabel = accessibilityLabel
+                }
+                buttonTransition.setFrame(view: buttonComponentView, frame: frame(buttonSize))
+                if animateButtonIn {
+                    alphaTransition.animateBlur(layer: buttonComponentView.layer, fromRadius: 10.0, toRadius: 0.0)
+                    alphaTransition.animateAlpha(view: buttonComponentView, from: 0.0, to: 1.0)
+                }
+            }
+            return buttonSize
+        }
+        
+        func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: Content, displayBackButton: Bool, leftInset: CGFloat, rightInset: CGFloat, sideContentWidth: CGFloat, sideContentFraction: CGFloat, size: CGSize, columnLength: CGFloat?, openOverflow: ((UIView, [OverflowItem]) -> Void)?, transition: ComponentTransition) {
             let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.3)
 
             transition.setPosition(view: self.titleOffsetContainer, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
@@ -476,6 +621,30 @@ public final class ChatListHeaderComponent: Component {
             let buttonSpacing: CGFloat = 0.0
             var nextLeftButtonX: CGFloat = 0.0
             
+            self.openOverflow = openOverflow
+            
+            // iPhone Duo: back and the icon buttons go into the side column (a left icon button
+            // first, then the right ones); text buttons stay in the row. Without a column, or when it
+            // cannot hold what must stay, every button is in the row as before.
+            var columnItems: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
+            var leftButtonInColumn = false
+            if columnLength != nil {
+                if let leftButton = content.leftButton, ChatListHeaderComponent.isColumnItem(leftButton) {
+                    columnItems.append(leftButton)
+                    leftButtonInColumn = true
+                }
+                columnItems.append(contentsOf: content.rightButtons.filter(ChatListHeaderComponent.isColumnItem))
+            }
+            let columnLayout: SideColumnItemsLayout? = columnLength.flatMap { columnLength in
+                return sideColumnItemsLayout(regionLength: columnLength, hasBack: displayBackButton, priorities: columnItems.map { content.overflowInfo[$0.id]?.priority })
+            }
+            self.columnLayout = columnLayout
+            if columnLayout == nil {
+                leftButtonInColumn = false
+            }
+            let rowLeftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>? = leftButtonInColumn ? nil : content.leftButton
+            let rowRightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = columnLayout != nil ? content.rightButtons.filter { !ChatListHeaderComponent.isColumnItem($0) } : content.rightButtons
+            
             if displayBackButton {
                 var backButtonTransition = transition
                 let backButtonView: BackButtonView
@@ -490,59 +659,125 @@ public final class ChatListHeaderComponent: Component {
                         self.backPressed()
                     })
                     self.backButtonView = backButtonView
-                    self.leftButtonsContainer.addSubview(backButtonView)
                 }
-                let backButtonSize = backButtonView.update(theme: theme, strings: strings, availableSize: CGSize(width: 100.0, height: size.height), transition: backButtonTransition)
-                backButtonTransition.setFrame(view: backButtonView, frame: CGRect(origin: CGPoint(x: nextLeftButtonX, y: floor((size.height - backButtonSize.height) / 2.0)), size: backButtonSize))
-                if nextLeftButtonX != 0.0 {
-                    nextLeftButtonX += buttonSpacing
+                let backContainer: UIView = columnLayout?.backFrame != nil ? self.columnBackContainer : self.leftButtonsContainer
+                if backButtonView.superview !== backContainer {
+                    backButtonTransition = .immediate
+                    backContainer.addSubview(backButtonView)
                 }
-                nextLeftButtonX += backButtonSize.width
+                if let backFrame = columnLayout?.backFrame {
+                    let backButtonSize = backButtonView.update(theme: theme, strings: strings, availableSize: backFrame.size, transition: backButtonTransition)
+                    backButtonTransition.setFrame(view: backButtonView, frame: CGRect(origin: CGPoint(x: floor((backFrame.width - backButtonSize.width) / 2.0), y: floor((backFrame.height - backButtonSize.height) / 2.0)), size: backButtonSize))
+                } else {
+                    let backButtonSize = backButtonView.update(theme: theme, strings: strings, availableSize: CGSize(width: 100.0, height: size.height), transition: backButtonTransition)
+                    backButtonTransition.setFrame(view: backButtonView, frame: CGRect(origin: CGPoint(x: nextLeftButtonX, y: floor((size.height - backButtonSize.height) / 2.0)), size: backButtonSize))
+                    if nextLeftButtonX != 0.0 {
+                        nextLeftButtonX += buttonSpacing
+                    }
+                    nextLeftButtonX += backButtonSize.width
+                }
             } else if let backButtonView = self.backButtonView {
                 self.backButtonView = nil
                 backButtonView.removeFromSuperview()
             }
             
             var validLeftButtons = Set<AnyHashable>()
-            if let leftButton = content.leftButton {
+            if let leftButton = rowLeftButton {
                 validLeftButtons.insert(leftButton.id)
-
                 if nextLeftButtonX != 0.0 {
                     nextLeftButtonX += buttonSpacing
                 }
-                
-                var buttonTransition = transition
-                var animateButtonIn = false
-                let buttonView: ComponentView<NavigationButtonComponentEnvironment>
-                if let current = self.leftButtonViews[leftButton.id] {
-                    buttonView = current
-                } else {
-                    buttonTransition = .immediate
-                    animateButtonIn = true
-                    buttonView = ComponentView<NavigationButtonComponentEnvironment>()
-                    self.leftButtonViews[leftButton.id] = buttonView
+                let originX = nextLeftButtonX
+                let buttonSize = self.updateButtonView(leftButton, isLeft: true, container: self.leftButtonsContainer, accessibilityLabel: content.overflowInfo[leftButton.id]?.title, theme: theme, availableHeight: size.height, transition: transition, alphaTransition: alphaTransition, frame: { buttonSize in
+                    return CGRect(origin: CGPoint(x: originX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+                })
+                nextLeftButtonX += buttonSize.width
+            }
+            
+            var nextRightButtonX: CGFloat = 0.0
+            var validRightButtons = Set<AnyHashable>()
+            for rightButton in rowRightButtons.reversed() {
+                validRightButtons.insert(rightButton.id)
+                if nextRightButtonX != 0.0 {
+                    nextRightButtonX += buttonSpacing
                 }
-                let buttonSize = buttonView.update(
-                    transition: buttonTransition,
-                    component: leftButton.component,
+                let originX = nextRightButtonX
+                let buttonSize = self.updateButtonView(rightButton, isLeft: false, container: self.rightButtonsContainer, accessibilityLabel: content.overflowInfo[rightButton.id]?.title, theme: theme, availableHeight: size.height, transition: transition, alphaTransition: alphaTransition, frame: { buttonSize in
+                    return CGRect(origin: CGPoint(x: originX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+                })
+                nextRightButtonX += buttonSize.width
+            }
+            
+            var overflowItems: [OverflowItem] = []
+            if let columnLayout {
+                for (cellIndex, itemIndex) in columnLayout.visibleItems.enumerated() {
+                    let item = columnItems[itemIndex]
+                    let isLeft = leftButtonInColumn && itemIndex == 0
+                    if isLeft {
+                        validLeftButtons.insert(item.id)
+                    } else {
+                        validRightButtons.insert(item.id)
+                    }
+                    let cellFrame = columnLayout.cellFrames[cellIndex]
+                    let _ = self.updateButtonView(item, isLeft: isLeft, container: self.columnButtonsContainer, accessibilityLabel: content.overflowInfo[item.id]?.title, theme: theme, availableHeight: cellFrame.height, transition: transition, alphaTransition: alphaTransition, frame: { buttonSize in
+                        return CGRect(origin: CGPoint(x: cellFrame.minX + floor((cellFrame.width - buttonSize.width) / 2.0), y: cellFrame.minY + floor((cellFrame.height - buttonSize.height) / 2.0)), size: buttonSize)
+                    })
+                }
+                for itemIndex in columnLayout.overflowItems {
+                    let item = columnItems[itemIndex]
+                    guard let navigationButton = item.component.wrapped as? NavigationButtonComponent else {
+                        continue
+                    }
+                    let info = content.overflowInfo[item.id]
+                    overflowItems.append(OverflowItem(id: item.id, title: info?.title ?? "", iconName: info?.iconName, action: navigationButton.pressed))
+                }
+            }
+            self.overflowItems = overflowItems
+            
+            if let columnLayout, !columnLayout.overflowItems.isEmpty, let cellFrame = columnLayout.cellFrames.last {
+                var overflowButtonTransition = transition
+                let overflowButtonView: ComponentView<NavigationButtonComponentEnvironment>
+                if let current = self.overflowButtonView {
+                    overflowButtonView = current
+                } else {
+                    overflowButtonTransition = .immediate
+                    overflowButtonView = ComponentView<NavigationButtonComponentEnvironment>()
+                    self.overflowButtonView = overflowButtonView
+                }
+                let overflowButtonSize = overflowButtonView.update(
+                    transition: overflowButtonTransition,
+                    component: AnyComponent(NavigationButtonComponent(
+                        content: .more,
+                        pressed: { [weak self] sourceView in
+                            guard let self else {
+                                return
+                            }
+                            self.openOverflow?(sourceView, self.overflowItems)
+                        }
+                    )),
                     environment: {
                         NavigationButtonComponentEnvironment(theme: theme)
                     },
-                    containerSize: CGSize(width: 100.0, height: size.height)
+                    containerSize: CGSize(width: 100.0, height: cellFrame.height)
                 )
-                let buttonFrame = CGRect(origin: CGPoint(x: nextLeftButtonX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
-                if let buttonComponentView = buttonView.view {
-                    if buttonComponentView.superview == nil {
-                        self.leftButtonsContainer.addSubview(buttonComponentView)
+                if let overflowButtonComponentView = overflowButtonView.view {
+                    if overflowButtonComponentView.superview !== self.columnButtonsContainer {
+                        overflowButtonTransition = .immediate
+                        self.columnButtonsContainer.addSubview(overflowButtonComponentView)
+                        alphaTransition.animateAlpha(view: overflowButtonComponentView, from: 0.0, to: 1.0)
                     }
-                    buttonTransition.setFrame(view: buttonComponentView, frame: buttonFrame)
-                    if animateButtonIn {
-                        alphaTransition.animateBlur(layer: buttonComponentView.layer, fromRadius: 10.0, toRadius: 0.0)
-                        alphaTransition.animateAlpha(view: buttonComponentView, from: 0.0, to: 1.0)
-                    }
+                    overflowButtonComponentView.accessibilityLabel = strings.Common_More
+                    overflowButtonTransition.setFrame(view: overflowButtonComponentView, frame: CGRect(origin: CGPoint(x: cellFrame.minX + floor((cellFrame.width - overflowButtonSize.width) / 2.0), y: cellFrame.minY + floor((cellFrame.height - overflowButtonSize.height) / 2.0)), size: overflowButtonSize))
                 }
-                nextLeftButtonX += buttonSize.width
+            } else if let overflowButtonView = self.overflowButtonView {
+                self.overflowButtonView = nil
+                if let overflowButtonComponentView = overflowButtonView.view {
+                    alphaTransition.setAlpha(view: overflowButtonComponentView, alpha: 0.0, completion: { [weak overflowButtonComponentView] _ in
+                        overflowButtonComponentView?.removeFromSuperview()
+                    })
+                }
             }
+            
             var removeLeftButtons: [AnyHashable] = []
             for (id, buttonView) in self.leftButtonViews {
                 if !validLeftButtons.contains(id) {
@@ -559,47 +794,6 @@ public final class ChatListHeaderComponent: Component {
                 self.leftButtonViews.removeValue(forKey: id)
             }
             
-            var nextRightButtonX: CGFloat = 0.0
-            var validRightButtons = Set<AnyHashable>()
-            for rightButton in content.rightButtons.reversed() {
-                validRightButtons.insert(rightButton.id)
-
-                if nextRightButtonX != 0.0 {
-                    nextRightButtonX += buttonSpacing
-                }
-                
-                var buttonTransition = transition
-                var animateButtonIn = false
-                let buttonView: ComponentView<NavigationButtonComponentEnvironment>
-                if let current = self.rightButtonViews[rightButton.id] {
-                    buttonView = current
-                } else {
-                    buttonTransition = .immediate
-                    animateButtonIn = true
-                    buttonView = ComponentView<NavigationButtonComponentEnvironment>()
-                    self.rightButtonViews[rightButton.id] = buttonView
-                }
-                let buttonSize = buttonView.update(
-                    transition: buttonTransition,
-                    component: rightButton.component,
-                    environment: {
-                        NavigationButtonComponentEnvironment(theme: theme)
-                    },
-                    containerSize: CGSize(width: 100.0, height: size.height)
-                )
-                let buttonFrame = CGRect(origin: CGPoint(x: nextRightButtonX, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize)
-                if let buttonComponentView = buttonView.view {
-                    if buttonComponentView.superview == nil {
-                        self.rightButtonsContainer.addSubview(buttonComponentView)
-                    }
-                    buttonTransition.setFrame(view: buttonComponentView, frame: buttonFrame)
-                    if animateButtonIn {
-                        alphaTransition.animateBlur(layer: buttonComponentView.layer, fromRadius: 10.0, toRadius: 0.0)
-                        alphaTransition.animateAlpha(view: buttonComponentView, from: 0.0, to: 1.0)
-                    }
-                }
-                nextRightButtonX += buttonSize.width
-            }
             var removeRightButtons: [AnyHashable] = []
             for (id, buttonView) in self.rightButtonViews {
                 if !validRightButtons.contains(id) {
@@ -744,6 +938,13 @@ public final class ChatListHeaderComponent: Component {
         private let rightButtonsContainer: UIView
         private var leftButtonsBackgroundContainer: GlassContextExtractableContainer?
         private var rightButtonsBackgroundContainer: GlassContextExtractableContainer?
+        /// iPhone Duo: the side column (back circle and capsule), laid out in its own bounds. The host
+        /// (`ChatListNavigationBar`) adds it to its hierarchy and sets its frame.
+        public let sideColumnView: UIView
+        private let columnBackContainer: UIView
+        private let columnButtonsContainer: UIView
+        private var columnBackBackgroundContainer: GlassContextExtractableContainer?
+        private var columnButtonsBackgroundContainer: GlassContextExtractableContainer?
         
         private let storyPeerListExternalState = StoryPeerListComponent.ExternalState()
         private var storyPeerList: ComponentView<Empty>?
@@ -759,6 +960,10 @@ public final class ChatListHeaderComponent: Component {
             self.leftButtonsContainer = UIView()
             self.rightButtonsContainer = UIView()
             self.rightButtonsContainer.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+            self.sideColumnView = SparseContainerView()
+            self.columnBackContainer = UIView()
+            self.columnButtonsContainer = UIView()
+            self.columnButtonsContainer.clipsToBounds = true
 
             super.init(frame: frame)
             
@@ -797,6 +1002,12 @@ public final class ChatListHeaderComponent: Component {
             }
             if let rightButtonsBackgroundContainer = self.rightButtonsBackgroundContainer, sourceView.isDescendant(of: rightButtonsBackgroundContainer) {
                 return rightButtonsBackgroundContainer
+            }
+            if let columnButtonsBackgroundContainer = self.columnButtonsBackgroundContainer, sourceView.isDescendant(of: columnButtonsBackgroundContainer) {
+                return columnButtonsBackgroundContainer
+            }
+            if let columnBackBackgroundContainer = self.columnBackBackgroundContainer, sourceView.isDescendant(of: columnBackBackgroundContainer) {
+                return columnBackBackgroundContainer
             }
             return nil
         }
@@ -890,6 +1101,8 @@ public final class ChatListHeaderComponent: Component {
                     self.addSubview(primaryContentView)
                     self.leftButtonsContainer.addSubview(primaryContentView.leftButtonsContainer)
                     self.rightButtonsContainer.addSubview(primaryContentView.rightButtonsContainer)
+                    self.columnBackContainer.addSubview(primaryContentView.columnBackContainer)
+                    self.columnButtonsContainer.addSubview(primaryContentView.columnButtonsContainer)
                 }
                 
                 let sideContentWidth: CGFloat = 0.0
@@ -902,11 +1115,12 @@ public final class ChatListHeaderComponent: Component {
                         chatListTitle: nil,
                         leftButton: primaryContent.leftButton,
                         rightButtons: primaryContent.rightButtons,
-                        backPressed: primaryContent.backPressed
+                        backPressed: primaryContent.backPressed,
+                        overflowInfo: primaryContent.overflowInfo
                     )
                 }
                 
-                primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, displayBackButton: primaryContent.backPressed != nil, leftInset: symmetricInset, rightInset: symmetricInset, sideContentWidth: sideContentWidth, sideContentFraction: (1.0 - component.storiesFraction), size: centeredContentFrame.size, transition: primaryContentTransition)
+                primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, displayBackButton: primaryContent.backPressed != nil, leftInset: symmetricInset, rightInset: symmetricInset + component.trailingButtonsInset, sideContentWidth: sideContentWidth, sideContentFraction: (1.0 - component.storiesFraction), size: centeredContentFrame.size, columnLength: component.sideColumnLength, openOverflow: component.openSideColumnOverflow, transition: primaryContentTransition)
                 primaryContentTransition.setFrame(view: primaryContentView, frame: centeredContentFrame)
                 
                 primaryContentView.updateContentOffsetFraction(contentOffsetFraction: 1.0 - self.storyOffsetFraction, transition: primaryContentTransition)
@@ -915,6 +1129,8 @@ public final class ChatListHeaderComponent: Component {
                 primaryContentView.removeFromSuperview()
                 primaryContentView.leftButtonsContainer.removeFromSuperview()
                 primaryContentView.rightButtonsContainer.removeFromSuperview()
+                primaryContentView.columnBackContainer.removeFromSuperview()
+                primaryContentView.columnButtonsContainer.removeFromSuperview()
             }
             
             var storyListTransition = transition
@@ -1044,8 +1260,10 @@ public final class ChatListHeaderComponent: Component {
                     }
                     self.leftButtonsContainer.addSubview(secondaryContentView.leftButtonsContainer)
                     self.rightButtonsContainer.addSubview(secondaryContentView.rightButtonsContainer)
+                    self.columnBackContainer.addSubview(secondaryContentView.columnBackContainer)
+                    self.columnButtonsContainer.addSubview(secondaryContentView.columnButtonsContainer)
                 }
-                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, displayBackButton: true, leftInset: symmetricInset, rightInset: symmetricInset, sideContentWidth: 0.0, sideContentFraction: 0.0, size: centeredContentFrame.size, transition: secondaryContentTransition)
+                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, displayBackButton: true, leftInset: symmetricInset, rightInset: symmetricInset + component.trailingButtonsInset, sideContentWidth: 0.0, sideContentFraction: 0.0, size: centeredContentFrame.size, columnLength: component.sideColumnLength, openOverflow: component.openSideColumnOverflow, transition: secondaryContentTransition)
                 secondaryContentTransition.setFrame(view: secondaryContentView, frame: centeredContentFrame)
                 
                 secondaryContentView.updateContentOffsetFraction(contentOffsetFraction: 1.0 - self.storyOffsetFraction, transition: secondaryContentTransition)
@@ -1079,6 +1297,8 @@ public final class ChatListHeaderComponent: Component {
                         secondaryContentView.updateNavigationTransitionAsNextInplace(previousView: primaryContentView, fraction: 0.0, transition: transition, completion: { [weak secondaryContentView] in
                             secondaryContentView?.leftButtonsContainer.removeFromSuperview()
                             secondaryContentView?.rightButtonsContainer.removeFromSuperview()
+                            secondaryContentView?.columnBackContainer.removeFromSuperview()
+                            secondaryContentView?.columnButtonsContainer.removeFromSuperview()
                             secondaryContentView?.removeFromSuperview()
                         })
                     } else {
@@ -1086,12 +1306,16 @@ public final class ChatListHeaderComponent: Component {
                         secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, storyPeerListView: self.storyPeerListView(), fraction: 0.0, transition: transition, completion: { [weak secondaryContentView] in
                             secondaryContentView?.leftButtonsContainer.removeFromSuperview()
                             secondaryContentView?.rightButtonsContainer.removeFromSuperview()
+                            secondaryContentView?.columnBackContainer.removeFromSuperview()
+                            secondaryContentView?.columnButtonsContainer.removeFromSuperview()
                             secondaryContentView?.removeFromSuperview()
                         })
                     }
                 } else {
                     secondaryContentView.leftButtonsContainer.removeFromSuperview()
                     secondaryContentView.rightButtonsContainer.removeFromSuperview()
+                    secondaryContentView.columnBackContainer.removeFromSuperview()
+                    secondaryContentView.columnButtonsContainer.removeFromSuperview()
                     secondaryContentView.removeFromSuperview()
                 }
             }
@@ -1182,7 +1406,7 @@ public final class ChatListHeaderComponent: Component {
                 let rightButtonsBackgroundContainer: GlassContextExtractableContainer
                 var rightButtonsBackgroundContainerTransition = transition
                 
-                let rightButtonsContainerFrame = CGRect(origin: CGPoint(x: availableSize.width - component.rightInset - max(44.0, rightButtonsEffectiveWidth), y: 0.0), size: CGSize(width: max(44.0, rightButtonsEffectiveWidth), height: 44.0))
+                let rightButtonsContainerFrame = CGRect(origin: CGPoint(x: availableSize.width - component.rightInset - component.trailingButtonsInset - max(44.0, rightButtonsEffectiveWidth), y: 0.0), size: CGSize(width: max(44.0, rightButtonsEffectiveWidth), height: 44.0))
                 
                 if let current = self.rightButtonsBackgroundContainer {
                     rightButtonsBackgroundContainer = current
@@ -1210,7 +1434,102 @@ public final class ChatListHeaderComponent: Component {
                 }
             }
             
+            self.updateSideColumn(component: component, transition: transition)
+            
             return availableSize
+        }
+        
+        /// Lays out the side column from the contents' column layouts: crossfading contents (a forum
+        /// opening inline) interpolate the capsule and share the back circle by `secondaryTransition`.
+        private func updateSideColumn(component: ChatListHeaderComponent, transition: ComponentTransition) {
+            var contents: [(view: ContentView, weight: CGFloat)] = []
+            if let primaryContentView = self.primaryContentView {
+                contents.append((primaryContentView, self.secondaryContentView == nil ? 1.0 : 1.0 - component.secondaryTransition))
+            }
+            if let secondaryContentView = self.secondaryContentView {
+                contents.append((secondaryContentView, component.secondaryTransition))
+            }
+            
+            var backAlpha: CGFloat = 0.0
+            var capsuleAlpha: CGFloat = 0.0
+            var capsuleFrame: CGRect?
+            var columnBackFrame: CGRect?
+            for (contentView, weight) in contents {
+                guard let columnLayout = contentView.columnLayout else {
+                    continue
+                }
+                if let layoutBackFrame = columnLayout.backFrame {
+                    backAlpha += weight
+                    if columnBackFrame == nil {
+                        columnBackFrame = layoutBackFrame
+                    }
+                }
+                if let frame = columnLayout.capsuleFrame {
+                    capsuleAlpha += weight
+                    if let current = capsuleFrame {
+                        capsuleFrame = CGRect(x: frame.minX, y: current.minY * (1.0 - weight) + frame.minY * weight, width: frame.width, height: current.height * (1.0 - weight) + frame.height * weight)
+                    } else {
+                        capsuleFrame = frame
+                    }
+                }
+            }
+            let isDark = component.theme.overallDarkAppearance
+            
+            if backAlpha > 0.0, let backFrame = columnBackFrame {
+                var backTransition = transition
+                let backBackgroundContainer: GlassContextExtractableContainer
+                if let current = self.columnBackBackgroundContainer {
+                    backBackgroundContainer = current
+                } else {
+                    backTransition = backTransition.withAnimation(.none)
+                    backBackgroundContainer = GlassContextExtractableContainer()
+                    self.columnBackBackgroundContainer = backBackgroundContainer
+                    self.sideColumnView.addSubview(backBackgroundContainer)
+                    backBackgroundContainer.contentView.addSubview(self.columnBackContainer)
+                    backBackgroundContainer.alpha = 0.0
+                }
+                backTransition.setFrame(view: backBackgroundContainer, frame: backFrame)
+                backBackgroundContainer.update(size: backFrame.size, cornerRadius: backFrame.height * 0.5, isDark: isDark, tintColor: .init(kind: .panel), isInteractive: true, transition: backTransition)
+                backTransition.setFrame(view: self.columnBackContainer, frame: backFrame)
+                for (contentView, _) in contents {
+                    backTransition.setFrame(view: contentView.columnBackContainer, frame: backFrame)
+                }
+                transition.setAlpha(view: backBackgroundContainer, alpha: backAlpha)
+            } else if let backBackgroundContainer = self.columnBackBackgroundContainer {
+                self.columnBackBackgroundContainer = nil
+                transition.setAlpha(view: backBackgroundContainer, alpha: 0.0, completion: { [weak backBackgroundContainer] _ in
+                    backBackgroundContainer?.removeFromSuperview()
+                })
+            }
+            
+            if let capsuleFrame {
+                var capsuleTransition = transition
+                let capsuleBackgroundContainer: GlassContextExtractableContainer
+                if let current = self.columnButtonsBackgroundContainer {
+                    capsuleBackgroundContainer = current
+                } else {
+                    capsuleTransition = capsuleTransition.withAnimation(.none)
+                    capsuleBackgroundContainer = GlassContextExtractableContainer()
+                    self.columnButtonsBackgroundContainer = capsuleBackgroundContainer
+                    self.sideColumnView.addSubview(capsuleBackgroundContainer)
+                    capsuleBackgroundContainer.contentView.addSubview(self.columnButtonsContainer)
+                    capsuleBackgroundContainer.alpha = 0.0
+                }
+                capsuleTransition.setFrame(view: capsuleBackgroundContainer, frame: capsuleFrame)
+                capsuleBackgroundContainer.update(size: capsuleFrame.size, cornerRadius: capsuleFrame.width * 0.5, isDark: isDark, tintColor: .init(kind: .panel), isInteractive: true, transition: capsuleTransition)
+                capsuleBackgroundContainer.morphsIntoContextMenu = self.effectiveContentView?.columnLayout?.cellFrames.count == 1
+                capsuleTransition.setFrame(view: self.columnButtonsContainer, frame: CGRect(origin: CGPoint(), size: capsuleFrame.size))
+                for (contentView, _) in contents {
+                    let size = contentView.columnLayout?.capsuleFrame?.size ?? capsuleFrame.size
+                    capsuleTransition.setFrame(view: contentView.columnButtonsContainer, frame: CGRect(origin: CGPoint(), size: size))
+                }
+                transition.setAlpha(view: capsuleBackgroundContainer, alpha: capsuleAlpha)
+            } else if let capsuleBackgroundContainer = self.columnButtonsBackgroundContainer {
+                self.columnButtonsBackgroundContainer = nil
+                transition.setAlpha(view: capsuleBackgroundContainer, alpha: 0.0, completion: { [weak capsuleBackgroundContainer] _ in
+                    capsuleBackgroundContainer?.removeFromSuperview()
+                })
+            }
         }
         
         public func findTitleView() -> ChatListTitleView? {

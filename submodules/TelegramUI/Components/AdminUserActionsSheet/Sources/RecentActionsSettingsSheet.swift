@@ -790,7 +790,7 @@ private final class RecentActionsSettingsResizableSheetComponent: Component {
                         metrics: environmentValue.metrics,
                         deviceMetrics: environmentValue.deviceMetrics,
                         isDisplaying: environmentValue.isVisible,
-                        isCentered: environmentValue.metrics.widthClass == .regular,
+                        isCentered: environmentValue.presentsFloatingPanels,
                         screenSize: availableSize,
                         regularMetricsSize: nil,
                         dismiss: { animated in

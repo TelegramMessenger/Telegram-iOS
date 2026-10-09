@@ -250,7 +250,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight))))
-                        transition.updateFrame(node: strongSelf.maskNode, frame: strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0))
+                        transition.updateFrame(node: strongSelf.maskNode, frame: strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)))
                         transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight)))
                         transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight)))
                     }
@@ -294,7 +294,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                     datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) }
                    
                     let datePickerSize = CGSize(width: width, height: pickerHeight)
-                    datePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - datePickerSize.width) / 2.0), y: 4.0), size: datePickerSize)
+                    datePickerNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - datePickerSize.width) / 2.0), y: 4.0), size: datePickerSize)
                     datePickerNode.updateLayout(size: datePickerSize, transition: .immediate)
                     
                     transition.updateFrame(node: strongSelf.containerNode, frame: CGRect(origin: .zero, size: CGSize(width: params.width, height: contentSize.height)))

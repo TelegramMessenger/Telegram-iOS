@@ -350,7 +350,7 @@ private final class TimeSelectionControlComponent: Component {
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
     let bottomInset: CGFloat
-    let screenCornerRadius: CGFloat
+    let screenCornerRadii: CornerRadii
     let apply: (Int32) -> Void
     let cancel: () -> Void
     
@@ -359,7 +359,7 @@ private final class TimeSelectionControlComponent: Component {
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
         bottomInset: CGFloat,
-        screenCornerRadius: CGFloat,
+        screenCornerRadii: CornerRadii,
         apply: @escaping (Int32) -> Void,
         cancel: @escaping () -> Void
     ) {
@@ -367,7 +367,7 @@ private final class TimeSelectionControlComponent: Component {
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.bottomInset = bottomInset
-        self.screenCornerRadius = screenCornerRadius
+        self.screenCornerRadii = screenCornerRadii
         self.apply = apply
         self.cancel = cancel
     }
@@ -400,7 +400,9 @@ private final class TimeSelectionControlComponent: Component {
             
             let glassInset: CGFloat = availableSize.width < availableSize.height ? 6.0 : 0.0
             let topCornerRadius: CGFloat = 38.0
-            let bottomCornerRadius: CGFloat = max(24.0, component.screenCornerRadius) - 2.0
+            let bottomCornerRadius: CGFloat = max(24.0, max(component.screenCornerRadii.bottomLeft, component.screenCornerRadii.bottomRight)) - 2.0
+            // iPhone Duo's cover screen: each bottom corner follows its own screen corner (nil where they are uniform).
+            let bottomCornerRadii = component.screenCornerRadii.sheetBottomCornerRadii(inset: 2.0)
 
             self.contentView.parentState = state
             let contentSize = self.contentView.update(
@@ -446,6 +448,7 @@ private final class TimeSelectionControlComponent: Component {
                 color: component.theme.actionSheet.opaqueItemBackgroundColor,
                 topCornerRadius: topCornerRadius,
                 bottomCornerRadius: bottomCornerRadius,
+                bottomCornerRadii: bottomCornerRadii,
                 transition: transition
             )
             transition.setFrame(view: self.backgroundView, frame: panelFrame)
@@ -499,7 +502,7 @@ final class EmojiStatusPreviewScreenComponent: Component {
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
     let bottomInset: CGFloat
-    let screenCornerRadius: CGFloat
+    let screenCornerRadii: CornerRadii
     let item: EmojiStatusComponent
     let dismiss: (StatusResult?) -> Void
     
@@ -508,7 +511,7 @@ final class EmojiStatusPreviewScreenComponent: Component {
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
         bottomInset: CGFloat,
-        screenCornerRadius: CGFloat,
+        screenCornerRadii: CornerRadii,
         item: EmojiStatusComponent,
         dismiss: @escaping (StatusResult?) -> Void
     ) {
@@ -516,7 +519,7 @@ final class EmojiStatusPreviewScreenComponent: Component {
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.bottomInset = bottomInset
-        self.screenCornerRadius = screenCornerRadius
+        self.screenCornerRadii = screenCornerRadii
         self.item = item
         self.dismiss = dismiss
     }
@@ -534,7 +537,7 @@ final class EmojiStatusPreviewScreenComponent: Component {
         if lhs.bottomInset != rhs.bottomInset {
             return false
         }
-        if lhs.screenCornerRadius != rhs.screenCornerRadius {
+        if lhs.screenCornerRadii != rhs.screenCornerRadii {
             return false
         }
         if lhs.item != rhs.item {
@@ -652,7 +655,7 @@ final class EmojiStatusPreviewScreenComponent: Component {
                     strings: component.strings,
                     dateTimeFormat: component.dateTimeFormat,
                     bottomInset: component.bottomInset,
-                    screenCornerRadius: component.screenCornerRadius,
+                    screenCornerRadii: component.screenCornerRadii,
                     apply: { [weak self] timestamp in
                         guard let strongSelf = self, let component = strongSelf.component else {
                             return

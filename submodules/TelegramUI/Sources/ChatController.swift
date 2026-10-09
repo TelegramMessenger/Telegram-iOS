@@ -110,6 +110,7 @@ import ChatMessageItemCommon
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatNavigationButton
+import ChatSideColumnLayout
 import WebsiteType
 import PeerInfoScreen
 import MediaEditor
@@ -240,6 +241,11 @@ struct ScrolledToMessageId: Equatable {
 }
 
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {    
+    /// iPhone Duo: this screen lays out its own side column, back button included.
+    override public var placesNavigationButtonInSideColumn: Bool {
+        return false
+    }
+    
     var validLayout: ContainerViewLayout?
     
     public weak var parentController: ViewController?
@@ -8398,6 +8404,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
     var additionalNavigationBarHitTestSlop: CGFloat = 0.0
     var additionalNavigationBarCutout: CGSize?
+    /// iPhone Duo: the side strip the chat's column goes in and its bar sits beside (nil elsewhere).
+    var sideColumnStripEdge: ContainerViewLayoutSideEdge?
+    /// Set while `containerLayoutUpdated` updates the column, which it lays out right after.
+    var isUpdatingSideColumnInLayout = false
 
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.suspendNavigationBarLayout {
@@ -8430,6 +8440,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.validLayout = layout
         
+        // iPhone Duo: the column and the bar follow the side strip.
+        let sideColumnStripEdge = chatSideColumnStripEdge(layout)
+        self.isUpdatingSideColumnInLayout = true
+        defer {
+            self.isUpdatingSideColumnInLayout = false
+        }
+        if sideColumnStripEdge != self.sideColumnStripEdge {
+            self.sideColumnStripEdge = sideColumnStripEdge
+            self.navigationItem.setLeftBarButton(self.barLeftItem(), animated: false)
+            self.updateRightNavigationButtons(presentationInterfaceState: self.presentationInterfaceState, transition: .immediate)
+        } else {
+            // The previous item (back or close) is set by the navigation container around layout.
+            self.updateSideColumn()
+        }
+        
         switch self.presentationInterfaceState.mode {
         case .standard, .inline:
             break
@@ -8443,7 +8468,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         var layout = layout
-        if case .compact = layout.metrics.widthClass, let attachmentController = self.attachmentController, attachmentController.window != nil {
+        // Wherever the attachment menu is a phone sheet over the chat (also on iPhone Duo's regular-width unfolded screen),
+        // its keyboard belongs to the sheet.
+        if !layout.presentsFloatingPanels, let attachmentController = self.attachmentController, attachmentController.window != nil {
             layout = layout.withUpdatedInputHeight(nil)
         }
                 

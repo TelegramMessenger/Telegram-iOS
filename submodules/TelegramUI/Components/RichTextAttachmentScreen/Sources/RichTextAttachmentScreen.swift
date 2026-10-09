@@ -1768,12 +1768,31 @@ final class RichTextAttachmentScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: barButtonSize.height)
             )
-            let leftNavActionsBarFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: leftNavActionsBarSize)
+            // iPhone Duo: with a side strip the screen's own Close leaves the header row for the strip, centred where a
+            // standard bar's back or close goes. The strip reaches below the bar, so the button then stands above the bar
+            // in the screen's view (as the bar's own strip button does) rather than inside it.
+            let sideColumnButtonFrame = environment.sideColumnNavigationButtonFrame
+            let leftNavActionsBarFrame: CGRect
+            if let sideColumnButtonFrame {
+                leftNavActionsBarFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(sideColumnButtonFrame.midX - leftNavActionsBarSize.width * 0.5), y: floorToScreenPixels(sideColumnButtonFrame.midY - leftNavActionsBarSize.height * 0.5)), size: leftNavActionsBarSize)
+            } else {
+                leftNavActionsBarFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: 16.0), size: leftNavActionsBarSize)
+            }
             if let leftNavActionsBarView = self.leftNavActionsBar.view {
-                if leftNavActionsBarView.superview == nil {
+                var leftNavActionsBarTransition = transition
+                if sideColumnButtonFrame != nil, let navigationBarView = environment.controller()?.navigationBar?.view, let screenView = navigationBarView.superview {
+                    if leftNavActionsBarView.superview !== screenView {
+                        screenView.insertSubview(leftNavActionsBarView, aboveSubview: navigationBarView)
+                        leftNavActionsBarTransition = .immediate
+                    }
+                } else if leftNavActionsBarView.superview !== component.overNavigationContainer {
+                    let isMoving = leftNavActionsBarView.superview != nil
                     component.overNavigationContainer.addSubview(leftNavActionsBarView)
+                    if isMoving {
+                        leftNavActionsBarTransition = .immediate
+                    }
                 }
-                transition.setFrame(view: leftNavActionsBarView, frame: leftNavActionsBarFrame)
+                leftNavActionsBarTransition.setFrame(view: leftNavActionsBarView, frame: leftNavActionsBarFrame)
             }
             
             let rightNavActionsBarSize = self.rightNavActionsBar.update(
@@ -1794,7 +1813,7 @@ final class RichTextAttachmentScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: barButtonSize.height)
             )
-            let rightNavActionsBarFrame = CGRect(origin: CGPoint(x: availableSize.width - (environment.safeInsets.left + 16.0) - rightNavActionsBarSize.width, y: 16.0), size: rightNavActionsBarSize)
+            let rightNavActionsBarFrame = CGRect(origin: CGPoint(x: availableSize.width - (environment.safeInsets.right + 16.0) - rightNavActionsBarSize.width, y: 16.0), size: rightNavActionsBarSize)
             if let rightNavActionsBarView = self.rightNavActionsBar.view {
                 if rightNavActionsBarView.superview == nil {
                     component.overNavigationContainer.addSubview(rightNavActionsBarView)
@@ -1817,12 +1836,13 @@ final class RichTextAttachmentScreenComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 40.0)
                 )
-                // The title is centered, but must clear both the left button cluster (Close + undo + redo) and the
+                // The title is centered (in the band between the side insets), but must clear both the left button cluster (Close + undo + redo) and the
                 // Done button. When the natural center would overlap either side, re-center it in the gap between
                 // the cluster's trailing edge and Done (needed on narrow screens where the centered title would
                 // otherwise sit under the redo pill).
-                let leftClusterMaxX = leftNavActionsBarFrame.maxX
-                var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
+                // With Close in the side strip (iPhone Duo) the row starts at the band's edge.
+                let leftClusterMaxX = sideColumnButtonFrame != nil ? environment.safeInsets.left : leftNavActionsBarFrame.maxX
+                var titleFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + floorToScreenPixels((availableSize.width - environment.safeInsets.left - environment.safeInsets.right - titleSize.width) / 2.0), y: floorToScreenPixels((environment.navigationHeight - titleSize.height) / 2.0) + 3.0), size: titleSize)
                 if titleFrame.minX < leftClusterMaxX + 16.0 || titleFrame.maxX > rightNavActionsBarFrame.minX - 16.0 {
                     titleFrame.origin.x = leftClusterMaxX + floorToScreenPixels((rightNavActionsBarFrame.minX - leftClusterMaxX) - titleSize.width) / 2.0
                 }
@@ -2132,6 +2152,8 @@ final class RichTextAttachmentScreenComponent: Component {
                 containerSize: CGSize(width: 44.0, height: 44.0)
             )
             
+            // The bottom row spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+            let bottomRowInsets = environment.bottomEdgeSideInsets()
             let actionBarSize = self.actionBar.update(
                 transition: transition,
                 component: AnyComponent(RichTextActionBarComponent(
@@ -2140,12 +2162,12 @@ final class RichTextAttachmentScreenComponent: Component {
                     actions: barActions
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - (sideInset + environment.safeInsets.left) * 2.0 - actionBarSpacing * 2.0 - aiButtonSize.width - sendButtonSize.width, height: 44.0)
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - bottomRowInsets.left - bottomRowInsets.right - actionBarSpacing * 2.0 - aiButtonSize.width - sendButtonSize.width, height: 44.0)
             )
             
             var bottomInset = max(environment.inputHeight, emojiPanelHeight, environment.safeInsets.bottom)
             
-            let aiButtonFrame = CGRect(origin: CGPoint(x: sideInset + environment.safeInsets.left, y: availableSize.height - bottomInset - 6.0 - aiButtonSize.height), size: aiButtonSize)
+            let aiButtonFrame = CGRect(origin: CGPoint(x: sideInset + bottomRowInsets.left, y: availableSize.height - bottomInset - 6.0 - aiButtonSize.height), size: aiButtonSize)
             if let aiButtonView = self.aiButton.view {
                 if aiButtonView.superview == nil {
                     self.addSubview(aiButtonView)
@@ -2153,7 +2175,7 @@ final class RichTextAttachmentScreenComponent: Component {
                 transition.setFrame(view: aiButtonView, frame: aiButtonFrame)
             }
             
-            let sendButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - (sideInset + environment.safeInsets.left) - sendButtonSize.width, y: availableSize.height - bottomInset - 6.0 - sendButtonSize.height), size: sendButtonSize)
+            let sendButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - (sideInset + bottomRowInsets.right) - sendButtonSize.width, y: availableSize.height - bottomInset - 6.0 - sendButtonSize.height), size: sendButtonSize)
             if self.sendButtonExtractedContainer.superview == nil {
                 self.addSubview(self.sendButtonExtractedContainer)
             }
@@ -2168,7 +2190,7 @@ final class RichTextAttachmentScreenComponent: Component {
             transition.setPosition(view: self.sendButtonExtractedContainer.contentView, position: CGPoint(x: sendButtonFrame.width * 0.5, y: sendButtonFrame.height * 0.5))
             transition.setBounds(view: self.sendButtonExtractedContainer.contentView, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
             
-            let actionBarFrame = CGRect(origin: CGPoint(x: sideInset + environment.safeInsets.left + aiButtonSize.width + actionBarSpacing, y: availableSize.height - bottomInset - 6.0 - actionBarSize.height), size: actionBarSize)
+            let actionBarFrame = CGRect(origin: CGPoint(x: sideInset + bottomRowInsets.left + aiButtonSize.width + actionBarSpacing, y: availableSize.height - bottomInset - 6.0 - actionBarSize.height), size: actionBarSize)
             if let actionBarView = self.actionBar.view {
                 if actionBarView.superview == nil {
                     self.addSubview(actionBarView)

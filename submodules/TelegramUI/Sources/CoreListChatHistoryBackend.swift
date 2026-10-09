@@ -122,10 +122,11 @@ private extension ComponentTransition.Animation.Curve {
         case .linear: self = .linear
         case let .custom(a, b, c, d): self = .custom(a, b, c, d)
         case let .bounce(stiffness, damping): self = .bounce(stiffness: stiffness, damping: damping)
-        case .uiKitSmoothDeceleration:
-            // Lossy, and the only lossy arm here: ComponentFlow has no critically-damped-spring
-            // case, and its `.custom` is a cubic bezier, which is exactly what this curve is not.
-            // `.spring` is the nearest family. This bridge only feeds item-internal
+        case .uiKitSmoothDeceleration, .customSpring:
+            // Lossy, and the only lossy arms here: ComponentFlow has no critically-damped-spring
+            // case and no parameterised spring (its `.bounce` is a different spring API), and its
+            // `.custom` is a cubic bezier, which is exactly what these curves are not. `.spring` is
+            // the nearest family. This bridge only feeds item-internal
             // ContainedViewLayoutTransitions — the scroll itself is animated by CoreList from the
             // real CASpringAnimation, so the approximation never reaches the offset.
             self = .spring
@@ -1009,6 +1010,13 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             case let .Custom(duration, x1, y1, x2, y2):
                 transition = .init(animation: .curve(duration: duration,
                                                      curve: .custom(x1, y1, x2, y2)))
+            case let .CustomSpring(duration, mass, stiffness, damping, initialVelocity):
+                // The chat's send transition scrolls on the new bubble's own vertical spring; CoreList
+                // plays it as the same CASpringAnimation Display does, so the two stay in lockstep.
+                transition = .init(animation: .curve(duration: duration,
+                                                     curve: .customSpring(mass: mass, stiffness: stiffness,
+                                                                          damping: damping,
+                                                                          initialVelocity: initialVelocity)))
             }
         } else if let updateSizeAndInsets, updateSizeAndInsets.duration != 0.0 {
             switch updateSizeAndInsets.curve {
@@ -1022,6 +1030,11 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
                                                       duration ?? 0.3))
             case let .Custom(duration, x1, y1, x2, y2):
                 transition = .init(animation: .curve(duration: duration, curve: .custom(x1, y1, x2, y2)))
+            case let .CustomSpring(duration, mass, stiffness, damping, initialVelocity):
+                transition = .init(animation: .curve(duration: duration,
+                                                     curve: .customSpring(mass: mass, stiffness: stiffness,
+                                                                          damping: damping,
+                                                                          initialVelocity: initialVelocity)))
             }
         } else if let customAnimationTransition,
                   case let .animated(duration, curve) = customAnimationTransition.legacyAnimator.transition,
@@ -1053,10 +1066,13 @@ final class CoreListChatHistoryBackend: ASDisplayNode, ChatHistoryListViewBacken
             case .linear:
                 // `.linear(duration:)` is a CoreListDemoTests convenience, not shipping API.
                 transition = .init(animation: .curve(duration: duration, curve: .linear))
-            case .spring, .customSpring:
-                // CoreList has one spring; `.customSpring`'s mass/stiffness/damping have no analogue,
-                // so it degrades rather than silently rendering as a bezier of the wrong shape.
+            case .spring:
                 transition = .spring(duration: duration)
+            case let .customSpring(mass, stiffness, damping, initialVelocity):
+                transition = .init(animation: .curve(duration: duration,
+                                                     curve: .customSpring(mass: mass, stiffness: stiffness,
+                                                                          damping: damping,
+                                                                          initialVelocity: initialVelocity)))
             case let .custom(x1, y1, x2, y2):
                 transition = .init(animation: .curve(duration: duration, curve: .custom(x1, y1, x2, y2)))
             }

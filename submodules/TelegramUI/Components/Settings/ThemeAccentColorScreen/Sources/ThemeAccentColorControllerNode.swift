@@ -1296,8 +1296,13 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
         let playButtonSize = CGSize(width: 48.0, height: 48.0)
         var centerDistance: CGFloat = 40.0
         let buttonsVerticalOffset: CGFloat = 5.0
+        // The option buttons center over the toolbar: in its band when the side insets differ (iPhone Duo's strip, which
+        // a bottom toolbar spans, keeping clear only of a corner block at the bottom), across the screen otherwise.
+        let toolbarBottomInsets = layout.bottomEdgeSideInsets()
+        let buttonsMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? toolbarBottomInsets.left : 0.0
+        let buttonsWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.size.width - toolbarBottomInsets.left - toolbarBottomInsets.right : layout.size.width
 
-        let playFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - playButtonSize.width) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset + floor((buttonSize.height - playButtonSize.height) / 2.0)), size: playButtonSize)
+        let playFrame = CGRect(origin: CGPoint(x: buttonsMinX + floor((buttonsWidth - playButtonSize.width) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset + floor((buttonSize.height - playButtonSize.height) / 2.0)), size: playButtonSize)
 
         let playAlpha: CGFloat
         var centerButtons = false
@@ -1324,8 +1329,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate 
             playAlpha = 0.0
         }
         
-        patternFrame = CGRect(origin: CGPoint(x: centerButtons ? floor((layout.size.width - buttonSize.width) / 2.0) : floor((layout.size.width - buttonSize.width * 2.0 - centerDistance) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
-        colorsFrame = CGRect(origin: CGPoint(x: centerButtons ? floor((layout.size.width - buttonSize.width) / 2.0) : patternFrame.maxX + centerDistance, y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
+        patternFrame = CGRect(origin: CGPoint(x: centerButtons ? buttonsMinX + floor((buttonsWidth - buttonSize.width) / 2.0) : buttonsMinX + floor((buttonsWidth - buttonSize.width * 2.0 - centerDistance) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
+        colorsFrame = CGRect(origin: CGPoint(x: centerButtons ? buttonsMinX + floor((buttonsWidth - buttonSize.width) / 2.0) : patternFrame.maxX + centerDistance, y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
         
         transition.updateFrame(node: self.patternButtonNode, frame: patternFrame)
         transition.updateAlpha(node: self.patternButtonNode, alpha: patternAlpha)

@@ -19,20 +19,24 @@ enum BrowserToolbarMode: Equatable {
 final class BrowserToolbarComponent: CombinedComponent {
     let theme: PresentationTheme
     let bottomInset: CGFloat
-    let sideInset: CGFloat
+    /// Per side: the toolbar's content is centered in the band between the insets (iPhone Duo's side strip).
+    let leftInset: CGFloat
+    let rightInset: CGFloat
     let item: AnyComponentWithIdentity<Empty>?
     let collapseFraction: CGFloat
     
     init(
         theme: PresentationTheme,
         bottomInset: CGFloat,
-        sideInset: CGFloat,
+        leftInset: CGFloat,
+        rightInset: CGFloat,
         item: AnyComponentWithIdentity<Empty>?,
         collapseFraction: CGFloat
     ) {
         self.theme = theme
         self.bottomInset = bottomInset
-        self.sideInset = sideInset
+        self.leftInset = leftInset
+        self.rightInset = rightInset
         self.item = item
         self.collapseFraction = collapseFraction
     }
@@ -44,7 +48,7 @@ final class BrowserToolbarComponent: CombinedComponent {
         if lhs.bottomInset != rhs.bottomInset {
             return false
         }
-        if lhs.sideInset != rhs.sideInset {
+        if lhs.leftInset != rhs.leftInset || lhs.rightInset != rhs.rightInset {
             return false
         }
         if lhs.item != rhs.item {
@@ -88,7 +92,7 @@ final class BrowserToolbarComponent: CombinedComponent {
             let item = context.component.item.flatMap { item in
                 return centerItems[item.id].update(
                     component: item.component,
-                    availableSize: CGSize(width: context.availableSize.width - context.component.sideInset * 2.0, height: backgroundHeight),
+                    availableSize: CGSize(width: context.availableSize.width - context.component.leftInset - context.component.rightInset, height: backgroundHeight),
                     transition: context.transition
                 )
             }
@@ -108,12 +112,12 @@ final class BrowserToolbarComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(background
-                .position(CGPoint(x: size.width / 2.0, y: backgroundSize.height / 2.0 + offset))
+                .position(CGPoint(x: context.component.leftInset + (size.width - context.component.leftInset - context.component.rightInset) / 2.0, y: backgroundSize.height / 2.0 + offset))
             )
             
             if let centerItem = item {
                 context.add(centerItem
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: backgroundSize.height / 2.0 + offset))
+                    .position(CGPoint(x: context.component.leftInset + (context.availableSize.width - context.component.leftInset - context.component.rightInset) / 2.0, y: backgroundSize.height / 2.0 + offset))
                     .appear(ComponentTransition.Appear({ _, view, transition in
                         transition.animateBlur(layer: view.layer, fromRadius: 10.0, toRadius: 0.0)
                         transition.animateAlpha(view: view, from: 0.0, to: 1.0)
