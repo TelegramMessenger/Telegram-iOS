@@ -16891,6 +16891,7 @@ Error: %8$@";
 "Wallet.Send.RecipientWallet" = "%@’s wallet";
 "Wallet.Send.Balance" = "Balance: %@";
 "Wallet.Send.Amount" = "Send %@";
+"Wallet.Send.DiscardAlertText" = "Discard this transfer?";
 "Wallet.Settings.Backup" = "Encrypted Backup";
 "Wallet.Settings.EnableBackup" = "Enable Backup";
 "Wallet.Settings.DisableBackup" = "Disable Backup";

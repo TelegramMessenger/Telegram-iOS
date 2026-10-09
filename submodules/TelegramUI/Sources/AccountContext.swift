@@ -657,6 +657,7 @@ public final class AccountContextImpl: AccountContext {
         )
 
         if let walletContext = self.walletContext {
+            self.account.walletTransferTasksRunning.set(walletContext.hasTransferBackgroundTasks)
             self.walletTonConnectDisposable.set((walletContext.tonConnectState
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 self?.updateWalletTonConnectPresentation(state)
@@ -690,6 +691,9 @@ public final class AccountContextImpl: AccountContext {
     }
 
     deinit {
+        if self.walletContext != nil {
+            self.account.walletTransferTasksRunning.set(.single(false))
+        }
         self.walletTonConnectDisposable.dispose()
         self.walletTonConnectDecisionDisposable.dispose()
         self.limitsConfigurationDisposable?.dispose()

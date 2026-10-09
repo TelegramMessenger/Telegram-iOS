@@ -998,6 +998,7 @@ public struct AccountRunningImportantTasks: Equatable {
         }
         
         public static let other = TaskTypes(rawValue: 1 << 0)
+        public static let walletTransfer = TaskTypes(rawValue: 1 << 1)
     }
     
     public var taskTypes: TaskTypes
@@ -1293,6 +1294,7 @@ public class Account {
         return self._loggedOut.get()
     }
     
+    public let walletTransferTasksRunning = Promise<Bool>(false)
     private let _importantTasksRunning = ValuePromise<AccountRunningImportantTasks>(AccountRunningImportantTasks(taskTypes: [], pendingMessageCount: 0, pendingStoryCount: 0), ignoreRepeated: true)
     public var importantTasksRunning: Signal<AccountRunningImportantTasks, NoError> {
         return self._importantTasksRunning.get()
@@ -1504,6 +1506,13 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
         
         let extractedExpr1: [Signal<AccountRunningImportantTasks, NoError>] = [
+            self.walletTransferTasksRunning.get() |> map { hasTasks in
+                return AccountRunningImportantTasks(
+                    taskTypes: hasTasks ? .walletTransfer : [],
+                    pendingMessageCount: 0,
+                    pendingStoryCount: 0
+                )
+            },
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network, messageMediaPreuploadManager: self.messageMediaPreuploadManager, auxiliaryMethods: self.auxiliaryMethods) |> map { inputStates in
                 return AccountRunningImportantTasks(
                     taskTypes: inputStates ? .other : [],

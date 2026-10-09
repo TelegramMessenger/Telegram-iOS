@@ -452,7 +452,7 @@ final class RustDatacenterTransferAuthAction: MTDatacenterTransferAuthAction, Ru
             return
         }
         self.actions.track(self)
-        self.queue.async {
+        self.queue.async { [self] in
             self.context = context
             self.masterDatacenterId = masterDatacenterId
             self.destinationDatacenterId = destinationDatacenterId

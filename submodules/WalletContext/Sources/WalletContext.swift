@@ -9,6 +9,7 @@ import TelegramUIPreferences
 @available(macOS 10.15, *)
 final class WalletContextOutput {
     private let stateValue: Atomic<WalletContext.State>
+    let transferBackgroundTasks = WalletTransferBackgroundTasks()
     let tonConnectStatePromise = ValuePromise<WalletContext.TonConnectState>(.empty, ignoreRepeated: true)
     let statePromise: ValuePromise<WalletContext.State>
     private let cancelOperationImpl: (UUID) -> Void
@@ -140,6 +141,11 @@ public final class WalletContext {
 
     public var stateValue: State {
         self.output.currentState()
+    }
+
+    /// Preparation and submission work, excluding blockchain confirmation.
+    public var hasTransferBackgroundTasks: Signal<Bool, NoError> {
+        self.output.transferBackgroundTasks.hasTasks
     }
 
     public func beginWalletScreenUpdates() -> Disposable {
@@ -367,6 +373,7 @@ public final class WalletContext {
         self.tonConnectUpdatesTask?.cancel()
         self.storedStateDisposable.dispose()
         self.operationTaskRegistry.shutdown()
+        self.output.transferBackgroundTasks.shutdown()
         let impl = self.impl
         Task {
             await impl.shutdown()
@@ -376,6 +383,7 @@ public final class WalletContext {
     func signal<Value: Sendable>(
         name: String,
         cancelOnDispose: Bool = true,
+        keepsTransferInBackground: Bool = false,
         submissionControl: WalletTransferSubmissionControl? = nil,
         deliverWhenAvailable: Bool = false,
         discardResult: (@Sendable (Value) -> Void)? = nil,
@@ -389,6 +397,7 @@ public final class WalletContext {
                 return EmptyDisposable
             }
             let operationId = UUID()
+            let backgroundTask = keepsTransferInBackground ? self.output.transferBackgroundTasks.acquire() : nil
             let cancellation = WalletOperationCancellation()
             let registry = self.operationTaskRegistry
             let logger = self.logger
@@ -453,6 +462,7 @@ public final class WalletContext {
             registry.register(id: operationId, cancellation: cancellation)
             let task = Task {
                 defer {
+                    backgroundTask?.dispose()
                     registry.remove(id: operationId)
                     if deliverWhenAvailable { authorization.finishResultDelivery(id: operationId) }
                 }

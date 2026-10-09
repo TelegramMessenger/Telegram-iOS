@@ -8,6 +8,80 @@ import PasscodeCore
 private let walletTransferResolutionInterval: Int32 = 15
 private let walletTransferSubmissionTimeout: UInt64 = 45_000_000_000
 
+/// Tracks execution, not pending transactions or their blockchain confirmation.
+final class WalletTransferBackgroundTasks: @unchecked Sendable {
+    final class Lease: Disposable, @unchecked Sendable {
+        private let owner: WalletTransferBackgroundTasks
+        private let id: UUID
+
+        fileprivate init(owner: WalletTransferBackgroundTasks, id: UUID) {
+            self.owner = owner
+            self.id = id
+        }
+
+        deinit {
+            self.dispose()
+        }
+
+        func dispose() {
+            self.owner.release(self.id)
+        }
+    }
+
+    private let lock = NSRecursiveLock()
+    private var ids = Set<UUID>()
+    private var isShutdown = false
+    private var isPublishing = false
+    private let hasTasksPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+
+    var hasTasks: Signal<Bool, NoError> {
+        Signal { subscriber in
+            self.lock.lock()
+            defer { self.lock.unlock() }
+            return self.hasTasksPromise.get().start(next: subscriber.putNext)
+        }
+    }
+
+    func acquire() -> Lease {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        let id = UUID()
+        if !self.isShutdown {
+            self.ids.insert(id)
+            self.publish()
+        }
+        return Lease(owner: self, id: id)
+    }
+
+    private func release(_ id: UUID) {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        guard self.ids.remove(id) != nil else { return }
+        self.publish()
+    }
+
+    func shutdown() {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        self.isShutdown = true
+        self.ids.removeAll()
+        self.publish()
+    }
+
+    // Called under the lock so publications cannot overtake mutations. An observer
+    // may acquire/release a lease: finish this emission before publishing its change.
+    private func publish() {
+        guard !self.isPublishing else { return }
+        self.isPublishing = true
+        defer { self.isPublishing = false }
+        while true {
+            let hasTasks = !self.ids.isEmpty
+            self.hasTasksPromise.set(hasTasks)
+            if hasTasks == !self.ids.isEmpty { return }
+        }
+    }
+}
+
 @available(macOS 10.15, *)
 struct WalletTransferSubmissionClock: Sendable {
     var now: @Sendable () -> Int32 = { Int32(clamping: Int64(Date().timeIntervalSince1970)) }
@@ -528,10 +602,12 @@ extension WalletContextImpl {
             let requestStartedAt = ProcessInfo.processInfo.systemUptime
             self.transferSubmissions.startedRPC(pending.id)
             let task = WalletAuthorizationScope.$session.withValue(nil) {
+                let backgroundTask = self.output.transferBackgroundTasks.acquire()
                 request.start(self.engine.wallet.sendTransfer(dataNormal: data.normal, dataGasless: data.gasless,
                     recipientPeerId: recipientPeerId, randomId: randomId, pendingMessage: submittedPending.pendingMessage))
                 return Task {
-                    try await self.submitTransferData(request, pending: submittedPending,
+                    defer { backgroundTask.dispose() }
+                    return try await self.submitTransferData(request, pending: submittedPending,
                         generation: generation, startedAt: startedAt, requestStartedAt: requestStartedAt)
                 }
             }
