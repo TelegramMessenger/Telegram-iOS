@@ -7715,15 +7715,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             UIGraphicsPopContext()
                         })
                         if let cgImage = maskImage?.cgImage {
-                            context.translateBy(x: subview.frame.midX, y: subview.frame.midY)
+                            // The context is already at the backdrop's origin, so flip around its own centre:
+                            // pivoting on `frame` moved the clip down by twice the backdrop's offset in its
+                            // container, leaving a gradient bubble's snapshot all but empty.
+                            context.translateBy(x: subview.bounds.midX, y: subview.bounds.midY)
                             context.scaleBy(x: 1.0, y: -1.0)
-                            context.translateBy(x: -subview.frame.midX, y: -subview.frame.midY)
+                            context.translateBy(x: -subview.bounds.midX, y: -subview.bounds.midY)
                             
                             context.clip(to: subview.bounds, mask: cgImage)
                             
-                            context.translateBy(x: subview.frame.midX, y: subview.frame.midY)
+                            context.translateBy(x: subview.bounds.midX, y: subview.bounds.midY)
                             context.scaleBy(x: 1.0, y: -1.0)
-                            context.translateBy(x: -subview.frame.midX, y: -subview.frame.midY)
+                            context.translateBy(x: -subview.bounds.midX, y: -subview.bounds.midY)
                         }
                     }
                     
