@@ -98,11 +98,20 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
     private var holdForReplacementKey = false
     private var holdForUnsupportedProxy = false
 
+    /// Set by `movePendingRequests`: the session is leaving, and its requests go there.
+    private var drainTarget: NetworkEngineRequestService?
+    private var drainCompletions: [() -> Void] = []
+    private var drainBackstop: SwiftSignalKit.Timer?
+
     private let registry: RustContextRegistry
     private let importsAuthorization: Bool
     private let exportable = Atomic<Bool>(value: false)
     private var lastCompletedKeyId: Int64?
     private var lastCompletedAt: Double = 0.0
+    /// When the server last sent anything but a completion (`rustEngineMonotonicNow`), and since when
+    /// requests have waited without a break: the local health check's view (`serverActivity`).
+    private var lastHeardAt: Double = -Double.infinity
+    private var busySince: Double?
 
     private var installedKeyId: Int64?
     private var installedKeyAt: Double = -Double.infinity
@@ -323,6 +332,9 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         }
         self.connectionWatchdog?.invalidate()
         self.connectionWatchdog = nil
+        self.drainBackstop?.invalidate()
+        self.drainBackstop = nil
+        self.drainTarget = nil
     }
 
     func setPaused(_ paused: Bool) {
@@ -335,7 +347,7 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
             }
             self.externallyPaused = paused
             if self.isMain {
-                let _ = self.exportable.swap(!paused)
+                let _ = self.exportable.swap(!paused && !self.isDraining)
             }
             rustEngineImportantLog("\(self.logPrefix) \(paused ? "pause" : "resume")")
             if !paused {
@@ -343,7 +355,7 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
                 self.resetConnectionWatchdogBackoff()
             }
             self.applyPaused()
-            if !paused {
+            if !paused && !self.isDraining {
                 if self.awaitingKey {
                     self.requestAwaitedKey()
                 }
@@ -383,6 +395,20 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         }
     }
 
+    func serverActivity(_ reply: @escaping (NetworkEngineServerActivity?) -> Void) {
+        self.queue.async { [weak self] in
+            guard let self = self, !self.isStopped.with({ $0 }), !self.isDraining else {
+                reply(nil)
+                return
+            }
+            let now = rustEngineMonotonicNow()
+            let heard = max(self.lastHeardAt, self.lastCompletedAt > 0.0 ? self.lastCompletedAt : -Double.infinity)
+            let flags = self.lastConnectionFlags
+            let connected = flags.map(rustEngineHasAnsweredConnection) ?? false
+            reply(NetworkEngineServerActivity(silentFor: heard.isFinite ? max(0.0, now - heard) : nil, waitingFor: self.busySince.map { max(0.0, now - $0) }, connected: connected))
+        }
+    }
+
     func add(_ request: NetworkEngineRequest) -> Disposable {
         let flags = rustEngineRequestFlags(wantsQuickAck: request.acknowledged != nil, wantsProgress: request.progress != nil, needsTimeoutTimer: request.options.needsTimeoutTimer, withoutUpdates: self.withoutUpdates)
         let localId = self.runtime.nextRequestId()
@@ -410,36 +436,141 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         }
     }
 
-    func movePendingRequests(to service: NetworkEngineRequestService, completion: @escaping () -> Void) {
+    /// The engine drains the session (`mt_session_drain`): a request that never reached the server comes
+    /// back at once and moves to `service`; one the server may have stays until its answer, which completes
+    /// it here, or until the deadline, after which it moves only if its policy allows a server error
+    /// (`networkEngineReleaseDecision`), as after a key rotation. `completion` runs when the engine closes
+    /// the session, with nothing left.
+    func movePendingRequests(to service: NetworkEngineRequestService, deadline: Double, completion: @escaping () -> Void) {
         let _ = self.exportable.swap(false)
         self.queue.async { [weak self] in
-            guard let self = self else {
+            guard let self = self, !self.isStopped.with({ $0 }) else {
                 completion()
                 return
             }
-            let pendings = self.activeRequests.filter { !$0.isFinished && !$0.isCancelled }
-            for pending in pendings {
-                let engineId = pending.engineId
-                let wasInEngine = pending.isInEngine
-                self.finish(pending)
-                if wasInEngine, engineId != 0, let engine = self.engine, self.handle != 0 {
-                    mt_session_cancel(engine, self.handle, engineId)
-                }
-                let disposable = service.add(pending.request)
-                var isCancelled = false
-                let _ = pending.control.modify { current in
-                    var updated = current
-                    updated.moved = disposable
-                    isCancelled = current.isCancelled
-                    return updated
-                }
-                if isCancelled {
-                    disposable.dispose()
-                }
+            let _ = self.exportable.swap(false)
+            self.drainCompletions.append(completion)
+            if self.drainTarget != nil {
+                return
             }
-            if !pendings.isEmpty {
-                rustEngineImportantLog("\(self.logPrefix) moved \(pendings.count) unanswered requests to another engine")
+            self.drainTarget = service
+            self.connectionWatchdog?.invalidate()
+            self.connectionWatchdog = nil
+            rustEngineImportantLog("\(self.logPrefix) draining into another session: \(self.activeRequests.count) requests, deadline \(deadline) s")
+            for pending in self.activeRequests where !pending.isInEngine && !pending.isFinished && !pending.isCancelled {
+                self.moveToDrainTarget(pending, after: 0.0)
             }
+            guard let engine = self.engine, self.handle != 0 else {
+                self.finishDrain()
+                return
+            }
+            mt_session_drain(engine, self.handle, deadline)
+            let backstop = SwiftSignalKit.Timer(timeout: RustNetworkSession.drainLongest + RustNetworkSession.drainBackstopMargin, repeat: false, completion: { [weak self] in
+                guard let self = self else {
+                    return
+                }
+                rustEngineImportantLog("\(self.logPrefix) the engine did not finish draining; the requests left move now")
+                self.finishDrain()
+            }, queue: self.queue)
+            self.drainBackstop = backstop
+            backstop.start()
+        }
+    }
+
+    /// The engine's longest drain (`DRAIN_MAX`): it extends the deadline while answers keep coming.
+    private static let drainLongest: Double = 30.0
+    private static let drainBackstopMargin: Double = 15.0
+
+    /// The session hands its requests over (`movePendingRequests`): it no longer speaks for the context.
+    private var isDraining: Bool {
+        return self.drainTarget != nil
+    }
+
+    private func moveToDrainTarget(_ pending: RustPendingRequest, after delay: Double) {
+        guard let target = self.drainTarget else {
+            return
+        }
+        let engineId = pending.engineId
+        self.finish(pending)
+        let disposable = networkEngineMove(pending.request, to: target, after: delay)
+        var isCancelled = false
+        let _ = pending.control.modify { current in
+            var updated = current
+            updated.moved = disposable
+            isCancelled = current.isCancelled
+            return updated
+        }
+        if isCancelled {
+            disposable.dispose()
+        }
+        rustEngineLog("\(self.logPrefix) moved #\(engineId) \(pending.request.shortMetadata.description)\(delay > 0.0 ? " after \(delay) s" : "")")
+    }
+
+    private func handleReleased(_ event: RustEngineEvent) {
+        guard let pending = self.pendingById[event.requestId] else {
+            return
+        }
+        self.pendingById.removeValue(forKey: event.requestId)
+        pending.isInEngine = false
+        if pending.isCancelled || pending.isFinished {
+            self.finish(pending)
+            return
+        }
+        if self.drainTarget == nil {
+            rustEngineImportantLog("\(self.logPrefix) #\(event.requestId) released without a drain; it cannot move")
+            self.finish(pending)
+            pending.request.completed(.failure(NetworkEngineRequestFailure(error: networkEngineSwitchedError, info: NetworkEngineResponseInfo(timestamp: 0.0, networkType: self.lastNetworkIsCellular ? 1 : 0, duration: 0.0))))
+            return
+        }
+        let mayHaveRun = rustEngineReleasedMayHaveRun(flags: event.flags)
+        let decision = networkEngineReleaseDecision(mayHaveRun: mayHaveRun, retryAfter: event.value1, allowsServerError: {
+            let errorContext = pending.errorState.applyServerError()
+            return pending.request.shouldContinueAfterError(NetworkEngineErrorContext(floodWaitSeconds: errorContext.floodWaitSeconds, floodWaitErrorText: errorContext.floodWaitErrorText, internalServerErrorCount: errorContext.internalServerErrorCount))
+        })
+        if pending.isCancelled || pending.isFinished {
+            self.finish(pending)
+            return
+        }
+        switch decision {
+        case let .move(delay):
+            self.moveToDrainTarget(pending, after: delay)
+        case .fail:
+            rustEngineImportantLog("\(self.logPrefix) #\(event.requestId) \(pending.request.shortMetadata.description) may have run here and may not run again: \(networkEngineSwitchedError.errorDescription ?? "")")
+            self.finish(pending)
+            pending.request.completed(.failure(NetworkEngineRequestFailure(error: networkEngineSwitchedError, info: NetworkEngineResponseInfo(timestamp: 0.0, networkType: self.lastNetworkIsCellular ? 1 : 0, duration: 0.0))))
+        }
+    }
+
+    /// The engine closed the drained session (or never would): whatever is left follows the same rule,
+    /// as possibly run if the engine had it, and the switch completes.
+    private func finishDrain() {
+        if self.drainCompletions.isEmpty {
+            return
+        }
+        self.drainBackstop?.invalidate()
+        self.drainBackstop = nil
+        let left = self.activeRequests.filter { !$0.isFinished && !$0.isCancelled }
+        for pending in left {
+            if pending.isInEngine, pending.engineId != 0 {
+                if let engine = self.engine, self.handle != 0 {
+                    mt_session_cancel(engine, self.handle, pending.engineId)
+                }
+                var event = MTEvent()
+                event.kind = MTEventKindReleased
+                event.request_id = pending.engineId
+                event.flags = rustEngineReleasedMayHaveRunFlag
+                self.handleReleased(withUnsafePointer(to: &event) { RustEngineEvent($0) })
+            } else {
+                self.moveToDrainTarget(pending, after: 0.0)
+            }
+        }
+        if !left.isEmpty {
+            rustEngineImportantLog("\(self.logPrefix) \(left.count) requests were left when the drain ended")
+        }
+        let completions = self.drainCompletions
+        self.drainCompletions.removeAll()
+        rustEngineImportantLog("\(self.logPrefix) drained")
+        for completion in completions {
             completion()
         }
     }
@@ -455,13 +586,24 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         if pending.isCancelled || self.isStopped.with({ $0 }) {
             return
         }
+        if self.activeRequests.isEmpty {
+            self.busySince = rustEngineMonotonicNow()
+        }
         self.activeRequests.append(pending)
         self.activeByLocalId[pending.localId] = pending
+        if self.isDraining {
+            self.moveToDrainTarget(pending, after: 0.0)
+            return
+        }
         self.sendToEngine(pending)
         self.updateConnectionWatchdog()
     }
 
     private func sendToEngine(_ pending: RustPendingRequest) {
+        if self.isDraining {
+            self.moveToDrainTarget(pending, after: 0.0)
+            return
+        }
         guard let engine = self.engine, self.handle != 0 else {
             return
         }
@@ -531,6 +673,9 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         if let index = self.heldRequests.firstIndex(where: { $0 === pending }) {
             self.heldRequests.remove(at: index)
         }
+        if self.activeRequests.isEmpty {
+            self.busySince = nil
+        }
         self.updateConnectionWatchdog()
     }
 
@@ -555,6 +700,9 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         }
         let previousKind = self.lastEventKind
         self.lastEventKind = kind
+        if kind.isServerActivity {
+            self.lastHeardAt = rustEngineMonotonicNow()
+        }
 
         switch kind {
         case .completed:
@@ -636,7 +784,11 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         case .pong:
             break
         case .connectionState:
-            self.lastConnectionFlags = RustEngineConnectionFlags(rawValue: event.flags)
+            let flags = RustEngineConnectionFlags(rawValue: event.flags)
+            if rustEngineConnectionStateRestartsSilence(previous: self.lastConnectionFlags, current: flags) {
+                self.lastHeardAt = rustEngineMonotonicNow()
+            }
+            self.lastConnectionFlags = flags
             self.lastEngineProxyAddress = event.text.isEmpty ? nil : event.text
             self.updateConnectionWatchdog()
             self.reportConnectionState()
@@ -697,7 +849,11 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
                 observer(drop)
             }
         case .closed:
-            break
+            if self.isDraining {
+                self.finishDrain()
+            }
+        case .released:
+            self.handleReleased(event)
         }
     }
 
@@ -1017,9 +1173,15 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         guard self.runsPfs, let keyId = self.installedKeyId else {
             return
         }
-        if rustEngineMonotonicNow() - self.installedKeyAt < RustNetworkSession.permanentKeyImmunity {
+        switch rustEnginePermanentKeyReportAction(draining: self.isDraining, keyAge: rustEngineMonotonicNow() - self.installedKeyAt, immunity: RustNetworkSession.permanentKeyImmunity) {
+        case .leaveToReplacement:
+            rustEngineImportantLog("\(self.logPrefix) draining: the report is left to the session that replaced this one")
+            return
+        case .keepYoungKey:
             rustEngineLog("\(self.logPrefix) permanent key reported unknown right after it was installed; keeping it")
             return
+        case .handle:
+            break
         }
         if self.requiresForeignAuthToken || self.importsAuthorization {
             if self.requiresForeignAuthToken {
@@ -1129,7 +1291,7 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
         let adopted = (event.flags & 1) != 0
         self.temporaryKeyId = keyId
         rustEngineLog("\(self.logPrefix) talking under temporary key \(keyId)\(adopted ? " from the context" : "")")
-        guard !adopted else {
+        guard !adopted, !self.isDraining else {
             return
         }
         guard let made = self.madeTemporaryKey, made.keyId == keyId else {
@@ -1548,7 +1710,7 @@ final class RustNetworkSession: NetworkEngineSession, RustEngineEventHandler {
             self.connectionWatchdog = nil
             return
         }
-        let wantsConnection = !self.appliedPaused && self.installedKeyId != nil && !self.schemes.isEmpty && (self.isMain || !self.activeRequests.isEmpty) && self.runtime.isNetworkAvailable
+        let wantsConnection = !self.isDraining && !self.appliedPaused && self.installedKeyId != nil && !self.schemes.isEmpty && (self.isMain || !self.activeRequests.isEmpty) && self.runtime.isNetworkAvailable
         if !wantsConnection {
             self.connectionWatchdog?.invalidate()
             self.connectionWatchdog = nil

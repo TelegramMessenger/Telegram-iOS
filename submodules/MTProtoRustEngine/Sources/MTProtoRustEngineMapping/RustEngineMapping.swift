@@ -727,3 +727,54 @@ public func rustEngineFailureIsAnswerUnderKey(code: Int32, text: String) -> Bool
 public func rustEngineFailureIsServerAnswer(code: Int32, text: String) -> Bool {
     return code != 401 && !text.hasPrefix("PROTOCOL_ERROR_") && rustEngineFailureIsAnswerUnderKey(code: code, text: text)
 }
+
+/// `MTEventKindReleased` (ABI 5): the bit of `MTEvent.flags` saying the request may have reached the
+/// server under the draining session (`MTReleasedMayHaveRun`).
+public let rustEngineReleasedMayHaveRunFlag: UInt32 = 1 << 0
+
+public func rustEngineReleasedMayHaveRun(flags: UInt32) -> Bool {
+    return (flags & rustEngineReleasedMayHaveRunFlag) != 0
+}
+
+/// The session has a connection the server answered on (connected and past the connection's context
+/// update, or only waiting for its temporary key's bind): what the local health check calls connected.
+public func rustEngineHasAnsweredConnection(_ flags: RustEngineConnectionFlags) -> Bool {
+    return flags.isConnected && (!flags.isUpdatingConnectionContext || flags.isAwaitingKeyBinding)
+}
+
+/// Whether the local health check's silence starts again at this connection state: the server answered
+/// on the connection just now, or the session just lost a connection the server had answered on (an idle
+/// session pings rarely, so its last packet can be long ago while it worked until this moment).
+public func rustEngineConnectionStateRestartsSilence(previous: RustEngineConnectionFlags?, current: RustEngineConnectionFlags) -> Bool {
+    if current.isConnected && !current.isUpdatingConnectionContext {
+        return true
+    }
+    return previous.map(rustEngineHasAnsweredConnection) == true && !rustEngineHasAnsweredConnection(current)
+}
+
+/// The context's temporary key is one the engine made and bound (`rustEngineBoundToAttribute`), not one
+/// MtProtoKit made.
+public func rustEngineMadeTemporaryKey(attributes: [AnyHashable: Any]?) -> Bool {
+    return attributes?[rustEngineBoundToAttribute] != nil
+}
+
+/// What a session does with the engine's `PermanentKeyInvalid`.
+public enum RustEnginePermanentKeyReportAction: Equatable {
+    /// The session drains into another (a live switch): the logout check is the replacement's to start,
+    /// with whatever engine then runs the context (B2 review L7: after a switch to MtProtoKit, MtProtoKit's
+    /// probe would judge the old session's report on a single refusal).
+    case leaveToReplacement
+    /// The key replaced another less than the immunity ago: the report is about the old one.
+    case keepYoungKey
+    case handle
+}
+
+public func rustEnginePermanentKeyReportAction(draining: Bool, keyAge: Double, immunity: Double) -> RustEnginePermanentKeyReportAction {
+    if draining {
+        return .leaveToReplacement
+    }
+    if keyAge < immunity {
+        return .keepYoungKey
+    }
+    return .handle
+}
