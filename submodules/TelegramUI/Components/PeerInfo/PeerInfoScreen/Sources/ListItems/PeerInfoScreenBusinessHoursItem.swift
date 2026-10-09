@@ -301,12 +301,13 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         self.containerNode.isGestureEnabled = item.contextAction != nil
                 
         let sideInset: CGFloat = 16.0 + safeInsets.left
+        let sideInsetRight: CGFloat = 16.0 + safeInsets.right
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: Font.regular(14.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
         
-        let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset - sideInsetRight, height: .greatestFiniteMagnitude))
         
         var topOffset = 15.0
         let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: labelSize)
@@ -324,7 +325,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             environment: {},
             containerSize: CGSize(width: 100.0, height: 100.0)
         )
-        let arrowIconFrame = CGRect(origin: CGPoint(x: width - sideInset + 1.0 - arrowIconSize.width, y: topOffset + 5.0), size: arrowIconSize)
+        let arrowIconFrame = CGRect(origin: CGPoint(x: width - sideInsetRight + 1.0 - arrowIconSize.width, y: topOffset + 5.0), size: arrowIconSize)
         if let arrowIconView = self.arrowIcon.view {
             if arrowIconView.superview == nil {
                 self.contextSourceNode.contentNode.view.addSubview(arrowIconView)
@@ -402,7 +403,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                 text: .plain(NSAttributedString(string: openStatusText, font: Font.regular(15.0), textColor: isOpen ? presentationData.theme.list.freeTextSuccessColor : presentationData.theme.list.itemDestructiveColor))
             )),
             environment: {},
-            containerSize: CGSize(width: width - sideInset * 2.0, height: 100.0)
+            containerSize: CGSize(width: width - sideInset - sideInsetRight, height: 100.0)
         )
         let currentStatusTextFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: currentStatusTextSize)
         if let currentStatusTextView = self.currentStatusText.view {
@@ -414,7 +415,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             currentStatusTextView.bounds = CGRect(origin: CGPoint(), size: currentStatusTextFrame.size)
         }
         
-        let dayRightInset = sideInset + 17.0
+        let dayRightInset = sideInsetRight + 17.0
         
         let currentDayTextSize = self.currentDayText.update(
             transition: .immediate,
@@ -587,7 +588,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                     text: .plain(NSAttributedString(string: dayTitleValue, font: Font.regular(15.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: width - sideInset - sideInsetRight, height: 100.0)
             )
             let dayTitleFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset + dayHeights), size: dayTitleSize)
             if let dayTitleView = dayTitle.view {

@@ -253,7 +253,13 @@ final class ContextMenuNode: ASDisplayNode {
             }
             self.arrowOnBottom = arrowOnBottom
                     
-            let horizontalOrigin: CGFloat = floor(max(8.0, min(self.centerHorizontally ? sourceRect.midX - contentWidth / 2.0 : max(sourceRect.minX + 8.0, sourceRect.midX - contentWidth / 2.0), layout.size.width - contentWidth - 8.0)))
+            // iPhone Duo: clear of a side strip's corner block (the status corner) that reaches into the menu's band.
+            // Beside the rest of the strip the menu keeps the screen margins, as the content it points at (the input
+            // panel beside a free corner) runs into the strip there. Without a strip both are 0.
+            let menuBandInsets = layout.sideInsets(forBandFrom: verticalOrigin, to: verticalOrigin + height)
+            let cornerBlockInsetLeft: CGFloat = layout.sideStrip(edge: .left) != nil ? menuBandInsets.left : 0.0
+            let cornerBlockInsetRight: CGFloat = layout.sideStrip(edge: .right) != nil ? menuBandInsets.right : 0.0
+            let horizontalOrigin: CGFloat = floor(max(8.0 + cornerBlockInsetLeft, min(self.centerHorizontally ? sourceRect.midX - contentWidth / 2.0 : max(sourceRect.minX + 8.0, sourceRect.midX - contentWidth / 2.0), layout.size.width - cornerBlockInsetRight - contentWidth - 8.0)))
             
             let containerFrame = CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin), size: CGSize(width: contentWidth, height: height))
             transition.updateFrame(node: self.containerNode, frame: containerFrame)

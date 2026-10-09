@@ -32,6 +32,7 @@ import ItemListUI
 import PeerSelectionScreen
 import CommunityPrivateChatScreen
 import AvatarComponent
+import SideColumnLayout
 
 private extension CommunityViewScreenMode {
     var usesGroupedStyle: Bool {
@@ -1649,18 +1650,22 @@ private final class CommunityViewContentComponent: Component {
             self.environment = environment
 
             let theme: PresentationTheme
+            // Each side keeps its own safe inset: beside iPhone Duo's side strip only one side has one.
             let sideInset: CGFloat
+            let rightSideInset: CGFloat
             switch component.mode {
             case .sheet:
                 theme = environment.theme.withModalBlocksBackground()
-                sideInset = 16.0 + max(environment.safeInsets.left, environment.safeInsets.right)
+                sideInset = 16.0 + environment.safeInsets.left
+                rightSideInset = 16.0 + environment.safeInsets.right
             case .fullscreen, .preview:
                 theme = environment.theme
-                sideInset = max(environment.safeInsets.left, environment.safeInsets.right)
+                sideInset = environment.safeInsets.left
+                rightSideInset = environment.safeInsets.right
             }
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let sectionSpacing: CGFloat = component.mode.usesGroupedStyle ? 28.0 : 12.0
-            let contentWidth = availableSize.width - sideInset * 2.0
+            let contentWidth = availableSize.width - sideInset - rightSideInset
 
             self.backgroundColor = .clear
 
@@ -1864,6 +1869,10 @@ private final class CommunityViewScreenComponent: Component {
         private let navigationBarView = ComponentView<Empty>()
         private let searchOverlayNode = ASDisplayNode()
         private let sheetBoundsUpdated = ActionSlot<ResizableSheetComponentEnvironment.BoundsUpdate>()
+        /// iPhone Duo: how far the sheet's navigation bar moves its trailing buttons to clear a top-right corner block it
+        /// has risen beside (the unfolded portrait screen's status island, the folded portrait screen's 84x170 status
+        /// corner); 0 below it. `updateSheetNavigationBarFrame` follows the sheet as it moves.
+        private var sheetNavigationCornerTrailingInset: CGFloat = 0.0
         private let sheetNavigationTopInset: CGFloat = 16.0
         private let sheetSearchOverlayTopOffset: CGFloat = 20.0
 
@@ -2788,8 +2797,12 @@ private final class CommunityViewScreenComponent: Component {
                 deviceMetrics: environment.deviceMetrics,
                 intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: effectiveSafeInsets.bottom, right: 0.0),
                 safeInsets: effectiveSafeInsets,
+                // Full screen, the search bar takes the screen's top row: with the screen's corners and full status height
+                // the layout resolves the compact bar height and the trailing inset beside iPhone Duo's status island.
+                reservedCorners: mode.usesFullscreenPresentation ? environment.reservedCorners : .none,
+                division: nil,
                 additionalInsets: environment.additionalInsets,
-                statusBarHeight: mode.usesFullscreenPresentation ? environment.statusBarHeight : 0.0,
+                statusBarHeight: mode.usesFullscreenPresentation ? environment.fullStatusBarHeight : 0.0,
                 inputHeight: environment.inputHeight > 0.0 ? environment.inputHeight : nil,
                 inputHeightIsInteractivellyChanging: false,
                 inVoiceOver: false,
@@ -2798,14 +2811,14 @@ private final class CommunityViewScreenComponent: Component {
         }
 
         private func sheetMetrics(availableSize: CGSize, environment: EnvironmentType) -> (fillingSize: CGFloat, rawSideInset: CGFloat) {
-            let fillingSize: CGFloat
+            var maxWidth: CGFloat?
             if case .regular = environment.metrics.widthClass {
-                fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
-            } else {
-                fillingSize = min(availableSize.width, availableSize.height) - environment.safeInsets.left * 2.0
+                maxWidth = 414.0
             }
-
-            return (fillingSize, floor((availableSize.width - fillingSize) * 0.5))
+            // Where `ResizableSheetComponent` puts the sheet, so the bar spans it: centred, or in the band beside a side
+            // strip (iPhone Duo).
+            let placement = resizableSheetHorizontalPlacement(containerSize: availableSize, safeInsets: environment.safeInsets, maxWidth: maxWidth)
+            return (placement.width, placement.minX)
         }
 
         private func updateNavigationBar(component: CommunityViewScreenComponent, availableSize: CGSize, statusBarHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, environment: EnvironmentType, transition: ComponentTransition) -> CGSize {
@@ -2907,6 +2920,7 @@ private final class CommunityViewScreenComponent: Component {
                     statusBarHeight: statusBarHeight,
                     leftInset: leftInset,
                     rightInset: rightInset,
+                    trailingButtonsInset: component.mode.usesSheetPresentation ? self.sheetNavigationCornerTrailingInset : environment.navigationBarTrailingButtonsInset,
                     search: component.mode.usesFullscreenPresentation && !component.mode.isPreview && component.selectionOptions == nil ? ChatListNavigationBar.Search(isEnabled: true) : nil,
                     activeSearch: self.isSearchDisplayControllerActive,
                     primaryContent: primaryContent,
@@ -2929,7 +2943,9 @@ private final class CommunityViewScreenComponent: Component {
                     openStatusSetup: { _ in
                     },
                     allowAutomaticOrder: {
-                    }
+                    },
+                    // iPhone Duo: the back and icon buttons go into the side strip, as the chat list's do.
+                    sideColumn: (component.mode.usesFullscreenPresentation && !component.mode.isPreview) ? pushedScreenSideColumnRegion(layout: environment.controller()?.currentlyAppliedLayout) : nil
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -2977,6 +2993,18 @@ private final class CommunityViewScreenComponent: Component {
 
             transition.setFrame(view: navigationBarComponentView, frame: frame)
             self.updateNavigationScrolling(transition: transition)
+
+            // The sheet's bar moves its trailing buttons clear of a top-right corner block only while it is beside it.
+            if let environment = self.environment {
+                var cornerTrailingInset: CGFloat = 0.0
+                if let topRight = environment.reservedCorners.topRight, frame.minY < topRight.height {
+                    cornerTrailingInset = max(0.0, topRight.width - (self.currentAvailableSize.width - frame.maxX))
+                }
+                if cornerTrailingInset != self.sheetNavigationCornerTrailingInset {
+                    self.sheetNavigationCornerTrailingInset = cornerTrailingInset
+                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                }
+            }
 
             if self.searchOverlayNode.view.superview === navigationBarComponentView.superview, let component = self.component, let environment = self.environment, component.mode.usesSheetPresentation {
                 let overlayFrame = self.sheetSearchOverlayFrame(navigationBarFrame: frame, availableSize: self.currentAvailableSize, statusBarHeight: environment.statusBarHeight)
@@ -3210,7 +3238,7 @@ private final class CommunityViewScreenComponent: Component {
                             metrics: environment.metrics,
                             deviceMetrics: environment.deviceMetrics,
                             isDisplaying: environment.isVisible,
-                            isCentered: environment.metrics.widthClass == .regular,
+                            isCentered: environment.presentsFloatingPanels,
                             screenSize: availableSize,
                             regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                             dismiss: { [weak self] animated in
@@ -3270,7 +3298,9 @@ private final class CommunityViewScreenComponent: Component {
                 let bottomFrame: CGRect
                 let bottomSize: CGSize
                 if displaysBottomItem {
-                    let bottomPanelWidth = max(1.0, availableSize.width - environment.safeInsets.left * 2.0 - buttonInsets.left - buttonInsets.right)
+                    // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                    let bottomEdgeInsets = environment.bottomEdgeSideInsets()
+                    let bottomPanelWidth = max(1.0, availableSize.width - bottomEdgeInsets.left - bottomEdgeInsets.right - buttonInsets.left - buttonInsets.right)
                     bottomSize = self.fullscreenBottomItem.update(
                         transition: transition,
                         component: AnyComponent(self.makeBottomButtonComponent(theme: theme, strings: environment.strings, safeInsets: UIEdgeInsets())),
@@ -3279,7 +3309,7 @@ private final class CommunityViewScreenComponent: Component {
                     )
                     bottomFrame = CGRect(
                         origin: CGPoint(
-                            x: environment.safeInsets.left + buttonInsets.left,
+                            x: bottomEdgeInsets.left + buttonInsets.left,
                             y: availableSize.height - bottomPanelHeight
                         ),
                         size: bottomSize

@@ -100,7 +100,6 @@ class InviteLinkInviteHeaderItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { [weak self] item, params, neighbors in
-            let leftInset: CGFloat = 40.0 + params.leftInset
             let topInset: CGFloat = 98.0
             let spacing: CGFloat = 10.0
             let bottomInset: CGFloat = 13.0
@@ -111,10 +110,10 @@ class InviteLinkInviteHeaderItemNode: ListViewItemNode {
             }
             
             let titleAttributedText = NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - min(params.leftInset, params.rightInset) - 40.0 * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let attributedText = NSAttributedString(string: item.text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - min(params.leftInset, params.rightInset) - 40.0 * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + spacing + textLayout.size.height + bottomInset)
         
@@ -131,14 +130,14 @@ class InviteLinkInviteHeaderItemNode: ListViewItemNode {
                     }
                                         
                     let iconSize = CGSize(width: 92.0, height: 92.0)
-                    strongSelf.iconBackgroundNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -18.0), size: iconSize)
+                    strongSelf.iconBackgroundNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: -18.0), size: iconSize)
                     strongSelf.iconNode.frame = strongSelf.iconBackgroundNode.frame.insetBy(dx: 8.0, dy: 8.0)
                     
                     let _ = titleApply()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset + 10.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0), y: topInset + 10.0), size: titleLayout.size)
                     
                     let _ = textApply()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - textLayout.size.width) / 2.0), y: topInset + 10.0 + titleLayout.size.height + spacing), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - textLayout.size.width) / 2.0), y: topInset + 10.0 + titleLayout.size.height + spacing), size: textLayout.size)
                 }
             })
         }

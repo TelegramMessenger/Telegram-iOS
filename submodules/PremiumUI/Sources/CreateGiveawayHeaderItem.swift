@@ -124,7 +124,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
             return
         }
         let navigationHeight: CGFloat = 76.0
-        let statusBarHeight = layout.statusBarHeight ?? 0.0
+        let statusBarHeight = layout.navigationBarStatusBarHeight ?? 0.0
         
         let topInset : CGFloat = 0.0
         let titleOffsetDelta = (topInset + 160.0) - (statusBarHeight + (navigationHeight - statusBarHeight) / 2.0)
@@ -134,8 +134,9 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
         let titleScale = 1.0 - fraction * 0.18
                 
+        let centerX = layout.safeInsets.left + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right) / 2.0
         let starPosition = CGPoint(
-            x: layout.size.width / 2.0,
+            x: centerX,
             y: -contentOffset + 80.0
         )
         if let view = self.hostView {
@@ -143,7 +144,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         }
         
         let titlePosition = CGPoint(
-            x: layout.size.width / 2.0,
+            x: centerX,
             y: max(topInset + 170.0 - titleOffset, statusBarHeight + (navigationHeight - statusBarHeight) / 2.0)
         )
 
@@ -151,7 +152,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         transition.updateTransformScale(node: self.titleNode, scale: titleScale)
         
         let textPosition = CGPoint(
-            x: layout.size.width / 2.0,
+            x: centerX,
             y: -contentOffset + 212.0
         )
         transition.updatePosition(node: self.textNode, position: textPosition)
@@ -160,7 +161,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
     override func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
         let leftInset: CGFloat = 24.0
         
-        let constrainedSize = CGSize(width: layout.size.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude)
+        let constrainedSize = CGSize(width: layout.size.width - leftInset * 2.0 - abs(layout.safeInsets.left - layout.safeInsets.right), height: CGFloat.greatestFiniteMagnitude)
         let titleSize = self.titleNode.updateLayout(constrainedSize)
         let textSize = self.textNode.updateLayout(constrainedSize)
                 
@@ -181,7 +182,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
             environment: {},
             containerSize: CGSize(width: 44.0, height: 44.0)
         )
-        let cancelButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: cancelButtonSize)
+        let cancelButtonFrame = CGRect(origin: CGPoint(x: 16.0 + max(0.0, layout.safeInsets.left - layout.safeInsets.right), y: 16.0), size: cancelButtonSize)
         if let cancelButtonView = self.cancelButton.view {
             if cancelButtonView.superview == nil {
                 self.view.addSubview(cancelButtonView)

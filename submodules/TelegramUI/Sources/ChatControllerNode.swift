@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import Display
+import ChatSideColumnLayout
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -292,6 +293,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
         
     let navigateButtons: ChatHistoryNavigationButtons
+    let sideColumnNode = ChatSideColumnNode()
     
     private var ignoreUpdateHeight = false
     private var overrideUpdateTextInputHeightTransition: ContainedViewLayoutTransition?
@@ -933,6 +935,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.wrappingNode.contentNode.addSubnode(self.messageTransitionNode.overlayContainerNode)
 
         self.contentContainerNode.contentNode.addSubnode(self.navigateButtons)
+        self.contentContainerNode.contentNode.addSubnode(self.sideColumnNode)
         self.wrappingNode.contentNode.addSubnode(self.presentationContextMarker)
         self.contentContainerNode.contentNode.addSubnode(self.contentDimNode)
         
@@ -1860,13 +1863,20 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         let inputPanelBottomInset = max(insets.bottom, inputPanelBottomInsetTerm)
         
+        // iPhone Duo: the column's frames, and the input panel's side insets for its band (it runs into
+        // the strip where the bottom corner has no block, never under the column).
+        let sideColumnFrames = layout.sideColumnFrames(itemSize: CGSize(width: 48.0, height: 48.0), spacing: 12.0, count: self.sideColumnNode.itemCount, minY: (layout.statusBarHeight ?? 0.0) + 8.0)
+        let inputPanelBandMaxY = layout.size.height - inputPanelBottomInset
+        let inputPanelBandMinY = inputPanelBandMaxY - max(44.0, self.inputPanelNode?.frame.height ?? 0.0)
+        let inputPanelSideInsets = chatInputPanelSideInsets(layout: layout, bandMinY: inputPanelBandMinY, bandMaxY: inputPanelBandMaxY, column: sideColumnFrames)
+        
         if let inputPanelNode = inputPanelNodes.primary, !previewing {
             if inputPanelNode !== self.inputPanelNode {
                 if let inputTextPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
                     if inputTextPanelNode.isFocused {
                         self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
                     }
-                    let _ = inputTextPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
+                    let _ = inputTextPanelNode.updateLayout(width: layout.size.width, leftInset: inputPanelSideInsets.left, rightInset: inputPanelSideInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
                 }
                 if let prevInputPanelNode = self.inputPanelNode, inputPanelNode.canHandleTransition(from: prevInputPanelNode) {
                     inputPanelNodeHandlesTransition = true
@@ -1878,7 +1888,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 } else {
                     dismissedInputPanelNode = self.inputPanelNode
                 }
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: false, transition: inputPanelNode.supernode !== self ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: inputPanelSideInsets.left, rightInset: inputPanelSideInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: false, transition: inputPanelNode.supernode !== self ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
                 self.inputPanelNode = inputPanelNode
                 if inputPanelNode.supernode !== self {
@@ -1889,7 +1899,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     self.inputPanelOverlayNode.view.addSubview(viewForOverlayContent)
                 }
             } else {
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset - 120.0, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: inputPanelSideInsets.left, rightInset: inputPanelSideInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset - 120.0, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
             }
         } else {
@@ -1900,7 +1910,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let secondaryInputPanelNode = inputPanelNodes.secondary, !previewing {
             if secondaryInputPanelNode !== self.secondaryInputPanelNode {
                 dismissedSecondaryInputPanelNode = self.secondaryInputPanelNode
-                let inputPanelHeight = secondaryInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: true, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
+                let inputPanelHeight = secondaryInputPanelNode.updateLayout(width: layout.size.width, leftInset: inputPanelSideInsets.left, rightInset: inputPanelSideInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: true, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
                 secondaryInputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
                 self.secondaryInputPanelNode = secondaryInputPanelNode
                 if secondaryInputPanelNode.supernode == nil {
@@ -1911,7 +1921,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     self.inputPanelOverlayNode.view.addSubview(viewForOverlayContent)
                 }
             } else {
-                let inputPanelHeight = secondaryInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: true, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
+                let inputPanelHeight = secondaryInputPanelNode.updateLayout(width: layout.size.width, leftInset: inputPanelSideInsets.left, rightInset: inputPanelSideInsets.right, bottomInset: inputPanelBottomInset, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, maxOverlayHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: true, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
                 secondaryInputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
             }
         } else {
@@ -2064,9 +2074,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         var wrappingInsets = UIEdgeInsets()
         if case .overlay = self.chatPresentationInterfaceState.mode {
-            let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 8.0 + layout.safeInsets.left)
-            wrappingInsets.left = floor((layout.size.width - containerWidth) / 2.0)
-            wrappingInsets.right = wrappingInsets.left
+            // Centered, or in the band beside a side strip (iPhone Duo).
+            let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 8.0, includesSafeInsets: true)
+            wrappingInsets.left = placement.left
+            wrappingInsets.right = placement.right
             
             wrappingInsets.top = 8.0
             if let statusBarHeight = layout.statusBarHeight, CGFloat(40.0).isLess(than: statusBarHeight) {
@@ -2695,13 +2706,20 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.historyNode.scrollEnabled = !(self.isScrollingLockedAtTop || self.chatPresentationInterfaceState.focusedPollAddOptionMessageId != nil)
         
         let navigateButtonsSize = self.navigateButtons.updateLayout(transition: transition)
-        var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 8.0, y: layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 20.0), size: navigateButtonsSize)
+        let navigateButtonsMinY = layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 20.0
+        // iPhone Duo: beside a free bottom corner the input panel runs into the strip; the buttons follow it
+        // (and keep the strip beside the column). Without corner blocks this is the plain safe inset.
+        let navigateButtonsRightInset = chatInputPanelSideInsets(layout: layout, bandMinY: navigateButtonsMinY, bandMaxY: navigateButtonsMinY + navigateButtonsSize.height, column: sideColumnFrames).right
+        var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - navigateButtonsRightInset - navigateButtonsSize.width - 8.0, y: navigateButtonsMinY), size: navigateButtonsSize)
         if containerInsets.bottom <= 32.0 {
             navigateButtonsFrame.origin.x -= 18.0
         }
         if case .overlay = self.chatPresentationInterfaceState.mode {
             navigateButtonsFrame = navigateButtonsFrame.offsetBy(dx: -8.0, dy: -8.0)
         }
+        
+        transition.updateFrame(node: self.sideColumnNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        self.sideColumnNode.updateLayout(containerSize: layout.size, frames: sideColumnFrames?.frames ?? [], isHidden: self.chatPresentationInterfaceState.search != nil, transition: transition)
         
         var apparentInputPanelFrame = inputPanelFrame
         let apparentSecondaryInputPanelFrame = secondaryInputPanelFrame
@@ -2752,7 +2770,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let footerPanelsComponentView = self.footerPanelsView?.view, let footerPanelsSize {
-            let footerPanelsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - footerPanelsSize.width) * 0.5), y: layout.size.height - (containerInsets.bottom + inputPanelsHeight + 8.0)), size: footerPanelsSize)
+            // Sized to the band between the side insets, so centred in it (they differ beside iPhone Duo's side strip).
+            let footerPanelsFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - footerPanelsSize.width) * 0.5), y: layout.size.height - (containerInsets.bottom + inputPanelsHeight + 8.0)), size: footerPanelsSize)
             var footerPanelsTransition = ComponentTransition(transition)
             if footerPanelsComponentView.superview == nil {
                 footerPanelsTransition.animateAlpha(view: footerPanelsComponentView, from: 0.0, to: 1.0)

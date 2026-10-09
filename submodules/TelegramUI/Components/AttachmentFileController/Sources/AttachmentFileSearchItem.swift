@@ -835,10 +835,12 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         insets.top += navigationBarHeight
         insets.bottom += 60.0
         
-        let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
         if layout.size.width >= 320.0 {
-            insets.left += inset
-            insets.right += inset
+            // iPhone Duo: a side with a side strip keeps the list 16pt clear of it; without a strip both margins
+            // are the old value.
+            let margins = layout.listSideMargins(base: max(16.0, floor((layout.size.width - 674.0) / 2.0)))
+            insets.left += margins.left
+            insets.right += margins.right
         }
         
         if self.rightOverlayNode.supernode == nil {

@@ -76,7 +76,7 @@ enum PeerInfoHeaderTextFieldNodeKey: Equatable {
 protocol PeerInfoHeaderTextFieldNode: ASDisplayNode {
     var text: String { get }
     
-    func update(width: CGFloat, safeInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat
+    func update(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat
 }
 
 private let TitleNodeStateRegular = 0
@@ -492,7 +492,19 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var currentStatusIcon: CredibilityIcon?
     
     private var currentPanelStatusData: PeerInfoStatusData?
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, presentedInFormSheet: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: EnginePeer?, cachedData: EngineCachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, profileGiftsContext: ProfileGiftsContext?, screenData: PeerInfoScreenData?, isSearching: Bool, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, sideInsets: PeerInfoSideInsets, statusBarHeight: CGFloat, navigationHeight: CGFloat, presentedInFormSheet: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: EnginePeer?, cachedData: EngineCachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, profileGiftsContext: ProfileGiftsContext?, screenData: PeerInfoScreenData?, isSearching: Bool, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
+        // iPhone Duo: keep the header out of the side strip; without one every expression below is today's.
+        let stripLeft = sideInsets.stripLeft
+        let stripRight = sideInsets.stripRight
+        let hasStrip = stripLeft > 0.0 || stripRight > 0.0
+        // With a strip, the avatar, title, subtitle and username are centered in the band between the strip
+        // and the other edge (the action buttons' and sections' axis), kept `margin` inside it when they do
+        // not fit.
+        func bandCenteredOrigin(width elementWidth: CGFloat, margin: CGFloat) -> CGFloat {
+            let bandWidth = width - stripLeft - stripRight
+            return stripLeft + horizontallyCenteredOrigin(width: elementWidth, containerWidth: bandWidth, minX: margin, maxX: bandWidth - margin)
+        }
+        self.avatarListNode.listContainerNode.stripSideInsets = UIEdgeInsets(top: 0.0, left: stripLeft, bottom: 0.0, right: stripRight)
         if self.appliedCustomNavigationContentNode !== self.customNavigationContentNode {
             if let previous = self.appliedCustomNavigationContentNode {
                 ComponentTransition(transition).setAlpha(view: previous.view, alpha: 0.0, completion: { [weak previous] _ in
@@ -503,12 +515,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.appliedCustomNavigationContentNode = self.customNavigationContentNode
             if let customNavigationContentNode = self.customNavigationContentNode {
                 self.searchBarContainer.addSubnode(customNavigationContentNode)
-                customNavigationContentNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: navigationHeight))
+                customNavigationContentNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width - sideInsets.navigationLeft - sideInsets.navigationRight, height: navigationHeight))
                 customNavigationContentNode.alpha = 0.0
                 ComponentTransition(transition).setAlpha(view: customNavigationContentNode.view, alpha: 1.0)
             }
         } else if let customNavigationContentNode = self.customNavigationContentNode {
-            transition.updateFrame(node: customNavigationContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: navigationHeight)))
+            transition.updateFrame(node: customNavigationContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width - sideInsets.navigationLeft - sideInsets.navigationRight, height: navigationHeight)))
         }
         
         var threadData = threadData
@@ -629,7 +641,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         
-        let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, presentedInFormSheet: presentedInFormSheet, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings || isMyProfile, presentationData: presentationData, transition: transition)
+        let editingContentHeight = self.editingContentNode.update(width: width, leftInset: sideInsets.sectionLeft, rightInset: sideInsets.sectionRight, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, presentedInFormSheet: presentedInFormSheet, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings || isMyProfile, presentationData: presentationData, transition: transition)
         transition.updateFrame(node: self.editingContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -contentOffset), size: CGSize(width: width, height: editingContentHeight)))
         
         let avatarOverlayFarme = self.editingContentNode.convert(self.editingContentNode.avatarNode.frame, to: self)
@@ -641,7 +653,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let transitionSourceTitleFrame = CGRect()
         let transitionSourceSubtitleFrame = CGRect()
         
-        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
+        let avatarFrame = CGRect(origin: CGPoint(x: hasStrip ? bandCenteredOrigin(width: avatarSize, margin: 16.0) : floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
         
         let regularNavigationContentsAccentColor: UIColor = peer?.effectiveProfileColor != nil ? .white : presentationData.theme.list.itemAccentColor
         let collapsedHeaderNavigationContentsAccentColor = presentationData.theme.list.itemAccentColor
@@ -1352,8 +1364,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let textSideInset: CGFloat = 36.0
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height
         
-        var titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
-        if self.navigationButtonContainer.rightButtonNodes.count > 1 {
+        var titleConstrainedSize = CGSize(width: width - stripLeft - stripRight - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
+        if self.navigationButtonContainer.rowRightButtonCount > 1 {
             titleConstrainedSize.width -= 60.0
         }
         
@@ -1423,7 +1435,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     debugLevel: self.context.sharedContext.immediateExperimentalUISettings.debugRatingLayout
                 )),
                 environment: {},
-                containerSize: CGSize(width: width - 12.0 * 2.0, height: 100.0)
+                containerSize: CGSize(width: width - 12.0 * 2.0 - stripLeft - stripRight, height: 100.0)
             )
             if let subtitleRatingView = subtitleRating.view {
                 if subtitleRatingView.superview == nil {
@@ -1442,8 +1454,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let subtitleConstrainedSize: CGSize
         let expandedSubtitleConstrainedSize: CGSize
         if self.isSettings {
-            subtitleConstrainedSize = CGSize(width: max(0.0, width - textSideInset * 2.0 - subtitleRatingInset), height: .greatestFiniteMagnitude)
-            expandedSubtitleConstrainedSize = CGSize(width: max(0.0, width - 16.0 * 2.0 - subtitleRatingInset), height: .greatestFiniteMagnitude)
+            subtitleConstrainedSize = CGSize(width: max(0.0, width - stripLeft - stripRight - textSideInset * 2.0 - subtitleRatingInset), height: .greatestFiniteMagnitude)
+            expandedSubtitleConstrainedSize = CGSize(width: max(0.0, width - stripLeft - stripRight - 16.0 * 2.0 - subtitleRatingInset), height: .greatestFiniteMagnitude)
         } else {
             subtitleConstrainedSize = titleConstrainedSize
             expandedSubtitleConstrainedSize = titleConstrainedSize
@@ -1712,7 +1724,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * expandedTitleScale, height: titleSize.height * expandedTitleScale)
-            var minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - bottomInset - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+            var minTitleFrame = CGRect(origin: CGPoint(x: 16.0 + stripLeft, y: expandedAvatarHeight - bottomInset - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
             if !self.isSettings && !self.isMyProfile {
                 minTitleFrame.origin.y -= 83.0
             }
@@ -1726,15 +1738,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleOffset = -min(titleCollapseOffset, contentOffset)
             titleCollapseFraction = max(0.0, min(1.0, contentOffset / titleCollapseOffset))
             
-            subtitleFrame = CGRect(origin: CGPoint(x: 16.0 - subtitleButtonHorizontalOffset * (1.0 - titleCollapseFraction), y: minTitleFrame.maxY + 2.0), size: subtitleSize)
+            subtitleFrame = CGRect(origin: CGPoint(x: 16.0 + stripLeft - subtitleButtonHorizontalOffset * (1.0 - titleCollapseFraction), y: minTitleFrame.maxY + 2.0), size: subtitleSize)
             if self.isSettings {
                 subtitleFrame.origin.x += subtitleRatingInset
             } else if subtitleRatingSize != nil {
                 subtitleFrame.origin.x += 22.0
             }
-            usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
+            usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0 - stripRight, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
-            titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
+            titleFrame = CGRect(origin: CGPoint(x: hasStrip ? bandCenteredOrigin(width: titleSize.width, margin: textSideInset) : floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             
             var titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
             if case .regular = metrics.widthClass, !isSettings, !isMyProfile {
@@ -1751,10 +1763,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             let totalSubtitleWidth = effectiveSubtitleWidth + usernameSpacing + usernameSize.width
             if usernameSize.width == 0.0 {
-                subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - effectiveSubtitleWidth) / 2.0) + subtitleLeadingInset - subtitleButtonHorizontalOffset * (1.0 - titleCollapseFraction), y: titleFrame.maxY + 1.0), size: subtitleSize)
-                usernameFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - usernameSize.width) / 2.0), y: subtitleFrame.maxY + 1.0), size: usernameSize)
+                subtitleFrame = CGRect(origin: CGPoint(x: (hasStrip ? bandCenteredOrigin(width: effectiveSubtitleWidth, margin: 16.0) : floorToScreenPixels((width - effectiveSubtitleWidth) / 2.0)) + subtitleLeadingInset - subtitleButtonHorizontalOffset * (1.0 - titleCollapseFraction), y: titleFrame.maxY + 1.0), size: subtitleSize)
+                usernameFrame = CGRect(origin: CGPoint(x: hasStrip ? bandCenteredOrigin(width: usernameSize.width, margin: 16.0) : floorToScreenPixels((width - usernameSize.width) / 2.0), y: subtitleFrame.maxY + 1.0), size: usernameSize)
             } else {
-                subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - totalSubtitleWidth) / 2.0) + subtitleLeadingInset - subtitleButtonHorizontalOffset * (1.0 - titleCollapseFraction), y: titleFrame.maxY + 1.0), size: subtitleSize)
+                subtitleFrame = CGRect(origin: CGPoint(x: (hasStrip ? bandCenteredOrigin(width: totalSubtitleWidth, margin: 16.0) : floorToScreenPixels((width - totalSubtitleWidth) / 2.0)) + subtitleLeadingInset - subtitleButtonHorizontalOffset * (1.0 - titleCollapseFraction), y: titleFrame.maxY + 1.0), size: subtitleSize)
                 usernameFrame = CGRect(origin: CGPoint(x: subtitleFrame.maxX + usernameSpacing, y: titleFrame.maxY + 1.0), size: usernameSize)
             }
         }
@@ -2273,9 +2285,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let buttonSpacing: CGFloat = 8.0
         let buttonSideInset = max(16.0, containerInset)
         
-        let actionButtonWidth = (width - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(actionButtonKeys.count) - buttonSpacing
+        let actionButtonWidth = (width - stripLeft - stripRight - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(actionButtonKeys.count) - buttonSpacing
         let actionButtonSize = CGSize(width: actionButtonWidth, height: 40.0)
-        var actionButtonRightOrigin = CGPoint(x: width - buttonSideInset, y: backgroundHeight - 16.0 - actionButtonSize.height)
+        var actionButtonRightOrigin = CGPoint(x: width - stripRight - buttonSideInset, y: backgroundHeight - 16.0 - actionButtonSize.height)
         
         for buttonKey in actionButtonKeys.reversed() {
             let buttonNode: PeerInfoHeaderActionButtonNode
@@ -2329,9 +2341,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
-        let buttonWidth = (width - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(buttonKeys.count) - buttonSpacing
+        let buttonWidth = (width - stripLeft - stripRight - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(buttonKeys.count) - buttonSpacing
         let buttonSize = CGSize(width: buttonWidth, height: 58.0)
-        var buttonRightOrigin = CGPoint(x: width - buttonSideInset, y: backgroundHeight - bottomInset - 16.0 - buttonSize.height)
+        var buttonRightOrigin = CGPoint(x: width - stripRight - buttonSideInset, y: backgroundHeight - bottomInset - 16.0 - buttonSize.height)
         if !actionButtonKeys.isEmpty {
             buttonRightOrigin.y += actionButtonSize.height + 24.0
         }
@@ -2548,6 +2560,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     topLeftButtonsSize: CGSize(width: (self.isSettings ? 57.0 : 47.0), height: 46.0),
                     topRightButtonsSize: CGSize(width: 76.0 + (self.isMyProfile ? 38.0 : 0.0), height: 46.0),
                     titleWidth: max(140.0, titleFrame.width) + 42.0,
+                    titleCenterX: hasStrip ? titleFrame.midX : nil,
+                    sideInsets: sideInsets,
                     bottomHeight: !buttonKeys.isEmpty ? 81.0 : 30.0,
                     action: { [weak self] gift in
                         guard let self, case let .unique(gift) = gift.gift else {
@@ -2675,6 +2689,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             let musicString = NSMutableAttributedString()
             let isOverlay = self.isAvatarExpanded || hasBackground
+            // iPhone Duo: the row is laid out in the band beside the side strip, so its label is centered on the
+            // avatar's and title's axis. Without a strip the band is the full width.
+            let musicBandWidth = backgroundFrame.width - stripLeft - stripRight
             musicString.append(NSAttributedString(string: track ?? "", font: Font.semibold(12.0), textColor: isOverlay ? .white : presentationData.theme.list.itemAccentColor))
             musicString.append(NSAttributedString(string: " - \(artist)", font: Font.regular(12.0), textColor: isOverlay ? UIColor.white.withAlphaComponent(0.7) : presentationData.theme.list.itemSecondaryTextColor))
             
@@ -2690,7 +2707,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                                 ),
                                 AnyComponentWithIdentity(
                                     id: "label",
-                                    component: AnyComponent(MarqueeComponent(attributedText: musicString, maxWidth: backgroundFrame.width - 96.0))
+                                    component: AnyComponent(MarqueeComponent(attributedText: musicString, maxWidth: musicBandWidth - 96.0))
                                 ),
                                 AnyComponentWithIdentity(
                                     id: "arrow",
@@ -2698,16 +2715,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                                 )
                             ], spacing: 4.0)
                         ),
-                        minSize: CGSize(width: backgroundFrame.width, height: musicHeight),
+                        minSize: CGSize(width: musicBandWidth, height: musicHeight),
                         action: { [weak self] in
                             self?.displaySavedMusic?()
                         }
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: backgroundFrame.width, height: musicHeight)
+                containerSize: CGSize(width: musicBandWidth, height: musicHeight)
             )
-            let musicFrame = CGRect(origin: CGPoint(x: 0.0, y: (apparentBackgroundHeight - backgroundHeight) + backgroundHeight - musicHeight - (hasBackground || self.isAvatarExpanded ? 0.0 : 4.0)), size: musicSize)
+            let musicFrame = CGRect(origin: CGPoint(x: stripLeft, y: (apparentBackgroundHeight - backgroundHeight) + backgroundHeight - musicHeight - (hasBackground || self.isAvatarExpanded ? 0.0 : 4.0)), size: musicSize)
             if let musicView = music.view {
                 if musicView.superview == nil {
                     self.regularContentNode.view.addSubview(musicView)

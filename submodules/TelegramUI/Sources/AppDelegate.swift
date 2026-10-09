@@ -804,7 +804,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }, currentHorizontalClassGetter: {
             return UIUserInterfaceSizeClass.compact
         }, documentsPath: legacyDocumentsPath(), currentApplicationBounds: {
-            return UIScreen.main.bounds
+            return mainWindowScreenBounds
         }, canOpenUrl: { url in
             return UIApplication.shared.canOpenURL(url)
         }, openUrl: { url in

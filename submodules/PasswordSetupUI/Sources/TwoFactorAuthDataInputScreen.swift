@@ -1888,6 +1888,17 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let contentAreaSize = layout.size
         let availableAreaSize = CGSize(width: layout.size.width, height: layout.size.height - layout.insets(options: [.input]).bottom)
         
+        // The content above the button lays out in the band between the side insets when they differ (iPhone Duo's
+        // side strip: the fields ran under it); across the screen otherwise.
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? contentAreaSize.width - layout.safeInsets.left - layout.safeInsets.right : contentAreaSize.width
+        // The button and the actions in its rows span iPhone Duo's side strip; they keep clear only of a corner block
+        // at the bottom.
+        let bottomSideInsets = layout.bottomEdgeSideInsets()
+        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
+        let bottomBandWidth: CGFloat = insetsDiffer ? contentAreaSize.width - bottomSideInsets.left - bottomSideInsets.right : contentAreaSize.width
+        
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
         let iconSpacing: CGFloat
@@ -1918,11 +1929,11 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
             iconSize = CGSize(width: 100.0, height: 100.0)
         }
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: contentAreaSize.width - sideInset * 2.0, height: contentAreaSize.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: contentAreaSize.width - sideInset * 2.0, height: contentAreaSize.height))
-        let skipActionSize = self.skipActionTitleNode.updateLayout(CGSize(width: contentAreaSize.width - sideInset * 2.0, height: contentAreaSize.height))
-        let changeEmailActionSize = self.changeEmailActionTitleNode.updateLayout(CGSize(width: contentAreaSize.width - sideInset * 2.0, height: contentAreaSize.height))
-        let resendCodeActionSize = self.resendCodeActionTitleNode.updateLayout(CGSize(width: contentAreaSize.width - sideInset * 2.0, height: contentAreaSize.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: bandWidth - sideInset * 2.0, height: contentAreaSize.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: bandWidth - sideInset * 2.0, height: contentAreaSize.height))
+        let skipActionSize = self.skipActionTitleNode.updateLayout(CGSize(width: bottomBandWidth - sideInset * 2.0, height: contentAreaSize.height))
+        let changeEmailActionSize = self.changeEmailActionTitleNode.updateLayout(CGSize(width: bottomBandWidth - sideInset * 2.0, height: contentAreaSize.height))
+        let resendCodeActionSize = self.resendCodeActionTitleNode.updateLayout(CGSize(width: bottomBandWidth - sideInset * 2.0, height: contentAreaSize.height))
         
         var calculatedContentHeight = iconSize.height + iconSpacing + titleSize.height
         if textSize.width.isZero {
@@ -1944,20 +1955,20 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let areaHeight = layout.size.height - insets.top - insets.bottom
         let contentVerticalOrigin = max(layout.statusBarHeight ?? 0.0, floor((areaHeight - calculatedContentHeight) / 2.0))
         
-        let iconFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize)
+        let iconFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize)
         if let animatedStickerNode = self.animatedStickerNode {
             animatedStickerNode.updateLayout(size: iconFrame.size)
             transition.updateFrame(node: animatedStickerNode, frame: iconFrame)
         } else if let monkeyNode = self.monkeyNode {
             transition.updateFrame(node: monkeyNode, frame: iconFrame)
         }
-        let titleFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         let textFrame: CGRect
         if textSize.width.isZero {
-            textFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - textSize.width) / 2.0), y: titleFrame.maxY), size: textSize)
+            textFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - textSize.width) / 2.0), y: titleFrame.maxY), size: textSize)
         } else {
-            textFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
+            textFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
         }
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
         
@@ -1968,7 +1979,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
             contentHeight += textSpacing
         }
         
-        let rowWidth = contentAreaSize.width - buttonSideInset * 2.0
+        let rowWidth = bandWidth - buttonSideInset * 2.0
         
         for i in 0 ..< self.inputNodes.count {
             let inputNode = self.inputNodes[i]
@@ -1976,7 +1987,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
                 contentHeight += rowSpacing
             }
             let inputNodeSize = CGSize(width: rowWidth, height: 52.0)
-            transition.updateFrame(node: inputNode, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: contentHeight), size: inputNodeSize))
+            transition.updateFrame(node: inputNode, frame: CGRect(origin: CGPoint(x: bandMinX + buttonSideInset, y: contentHeight), size: inputNodeSize))
             inputNode.updateLayout(size: inputNodeSize, transition: transition)
             contentHeight += inputNodeSize.height
         }
@@ -1985,11 +1996,11 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let buttonBottomInset = layout.intrinsicInsets.bottom + minimalBottomInset
         let bottomInset = layout.intrinsicInsets.bottom + buttonSpacing
         
-        let buttonWidth = contentAreaSize.width - buttonSideInset * 2.0
+        let buttonWidth = bottomBandWidth - buttonSideInset * 2.0
         
         let maxButtonY = min(areaHeight - buttonSpacing, layout.size.height - buttonBottomInset) - buttonHeight * 2.0
         
-        let buttonFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - buttonWidth) / 2.0), y: max(contentHeight + buttonSpacing, maxButtonY)), size: CGSize(width: buttonWidth, height: buttonHeight))
+        let buttonFrame = CGRect(origin: CGPoint(x: bottomBandMinX + floor((bottomBandWidth - buttonWidth) / 2.0), y: max(contentHeight + buttonSpacing, maxButtonY)), size: CGSize(width: buttonWidth, height: buttonHeight))
         let _ = self.button.update(
             transition: ComponentTransition(transition),
             component: AnyComponent(ButtonComponent(
@@ -2038,7 +2049,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASS
         let changeEmailActionButtonFrame: CGRect
         let resendCodeActionFrame: CGRect
         let resendCodeActionButtonFrame: CGRect
-        if changeEmailActionSize.width + resendCodeActionSize.width > layout.size.width - buttonFrame.minX * 2.0 - 32.0 {
+        if changeEmailActionSize.width + resendCodeActionSize.width > bottomBandWidth - (buttonFrame.minX - bottomBandMinX) * 2.0 - 32.0 {
             changeEmailActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.minY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))
             changeEmailActionFrame = CGRect(origin: CGPoint(x: changeEmailActionButtonFrame.minX + floor((changeEmailActionButtonFrame.width - changeEmailActionSize.width) / 2.0), y: changeEmailActionButtonFrame.minY + floor((changeEmailActionButtonFrame.height - changeEmailActionSize.height) / 2.0)), size: changeEmailActionSize)
             resendCodeActionButtonFrame = CGRect(origin: CGPoint(x: buttonFrame.minX, y: buttonFrame.maxY), size: CGSize(width: buttonFrame.width, height: buttonFrame.height))

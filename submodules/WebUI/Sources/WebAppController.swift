@@ -223,6 +223,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var placeholderIcon: (UIImage, Bool)?
         private var placeholderNode: ShimmerEffectNode?
         private var fullscreenControls: ComponentView<Empty>?
+        private var sideColumnBackButton: ComponentView<Empty>?
             
         fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
         
@@ -935,6 +936,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 let controlsMargin: CGFloat = 8.0
                 let componentTransition: ComponentTransition = added ? .immediate : ComponentTransition(transition)
+                // iPhone Duo: the back/close button goes in the side strip, where a screen's own back button belongs;
+                // the row keeps minimize and more. Nil without a strip.
+                let sideColumnFrame = layout.sideColumnNavigationButtonFrame
                 let controlsSize = fullscreenControls.update(
                     transition: componentTransition,
                     component: AnyComponent(
@@ -943,9 +947,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             strings: self.presentationData.strings,
                             title: controller.botName,
                             isVerified: controller.botVerified,
-                            insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right),
+                            insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right + layout.navigationBarTrailingButtonsInset),
                             statusBarStyle: self.fullScreenStatusBarStyle,
                             hasBack: self.hasBackButton,
+                            showsBackButton: sideColumnFrame == nil,
                             backPressed: { [weak self] in
                                 guard let self else {
                                     return
@@ -973,13 +978,61 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if view.superview == nil {
                         self.view.addSubview(view)
                     }
-                    transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) + controlsMargin), size: controlsSize))
+                    // iPhone Duo unfolded portrait: the controls sit beside the status island, the right ones clear of it.
+                    transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: (layout.navigationBarStatusBarHeight ?? 0.0) + controlsMargin), size: controlsSize))
                     if added {
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                     }
                 }
+                if let sideColumnFrame {
+                    let sideColumnBackButton: ComponentView<Empty>
+                    var sideColumnTransition = componentTransition
+                    if let current = self.sideColumnBackButton {
+                        sideColumnBackButton = current
+                    } else {
+                        sideColumnBackButton = ComponentView<Empty>()
+                        self.sideColumnBackButton = sideColumnBackButton
+                        sideColumnTransition = .immediate
+                    }
+                    let buttonSize = sideColumnBackButton.update(
+                        transition: sideColumnTransition,
+                        component: AnyComponent(GlassBarButtonComponent(
+                            size: CGSize(width: 44.0, height: 44.0),
+                            backgroundColor: nil,
+                            isDark: self.presentationData.theme.overallDarkAppearance,
+                            state: .glass,
+                            component: AnyComponentWithIdentity(id: self.hasBackButton ? "back" : "close", component: AnyComponent(
+                                BundleIconComponent(name: self.hasBackButton ? "Navigation/Back" : "Navigation/Close", tintColor: self.presentationData.theme.chat.inputPanel.panelControlColor)
+                            )),
+                            action: { [weak self] _ in
+                                self?.controller?.cancelPressed()
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 44.0, height: 44.0)
+                    )
+                    if let view = sideColumnBackButton.view {
+                        if view.superview == nil {
+                            self.view.addSubview(view)
+                            view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        }
+                        sideColumnTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: sideColumnFrame.midX - buttonSize.width / 2.0, y: sideColumnFrame.midY - buttonSize.height / 2.0), size: buttonSize))
+                    }
+                } else if let sideColumnBackButton = self.sideColumnBackButton {
+                    self.sideColumnBackButton = nil
+                    sideColumnBackButton.view?.removeFromSuperview()
+                }
+                
                 contentTopInset = controlsSize.height + controlsMargin * 2.0
+                if let island = layout.topBarStatusIsland {
+                    // The page's content starts below both the controls and the island beside them.
+                    contentTopInset = max(contentTopInset, island.height - (layout.navigationBarStatusBarHeight ?? 0.0))
+                }
             } else if let fullscreenControls = self.fullscreenControls {
+                if let sideColumnBackButton = self.sideColumnBackButton {
+                    self.sideColumnBackButton = nil
+                    sideColumnBackButton.view?.removeFromSuperview()
+                }
                 self.fullscreenControls = nil
                 fullscreenControls.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                     fullscreenControls.view?.removeFromSuperview()
@@ -1051,7 +1104,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 var customInsets: UIEdgeInsets = .zero
                 if controller.isFullscreen {
-                    customInsets.top = layout.statusBarHeight ?? 0.0
+                    // The status height the controls sit under (compact beside iPhone Duo's status island).
+                    customInsets.top = layout.navigationBarStatusBarHeight ?? 0.0
                 }
                 if layout.intrinsicInsets.bottom > 44.0 || (layout.inputHeight ?? 0.0) > 0.0 {
                     customInsets.bottom = 0.0
@@ -1059,7 +1113,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     customInsets.bottom = layout.intrinsicInsets.bottom
                 }
                 customInsets.left = layout.safeInsets.left
-                customInsets.right = layout.safeInsets.left
+                customInsets.right = layout.safeInsets.right
                 webView.customInsets = customInsets
                 
                 if let controller = self.controller {
@@ -3649,6 +3703,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.automaticallyControlPresentationContextLayout = false
+        // A mini app sheet opens to the whole screen beside iPhone Duo's status island (unfolded portrait).
+        self.fillsScreenBesideStatusIsland = true
         
         if case .attachMenu = self.source {
             
@@ -4301,7 +4357,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

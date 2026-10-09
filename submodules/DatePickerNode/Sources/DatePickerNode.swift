@@ -732,6 +732,15 @@ public final class DatePickerNode: ASDisplayNode {
     }
     
     public var heightUpdated: ((CGFloat) -> Void)?
+    /// How much further from the right edge the header row's controls (month arrows, time and date buttons) stay, to
+    /// clear a corner block the header rises beside (iPhone Duo's status corner). The grid keeps the full width.
+    public var headerTrailingInset: CGFloat = 0.0 {
+        didSet {
+            if self.headerTrailingInset != oldValue, let size = self.validLayout {
+                self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition) {
         var validIds: [Date] = []
         
@@ -819,9 +828,9 @@ public final class DatePickerNode: ASDisplayNode {
         self.monthButtonNode.frame = monthTextFrame.inset(by: UIEdgeInsets(top: -6.0, left: -6.0, bottom: -6.0, right: -30.0))
         
         self.previousButtonNode.isEnabled = self.currentIndex > 0
-        self.previousButtonNode.frame = CGRect(x: size.width - sideInset - 54.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
+        self.previousButtonNode.frame = CGRect(x: size.width - sideInset - self.headerTrailingInset - 54.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
         self.nextButtonNode.isEnabled = self.currentIndex < self.months.count - 1
-        self.nextButtonNode.frame = CGRect(x: size.width - sideInset - 13.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
+        self.nextButtonNode.frame = CGRect(x: size.width - sideInset - self.headerTrailingInset - 13.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
         
         let date = self.date ?? Date()
         var t: time_t = Int(date.timeIntervalSince1970)
@@ -834,7 +843,7 @@ public final class DatePickerNode: ASDisplayNode {
         var timeSize = self.timeButtonNode.measure(size)
         timeSize.width += 24.0
         timeSize.height = 36.0
-        self.timeButtonNode.frame = CGRect(x: size.width - timeSize.width - 10.0, y: 4.0, width: timeSize.width, height: timeSize.height)
+        self.timeButtonNode.frame = CGRect(x: size.width - self.headerTrailingInset - timeSize.width - 10.0, y: 4.0, width: timeSize.width, height: timeSize.height)
         
         let dateString = stringForMediumDate(timestamp: Int32(date.timeIntervalSince1970), strings: self.strings, dateTimeFormat: self.dateTimeFormat, withTime: false)
         self.dateButtonNode.setTitle(dateString, with: Font.with(size: 17.0, traits: .monospacedNumbers), with: self.state.displayingDateSelection ? self.theme.accentColor : self.theme.textColor, for: .normal)
@@ -842,7 +851,7 @@ public final class DatePickerNode: ASDisplayNode {
         var dateSize = self.dateButtonNode.measure(size)
         dateSize.width += 24.0
         dateSize.height = 36.0
-        self.dateButtonNode.frame = CGRect(x: size.width - timeSize.width - 10.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
+        self.dateButtonNode.frame = CGRect(x: size.width - self.headerTrailingInset - timeSize.width - 10.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
         
         let daysSideInset: CGFloat = 12.0
         let cellSize: CGFloat = floor((constrainedSize.width - daysSideInset * 2.0) / 7.0)

@@ -23,6 +23,7 @@ import MultilineTextComponent
 import AttachmentUI
 import SearchBarNode
 import BalancedTextComponent
+import SideColumnLayout
 
 final class QuickReplySetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -730,6 +731,7 @@ final class QuickReplySetupScreenComponent: Component {
             size: CGSize,
             insets: UIEdgeInsets,
             statusBarHeight: CGFloat,
+            trailingButtonsInset: CGFloat,
             isModal: Bool,
             transition: ComponentTransition,
             deferScrollApplication: Bool
@@ -806,6 +808,7 @@ final class QuickReplySetupScreenComponent: Component {
                     statusBarHeight: statusBarHeight,
                     leftInset: insets.left,
                     rightInset: insets.right,
+                    trailingButtonsInset: trailingButtonsInset,
                     search: ChatListNavigationBar.Search(isEnabled: !self.isEditing),
                     activeSearch: self.isSearchDisplayControllerActive ? ChatListNavigationBar.ActiveSearch(isExternal: false) : nil,
                     primaryContent: headerContent,
@@ -830,7 +833,9 @@ final class QuickReplySetupScreenComponent: Component {
                     openStatusSetup: { _ in
                     },
                     allowAutomaticOrder: {
-                    }
+                    },
+                    // iPhone Duo: the back and icon buttons go into the side strip, as the chat list's do.
+                    sideColumn: pushedScreenSideColumnRegion(layout: self.environment?.controller()?.currentlyAppliedLayout)
                 )),
                 environment: {},
                 containerSize: size
@@ -995,6 +1000,7 @@ final class QuickReplySetupScreenComponent: Component {
                 size: availableSize,
                 insets: environment.safeInsets,
                 statusBarHeight: statusBarHeight,
+                trailingButtonsInset: environment.navigationBarTrailingButtonsInset,
                 isModal: isModal,
                 transition: transition,
                 deferScrollApplication: true
@@ -1122,7 +1128,9 @@ final class QuickReplySetupScreenComponent: Component {
                             animateScale: false,
                             animateContents: false
                         ))),
-                        insets: UIEdgeInsets(top: 4.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom + environment.additionalInsets.bottom, right: environment.safeInsets.right)
+                        // The panel at the bottom spans iPhone Duo's side strip; it keeps clear only of a corner block at
+                        // the bottom.
+                        insets: UIEdgeInsets(top: 4.0, left: environment.bottomEdgeSideInsets().left, bottom: environment.safeInsets.bottom + environment.additionalInsets.bottom, right: environment.bottomEdgeSideInsets().right)
                     )),
                     environment: {},
                     containerSize: availableSize

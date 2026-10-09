@@ -65,12 +65,14 @@ final class SecureIdAuthAcceptNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(width: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    /// `leftInset`/`rightInset` keep the button clear of a corner block beside the panel (iPhone Duo); the separator
+    /// and the background span the whole width.
+    func updateLayout(width: CGFloat, leftInset: CGFloat = 0.0, rightInset: CGFloat = 0.0, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
         let baseHeight: CGFloat = 78.0
-        let buttonSize = CGSize(width: width - 16.0 * 2.0, height: 48.0)
-        let buttonFrame = CGRect(origin: CGPoint(x: 16.0, y: floor((baseHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        let buttonSize = CGSize(width: width - leftInset - rightInset - 16.0 * 2.0, height: 48.0)
+        let buttonFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: floor((baseHeight - buttonSize.height) / 2.0)), size: buttonSize)
         transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         

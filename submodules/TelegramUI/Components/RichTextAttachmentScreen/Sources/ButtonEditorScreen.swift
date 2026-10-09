@@ -685,7 +685,7 @@ private final class ButtonEditorSheetComponent: Component {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: availableSize,
                         regularMetricsSize: nil,
                         dismiss: { [weak self] animated in self?.dismiss(animated: animated) }

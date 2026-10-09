@@ -223,8 +223,10 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         
         let leftActionSize = self.leftActionTextNode.updateLayout(CGSize(width: floor(layout.size.width / 2.0), height: CGFloat.greatestFiniteMagnitude))
         let rightActionSize = self.rightActionTextNode.updateLayout(CGSize(width: floor(layout.size.width / 2.0), height: CGFloat.greatestFiniteMagnitude))
-        let leftActionTextFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 15.0, y: toolbarFrame.minY + floor((toolbarHeight - leftActionSize.height) / 2.0)), size: leftActionSize)
-        let rightActionTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - 15.0 - rightActionSize.width, y: toolbarFrame.minY + floor((toolbarHeight - rightActionSize.height) / 2.0)), size: rightActionSize)
+        // The bottom toolbar spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let toolbarSideInsets = layout.bottomEdgeSideInsets()
+        let leftActionTextFrame = CGRect(origin: CGPoint(x: toolbarSideInsets.left + 15.0, y: toolbarFrame.minY + floor((toolbarHeight - leftActionSize.height) / 2.0)), size: leftActionSize)
+        let rightActionTextFrame = CGRect(origin: CGPoint(x: layout.size.width - toolbarSideInsets.right - 15.0 - rightActionSize.width, y: toolbarFrame.minY + floor((toolbarHeight - rightActionSize.height) / 2.0)), size: rightActionSize)
         transition.updateFrame(node: self.leftActionTextNode, frame: leftActionTextFrame)
         transition.updateFrame(node: self.rightActionTextNode, frame: rightActionTextFrame)
         self.leftActionNode.frame = CGRect(origin: CGPoint(x: 0.0, y: toolbarFrame.minY), size: CGSize(width: leftActionTextFrame.maxX + 15.0, height: toolbarHeight))

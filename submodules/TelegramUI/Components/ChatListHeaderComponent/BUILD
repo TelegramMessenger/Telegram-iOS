@@ -26,6 +26,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/SideColumnLayout",
     ],
     visibility = [
         "//visibility:public",

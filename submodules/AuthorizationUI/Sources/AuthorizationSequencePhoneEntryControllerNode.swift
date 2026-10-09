@@ -612,8 +612,20 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: self.account == nil ? self.strings.Login_NewNumber : self.strings.Login_PhoneTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         self.titleActivateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
+        // iPhone Duo: beside a side strip the content keeps to the band between the side insets. With equal
+        // insets (every other phone) it keeps the full width.
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        
         let inset: CGFloat = 24.0
-        let maximumWidth: CGFloat = min(430.0, layout.size.width)
+        let maximumWidth: CGFloat = min(430.0, bandWidth)
+        
+        // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let bottomSideInsets = layout.bottomEdgeSideInsets()
+        let bottomBandMinX: CGFloat = insetsDiffer ? bottomSideInsets.left : 0.0
+        let bottomBandWidth: CGFloat = insetsDiffer ? layout.size.width - bottomSideInsets.left - bottomSideInsets.right : layout.size.width
+        let bottomMaximumWidth: CGFloat = min(430.0, bottomBandWidth)
         
         let animationSize = CGSize(width: 100.0, height: 100.0)
         let titleSize = self.titleNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
@@ -621,8 +633,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         let noticeInset: CGFloat = self.account == nil ? 32.0 : 0.0
         
         let noticeSize = self.noticeNode.updateLayout(CGSize(width: min(274.0 + noticeInset, maximumWidth - 28.0), height: CGFloat.greatestFiniteMagnitude))
-        let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - inset * 2.0, transition: transition)
-        let proceedSize = CGSize(width: maximumWidth - inset * 2.0, height: proceedHeight)
+        let proceedHeight = self.proceedNode.updateLayout(width: bottomMaximumWidth - inset * 2.0, transition: transition)
+        let proceedSize = CGSize(width: bottomMaximumWidth - inset * 2.0, height: proceedHeight)
         
         var items: [AuthorizationLayoutItem] = [
             AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: titleInset, maxValue: titleInset), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
@@ -654,14 +666,14 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         if let forcedButtonFrame = self.forcedButtonFrame, (layout.inputHeight ?? 0.0).isZero {
             buttonFrame = forcedButtonFrame
         } else {
-            buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)
+            buttonFrame = CGRect(origin: CGPoint(x: bottomBandMinX + floorToScreenPixels((bottomBandWidth - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)
         }
         
         transition.updateFrame(node: self.proceedNode, frame: buttonFrame)
         
         self.animationNode.updateLayout(size: animationSize)
         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: bandMinX, y: insets.top), size: CGSize(width: bandWidth, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
         
         transition.updateFrame(node: self.managedAnimationNode, frame: self.animationNode.frame)
         
@@ -1054,7 +1066,13 @@ final class PhoneConfirmationController: ViewController {
             let sideInset: CGFloat = 8.0
             let innerInset: CGFloat = 18.0
             
-            let maximumWidth: CGFloat = min(430.0, layout.size.width)
+            // iPhone Duo: beside a side strip the card keeps to the band between the side insets. With equal
+            // insets (every other phone) it is centered on the full width.
+            let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+            let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+            let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+            
+            let maximumWidth: CGFloat = min(430.0, bandWidth)
             
             transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: -layout.size.width, y: 0.0), size: CGSize(width: layout.size.width * 3.0, height: layout.size.height)))
             
@@ -1072,10 +1090,10 @@ final class PhoneConfirmationController: ViewController {
                 }
             }
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - backgroundSize.width) / 2.0), y: originY), size: backgroundSize)
+            let backgroundFrame = CGRect(origin: CGPoint(x: bandMinX + floorToScreenPixels((bandWidth - backgroundSize.width) / 2.0), y: originY), size: backgroundSize)
             transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
               
-            let maxWidth = layout.size.width - 20.0
+            let maxWidth = bandWidth - 20.0
             if !hadLayout {
                 var fontSize = 34.0
                 if layout.size.width < 375.0 {

@@ -192,7 +192,11 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
         let titleAreaHeight: CGFloat = 54.0
         var contentHeight = titleAreaHeight + bottomInset
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        // Centered, or in the band beside a side strip (iPhone Duo). The panel is anchored at the bottom: placed as
+        // `horizontalContainerFillingPlacementForLayout(anchoredAtBottom:)` describes (it spans iPhone Duo's side strip
+        // in compact width, clear only of a corner block at the bottom).
+        let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: true, anchoredAtBottom: true)
+        let width = placement.width
         
         if self.contentNode == nil || self.contentNode?.frame.width != width {
             self.contentNode?.removeFromSupernode()
@@ -214,7 +218,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollVie
             contentNode.updateVisibleItems(visibleBounds: contentNode.bounds, animated: false)
         }
         
-        let sideInset = floor((layout.size.width - width) / 2.0)
+        let sideInset = placement.left
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
         let contentFrame = contentContainerFrame
         

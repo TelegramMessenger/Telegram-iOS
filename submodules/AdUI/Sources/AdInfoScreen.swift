@@ -173,14 +173,18 @@ public final class AdInfoScreen: ViewController {
             if self.titleNode.supernode == nil {
                 self.addSubnode(self.titleNode)
             }
-            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left * 2.0 - 80.0 - 16.0 * 2.0, height: 100.0))
-            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + 16.0, y: floor((navigationHeight - titleSize.height) / 2.0)), size: titleSize))
+            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 80.0 - 16.0 * 2.0, height: 100.0))
+            // Centred in the bar's row below the status bar, as the bar's Done button is: in landscape the modal is
+            // full screen, and iPhone Duo's folded landscape has a status bar there. No status bar gives the old y.
+            let barStatusBarHeight: CGFloat = layout.navigationBarStatusBarHeight ?? 0.0
+            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + 16.0, y: barStatusBarHeight + floor((navigationHeight - barStatusBarHeight - titleSize.height) / 2.0)), size: titleSize))
 
             transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
 
+            // Per side: on iPhone Duo the right safe inset is the side strip. Equal insets give the old width.
             let sideInset: CGFloat = layout.safeInsets.left + 16.0
-            let maxWidth: CGFloat = layout.size.width - sideInset * 2.0
+            let maxWidth: CGFloat = layout.size.width - sideInset - (layout.safeInsets.right + 16.0)
             var contentHeight: CGFloat = navigationHeight + 16.0
 
             for item in self.items {

@@ -391,7 +391,7 @@ private class MessagePriceItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.highlightNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - params.rightInset - separatorRightInset, height: separatorHeight))
                     
@@ -412,11 +412,12 @@ private class MessagePriceItemNode: ListViewItemNode, ItemListItemNode {
                     let sideInset: CGFloat = 18.0
                     
                     strongSelf.leftTextNode.frame = CGRect(origin: CGPoint(x: params.leftInset + sideInset, y: 15.0), size: leftTextSize)
-                    strongSelf.rightTextNode.frame = CGRect(origin: CGPoint(x: params.width - params.leftInset - sideInset - rightTextSize.width, y: 15.0), size: rightTextSize)
+                    strongSelf.rightTextNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - sideInset - rightTextSize.width, y: 15.0), size: rightTextSize)
                     
                     let totalCenterWidth = centerLeftTextSize.width + centerSpacing + centerRightTextSize.width
-                    let centerLeftFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - totalCenterWidth) / 2.0), y: 11.0), size: centerLeftTextSize)
-                    let centerRightFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - totalCenterWidth) / 2.0) + totalCenterWidth - centerRightTextSize.width, y: 14.0 - UIScreenPixel), size: centerRightTextSize)
+                    let centerOriginX = params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - totalCenterWidth) / 2.0)
+                    let centerLeftFrame = CGRect(origin: CGPoint(x: centerOriginX, y: 11.0), size: centerLeftTextSize)
+                    let centerRightFrame = CGRect(origin: CGPoint(x: centerOriginX + totalCenterWidth - centerRightTextSize.width, y: 14.0 - UIScreenPixel), size: centerRightTextSize)
                     
                     let centerButtonFrame = CGRect(origin: CGPoint(x: centerLeftFrame.minX, y: centerLeftFrame.minY), size: CGSize(width: centerRightFrame.maxX - centerLeftFrame.minX, height: centerLeftFrame.height)).insetBy(dx: -8.0, dy: -4.0)
                     

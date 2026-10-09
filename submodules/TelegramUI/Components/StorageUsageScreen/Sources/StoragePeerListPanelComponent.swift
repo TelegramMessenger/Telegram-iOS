@@ -455,6 +455,7 @@ final class StoragePeerListPanelComponent: Component {
         let containerInsets: UIEdgeInsets
         let containerWidth: CGFloat
         let sideInset: CGFloat
+        let rightSideInset: CGFloat
         let itemHeight: CGFloat
         let itemCount: Int
 
@@ -464,12 +465,14 @@ final class StoragePeerListPanelComponent: Component {
             containerInsets: UIEdgeInsets,
             containerWidth: CGFloat,
             sideInset: CGFloat,
+            rightSideInset: CGFloat,
             itemHeight: CGFloat,
             itemCount: Int
         ) {
             self.containerInsets = containerInsets
             self.containerWidth = containerWidth
             self.sideInset = sideInset
+            self.rightSideInset = rightSideInset
             self.itemHeight = itemHeight
             self.itemCount = itemCount
 
@@ -493,7 +496,7 @@ final class StoragePeerListPanelComponent: Component {
         }
 
         func itemFrame(for index: Int) -> CGRect {
-            return CGRect(origin: CGPoint(x: self.sideInset, y: self.containerInsets.top + CGFloat(index) * self.itemHeight), size: CGSize(width: self.containerWidth - self.sideInset * 2.0, height: self.itemHeight))
+            return CGRect(origin: CGPoint(x: self.sideInset, y: self.containerInsets.top + CGFloat(index) * self.itemHeight), size: CGSize(width: self.containerWidth - self.sideInset - self.rightSideInset, height: self.itemHeight))
         }
     }
     
@@ -589,8 +592,8 @@ final class StoragePeerListPanelComponent: Component {
             distanceToTop = max(-100.0, distanceToTop)
             distanceToBottom = max(-100.0, distanceToBottom)
 
-            let listBackgroundFrame = CGRect(origin: CGPoint(x: 16.0, y: distanceToTop), size: CGSize(width: max(1.0, size.width - 16.0 * 2.0), height: max(1.0, size.height - distanceToBottom - distanceToTop)))
-            let listMaskFrame = CGRect(origin: CGPoint(x: 0.0, y: listBackgroundFrame.minY), size: CGSize(width: listBackgroundFrame.width + 16.0 * 2.0, height: listBackgroundFrame.height))
+            let listBackgroundFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: distanceToTop), size: CGSize(width: max(1.0, size.width - itemLayout.sideInset - itemLayout.rightSideInset), height: max(1.0, size.height - distanceToBottom - distanceToTop)))
+            let listMaskFrame = CGRect(origin: CGPoint(x: listBackgroundFrame.minX - 16.0, y: listBackgroundFrame.minY), size: CGSize(width: listBackgroundFrame.width + 16.0 * 2.0, height: listBackgroundFrame.height))
             transition.setFrame(view: self.listBackgroundView, frame: listBackgroundFrame)
             transition.setFrame(view: self.listMaskView, frame: listMaskFrame)
         }
@@ -643,7 +646,7 @@ final class StoragePeerListPanelComponent: Component {
                         component: AnyComponent(PeerListItemComponent(
                             context: component.context,
                             theme: environment.theme,
-                            sideInset: environment.containerInsets.left,
+                            sideInset: min(environment.containerInsets.left, environment.containerInsets.right),
                             title: itemTitle,
                             peer: item.peer,
                             label: dataSizeString(item.size, formatting: dataSizeFormatting),
@@ -653,7 +656,7 @@ final class StoragePeerListPanelComponent: Component {
                             contextAction: component.contextAction
                         )),
                         environment: {},
-                        containerSize: CGSize(width: itemLayout.containerWidth - itemLayout.sideInset * 2.0, height: itemLayout.itemHeight)
+                        containerSize: CGSize(width: itemLayout.containerWidth - itemLayout.sideInset - itemLayout.rightSideInset, height: itemLayout.itemHeight)
                     )
                     let itemFrame = itemLayout.itemFrame(for: index)
                     if let itemComponentView = itemView.view {
@@ -695,7 +698,7 @@ final class StoragePeerListPanelComponent: Component {
                 component: AnyComponent(PeerListItemComponent(
                     context: component.context,
                     theme: environment.theme,
-                    sideInset: environment.containerInsets.left,
+                    sideInset: min(environment.containerInsets.left, environment.containerInsets.right),
                     title: "ABCDEF",
                     peer: nil,
                     label: "1000",
@@ -713,7 +716,11 @@ final class StoragePeerListPanelComponent: Component {
             let itemLayout = ItemLayout(
                 containerInsets: environment.containerInsets,
                 containerWidth: availableSize.width,
-                sideInset: 16.0,
+                // iPhone Duo: the part of one side's inset beyond the other's is the side strip; the list keeps 16pt
+                // clear of it, and the rows' own inset is the part both sides share. Equal insets give 16pt
+                // margins and the left inset in the rows, as before.
+                sideInset: 16.0 + max(0.0, environment.containerInsets.left - environment.containerInsets.right),
+                rightSideInset: 16.0 + max(0.0, environment.containerInsets.right - environment.containerInsets.left),
                 itemHeight: measureItemSize.height,
                 itemCount: component.items?.items.count ?? 0
             )

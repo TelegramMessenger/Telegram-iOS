@@ -25,7 +25,7 @@ private final class PasscodeModeContextSource: ContextReferenceContentSource {
         let bounds = self.sourceNode.bounds
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceNode.view,
-            contentAreaInScreenSpace: UIScreen.main.bounds,
+            contentAreaInScreenSpace: mainWindowScreenBounds,
             insets: UIEdgeInsets(top: titleFrame.minY - bounds.minY, left: titleFrame.minX - bounds.minX, bottom: bounds.maxY - titleFrame.maxY, right: bounds.maxX - titleFrame.maxX),
             actionsPosition: .top
         )

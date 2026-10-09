@@ -560,14 +560,24 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         let keyboardHidden = self.keyboardNode.alpha == 0.0
         
         let layoutSize: CGSize
+        // Where the portrait title and icon start: the band's leading edge when the portrait layout uses the band.
+        let portraitBandMinX: CGFloat
         if isLandscape {
             if keyboardHidden {
                 layoutSize = CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height)
             } else {
                 layoutSize = CGSize(width: layout.size.width / 2.0, height: layout.size.height)
             }
+            portraitBandMinX = 0.0
+        } else if keyboardHidden && layout.safeInsets.left != layout.safeInsets.right {
+            // iPhone Duo, folded portrait: the alphanumeric field and its texts stay in the band beside the side strip,
+            // as the landscape layout without the keypad does (the field ran 34pt into the strip). The digit keypad
+            // fits beside the strip centred on the screen, so it keeps the whole width.
+            layoutSize = CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height)
+            portraitBandMinX = layout.safeInsets.left
         } else {
             layoutSize = layout.size
+            portraitBandMinX = 0.0
         }
         
         if layout.size.width == 320.0 || (isLandscape && keyboardHidden) {
@@ -597,8 +607,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             let titleSize = self.titleNode.updateLayout(size: CGSize(width: layoutSize.width, height: layout.size.height), transition: transition)
             titleFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: inputFieldFrame.minY - titleSize.height - 16.0), size: titleSize)
         } else {
-            let titleSize = self.titleNode.updateLayout(size: layout.size, transition: transition)
-            titleFrame = CGRect(origin: CGPoint(x: 0.0, y: passcodeLayout.titleOffset), size: titleSize)
+            let titleSize = self.titleNode.updateLayout(size: CGSize(width: layoutSize.width, height: layout.size.height), transition: transition)
+            titleFrame = CGRect(origin: CGPoint(x: portraitBandMinX, y: passcodeLayout.titleOffset), size: titleSize)
         }
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
@@ -607,7 +617,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         if isLandscape {
             iconFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layoutSize.width - iconSize.width) / 2.0) + 6.0, y: titleFrame.minY - iconSize.height - 14.0), size: iconSize)
         } else {
-            iconFrame = CGRect(origin: CGPoint(x: floor((layoutSize.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize)
+            iconFrame = CGRect(origin: CGPoint(x: portraitBandMinX + floor((layoutSize.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize)
         }
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
         
@@ -628,7 +638,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         var cancelX = floor(keyboardFrame.minX + keyboardButtonSize.width / 2.0 - cancelSize.width / 2.0)
         var cancelY = bottomButtonY
         if bottomInset > 0 && keyboardHidden {
-            cancelX = floor((layout.size.width - cancelSize.width) / 2.0)
+            // Centred with the field, in the band beside iPhone Duo's side strip in portrait.
+            cancelX = portraitBandMinX > 0.0 ? portraitBandMinX + floor((layoutSize.width - cancelSize.width) / 2.0) : floor((layout.size.width - cancelSize.width) / 2.0)
             cancelY = layout.size.height - bottomInset - cancelSize.height - 15.0 - layout.intrinsicInsets.bottom
         } else if isLandscape {
             bottomButtonY = keyboardFrame.maxY - keyboardButtonSize.height + floor((keyboardButtonSize.height - cancelSize.height) / 2.0)

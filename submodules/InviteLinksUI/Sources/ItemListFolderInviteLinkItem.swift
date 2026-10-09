@@ -331,7 +331,7 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                 subtitleColor = item.presentationData.theme.list.itemSecondaryTextColor
             }
             
-            let (invitedPeersLayout, invitedPeersApply) = makeInvitedPeersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: titleFont, textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (invitedPeersLayout, invitedPeersApply) = makeInvitedPeersLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: titleFont, textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - min(params.leftInset, params.rightInset) - 20.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let avatarsContent = avatarsContext.update(peers: item.peers, animated: false)
             
@@ -438,7 +438,7 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                         strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: item.systemStyle == .glass) : nil
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
@@ -545,7 +545,7 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                     }
                     
                     var totalWidth = invitedPeersLayout.size.width
-                    var leftOrigin: CGFloat = floorToScreenPixels((params.width - invitedPeersLayout.size.width) / 2.0)
+                    var leftOrigin: CGFloat = params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - invitedPeersLayout.size.width) / 2.0)
                     let avatarSpacing: CGFloat = 21.0
                     if let avatarsContent = strongSelf.avatarsContent {
                         let avatarsSize = strongSelf.avatarsNode.update(context: item.context, content: avatarsContent, itemSize: CGSize(width: 32.0, height: 32.0), animated: true, synchronousLoad: true)
@@ -554,7 +554,7 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                             totalWidth += avatarsSize.width + avatarSpacing
                         }
                         
-                        let avatarsNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0), size: avatarsSize)
+                        let avatarsNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0), size: avatarsSize)
                         strongSelf.avatarsNode.frame = avatarsNodeFrame
                         if !avatarsSize.width.isZero {
                             leftOrigin = avatarsNodeFrame.maxX + avatarSpacing
@@ -563,7 +563,7 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                     
                     strongSelf.invitedPeersNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: fieldFrame.maxY + 92.0), size: invitedPeersLayout.size)
                     
-                    strongSelf.avatarsButtonNode.frame = CGRect(x: floorToScreenPixels((params.width - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0, width: totalWidth, height: 32.0)
+                    strongSelf.avatarsButtonNode.frame = CGRect(x: params.leftInset + floorToScreenPixels((params.width - params.leftInset - params.rightInset - totalWidth) / 2.0), y: fieldFrame.maxY + 87.0, width: totalWidth, height: 32.0)
                     strongSelf.avatarsButtonNode.isUserInteractionEnabled = !item.peers.isEmpty && item.invite != nil
                     
                     strongSelf.addressButtonNode.isUserInteractionEnabled = item.invite != nil

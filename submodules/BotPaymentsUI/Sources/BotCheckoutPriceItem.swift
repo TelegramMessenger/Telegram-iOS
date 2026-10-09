@@ -226,7 +226,7 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
 
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: contentSize.height))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset + floor((naturalContentHeight - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: verticalOffset + floor((naturalContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
 

@@ -91,7 +91,11 @@ final class GameControllerNode: ViewControllerTracingNode {
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         if let webView = self.webView {
-            webView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - navigationBarHeight)))
+            // Beside a side strip (iPhone Duo) the game keeps to the band: a game page does not read the safe area, so
+            // laid out across the screen its controls run under the strip. Equal side insets keep the full width.
+            let bandMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.safeInsets.left : 0.0
+            let bandWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+            webView.frame = CGRect(origin: CGPoint(x: bandMinX, y: navigationBarHeight), size: CGSize(width: bandWidth, height: max(1.0, layout.size.height - navigationBarHeight)))
         }
     }
     

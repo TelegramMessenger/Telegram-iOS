@@ -558,9 +558,10 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     let _ = labelApply()
                     
                     let leftInset: CGFloat = 16.0 + params.leftInset
+                    let rightInset: CGFloat = 16.0 + params.rightInset
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((labelsContentHeight - titleLayout.size.height) / 2.0)), size: titleLayout.size)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - labelLayout.size.width, y: floor((labelsContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: floor((labelsContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
 
                     if strongSelf.formatter == nil {
                         strongSelf.formatter = FormatterImpl(textField: strongSelf.textNode.textField, currency: item.currency, maxNumericalValue: item.maxValue, initialValue: item.value, updated: { value in
@@ -610,7 +611,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     strongSelf.textNode.textField.returnKeyType = .next
                     strongSelf.textNode.textField.tintColor = item.theme.list.itemAccentColor
 
-                    var textInputFrame = CGRect(origin: CGPoint(x: params.width - leftInset - 150.0, y: -2.0), size: CGSize(width: 150.0, height: labelsContentHeight))
+                    var textInputFrame = CGRect(origin: CGPoint(x: params.width - rightInset - 150.0, y: -2.0), size: CGSize(width: 150.0, height: labelsContentHeight))
 
                     let currencyText: (String, String, Bool) = formatCurrencyAmountCustom(item.numericValue, currency: item.currency)
 
@@ -669,8 +670,9 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     }
 
                     let sideInset: CGFloat = params.leftInset + 16.0
+                    let rightSideInset: CGFloat = params.rightInset + 16.0
                     var scaleFactor: CGFloat = 1.0
-                    let availableWidth = params.width - sideInset * 2.0 - CGFloat(max(0, item.availableVariants.count - 1)) * 12.0
+                    let availableWidth = params.width - sideInset - rightSideInset - CGFloat(max(0, item.availableVariants.count - 1)) * 12.0
                     if totalMinWidth < availableWidth {
                         scaleFactor = availableWidth / totalMinWidth
                     }
@@ -688,7 +690,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
                         var valueFrame = CGRect(origin: CGPoint(x: variantsOffset, y: 0.0), size: CGSize(width: nodeWidth, height: valueHeight))
                         if scaleFactor > 1.0 && index == item.availableVariants.count - 1 {
-                            valueFrame.size.width = params.width - sideInset - valueFrame.minX
+                            valueFrame.size.width = params.width - rightSideInset - valueFrame.minX
                         }
 
                         valueNode.frame = valueFrame
@@ -696,7 +698,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                         variantsOffset += nodeWidth
                     }
 
-                    variantsOffset += 16.0
+                    variantsOffset += 16.0 + max(0.0, params.rightInset - params.leftInset)
 
                     strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: valueY), size: CGSize(width: params.width, height: max(0.0, contentSize.height - valueY)))
                     strongSelf.scrollNode.view.contentSize = CGSize(width: variantsOffset, height: strongSelf.scrollNode.frame.height)

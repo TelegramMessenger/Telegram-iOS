@@ -96,7 +96,7 @@ class GlobalAutoremoveHeaderItemNode: ListViewItemNode {
                     strongSelf.item = item
                                         
                     let iconSize = CGSize(width: 110.0, height: 110.0)
-                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
+                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                 }
             })

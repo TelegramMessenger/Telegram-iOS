@@ -95,10 +95,15 @@ final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
         var panelHeight: CGFloat = 44.0 + bottomInset
         panelHeight += contentInset
         if !self.textNode.isHidden {
-            let sideInset: CGFloat = 8.0 + leftInset
+            // A long caption can rise to iPhone Duo's corner block, so it keeps the screen's insets, which the buttons at
+            // the bottom leave out.
+            let captionInsets = self.screenSideInsets ?? (leftInset, rightInset)
+            let sideInset: CGFloat = 8.0 + captionInsets.left
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0 + contentInset
-            let textSize = self.textNode.measure(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            // The trailing side keeps the right inset rather than mirroring the left one: they differ beside iPhone Duo's
+            // side strip, which the caption otherwise ran under.
+            let textSize = self.textNode.measure(CGSize(width: width - sideInset - 8.0 - captionInsets.right, height: CGFloat.greatestFiniteMagnitude))
             panelHeight += textSize.height + topInset + textBottomInset
             self.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
         }

@@ -752,6 +752,20 @@ CGSize TGScreenSize()
             size = screen.bounds.size;
     });
     
+    // iPhone Duo: the main screen is the 466x678 cover screen even while the app shows on the unfolded inner screen
+    // (669x951), and legacy layouts size their rotation square from this (on the inner screen the square was smaller
+    // than the window, which put the photo viewer's landscape toolbar on screen in portrait). Answer with the screen
+    // the app's window is on, portrait-oriented like the cached size; every other device keeps the cached value.
+    if ((int)MIN(size.width, size.height) == 466 && (int)MAX(size.width, size.height) == 678 && [NSThread isMainThread])
+    {
+        UIScreen *windowScreen = [[LegacyComponentsGlobals provider] applicationWindows].firstObject.screen;
+        if (windowScreen != nil && windowScreen != [UIScreen mainScreen])
+        {
+            CGSize windowScreenSize = windowScreen.bounds.size;
+            return CGSizeMake(MIN(windowScreenSize.width, windowScreenSize.height), MAX(windowScreenSize.width, windowScreenSize.height));
+        }
+    }
+    
     return size;
 }
 

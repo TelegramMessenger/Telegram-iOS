@@ -86,6 +86,7 @@ private final class BrowserScreenComponent: CombinedComponent {
     
     static var body: Body {
         let navigationBar = Child(BrowserNavigationBarComponent.self)
+        let sideColumnCloseButton = Child(GlassBarButtonComponent.self)
         let toolbar = Child(BrowserToolbarComponent.self)
         let addressList = Child(BrowserAddressListComponent.self)
         
@@ -104,6 +105,7 @@ private final class BrowserScreenComponent: CombinedComponent {
             let navigationContent: AnyComponentWithIdentity<BrowserNavigationBarEnvironment>?
             var navigationLeftItems: [AnyComponentWithIdentity<Empty>]
             var navigationRightItems: [AnyComponentWithIdentity<Empty>]
+            var showsSideColumnClose = false
             if context.component.presentationState.isSearching {
                 navigationContent = AnyComponentWithIdentity(
                     id: "search",
@@ -173,7 +175,13 @@ private final class BrowserScreenComponent: CombinedComponent {
                             )
                         )
                     ]
-                                        
+                    if environment.sideColumnNavigationButtonFrame != nil {
+                        // iPhone Duo: the close button goes in the side strip (added after the bar below), not in
+                        // the bar's row.
+                        navigationLeftItems.removeAll()
+                        showsSideColumnClose = true
+                    }
+
                     if isTablet {
 //                        #if DEBUG
 //                        navigationLeftItems.append(
@@ -336,7 +344,9 @@ private final class BrowserScreenComponent: CombinedComponent {
                     theme: environment.theme,
                     topInset: environment.statusBarHeight,
                     height: environment.navigationHeight - environment.statusBarHeight + 8.0,
-                    sideInset: environment.safeInsets.left,
+                    leftInset: environment.safeInsets.left,
+                    rightInset: environment.safeInsets.right,
+                    trailingButtonsInset: environment.navigationBarTrailingButtonsInset,
                     metrics: environment.metrics,
                     externalState: navigationBarExternalState,
                     leftItems: navigationLeftItems,
@@ -394,11 +404,14 @@ private final class BrowserScreenComponent: CombinedComponent {
             if isTablet && !context.component.presentationState.isSearching {
                 
             } else {
+                // The bottom toolbar spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                let toolbarSideInsets = environment.bottomEdgeSideInsets()
                 let toolbar = toolbar.update(
                     component: BrowserToolbarComponent(
                         theme: environment.theme,
                         bottomInset: toolbarBottomInset,
-                        sideInset: environment.safeInsets.left,
+                        leftInset: toolbarSideInsets.left,
+                        rightInset: toolbarSideInsets.right,
                         item: toolbarContent,
                         collapseFraction: 0.0
                     ),
@@ -457,7 +470,32 @@ private final class BrowserScreenComponent: CombinedComponent {
             context.add(navigationBar
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
             )
-            
+
+            // iPhone Duo: the bar's close button, centred in the side strip's navigation button frame, above the bar.
+            // It fades as the bar collapses, as it did in the bar.
+            if showsSideColumnClose, let sideColumnFrame = environment.sideColumnNavigationButtonFrame {
+                let sideColumnCloseButton = sideColumnCloseButton.update(
+                    component: GlassBarButtonComponent(
+                        size: CGSize(width: 44.0, height: 44.0),
+                        backgroundColor: nil,
+                        isDark: environment.theme.overallDarkAppearance,
+                        state: .glass,
+                        component: AnyComponentWithIdentity(id: "close", component: AnyComponent(
+                            BundleIconComponent(name: "Navigation/Close", tintColor: environment.theme.chat.inputPanel.panelControlColor)
+                        )),
+                        action: { _ in
+                            performAction.invoke(.close)
+                        }
+                    ),
+                    availableSize: CGSize(width: 44.0, height: 44.0),
+                    transition: context.transition
+                )
+                context.add(sideColumnCloseButton
+                    .position(CGPoint(x: sideColumnFrame.midX, y: sideColumnFrame.midY))
+                    .opacity(1.0 - collapseFraction)
+                )
+            }
+
             return context.availableSize
         }
     }
@@ -885,6 +923,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                     return
                 }
                 self.presentationData = presentationData
+                self.controller?.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
                 for content in self.content {
                     content.updatePresentationData(presentationData)
                 }
@@ -1468,8 +1507,11 @@ public class BrowserScreen: ViewController, MinimizableController {
             
             self.validLayout = (layout, navigationBarHeight)
             
+            // The status height the navigation bar is laid out under (`navigationBarHeight` comes from it), so the
+            // bar keeps its height beside iPhone Duo's status island; its right items clear the island.
             let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                fullStatusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: navigationBarHeight,
                 safeInsets: UIEdgeInsets(
                     top: layout.intrinsicInsets.top + layout.safeInsets.top,
@@ -1477,6 +1519,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                     bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom,
                     right: layout.safeInsets.right
                 ),
+                reservedCorners: layout.reservedCorners,
+                navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
+                // iPhone Duo: the close button goes in the side strip (see `BrowserScreenComponent`); nil elsewhere.
+                sideColumnNavigationButtonFrame: layout.sideColumnNavigationButtonFrame,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
@@ -1541,7 +1587,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                         BrowserContentComponent(
                             content: content,
                             insets: UIEdgeInsets(
-                                top: layout.statusBarHeight ?? 0.0,
+                                top: layout.navigationBarStatusBarHeight ?? 0.0,
                                 left: layout.safeInsets.left,
                                 bottom: layout.intrinsicInsets.bottom,
                                 right: layout.safeInsets.right
@@ -1657,6 +1703,9 @@ public class BrowserScreen: ViewController, MinimizableController {
         self._hasGlassStyle = true
         
         self.navigationPresentation = .modalInCompactLayout
+        self.fillsScreenBesideStatusIsland = true
+        // Used where the browser fills the screen (beside iPhone Duo's status island); a card ignores it.
+        self.statusBar.statusBarStyle = context.sharedContext.currentPresentationData.with { $0 }.theme.rootController.statusBarStyle.style
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
         
@@ -1780,7 +1829,7 @@ private final class BrowserReferenceContentSource: ContextReferenceContentSource
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

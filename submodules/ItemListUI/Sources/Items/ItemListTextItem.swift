@@ -242,7 +242,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     case .natural:
                         titleOrigin = leftInset + params.leftInset
                     case .center:
-                        titleOrigin = floorToScreenPixels((contentSize.width - titleLayout.size.width) / 2.0)
+                        titleOrigin = params.leftInset + floorToScreenPixels((contentSize.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0)
                     }
 
                     strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: titleOrigin, y: topInset), size: titleLayout.size)

@@ -98,9 +98,16 @@ final class NotificationItemContainerNode: ASDisplayNode {
             let inset: CGFloat = 8.0
             
             var contentInsets = UIEdgeInsets(top: inset + layout.safeInsets.left, left: inset, bottom: inset, right: inset + layout.safeInsets.right)
+            if layout.safeInsets.left != layout.safeInsets.right {
+                // Beside a side strip (iPhone Duo) the banner keeps to the band below, so it has no side inset to keep.
+                contentInsets.top = inset
+                contentInsets.right = inset
+            }
             
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight >= 39.0 {
-                if layout.deviceMetrics.hasDynamicIsland {
+                if layout.deviceMetrics.hasDynamicIsland || layout.topBarStatusIsland != nil {
+                    // Below the status island too (iPhone Duo, unfolded portrait: 134x82 at the top right), which the
+                    // centred banner would otherwise reach.
                     contentInsets.top = statusBarHeight + 6.0
                 } else if statusBarHeight >= 44.0 {
                     contentInsets.top += 34.0
@@ -109,7 +116,11 @@ final class NotificationItemContainerNode: ASDisplayNode {
                 }
             }
             
-            let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+            // Centered, or in the band beside a side strip (iPhone Duo): a banner across the top would run under
+            // the status corner.
+            let placement = horizontalContainerFillingPlacementForLayout(layout: layout, margin: 0.0, includesSafeInsets: false)
+            let containerWidth = placement.width
+            let containerCenterX = placement.left == placement.right ? layout.size.width / 2.0 : placement.left + containerWidth / 2.0
             
             let contentWidth = containerWidth - contentInsets.left - contentInsets.right
             let contentHeight = contentNode.updateLayout(width: contentWidth, transition: transition)
@@ -117,9 +128,9 @@ final class NotificationItemContainerNode: ASDisplayNode {
             let backgroundInset: CGFloat = 8.0
             let backgroundSize = CGSize(width: containerWidth - backgroundInset * 2.0, height: contentHeight)
             self.backgroundView.update(size: backgroundSize, cornerRadius: 24.0, isDark: self.theme.overallDarkAppearance, tintColor: .init(kind: .panel), transition: ComponentTransition(transition))
-            transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - backgroundSize.width) / 2.0), y: contentInsets.top), size: backgroundSize))
+            transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floor(containerCenterX - backgroundSize.width / 2.0), y: contentInsets.top), size: backgroundSize))
             
-            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - contentWidth) / 2.0), y: contentInsets.top), size: CGSize(width: contentWidth, height: contentHeight)))
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor(containerCenterX - contentWidth / 2.0), y: contentInsets.top), size: CGSize(width: contentWidth, height: contentHeight)))
         }
     }
     

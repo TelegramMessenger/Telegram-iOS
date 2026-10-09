@@ -254,7 +254,7 @@ public final class ItemListPeerActionItemNode: ListViewItemNode, ItemListItemNod
                     textColor = item.presentationData.theme.list.itemDisabledTextColor
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - editingOffset - max(0.0, params.rightInset - params.leftInset), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             let separatorRightInset: CGFloat = item.systemStyle == .glass ? 16.0 : 0.0
@@ -333,7 +333,7 @@ public final class ItemListPeerActionItemNode: ListViewItemNode, ItemListItemNod
                         if strongSelf.maskNode.supernode != nil {
                             strongSelf.maskNode.removeFromSupernode()
                         }
-                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset - separatorRightInset, height: separatorHeight))
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset - params.rightInset - separatorRightInset, height: separatorHeight))
                     case .blocks:
                         if strongSelf.backgroundNode.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -377,7 +377,9 @@ public final class ItemListPeerActionItemNode: ListViewItemNode, ItemListItemNod
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                         strongSelf.highlightNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                        strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                        // Per side: the margins differ beside iPhone Duo's strip; equal margins give the symmetric frame.
+                        let backgroundFrame = strongSelf.backgroundNode.frame
+                        strongSelf.maskNode.frame = CGRect(x: backgroundFrame.minX + params.leftInset, y: backgroundFrame.minY, width: backgroundFrame.width - params.leftInset - params.rightInset, height: backgroundFrame.height)
                         strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                         transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset - separatorRightInset - params.rightInset, height: separatorHeight)))
                     }
@@ -385,7 +387,11 @@ public final class ItemListPeerActionItemNode: ListViewItemNode, ItemListItemNod
                     let titleFrame = CGRect(origin: CGPoint(x: leftInset + editingOffset, y: floorToScreenPixels((contentSize.height - titleLayout.size.height) / 2.0) + 1.0), size: titleLayout.size)
                     transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
+                    // Plain style: the highlight spans the full-width separator's extent (ChatListItem's rule), out of the
+                    // side safe areas and ending where the separators end when there is a right inset (iPhone Duo's strip).
+                    let highlightLeftInset: CGFloat = item.style == .plain ? params.leftInset : 0.0
+                    let highlightRightInset: CGFloat = item.style == .plain && !params.rightInset.isZero ? params.rightInset + separatorRightInset : 0.0
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: highlightLeftInset, y: -UIScreenPixel), size: CGSize(width: params.width - highlightLeftInset - highlightRightInset, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
                     
                     if let additionalBadgeIcon = item.additionalBadgeIcon {
                         let additionalLabelBadgeNode: ASImageNode

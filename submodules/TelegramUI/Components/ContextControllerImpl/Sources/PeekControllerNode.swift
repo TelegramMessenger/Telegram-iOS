@@ -208,15 +208,17 @@ final class PeekControllerNode: ViewControllerTracingNode, PeekControllerNodePro
         transition.updateFrame(view: self.blurView, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         var layoutInsets = layout.insets(options: [])
-        let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
-       
-        layoutInsets.left = floor((layout.size.width - containerWidth) / 2.0)
-        layoutInsets.right = layoutInsets.left
         if !layoutInsets.bottom.isZero {
             layoutInsets.bottom -= 12.0
         }
+        // The preview and its actions lay out across the screen, or in the band between the side insets when they
+        // differ (iPhone Duo's side strip), so neither runs under the strip or its corner block. Equal insets keep the
+        // screen-wide layout exactly.
+        let insetsDiffer = layout.safeInsets.left != layout.safeInsets.right
+        let bandMinX: CGFloat = insetsDiffer ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = insetsDiffer ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
         
-        let maxContainerSize = CGSize(width: layout.size.width - 14.0 * 2.0, height: layout.size.height - layoutInsets.top - layoutInsets.bottom - 90.0)
+        let maxContainerSize = CGSize(width: bandWidth - 14.0 * 2.0, height: layout.size.height - layoutInsets.top - layoutInsets.bottom - 90.0)
         
         let contentSize = self.contentNode.updateLayout(size: maxContainerSize, transition: self.contentNodeHasValidLayout ? transition : .immediate)
         if self.contentNodeHasValidLayout {
@@ -226,10 +228,11 @@ final class PeekControllerNode: ViewControllerTracingNode, PeekControllerNodePro
         }
         
         let actionsSideInset: CGFloat = layout.safeInsets.left + 11.0
+        let actionsWidth: CGFloat = insetsDiffer ? bandWidth - 11.0 * 2.0 : layout.size.width - actionsSideInset * 2.0
         
         let actionsSize = self.actionsStackNode.update(
             presentationData: self.presentationData,
-            constrainedSize: CGSize(width: layout.size.width - actionsSideInset * 2.0, height: layout.size.height),
+            constrainedSize: CGSize(width: actionsWidth, height: layout.size.height),
             presentation: .inline,
             transition: transition
         )
@@ -238,23 +241,27 @@ final class PeekControllerNode: ViewControllerTracingNode, PeekControllerNodePro
         let actionsFrame: CGRect
         if layout.size.width > layout.size.height {
             if self.actionsStackNode.alpha.isZero {
-                containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
+                containerFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
             } else {
-                containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 3.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
+                containerFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - contentSize.width) / 3.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
             }
-            actionsFrame = CGRect(origin: CGPoint(x: containerFrame.maxX + 32.0, y: floor((layout.size.height - actionsSize.height) / 2.0)), size: actionsSize)
+            var actionsOriginX = containerFrame.maxX + 32.0
+            if insetsDiffer {
+                actionsOriginX = min(actionsOriginX, bandMinX + bandWidth - 11.0 - actionsSize.width)
+            }
+            actionsFrame = CGRect(origin: CGPoint(x: actionsOriginX, y: floor((layout.size.height - actionsSize.height) / 2.0)), size: actionsSize)
         } else {
             switch self.content.presentation() {
                 case .contained:
-                    containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
+                    containerFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
                 case .freeform:
                     var fraction: CGFloat = 1.0 / 3.0
                     if let _ = self.controller?.appeared {
                         fraction *= 1.33
                     }
-                    containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) * fraction)), size: contentSize)
+                    containerFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) * fraction)), size: contentSize)
             }
-            actionsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - actionsSize.width) / 2.0), y: containerFrame.maxY + 64.0), size: actionsSize)
+            actionsFrame = CGRect(origin: CGPoint(x: bandMinX + floor((bandWidth - actionsSize.width) / 2.0), y: containerFrame.maxY + 64.0), size: actionsSize)
         }
         transition.updateFrame(node: self.containerNode, frame: containerFrame)
                 

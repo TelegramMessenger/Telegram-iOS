@@ -142,6 +142,10 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         return self.tabBarControllerNode.isPointInsideContentArea(point: point)
     }
     
+    public func verticalTabBarFrame(for layout: ContainerViewLayout) -> CGRect? {
+        return self.tabBarControllerNode.sidePlacement(for: layout)?.frame
+    }
+    
     public func updateIsTabBarEnabled(_ value: Bool, transition: ContainedViewLayoutTransition) {
         self.tabBarControllerNode.updateIsTabBarEnabled(value, transition: transition)
     }
@@ -181,18 +185,20 @@ open class TabBarControllerImpl: ViewController, TabBarController {
                 if let validLayout = strongSelf.validLayout {
                     var updatedLayout = validLayout
                     
-                    var tabBarHeight: CGFloat
-                    var options: ContainerViewLayoutInsetOptions = []
-                    if validLayout.metrics.widthClass == .regular {
-                        options.insert(.input)
+                    if strongSelf.tabBarControllerNode.sidePlacement(for: validLayout) == nil {
+                        var tabBarHeight: CGFloat
+                        var options: ContainerViewLayoutInsetOptions = []
+                        if validLayout.metrics.widthClass == .regular {
+                            options.insert(.input)
+                        }
+                        let bottomInset: CGFloat = validLayout.insets(options: options).bottom
+                        if !validLayout.safeInsets.left.isZero {
+                            tabBarHeight = 34.0 + bottomInset
+                        } else {
+                            tabBarHeight = 49.0 + bottomInset
+                        }
+                        updatedLayout.intrinsicInsets.bottom = tabBarHeight
                     }
-                    let bottomInset: CGFloat = validLayout.insets(options: options).bottom
-                    if !validLayout.safeInsets.left.isZero {
-                        tabBarHeight = 34.0 + bottomInset
-                    } else {
-                        tabBarHeight = 49.0 + bottomInset
-                    }
-                    updatedLayout.intrinsicInsets.bottom = tabBarHeight
                     
                     strongSelf.controllers[index].containerLayoutUpdated(updatedLayout, transition: .immediate)
                 }
@@ -371,7 +377,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
             
             var updatedLayout = layout
-            if !self.tabBarControllerNode.tabBarHidden {
+            if !self.tabBarControllerNode.tabBarHidden, let bottomInset {
                 updatedLayout.intrinsicInsets.bottom = bottomInset
             }
             
@@ -400,7 +406,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             } else {
                 tabBarHeight = 49.0 + bottomInset
             }
-            if !self.tabBarControllerNode.tabBarHidden {
+            if !self.tabBarControllerNode.tabBarHidden && self.tabBarControllerNode.sidePlacement(for: layout) == nil {
                 updatedLayout.intrinsicInsets.bottom = tabBarHeight
             }
             

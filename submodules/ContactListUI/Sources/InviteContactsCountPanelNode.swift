@@ -16,13 +16,13 @@ final class InviteContactsCountPanelNode: ASDisplayNode {
     private let edgeEffectView = EdgeEffectView()
     private let button = ComponentView<Empty>()
         
-    private var validLayout: (CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat)?
     
     var count: Int = 0 {
         didSet {
             if self.count != oldValue && self.count > 0 {
-                if let (width, sideInset, bottomInset) = self.validLayout {
-                    let _ = self.updateLayout(width: width, sideInset: sideInset, bottomInset: bottomInset, transition: .immediate)
+                if let (width, leftInset, rightInset, bottomInset) = self.validLayout {
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, transition: .immediate)
                 }
             }
         }
@@ -36,8 +36,8 @@ final class InviteContactsCountPanelNode: ASDisplayNode {
         super.init()
     }
     
-    func updateLayout(width: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.validLayout = (width, sideInset, bottomInset)
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset)
         
         let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: bottomInset, innerDiameter: 52.0, sideInset: 30.0)
         let height: CGFloat = 52.0 + buttonInsets.bottom
@@ -87,9 +87,9 @@ final class InviteContactsCountPanelNode: ASDisplayNode {
                 )
             ),
             environment: {},
-            containerSize: CGSize(width: width - sideInset * 2.0 - buttonInsets.left - buttonInsets.right, height: 52.0)
+            containerSize: CGSize(width: width - leftInset - rightInset - buttonInsets.left - buttonInsets.right, height: 52.0)
         )
-        let buttonFrame = CGRect(origin: CGPoint(x: sideInset + buttonInsets.left, y: 0.0), size: buttonSize)
+        let buttonFrame = CGRect(origin: CGPoint(x: leftInset + buttonInsets.left, y: 0.0), size: buttonSize)
         if let buttonView = self.button.view {
             if buttonView.superview == nil {
                 self.view.addSubview(buttonView)

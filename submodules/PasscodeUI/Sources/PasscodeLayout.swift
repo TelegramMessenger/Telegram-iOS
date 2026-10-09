@@ -2,6 +2,17 @@ import Foundation
 import UIKit
 import Display
 
+/// The device whose rows a passcode layout uses. iPhone Duo is one device with two screens: the 951pt-tall inner
+/// screen keeps the rows it has always used, while the 678pt cover screen takes the 667pt-tall iPhone 6 rows, the
+/// tallest whose keypad and Cancel/Delete fit above its bottom edge (the 932pt rows ended the bottom key row 36pt
+/// below it). The longer side tells the screens apart in either orientation.
+private func passcodeLayoutDeviceMetrics(_ layout: ContainerViewLayout) -> DeviceMetrics {
+    if case .iPhoneDuo = layout.deviceMetrics, max(layout.size.width, layout.size.height) < 800.0 {
+        return .iPhone6
+    }
+    return layout.deviceMetrics
+}
+
 struct PasscodeKeyboardLayout {
     var buttonSize: CGFloat
     var horizontalSecond: CGFloat
@@ -22,7 +33,7 @@ struct PasscodeKeyboardLayout {
             modalBiometricsOffset -= 8.0
         }
         
-        switch layout.deviceMetrics {
+        switch passcodeLayoutDeviceMetrics(layout) {
             case .iPhone4:
                 self.buttonSize = 75.0
                 self.horizontalSecond = 95.0
@@ -134,7 +145,7 @@ public struct PasscodeLayout {
         }
         
         self.keyboard = PasscodeKeyboardLayout(layout: layout, modalPresentation: modalPresentation)
-        switch layout.deviceMetrics {
+        switch passcodeLayoutDeviceMetrics(layout) {
             case .iPhone4:
                 self.titleOffset = 30.0
                 self.subtitleOffset = -13.0

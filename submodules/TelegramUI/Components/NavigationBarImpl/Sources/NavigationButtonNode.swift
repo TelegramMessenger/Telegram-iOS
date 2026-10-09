@@ -5,7 +5,7 @@ import ComponentFlow
 import MultilineTextComponent
 import AppBundle
 
-let glassBackArrowImage: UIImage? = {
+public let glassBackArrowImage: UIImage? = {
     let imageSize = CGSize(width: 44.0, height: 44.0)
     let topRightPoint = CGPoint(x: 24.6, y: 14.0)
     let centerPoint = CGPoint(x: 17.0, y: imageSize.height * 0.5)
@@ -22,7 +22,7 @@ let glassBackArrowImage: UIImage? = {
     })?.withRenderingMode(.alwaysTemplate)
 }()
 
-let glassCloseImage: UIImage? = {
+public let glassCloseImage: UIImage? = {
     return generateTintedImage(image: UIImage(bundleImageName: "Navigation/Close"), color: .white)?.withRenderingMode(.alwaysTemplate)
 }()
 

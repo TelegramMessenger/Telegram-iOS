@@ -46,7 +46,7 @@ final class NavigationTransitionCoordinator {
     private let shadowNode: ASImageNode
     private let customTransitionNode: CustomNavigationTransitionNode?
     
-    private var topNodeInitialParameters: (clipsToBounds: Bool, cornerRadius: CGFloat)?
+    private var topNodeInitialParameters: (clipsToBounds: Bool, cornerRadius: CGFloat, usesCornerRadii: Bool)?
     
     private let inlineNavigationBarTransition: Bool
     
@@ -56,7 +56,7 @@ final class NavigationTransitionCoordinator {
     
     private var frameRateLink: SharedDisplayLinkDriver.Link?
     
-    init(transition: NavigationTransition, isInteractive: Bool, isFlat: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, screenCornerRadius: CGFloat, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
+    init(transition: NavigationTransition, isInteractive: Bool, isFlat: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, screenCornerRadii: CornerRadii, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
         self.transition = transition
         self.isInteractive = isInteractive
         self.isFlat = isFlat
@@ -112,13 +112,22 @@ final class NavigationTransitionCoordinator {
             self.container.insertSubnode(self.dimNode, belowSubnode: topNode)
             self.container.insertSubnode(self.shadowNode, belowSubnode: self.dimNode)
             
-            if screenCornerRadius > 0.0 {
-                self.topNodeInitialParameters = (topNode.clipsToBounds, topNode.cornerRadius)
+            let maxScreenCornerRadius = max(max(screenCornerRadii.topLeft, screenCornerRadii.topRight), max(screenCornerRadii.bottomLeft, screenCornerRadii.bottomRight))
+            if maxScreenCornerRadius > 0.0 {
+                // The moving controller takes the screen's corners. They differ per corner on iPhone Duo's folded
+                // screen (8pt on the hinge side, 59pt outside), so there it gets all four; elsewhere they are
+                // uniform and the single radius applies.
+                let usesCornerRadii = !screenCornerRadii.isUniform && CALayer.cornerRadiiSupported
+                self.topNodeInitialParameters = (topNode.clipsToBounds, topNode.cornerRadius, usesCornerRadii)
                 if #available(iOS 13.0, *) {
                     topNode.layer.cornerCurve = .continuous
                 }
                 topNode.clipsToBounds = true
-                topNode.cornerRadius = screenCornerRadius
+                if usesCornerRadii {
+                    topNode.layer.setCornerRadii(screenCornerRadii)
+                } else {
+                    topNode.cornerRadius = maxScreenCornerRadius
+                }
             }
         }
         if let customTransitionNode = self.customTransitionNode {
@@ -337,11 +346,14 @@ final class NavigationTransitionCoordinator {
     }
     
     private func restoreTopNodeCorners() {
-        guard let (clipsToBounds, cornerRadius) = self.topNodeInitialParameters else {
+        guard let (clipsToBounds, cornerRadius, usesCornerRadii) = self.topNodeInitialParameters else {
             return
         }
         if #available(iOS 13.0, *) {
             self.topNode.layer.cornerCurve = .circular
+        }
+        if usesCornerRadii {
+            self.topNode.layer.setCornerRadii(CornerRadii(uniform: cornerRadius))
         }
         self.topNode.clipsToBounds = clipsToBounds
         self.topNode.cornerRadius = cornerRadius

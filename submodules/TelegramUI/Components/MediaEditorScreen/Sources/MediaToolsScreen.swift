@@ -364,7 +364,12 @@ private final class MediaToolsScreenComponent: Component {
                 if availableSize.height < previewSize.height + 30.0 {
                     topInset = 0.0
                     controlsBottomInset = -75.0
-                    buttonSideInset = 9.0
+                    // Beside iPhone Duo's status island the bottom bar mirrors the editor's: its 44pt buttons centred
+                    // compact status height + 31 above the bottom edge, 16pt from the sides.
+                    buttonSideInset = environment.navigationBarTrailingButtonsInset > 0.0 ? 16.0 : 9.0
+                    if environment.navigationBarTrailingButtonsInset > 0.0 {
+                        controlsBottomInset = -(environment.statusBarHeight + 31.0 + buttonBottomInset + 22.0)
+                    }
                 } else {
                     if availableSize.width > 320.0 {
                         buttonSideInset = 16.0
@@ -439,7 +444,9 @@ private final class MediaToolsScreenComponent: Component {
                 containerSize: CGSize(width: 44.0, height: 44.0)
             )
             let doneButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - buttonSideInset - doneButtonSize.width, y: buttonBottomInset),
+                // The wide (tablet) layout keeps the button clear of the right inset. A bottom button spans iPhone Duo's
+                // side strip; it keeps clear only of a corner block at the bottom.
+                origin: CGPoint(x: availableSize.width - (isTablet ? environment.bottomEdgeSideInsets().right : 0.0) - buttonSideInset - doneButtonSize.width, y: buttonBottomInset),
                 size: doneButtonSize
             )
             if let doneButtonView = self.doneButton.view {
@@ -886,7 +893,9 @@ private final class MediaToolsScreenComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height)
+                    // The blur's position maps onto the image, so where the 9:16 preview is much taller than the whole screen
+                    // (iPhone Duo; it starts at the top there) it spans the preview rather than the visible area.
+                    containerSize: CGSize(width: previewContainerFrame.width, height: previewSize.height > availableSize.height + 30.0 ? previewSize.height : previewContainerFrame.height)
                 )
             case .curves:
                 needsHistogram = true
@@ -1050,17 +1059,25 @@ public final class MediaToolsScreen: ViewController {
             let isTablet = layout.metrics.isTablet
 
             let previewSize: CGSize
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
+            var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             if isTablet {
                 let previewHeight = layout.size.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
             }
-            let bottomInset = layout.size.height - previewSize.height - topInset
+            var bottomInset = layout.size.height - previewSize.height - topInset
+            if previewSize.height > layout.size.height + 30.0 {
+                // A 9:16 preview much taller than the whole screen (iPhone Duo: 1189pt on the 951pt unfolded screen) leaves no
+                // space below it; as in the editor, the preview starts at the top and the bottom controls stay on screen.
+                topInset = 0.0
+                bottomInset = 0.0
+            }
             
             let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                // Beside iPhone Duo's status island the bottom bar mirrors the editor's (see MediaEditorScreen).
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                fullStatusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,
                 safeInsets: UIEdgeInsets(
                     top: topInset,
@@ -1068,6 +1085,8 @@ public final class MediaToolsScreen: ViewController {
                     bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
+                reservedCorners: layout.reservedCorners,
+                navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,

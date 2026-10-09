@@ -38,6 +38,8 @@ swift_library(
         "//submodules/TelegramUI/Components/EdgeEffect",
         "//submodules/ComponentFlow",
         "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/GlassBackgroundComponent",
+        "//submodules/TelegramUI/Components/SideColumnLayout",
     ],
     visibility = [
         "//visibility:public",

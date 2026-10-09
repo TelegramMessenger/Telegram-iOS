@@ -120,7 +120,6 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
         let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         
         return { [weak self] item, params, neighbors in
-            let leftInset: CGFloat = 24.0 + params.leftInset
             let iconSize: CGSize
             if params.width > params.availableHeight && params.width > 320.0 {
                 iconSize = CGSize(width: 140.0, height: 140.0)
@@ -153,9 +152,9 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
                 }
             })
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 24.0 * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 24.0 * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             var contentSize = CGSize(width: params.width, height: topInset + textLayout.size.height)
             if let _ = item.title {
@@ -175,13 +174,13 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         
-                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
+                    strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                     
                     var origin: CGFloat = topInset + 8.0
                     
                     let _ = titleApply()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: origin), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0), y: origin), size: titleLayout.size)
                     if titleLayout.size.height > 0.0 {
                         origin += titleLayout.size.height + spacing
                     }
@@ -193,7 +192,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
                         placeholderColor: item.theme.list.mediaPlaceholderColor,
                         attemptSynchronous: true
                     ))
-                    strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - textLayout.size.width) / 2.0), y: origin), size: textLayout.size)
+                    strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((layout.size.width - params.leftInset - params.rightInset - textLayout.size.width) / 2.0), y: origin), size: textLayout.size)
                     strongSelf.textNode.visibilityRect = .infinite
                 }
             })

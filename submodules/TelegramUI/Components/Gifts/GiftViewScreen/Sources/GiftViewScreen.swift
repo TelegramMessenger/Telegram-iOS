@@ -6308,11 +6308,24 @@ private final class GiftViewSheetContentContainer: Component {
             }
 
             if let controlPanelComponent = self.contentExternalState.controlPanel {
+                // Beside a side strip (iPhone Duo, folded portrait, where the sheet spans the screen) the close and
+                // "..." buttons keep the side insets: this sheet is tall enough for its top to rise beside the 84x170
+                // status corner. Equal insets, and the band a landscape sheet keeps to, change nothing.
+                var controlPanelStripInsets: (left: CGFloat, right: CGFloat) = environmentValue.safeInsets.left != environmentValue.safeInsets.right ? (environmentValue.safeInsets.left, environmentValue.safeInsets.right) : (0.0, 0.0)
+                // On the unfolded screen in portrait the "..." button likewise keeps clear of the status island, when
+                // the sheet is tall enough for its top to rise beside it (the sheet ends at the screen's bottom and is
+                // at most `maximumHeight`, which leaves `statusBarHeight + 10` above it).
+                if environmentValue.navigationBarTrailingButtonsInset > 0.0, let island = environmentValue.reservedCorners.topRight {
+                    let sheetMinY = environmentValue.statusBarHeight + 10.0 + max(0.0, component.maximumHeight - visibleHeight)
+                    if sheetMinY + 16.0 < island.height {
+                        controlPanelStripInsets.right += environmentValue.navigationBarTrailingButtonsInset
+                    }
+                }
                 let controlPanelSize = self.controlPanel.update(
                     transition: self.contentExternalState.controlPanelTransition,
                     component: AnyComponent(controlPanelComponent),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 44.0)
+                    containerSize: CGSize(width: availableSize.width - 16.0 * 2.0 - controlPanelStripInsets.left - controlPanelStripInsets.right, height: 44.0)
                 )
                 if let controlPanelView = self.controlPanel.view {
                     if controlPanelView.superview == nil {
@@ -6321,7 +6334,7 @@ private final class GiftViewSheetContentContainer: Component {
                     transition.setFrame(
                         view: controlPanelView,
                         frame: CGRect(
-                            origin: CGPoint(x: floorToScreenPixels((availableSize.width - controlPanelSize.width) * 0.5), y: 16.0),
+                            origin: CGPoint(x: controlPanelStripInsets.left + floorToScreenPixels((availableSize.width - controlPanelStripInsets.left - controlPanelStripInsets.right - controlPanelSize.width) * 0.5), y: 16.0),
                             size: controlPanelSize
                         )
                     )
@@ -6472,7 +6485,7 @@ final class GiftViewSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -6517,8 +6530,10 @@ final class GiftViewSheetComponent: CombinedComponent {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: max(sideInset, environment.safeInsets.left), bottom: 0.0, right: max(sideInset, environment.safeInsets.right)),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
                     inVoiceOver: false,
@@ -7204,7 +7219,7 @@ private final class GiftViewContextReferenceContentSource: ContextReferenceConte
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

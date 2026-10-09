@@ -71,7 +71,7 @@ private let boldTextFont = Font.semibold(15.0)
 class IncreaseLimitHeaderItemNode: ListViewItemNode {
     private var hostView: ComponentHostView<Empty>?
     
-    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout)?
+    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout, CGFloat)?
         
     private var item: BoostLevelHeaderItem?
     
@@ -86,14 +86,14 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
         self.hostView = hostView
         self.view.addSubview(hostView)
         
-        if let (component, containerSize, layout) = self.params {
+        if let (component, containerSize, _, leftInset) = self.params {
             let size = hostView.update(
                 transition: .immediate,
                 component: component,
                 environment: {},
                 containerSize: containerSize
             )
-            hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -5.0), size: size)
+            hostView.frame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((containerSize.width - size.width) / 2.0), y: -5.0), size: size)
         }
     }
     
@@ -146,10 +146,10 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                             environment: {},
                             containerSize: containerSize
                         )
-                        hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -5.0), size: size)
+                        hostView.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((containerSize.width - size.width) / 2.0), y: -5.0), size: size)
                     }
                     
-                    strongSelf.params = (component, containerSize, layout)
+                    strongSelf.params = (component, containerSize, layout, params.leftInset)
                 }
             })
         }

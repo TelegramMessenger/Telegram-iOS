@@ -4302,7 +4302,7 @@ final class StoryItemSetContainerSendMessage: @unchecked(Sendable) {
             }
 
             func transitionInfo() -> ContextControllerReferenceViewInfo? {
-                return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets), insets: self.contentInsets, actionsPosition: .top)
+                return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds.inset(by: self.insets), insets: self.contentInsets, actionsPosition: .top)
             }
         }
 

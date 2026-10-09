@@ -62,6 +62,7 @@ private final class PeerInfoScreenBirthdatePickerItemNode: PeerInfoScreenItemNod
         self.theme = presentationData.theme
                 
         let sideInset: CGFloat = 16.0 + safeInsets.left
+        let sideInsetRight: CGFloat = 16.0 + safeInsets.right
         let height: CGFloat = 226.0
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -75,7 +76,7 @@ private final class PeerInfoScreenBirthdatePickerItemNode: PeerInfoScreenItemNod
                 valueUpdated: item.valueUpdated
             )),
             environment: {},
-            containerSize: CGSize(width: width - sideInset * 2.0, height: height)
+            containerSize: CGSize(width: width - sideInset - sideInsetRight, height: height)
         )
         let pickerFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: pickerSize)
         if let pickerView = self.picker.view {

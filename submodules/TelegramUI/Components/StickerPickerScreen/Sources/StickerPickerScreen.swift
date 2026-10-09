@@ -36,6 +36,7 @@ private final class StickerSelectionComponent: Component {
     let deviceMetrics: DeviceMetrics
     let topInset: CGFloat
     let bottomInset: CGFloat
+    let sideInsets: UIEdgeInsets
     let content: StickerPickerInputData
     let backgroundColor: UIColor
     let separatorColor: UIColor
@@ -48,6 +49,7 @@ private final class StickerSelectionComponent: Component {
         deviceMetrics: DeviceMetrics,
         topInset: CGFloat,
         bottomInset: CGFloat,
+        sideInsets: UIEdgeInsets,
         content: StickerPickerInputData,
         backgroundColor: UIColor,
         separatorColor: UIColor,
@@ -59,6 +61,7 @@ private final class StickerSelectionComponent: Component {
         self.deviceMetrics = deviceMetrics
         self.topInset = topInset
         self.bottomInset = bottomInset
+        self.sideInsets = sideInsets
         self.content = content
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -79,6 +82,9 @@ private final class StickerSelectionComponent: Component {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        if lhs.sideInsets != rhs.sideInsets {
             return false
         }
         if lhs.content != rhs.content {
@@ -269,6 +275,9 @@ private final class StickerSelectionComponent: Component {
             )
             
             let isFullscreen = controller?.isFullscreen == true
+            // iPhone Duo: the keyboard (tabs, grid, bottom panel) keeps to the band beside the side strip and clear of
+            // the status corner at its end; the panel background still spans the sheet. Zero elsewhere.
+            let sideInsets = component.sideInsets
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
@@ -367,7 +376,7 @@ private final class StickerSelectionComponent: Component {
                 )),
                 environment: {},
                 forceUpdate: self.forceUpdate,
-                containerSize: availableSize
+                containerSize: CGSize(width: availableSize.width - sideInsets.left - sideInsets.right, height: availableSize.height)
             )
             self.forceUpdate = false
             if let keyboardComponentView = self.keyboardView.view {
@@ -384,10 +393,10 @@ private final class StickerSelectionComponent: Component {
                 transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight - topInset)))
                 self.keyboardClippingView.hitEdgeInsets = UIEdgeInsets(top: -topPanelHeight - topInset, left: 0.0, bottom: 0.0, right: 0.0)
                 
-                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight - topInset), size: keyboardSize))
-                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
+                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: sideInsets.left, y: -topPanelHeight - topInset), size: keyboardSize))
+                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: sideInsets.left, y: topPanelHeight + topInset - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
                 
-                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight + topInset)))
+                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: topPanelHeight + topInset)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
                 let topPanelAlpha: CGFloat
@@ -408,7 +417,7 @@ private final class StickerSelectionComponent: Component {
                 transition.setAlpha(view: self.panelBackgroundView, alpha: topPanelAlpha)
                 transition.setAlpha(view: self.panelSeparatorView, alpha: topPanelAlpha)
                 
-                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - UIScreenPixel), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
+                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             }
             
             return availableSize
@@ -1786,6 +1795,9 @@ public class StickerPickerScreen: ViewController {
                             deviceMetrics: layout.deviceMetrics,
                             topInset: controller.isFullscreen ? navigationHeight : 0.0,
                             bottomInset: bottomInset,
+                            // iPhone Duo: the side strip's inset (folded portrait: the sheet rises beside the status
+                            // corner); equal insets keep the full width, as before.
+                            sideInsets: layout.safeInsets.left != layout.safeInsets.right ? UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right) : UIEdgeInsets(),
                             content: content,
                             backgroundColor: self.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.85),
                             separatorColor: self.theme.rootController.navigationBar.separatorColor,
@@ -2160,9 +2172,12 @@ public class StickerPickerScreen: ViewController {
     }
         
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        // iPhone Duo: the unfolded screen in landscape is regular width but a phone, which shows the phone sheet rather
+        // than the floating panel (every width-class check below then reads compact). Unchanged elsewhere.
+        let layout = layout.forOptionalFloatingPresentation
         self.currentLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
-        
+
         let navigationHeight: CGFloat = 56.0
         
         self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: ComponentTransition(transition))

@@ -410,7 +410,7 @@ private final class AuthConfirmationSheetContent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(accountButton
-                    .position(CGPoint(x: context.availableSize.width - 16.0 - accountButton.size.width / 2.0, y: 16.0 + accountButton.size.height / 2.0))
+                    .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - accountButton.size.width / 2.0, y: 16.0 + accountButton.size.height / 2.0))
                 )
             }
             
@@ -936,7 +936,7 @@ private final class AuthConfirmationSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -1035,7 +1035,7 @@ private final class AuthConfirmationReferenceContentSource: ContextReferenceCont
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

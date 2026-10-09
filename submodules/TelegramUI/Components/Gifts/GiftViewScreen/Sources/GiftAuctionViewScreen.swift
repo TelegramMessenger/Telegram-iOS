@@ -1273,7 +1273,7 @@ private final class GiftAuctionViewSheetContent: CombinedComponent {
                 transition: context.transition
             )
             context.add(moreButton
-                .position(CGPoint(x: context.availableSize.width - 16.0 - moreButton.size.width / 2.0, y: 16.0 + moreButton.size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - moreButton.size.width / 2.0, y: 16.0 + moreButton.size.height / 2.0))
             )
             
             return CGSize(width: context.availableSize.width, height: originY)
@@ -1345,7 +1345,7 @@ final class GiftAuctionViewSheetComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         hasInputHeight: !environment.inputHeight.isZero,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
@@ -1387,8 +1387,10 @@ final class GiftAuctionViewSheetComponent: CombinedComponent {
                     deviceMetrics: environment.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
                     safeInsets: UIEdgeInsets(top: 0.0, left: max(sideInset, environment.safeInsets.left), bottom: 0.0, right: max(sideInset, environment.safeInsets.right)),
+                    reservedCorners: environment.reservedCorners,
+                    division: nil,
                     additionalInsets: .zero,
-                    statusBarHeight: environment.statusBarHeight,
+                    statusBarHeight: environment.fullStatusBarHeight,
                     inputHeight: nil,
                     inputHeightIsInteractivellyChanging: false,
                     inVoiceOver: false,
@@ -1480,6 +1482,6 @@ private final class GiftViewContextReferenceContentSource: ContextReferenceConte
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

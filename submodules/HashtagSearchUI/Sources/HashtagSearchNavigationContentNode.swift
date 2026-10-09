@@ -202,9 +202,10 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
                     isEditing: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: size.width - (leftInset + 16.0) * 2.0, height: 44.0)
+                containerSize: CGSize(width: size.width - leftInset - rightInset - 16.0 * 2.0, height: 44.0)
             )
-            let tabSelectorFrameOriginX = floorToScreenPixels((size.width - tabSelectorSize.width) / 2.0)
+            // Centred while it fits between the side insets, which differ beside iPhone Duo's side strip or status island.
+            let tabSelectorFrameOriginX = horizontallyCenteredOrigin(width: tabSelectorSize.width, containerWidth: size.width, minX: leftInset + 16.0, maxX: size.width - rightInset - 16.0)
             let tabSelectorFrame = CGRect(origin: CGPoint(x: tabSelectorFrameOriginX, y: searchBarFrame.maxY + 10.0), size: tabSelectorSize)
             
             transition.updateFrame(view: self.tabsBackgroundContainer, frame: tabSelectorFrame)

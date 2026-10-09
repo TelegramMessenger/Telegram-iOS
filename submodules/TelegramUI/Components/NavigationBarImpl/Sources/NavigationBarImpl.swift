@@ -8,6 +8,8 @@ import EdgeEffect
 import ComponentDisplayAdapters
 
 public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
+    /// iPhone Duo: see `NavigationBar.trailingButtonsInset`.
+    public var trailingButtonsInset: CGFloat = 0.0
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
     }
@@ -278,6 +280,78 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
     
     public var enableAutomaticBackButton: Bool = true
     
+    public var hidesBackButton: Bool = false {
+        didSet {
+            if self.hidesBackButton != oldValue {
+                self.updateLeftButton(animated: false)
+                self.invalidateCalculatedLayout()
+                self.requestLayout()
+            }
+        }
+    }
+    
+    public var displaysNavigationButtonInSideColumn: Bool = false {
+        didSet {
+            if self.displaysNavigationButtonInSideColumn != oldValue {
+                self.updateLeftButton(animated: false)
+                self.invalidateCalculatedLayout()
+                self.requestLayout()
+            }
+        }
+    }
+    
+    public var navigationButtonForSideColumnUpdated: (() -> Void)?
+    
+    public var navigationButtonForSideColumn: NavigationSideColumnButtonKind? {
+        guard let item = self.item, !self.hidesBackButton else {
+            return nil
+        }
+        if let leftBarButtonItem = item.leftBarButtonItem {
+            // A left item drawn as the back button (the media gallery's) is one; the bar's own close X
+            // ("___close", a modal's first screen) is a close.
+            if leftBarButtonItem.backButtonAppearance {
+                return .back
+            }
+            if leftBarButtonItem.title == "___close" {
+                return .close
+            }
+            return nil
+        }
+        guard let previousItem = self.previousItem else {
+            return nil
+        }
+        switch previousItem {
+        case .close:
+            return .close
+        case .item:
+            return .back
+        }
+    }
+    
+    private weak var sideColumnNavigationButtonNode: NavigationBarSideColumnButtonNode?
+    
+    public func makeSideColumnNavigationButtonNode() -> NavigationSideColumnButtonNode {
+        let node = NavigationBarSideColumnButtonNode(presentationData: self.presentationData)
+        node.alpha = self.alpha
+        node.isHidden = self.isHidden
+        self.sideColumnNavigationButtonNode = node
+        return node
+    }
+    
+    // The side strip's button hides with the bar: screens fade or hide the bar directly (the media gallery
+    // when its controls hide or it is swiped away), often inside an animation block, outside any layout.
+    override public var alpha: CGFloat {
+        didSet {
+            self.sideColumnNavigationButtonNode?.alpha = self.alpha
+        }
+    }
+    
+    override public var isHidden: Bool {
+        didSet {
+            self.sideColumnNavigationButtonNode?.isHidden = self.isHidden
+        }
+    }
+    
     var _previousItem: NavigationPreviousAction?
     public var previousItem: NavigationPreviousAction? {
         get {
@@ -362,7 +436,19 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
     }
     
     private func updateLeftButton(animated: Bool) {
+        // Whatever this decides, what the bar would show on the left may have changed.
+        defer {
+            self.navigationButtonForSideColumnUpdated?()
+        }
         if let item = self.item {
+            let leftItemIsBack = item.leftBarButtonItem.map { $0.backButtonAppearance || $0.title == "___close" } ?? true
+            if (self.hidesBackButton && item.leftBarButtonItem == nil) || (self.displaysNavigationButtonInSideColumn && leftItemIsBack) {
+                self.leftButtonNodeImpl.view.removeFromSuperview()
+                self.backButtonNodeImpl.view.removeFromSuperview()
+                self.backButtonArrow.view.removeFromSuperview()
+                self.badgeNode.view.removeFromSuperview()
+                return
+            }
             var needsLeftButton = false
             if let leftBarButtonItem = item.leftBarButtonItem, !leftBarButtonItem.backButtonAppearance {
                 needsLeftButton = true
@@ -774,6 +860,7 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
             self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
             
             self.badgeNode.updateTheme(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
+            self.sideColumnNavigationButtonNode?.updatePresentationData(self.presentationData)
             
             self.updateLeftButton(animated: false)
             self.requestLayout()
@@ -837,6 +924,9 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
         let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
+        // The legacy (non-glass) bar's right button: its own side's inset (iPhone Duo's side strip makes them
+        // differ; with equal insets this is `leftButtonInset`).
+        let rightButtonInset: CGFloat = rightInset + self.trailingButtonsInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
         
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -855,7 +945,8 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                 }
                 
                 transition.updateFrame(node: contentNode, frame: contentNodeFrame)
-                let _ = contentNode.updateLayout(size: contentNodeFrame.size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+                // It takes the bar's row, so its trailing end keeps clear of a status island beside the bar (iPhone Duo).
+                let _ = contentNode.updateLayout(size: contentNodeFrame.size, leftInset: leftInset, rightInset: rightInset + self.trailingButtonsInset, transition: transition)
             case .expansion:
                 expansionHeight = contentNode.height
                 
@@ -988,8 +1079,8 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
             if case .glass = self.presentationData.theme.style {
                 transition.updateFrame(node: self.rightButtonNodeImpl, frame: CGRect(origin: CGPoint(x: 0.0, y: floor((44.0 - rightButtonSize.height) / 2.0)), size: rightButtonSize))
             } else {
-                rightTitleInset = rightButtonSize.width + leftButtonInset + 4.0
-                transition.updateFrame(node: self.rightButtonNodeImpl, frame: CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
+                rightTitleInset = rightButtonSize.width + rightButtonInset + 4.0
+                transition.updateFrame(node: self.rightButtonNodeImpl, frame: CGRect(origin: CGPoint(x: size.width - rightButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
             }
         }
         self.rightButtonNodeUpdated = false
@@ -1030,9 +1121,9 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
         
         if let rightButtonsBackgroundView = self.rightButtonsBackgroundView {
             if rightButtonsWidth != 0.0 {
-                rightTitleInset = rightInset + 16.0 + rightButtonsWidth + 10.0
+                rightTitleInset = rightInset + self.trailingButtonsInset + 16.0 + rightButtonsWidth + 10.0
                 
-                let rightButtonsBackgroundFrame = CGRect(origin: CGPoint(x: size.width - rightInset - 16.0 - rightButtonsWidth, y: contentVerticalOrigin + floor((nominalHeight - 44.0) * 0.5)), size: CGSize(width: rightButtonsWidth, height: 44.0))
+                let rightButtonsBackgroundFrame = CGRect(origin: CGPoint(x: size.width - rightInset - self.trailingButtonsInset - 16.0 - rightButtonsWidth, y: contentVerticalOrigin + floor((nominalHeight - 44.0) * 0.5)), size: CGSize(width: rightButtonsWidth, height: 44.0))
                 var rightButtonsBackgroundTransition = ComponentTransition(transition)
                 if rightButtonsBackgroundView.background.isHidden {
                     rightButtonsBackgroundTransition = .immediate
@@ -1069,13 +1160,9 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
             rightButtonsBackgroundView.background.morphsIntoContextMenu = rightButtonCount == 1
         }
         
-        if (leftTitleInset == leftInset) != (rightTitleInset == rightInset) {
-            if rightTitleInset == rightInset {
-                rightTitleInset = max(rightInset, 16.0)
-            } else if leftTitleInset == leftInset {
-                leftTitleInset = rightTitleInset
-            }
-        }
+        // Titles are centered in the band between the side insets, clear of the buttons (iPhone Duo's
+        // strip makes the insets differ; with equal insets this is full-width centering).
+        (leftTitleInset, rightTitleInset) = navigationBarTitleInsets(leftInset: leftInset, rightInset: rightInset, leftTitleInset: leftTitleInset, rightTitleInset: rightTitleInset)
         
         if self.titleNode.view.superview != nil {
             var transition = transition
@@ -1086,11 +1173,8 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
             
             let titleSize = self.titleNode.updateLayout(CGSize(width: max(1.0, size.width - leftTitleInset - rightTitleInset), height: nominalHeight))
             
-            if titleSize.width <= size.width - max(leftTitleInset, rightTitleInset) * 2.0 {
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize))
-            } else {
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftTitleInset + floor((size.width - leftTitleInset - rightTitleInset - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize))
-            }
+            let titleX = navigationBarTextTitleOriginX(width: size.width, leftInset: leftInset, rightInset: rightInset, leftTitleInset: leftTitleInset, rightTitleInset: rightTitleInset, titleWidth: titleSize.width)
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: titleX, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize))
         }
         
         if let titleView = self.titleView {
@@ -1102,27 +1186,14 @@ public final class NavigationBarImpl: ASDisplayNode, NavigationBar {
                 
                 let titleSize = titleView.updateLayout(availableSize: CGSize(width: size.width - leftTitleInset - rightTitleInset, height: nominalHeight), transition: titleViewTransition)
                 
-                var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) * 0.5), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
-                if titleFrame.origin.x + titleFrame.width > size.width - rightTitleInset {
-                    titleFrame.origin.x = size.width - rightTitleInset - titleFrame.width
-                }
-                if titleFrame.origin.x < leftTitleInset {
-                    titleFrame.origin.x = leftTitleInset + floorToScreenPixels((size.width - leftTitleInset - rightTitleInset - titleFrame.width) * 0.5)
-                }
+                let titleX = navigationBarTitleViewOriginX(width: size.width, leftInset: leftInset, rightInset: rightInset, leftTitleInset: leftTitleInset, rightTitleInset: rightTitleInset, titleWidth: titleSize.width)
+                let titleFrame = CGRect(origin: CGPoint(x: titleX, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
                 
                 titleViewTransition.updateFrame(view: titleView, frame: titleFrame)
             } else {
-                leftTitleInset = max(leftTitleInset, rightTitleInset)
-                rightTitleInset = leftTitleInset
-                
-                let titleSize = CGSize(width: max(1.0, size.width - leftTitleInset - rightTitleInset), height: nominalHeight)
-                var titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
-                if titleFrame.origin.x + titleFrame.width > size.width - rightTitleInset {
-                    titleFrame.origin.x = size.width - rightTitleInset - titleFrame.width
-                }
-                if titleFrame.origin.x < leftTitleInset {
-                    titleFrame.origin.x = leftTitleInset + floorToScreenPixels((size.width - leftTitleInset - rightTitleInset - titleFrame.width) * 0.5)
-                }
+                let titleHorizontalFrame = navigationBarFillingTitleFrame(width: size.width, leftInset: leftInset, rightInset: rightInset, leftTitleInset: leftTitleInset, rightTitleInset: rightTitleInset)
+                let titleSize = CGSize(width: titleHorizontalFrame.width, height: nominalHeight)
+                let titleFrame = CGRect(origin: CGPoint(x: titleHorizontalFrame.x, y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize)
                 var titleViewTransition = transition
                 if titleView.frame.isEmpty {
                     titleViewTransition = .immediate

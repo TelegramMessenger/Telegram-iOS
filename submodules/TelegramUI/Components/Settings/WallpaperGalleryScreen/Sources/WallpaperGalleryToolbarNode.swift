@@ -325,9 +325,12 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
         let buttonHeight: CGFloat = 52.0
 
         let spacing: CGFloat = 8.0
+        // Beside a side strip (iPhone Duo) the buttons keep to the band: in folded landscape-left the strip's status
+        // block sits at its bottom, level with them. Equal side insets keep the full width.
+        let stripInsets = wallpaperToolbarStripInsets(layout: layout)
 
-        let applyFrame = CGRect(origin: CGPoint(x: inset, y: 2.0), size: CGSize(width: size.width - inset * 2.0, height: buttonHeight))
-        let applyForBothFrame = CGRect(origin: CGPoint(x: inset, y: applyFrame.maxY + spacing), size: CGSize(width: size.width - inset * 2.0, height: buttonHeight))
+        let applyFrame = CGRect(origin: CGPoint(x: inset + stripInsets.left, y: 2.0), size: CGSize(width: size.width - inset * 2.0 - stripInsets.left - stripInsets.right, height: buttonHeight))
+        let applyForBothFrame = CGRect(origin: CGPoint(x: inset + stripInsets.left, y: applyFrame.maxY + spacing), size: CGSize(width: size.width - inset * 2.0 - stripInsets.left - stripInsets.right, height: buttonHeight))
 
         var showApplyForBothButton = false
         if case .setPeer = self.doneButtonType {
@@ -422,10 +425,12 @@ public final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalle
         let sideInset: CGFloat = 30.0
         let spacing: CGFloat = 24.0
         let buttonHeight: CGFloat = 52.0
-        let buttonWidth = floor(max(1.0, size.width - sideInset * 2.0 - spacing) / 2.0)
+        // Beside a side strip (iPhone Duo) the buttons keep to the band; equal side insets keep the full width.
+        let stripInsets = wallpaperToolbarStripInsets(layout: layout)
+        let buttonWidth = floor(max(1.0, size.width - sideInset * 2.0 - stripInsets.left - stripInsets.right - spacing) / 2.0)
         let buttonY = floor((size.height - buttonHeight) / 2.0)
-        let cancelFrame = CGRect(x: sideInset, y: buttonY, width: buttonWidth, height: buttonHeight)
-        let doneFrame = CGRect(x: cancelFrame.maxX + spacing, y: buttonY, width: max(1.0, size.width - sideInset - cancelFrame.maxX - spacing), height: buttonHeight)
+        let cancelFrame = CGRect(x: sideInset + stripInsets.left, y: buttonY, width: buttonWidth, height: buttonHeight)
+        let doneFrame = CGRect(x: cancelFrame.maxX + spacing, y: buttonY, width: max(1.0, size.width - sideInset - stripInsets.right - cancelFrame.maxX - spacing), height: buttonHeight)
 
         let glassColor = UIColor(white: 1.0, alpha: 0.0)
         let foregroundColor = self.theme.list.itemPrimaryTextColor
@@ -492,4 +497,14 @@ public final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalle
             doneView.isUserInteractionEnabled = self.doneEnabled && doneIsVisible
         }
     }
+}
+
+/// The side insets a wallpaper toolbar keeps beside a side strip (iPhone Duo), where the side safe insets differ; none
+/// with equal insets, so every other device keeps the full-width toolbar.
+private func wallpaperToolbarStripInsets(layout: ContainerViewLayout) -> (left: CGFloat, right: CGFloat) {
+    if layout.safeInsets.left == layout.safeInsets.right {
+        return (0.0, 0.0)
+    }
+    // A bottom toolbar spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+    return layout.bottomEdgeSideInsets()
 }

@@ -91,6 +91,18 @@ final class ButtonGroupView: OverlayMaskContainerView {
         
         let buttonSize: CGFloat = 56.0
         let buttonSpacing: CGFloat = 36.0
+        // The band between the side insets when they differ (iPhone Duo's side strip); the whole width otherwise.
+        let bandMinX: CGFloat = insets.left != insets.right ? insets.left : 0.0
+        let bandWidth: CGFloat = insets.left != insets.right ? size.width - insets.left - insets.right : size.width
+        // Centered in the band when it fits there; a wider row stays centered on the screen, crossing the strip
+        // below its corner block.
+        func centeredX(width: CGFloat) -> CGFloat {
+            if width <= bandWidth {
+                return bandMinX + floor((bandWidth - width) * 0.5)
+            } else {
+                return floor((size.width - width) * 0.5)
+            }
+        }
         
         let buttonNoticeSpacing: CGFloat = 16.0
         let controlsHiddenNoticeSpacing: CGFloat = 0.0
@@ -131,8 +143,8 @@ final class ButtonGroupView: OverlayMaskContainerView {
                     noticesHeight += buttonNoticeSpacing
                 }
             }
-            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, constrainedWidth: size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
-            let noticeFrame = CGRect(origin: CGPoint(x: floor((size.width - noticeSize.width) * 0.5), y: isAnimatedOutToGroupCall ? nextNoticeY : (nextNoticeY - noticeSize.height)), size: noticeSize)
+            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, constrainedWidth: insets.left != insets.right ? bandWidth - 16.0 * 2.0 : size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
+            let noticeFrame = CGRect(origin: CGPoint(x: centeredX(width: noticeSize.width), y: isAnimatedOutToGroupCall ? nextNoticeY : (nextNoticeY - noticeSize.height)), size: noticeSize)
             noticesHeight += noticeSize.height
             if !isAnimatedOutToGroupCall {
                 nextNoticeY -= noticeSize.height + noticeSpacing
@@ -175,7 +187,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
             buttonY = size.height - insets.bottom - 52.0 - buttonSize
             resultHeight = size.height - buttonY + noticesHeight
         }
-        var buttonX: CGFloat = floor((size.width - buttonSize * CGFloat(buttons.count) - buttonSpacing * CGFloat(buttons.count - 1)) * 0.5)
+        var buttonX: CGFloat = centeredX(width: buttonSize * CGFloat(buttons.count) + buttonSpacing * CGFloat(buttons.count - 1))
         
         if displayClose {
             let closeButtonView: CloseButtonView
@@ -199,7 +211,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
             }
             let closeButtonSize = CGSize(width: minWidth, height: buttonSize)
             closeButtonView.update(text: strings.Common_Close, size: closeButtonSize, transition: closeButtonTransition)
-            closeButtonTransition.setFrame(view: closeButtonView, frame: CGRect(origin: CGPoint(x: floor((size.width - closeButtonSize.width) * 0.5), y: buttonY), size: closeButtonSize))
+            closeButtonTransition.setFrame(view: closeButtonView, frame: CGRect(origin: CGPoint(x: centeredX(width: closeButtonSize.width), y: buttonY), size: closeButtonSize))
             
             if animateIn && !transition.animation.isImmediate {
                 closeButtonView.animateIn()

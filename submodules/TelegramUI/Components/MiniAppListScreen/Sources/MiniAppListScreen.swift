@@ -20,6 +20,7 @@ import MultilineTextComponent
 import SearchBarNode
 import BalancedTextComponent
 import ChatListSearchItemHeader
+import SideColumnLayout
 
 final class MiniAppListScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -239,6 +240,7 @@ final class MiniAppListScreenComponent: Component {
             size: CGSize,
             insets: UIEdgeInsets,
             statusBarHeight: CGFloat,
+            trailingButtonsInset: CGFloat,
             isModal: Bool,
             transition: ComponentTransition,
             deferScrollApplication: Bool
@@ -284,6 +286,7 @@ final class MiniAppListScreenComponent: Component {
                     statusBarHeight: statusBarHeight,
                     leftInset: insets.left,
                     rightInset: insets.right,
+                    trailingButtonsInset: trailingButtonsInset,
                     search: ChatListNavigationBar.Search(isEnabled: true),
                     activeSearch: self.isSearchDisplayControllerActive ? ChatListNavigationBar.ActiveSearch(isExternal: false) : nil,
                     primaryContent: headerContent,
@@ -308,17 +311,24 @@ final class MiniAppListScreenComponent: Component {
                     openStatusSetup: { _ in
                     },
                     allowAutomaticOrder: {
-                    }
+                    },
+                    // iPhone Duo: the back and icon buttons go into the side strip, as the chat list's do.
+                    sideColumn: pushedScreenSideColumnRegion(layout: self.environment?.controller()?.currentlyAppliedLayout)
                 )),
                 environment: {},
                 containerSize: size
             )
             
+            // iPhone Duo: when the side insets differ (one is the side strip) the title keeps to the band the rows below
+            // lay out in; equal insets keep the old full-width header.
+            let sectionHeaderInsetsDiffer = insets.left != insets.right
             let sectionHeaderSize = self.sectionHeader.update(
                 transition: transition,
                 component: AnyComponent(ListHeaderComponent(
                     theme: theme,
-                    title: strings.MiniAppList_ListSectionHeader
+                    title: strings.MiniAppList_ListSectionHeader,
+                    leftInset: sectionHeaderInsetsDiffer ? insets.left : 0.0,
+                    rightInset: sectionHeaderInsetsDiffer ? insets.right : 0.0
                 )),
                 environment: {},
                 containerSize: CGSize(width: size.width, height: 1000.0)
@@ -442,6 +452,7 @@ final class MiniAppListScreenComponent: Component {
                 size: availableSize,
                 insets: environment.safeInsets,
                 statusBarHeight: statusBarHeight,
+                trailingButtonsInset: environment.navigationBarTrailingButtonsInset,
                 isModal: isModal,
                 transition: transition,
                 deferScrollApplication: true
@@ -596,6 +607,10 @@ final class MiniAppListScreenComponent: Component {
                     emptySearchState = ComponentView()
                     self.emptySearchState = emptySearchState
                 }
+                // Centred in the band between the side insets when they differ (iPhone Duo's side strip), as the list
+                // rows are; equal insets keep the full width.
+                let emptySearchStateBandMinX: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? environment.safeInsets.left : 0.0
+                let emptySearchStateBandWidth: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? availableSize.width - environment.safeInsets.left - environment.safeInsets.right : availableSize.width
                 let emptySearchStateSize = emptySearchState.update(
                     transition: .immediate,
                     component: AnyComponent(BalancedTextComponent(
@@ -604,11 +619,11 @@ final class MiniAppListScreenComponent: Component {
                         maximumNumberOfLines: 0
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: availableSize.height)
+                    containerSize: CGSize(width: emptySearchStateBandWidth - 16.0 * 2.0, height: availableSize.height)
                 )
                 var emptySearchStateBottomInset = listBottomInset
                 emptySearchStateBottomInset = max(emptySearchStateBottomInset, environment.inputHeight)
-                let emptySearchStateFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - emptySearchStateSize.width) * 0.5), y: navigationHeight + floor((availableSize.height - emptySearchStateBottomInset - navigationHeight) * 0.5)), size: emptySearchStateSize)
+                let emptySearchStateFrame = CGRect(origin: CGPoint(x: emptySearchStateBandMinX + floor((emptySearchStateBandWidth - emptySearchStateSize.width) * 0.5), y: navigationHeight + floor((availableSize.height - emptySearchStateBottomInset - navigationHeight) * 0.5)), size: emptySearchStateSize)
                 if let emptySearchStateView = emptySearchState.view {
                     if emptySearchStateView.superview == nil {
                         if let navigationBarComponentView = self.navigationBarView.view {
@@ -743,20 +758,32 @@ public final class MiniAppListScreen: ViewControllerComponentContainer {
 private final class ListHeaderComponent: Component {
     let theme: PresentationTheme
     let title: String
-    
+    let leftInset: CGFloat
+    let rightInset: CGFloat
+
     init(
         theme: PresentationTheme,
-        title: String
+        title: String,
+        leftInset: CGFloat,
+        rightInset: CGFloat
     ) {
         self.theme = theme
         self.title = title
+        self.leftInset = leftInset
+        self.rightInset = rightInset
     }
-    
+
     static func ==(lhs: ListHeaderComponent, rhs: ListHeaderComponent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.leftInset != rhs.leftInset {
+            return false
+        }
+        if lhs.rightInset != rhs.rightInset {
             return false
         }
         return true
@@ -780,7 +807,7 @@ private final class ListHeaderComponent: Component {
                 self.backgroundColor = component.theme.chatList.sectionHeaderFillColor
             }
             
-            let insets = UIEdgeInsets(top: 7.0, left: 16.0, bottom: 7.0, right: 16.0)
+            let insets = UIEdgeInsets(top: 7.0, left: 16.0 + component.leftInset, bottom: 7.0, right: 16.0 + component.rightInset)
             
             let titleString = component.title
             

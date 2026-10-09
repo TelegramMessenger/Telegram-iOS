@@ -296,7 +296,7 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                     strongSelf.botNameNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.maxY + textBotNameSpacing), size: botNameLayout.size)
 
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: contentSize.height))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
             })

@@ -477,7 +477,9 @@ final class InviteContactsControllerNode: ASDisplayNode {
         var headerInsets = layout.insets(options: [.input])
         headerInsets.top += actualNavigationBarHeight
         
-        let countPanelHeight = self.countPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+        // The bottom count panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+        let bottomInsets = layout.bottomEdgeSideInsets()
+        let countPanelHeight = self.countPanelNode.updateLayout(width: layout.size.width, leftInset: bottomInsets.left, rightInset: bottomInsets.right, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
         if self.selectionState.selectedContactIndices.isEmpty {
             transition.updateFrame(node: self.countPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: countPanelHeight)))
         } else {

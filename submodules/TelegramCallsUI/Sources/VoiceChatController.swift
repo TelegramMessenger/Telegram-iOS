@@ -276,12 +276,12 @@ private final class VoiceChatContextExtractedContentSource: ContextExtractedCont
     
     func takeView() -> ContextControllerTakeViewInfo? {
         self.animateTransitionIn()
-        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds, maskView: self.maskView)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: mainWindowScreenBounds, maskView: self.maskView)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         self.animateTransitionOut()
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds, maskView: self.maskView)
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: mainWindowScreenBounds, maskView: self.maskView)
     }
 }
 
@@ -295,7 +295,7 @@ final class VoiceChatContextReferenceContentSource: ContextReferenceContentSourc
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

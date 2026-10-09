@@ -143,10 +143,15 @@ final class StorySearchGridScreenComponent: Component {
                 })
             }
             
+            // iPhone Duo: when the side insets differ (one is the side strip, whose top corner holds the status
+            // corner), the grid is laid out in the band between them, as in PeerInfoStoryGridScreen; equal insets keep
+            // the full-width grid.
+            let insetsDiffer = environment.safeInsets.left != environment.safeInsets.right
+            let paneFrame = insetsDiffer ? CGRect(x: environment.safeInsets.left, y: 0.0, width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right, height: availableSize.height) : CGRect(origin: CGPoint(), size: availableSize)
             paneNode.update(
-                size: availableSize,
+                size: paneFrame.size,
                 topInset: environment.navigationHeight,
-                sideInset: environment.safeInsets.left,
+                sideInset: insetsDiffer ? 0.0 : environment.safeInsets.left,
                 bottomInset: bottomInset,
                 deviceMetrics: environment.deviceMetrics,
                 visibleHeight: availableSize.height,
@@ -157,7 +162,7 @@ final class StorySearchGridScreenComponent: Component {
                 synchronous: false,
                 transition: transition.containedViewLayoutTransition
             )
-            transition.setFrame(view: paneNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setFrame(view: paneNode.view, frame: paneFrame)
             
             return availableSize
         }
@@ -302,6 +307,6 @@ private final class PeerInfoContextReferenceContentSource: ContextReferenceConte
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

@@ -177,6 +177,14 @@ struct Month: Equatable {
 
 private var savedStoriesContentOffset: CGFloat?
 
+/// The x of the "N selected" pill, right of the bar's close/back button. Beside a side strip (iPhone Duo, folded
+/// landscape-right: the strip and its status block are on the left) that button stands past the left inset, so the
+/// pill does too rather than sitting in the status block over it; equal insets keep it where it was.
+private func selectedButtonMinX(layout: ContainerViewLayout) -> CGFloat {
+    let stripLeftInset: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.safeInsets.left : 0.0
+    return stripLeftInset + 16.0 + 44.0 + 12.0
+}
+
 public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, AttachmentContainable {
     public enum Style {
         case glass
@@ -2691,7 +2699,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             let selectedSize = self.selectedButtonNode.update(count: count)
             
             let navigationHeight = navigationLayout(layout: layout).navigationFrame.height
-            self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: 16.0 + 44.0 + 12.0, y: self._hasGlassStyle ? 16.0 : floorToScreenPixels((navigationHeight - selectedSize.height) / 2.0) + 1.0), size: selectedSize)
+            self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: selectedButtonMinX(layout: layout), y: self._hasGlassStyle ? 16.0 : floorToScreenPixels((navigationHeight - selectedSize.height) / 2.0) + 1.0), size: selectedSize)
             
             let isSelectionButtonVisible = count > 0 && self.controllerNode.currentDisplayMode == .all
             transition.updateAlpha(node: self.selectedButtonNode, alpha: isSelectionButtonVisible ? 1.0 : 0.0)
@@ -3315,7 +3323,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
 
         let navigationHeight = navigationLayout(layout: layout).navigationFrame.height
-        self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: 16.0 + 44.0 + 12.0, y: self._hasGlassStyle ? 16.0 : floorToScreenPixels((navigationHeight - self.selectedButtonNode.frame.height) / 2.0) + 1.0), size: self.selectedButtonNode.frame.size)
+        self.selectedButtonNode.frame = CGRect(origin: CGPoint(x: selectedButtonMinX(layout: layout), y: self._hasGlassStyle ? 16.0 : floorToScreenPixels((navigationHeight - self.selectedButtonNode.frame.height) / 2.0) + 1.0), size: self.selectedButtonNode.frame.size)
     }
     
     public func dismissAnimated() {
@@ -3508,7 +3516,7 @@ private final class MediaPickerContextReferenceContentSource: ContextReferenceCo
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }
 

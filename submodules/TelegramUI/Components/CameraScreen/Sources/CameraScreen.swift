@@ -814,8 +814,8 @@ private final class CameraScreenComponent: CombinedComponent {
             let isFlashOn = controller.cameraState.flashMode == .on
             
             if isFrontCamera && isFlashOn {
-                let previousBrightness = UIScreen.main.brightness
-                UIScreen.main.brightness = 1.0
+                let previousBrightness = mainWindowScreen.brightness
+                mainWindowScreen.brightness = 1.0
                 
                 let flashController = CameraFrontFlashOverlayController(color: controller.cameraState.flashTint.color)
                 controller.presentInGlobalOverlay(flashController)
@@ -826,7 +826,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     Queue.mainQueue().after(0.5, {
                         self.isTakingPhoto = false
                         
-                        self.brightnessArguments = (CACurrentMediaTime(), 0.25, UIScreen.main.brightness, previousBrightness)
+                        self.brightnessArguments = (CACurrentMediaTime(), 0.25, mainWindowScreen.brightness, previousBrightness)
                         self.animateBrightnessChange()
                         flashController.dismissAnimated()
                     })
@@ -853,14 +853,14 @@ private final class CameraScreenComponent: CombinedComponent {
             
             if isFrontCamera && isVideo && isFlashOn {
                 if self.initialBrightness == nil {
-                    self.initialBrightness = UIScreen.main.brightness
-                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, 1.0)
+                    self.initialBrightness = mainWindowScreen.brightness
+                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, mainWindowScreen.brightness, 1.0)
                     self.animateBrightnessChange()
                 }
             } else {
                 if let initialBrightness = self.initialBrightness {
                     self.initialBrightness = nil
-                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
+                    self.brightnessArguments = (CACurrentMediaTime(), 0.2, mainWindowScreen.brightness, initialBrightness)
                     self.animateBrightnessChange()
                 }
             }
@@ -880,7 +880,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
                 let value = initial + (target - initial) * t
                 
-                UIScreen.main.brightness = value
+                mainWindowScreen.brightness = value
                 
                 if t >= 1.0 {
                     self.brightnessArguments = nil
@@ -968,7 +968,7 @@ private final class CameraScreenComponent: CombinedComponent {
             
             if case .front = controller.cameraState.position, let initialBrightness = self.initialBrightness {
                 self.initialBrightness = nil
-                self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
+                self.brightnessArguments = (CACurrentMediaTime(), 0.2, mainWindowScreen.brightness, initialBrightness)
                 self.animateBrightnessChange()
             }
         }
@@ -1386,6 +1386,9 @@ private final class CameraScreenComponent: CombinedComponent {
             
             let smallPanelWidth = min(component.panelWidth, 88.0)
             let panelWidth = min(component.panelWidth, 185.0)
+            // The right panel of the tablet layout ends at the side strip where there is one (iPhone Duo's unfolded screen
+            // in landscape: its top-right corner block and the strip below it).
+            let rightPanelMaxX = availableSize.width - environment.safeInsets.right
             
             var controlsBottomInset: CGFloat = 0.0
             let previewHeight = floorToScreenPixels(availableSize.width * 1.77778)
@@ -1600,7 +1603,7 @@ private final class CameraScreenComponent: CombinedComponent {
             
             let captureControlsPosition: CGPoint
             if isTablet {
-                captureControlsPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0)
+                captureControlsPosition = CGPoint(x: rightPanelMaxX - panelWidth / 2.0, y: availableSize.height / 2.0)
             } else {
                 captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0 + floorToScreenPixels(controlsBottomInset * 0.66))
             }
@@ -1629,7 +1632,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         strings: environment.strings,
                         peerId: state.sendAsPeerId ?? component.context.account.peerId,
                         story: state.liveStreamStory,
-                        statusBarHeight: environment.statusBarHeight,
+                        statusBarHeight: environment.fullStatusBarHeight,
                         inputHeight: environment.inputHeight,
                         safeInsets: environment.safeInsets,
                         metrics: environment.metrics,
@@ -1665,7 +1668,13 @@ private final class CameraScreenComponent: CombinedComponent {
             
             var flashButtonPosition: CGPoint?
             let topControlSideInset: CGFloat = 9.0
+            // iPhone Duo: the right-anchored top controls keep the right safe inset (the side strip, whose top
+            // corner holds the status corner); it is 0 on every other phone, whose camera is portrait-only.
+            let topControlRightInset: CGFloat = topControlSideInset + environment.safeInsets.right + environment.navigationBarTrailingButtonsInset
             let topControlVerticalInset: CGFloat = 12.0
+            // The top row's top edge. Beside iPhone Duo's status island (unfolded portrait) its 44pt controls are centred
+            // on the island's clock line (compact status height + 31), as the editors' are; elsewhere below the status bar.
+            let topRowTop: CGFloat = environment.navigationBarTrailingButtonsInset > 0.0 ? environment.statusBarHeight + 31.0 - 22.0 : max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset)
             let topButtonSpacing: CGFloat = 15.0
             
             if component.cameraState.mode == .live && component.cameraState.isStreaming == .none {
@@ -1691,7 +1700,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(streamAsButton
-                    .position(CGPoint(x: topControlSideInset + streamAsButton.size.width / 2.0 + 7.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + streamAsButton.size.height / 2.0 + 4.0))
+                    .position(CGPoint(x: topControlSideInset + streamAsButton.size.width / 2.0 + 7.0, y: topRowTop + streamAsButton.size.height / 2.0 + 4.0))
                     .appear(ComponentTransition.Appear({ _, view, transition in
                         if let buttonView = view as? PlainButtonComponent.View, let view = buttonView.contentView as? StreamAsComponent.View, !transition.animation.isImmediate {
                             view.animateIn(transition: transition)
@@ -1732,7 +1741,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         transition: .immediate
                     )
                     context.add(cancelButton
-                        .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : availableSize.width - topControlSideInset - cancelButton.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + cancelButton.size.height / 2.0))
+                        .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : availableSize.width - topControlRightInset - cancelButton.size.width / 2.0, y: topRowTop + cancelButton.size.height / 2.0))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                         .shadow(Shadow(color: UIColor(white: 0.0, alpha: 0.25), radius: 3.0, offset: .zero))
@@ -1809,7 +1818,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             transition: .immediate
                         )
                         context.add(endStreamButton
-                            .position(CGPoint(x: availableSize.width - topControlSideInset - 3.0 - endStreamButton.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + endStreamButton.size.height / 2.0))
+                            .position(CGPoint(x: availableSize.width - topControlRightInset - 3.0 - endStreamButton.size.width / 2.0, y: topRowTop + endStreamButton.size.height / 2.0))
                             .appear(.default(scale: true))
                             .disappear(.default(scale: true))
                         )
@@ -1847,7 +1856,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             transition: .immediate
                         )
                         context.add(disableCollageButton
-                            .position(CGPoint(x: availableSize.width - topControlSideInset - disableCollageButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + disableCollageButton.size.height / 2.0 + 2.0))
+                            .position(CGPoint(x: availableSize.width - topControlRightInset - disableCollageButton.size.width / 2.0 - 5.0, y: topRowTop + disableCollageButton.size.height / 2.0 + 2.0))
                             .appear(.default(scale: true))
                             .disappear(.default(scale: true))
                             .shadow(Shadow(color: UIColor(white: 0.0, alpha: 0.25), radius: 3.0, offset: .zero))
@@ -1874,7 +1883,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             transition: .immediate
                         )
                         
-                        let position = CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlSideInset - flashButton.size.width / 2.0 - 50.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + flashButton.size.height / 2.0)
+                        let position = CGPoint(x: isTablet ? rightPanelMaxX - smallPanelWidth / 2.0 : availableSize.width - topControlRightInset - flashButton.size.width / 2.0 - 50.0, y: topRowTop + flashButton.size.height / 2.0)
                         flashButtonPosition = position
                         context.add(flashButton
                             .position(position)
@@ -1886,7 +1895,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     }
                     
                     if !isSticker && !isAvatar && !isTablet {
-                        var nextButtonX = availableSize.width - topControlSideInset - rightMostButtonWidth / 2.0 - 100.0
+                        var nextButtonX = availableSize.width - topControlRightInset - rightMostButtonWidth / 2.0 - 100.0
                         if LegacyCameraImpl.shared.isDualCameraSupported(forRoundVideo: false) && !component.cameraState.isCollageEnabled && component.cameraState.isStreaming == .none {
                             let dualButton = dualButton.update(
                                 component: CameraButton(
@@ -1909,7 +1918,7 @@ private final class CameraScreenComponent: CombinedComponent {
                                 transition: .immediate
                             )
                             context.add(dualButton
-                                .position(CGPoint(x: nextButtonX, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + dualButton.size.height / 2.0 + 2.0))
+                                .position(CGPoint(x: nextButtonX, y: topRowTop + dualButton.size.height / 2.0 + 2.0))
                                 .appear(.default(scale: true))
                                 .disappear(.default(scale: true))
                                 .shadow(Shadow(color: UIColor(white: 0.0, alpha: 0.25), radius: 3.0, offset: .zero))
@@ -1943,7 +1952,7 @@ private final class CameraScreenComponent: CombinedComponent {
                                     transition: context.transition
                                 )
                                 context.add(flipButton
-                                    .position(CGPoint(x: nextButtonX, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + flipButton.size.height / 2.0 - 4.0))
+                                    .position(CGPoint(x: nextButtonX, y: topRowTop + flipButton.size.height / 2.0 - 4.0))
                                     .appear(.default(scale: true))
                                     .disappear(.default(scale: true))
                                 )
@@ -1976,10 +1985,10 @@ private final class CameraScreenComponent: CombinedComponent {
                             }
                             var collageButtonX = nextButtonX
                             if rightMostButtonWidth.isZero {
-                                collageButtonX = availableSize.width - topControlSideInset - collageButton.size.width / 2.0 - 54.0
+                                collageButtonX = availableSize.width - topControlRightInset - collageButton.size.width / 2.0 - 54.0
                             }
                             context.add(collageButton
-                                .position(CGPoint(x: collageButtonX, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + collageButton.size.height / 2.0 + 2.0))
+                                .position(CGPoint(x: collageButtonX, y: topRowTop + collageButton.size.height / 2.0 + 2.0))
                                 .appear(.default(scale: true))
                                 .disappear(.default(scale: true))
                                 .shadow(Shadow(color: UIColor(white: 0.0, alpha: 0.25), radius: 3.0, offset: .zero))
@@ -1998,7 +2007,7 @@ private final class CameraScreenComponent: CombinedComponent {
                                     transition: .immediate
                                 )
                                 context.add(collageCarousel
-                                    .position(CGPoint(x: collageCarousel.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlVerticalInset) + collageCarousel.size.height / 2.0 + 2.0))
+                                    .position(CGPoint(x: collageCarousel.size.width / 2.0, y: topRowTop + collageCarousel.size.height / 2.0 + 2.0))
                                     .appear(ComponentTransition.Appear({ _, view, transition in
                                         if let view = view as? CollageIconCarouselComponent.View, !transition.animation.isImmediate {
                                             view.animateIn()
@@ -2064,9 +2073,9 @@ private final class CameraScreenComponent: CombinedComponent {
                 
                 let timePosition: CGPoint
                 if isTablet {
-                    timePosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 - 97.0)
+                    timePosition = CGPoint(x: rightPanelMaxX - panelWidth / 2.0, y: availableSize.height / 2.0 - 97.0)
                 } else {
-                    timePosition = CGPoint(x: availableSize.width / 2.0, y: max(environment.statusBarHeight + 5.0 + 20.0, environment.safeInsets.top + topControlVerticalInset + 20.0))
+                    timePosition = CGPoint(x: availableSize.width / 2.0, y: topRowTop + 20.0)
                 }
                                 
                 if component.cameraState.recording != .none {
@@ -2169,7 +2178,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 )
                 let modeControlPosition: CGPoint
                 if isTablet {
-                    modeControlPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 + modeControl.size.height + 26.0)
+                    modeControlPosition = CGPoint(x: rightPanelMaxX - panelWidth / 2.0, y: availableSize.height / 2.0 + modeControl.size.height + 26.0)
                 } else {
                     modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0 + controlsBottomInset + 16.0)
                 }
@@ -3736,7 +3745,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     topInset = 0.0
                 }
             }
-            let bottomInset = layout.size.height - previewSize.height - topInset
+            // Clamped like the story editor's: a 9:16 viewfinder much taller than the screen (iPhone Duo's unfolded
+            // screen in portrait, 238pt over) would otherwise put the bottom controls below the screen.
+            let bottomInset = max(0.0, layout.size.height - previewSize.height - topInset)
             
             let panelWidth: CGFloat
             let previewFrame: CGRect
@@ -3752,7 +3763,10 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             }
             
             let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                // Beside iPhone Duo's status island (unfolded portrait) the top row sits at the compact status height,
+                // its right controls clear of the island (`navigationBarTrailingButtonsInset`).
+                statusBarHeight: layout.navigationBarStatusBarHeight ?? 0.0,
+                fullStatusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,
                 safeInsets: UIEdgeInsets(
                     top: topInset,
@@ -3760,6 +3774,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
+                reservedCorners: layout.reservedCorners,
+                navigationBarTrailingButtonsInset: layout.navigationBarTrailingButtonsInset,
                 additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
@@ -3984,22 +4000,22 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             var origin: CGPoint
             switch self.pipPosition {
             case .topLeft:
-                origin = CGPoint(x: circleOffset.x, y: circleOffset.y)
+                origin = CGPoint(x: layout.safeInsets.left + circleOffset.x, y: circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: -180.0, dy: 0.0)
                 }
             case .topRight:
-                origin = CGPoint(x: previewFrame.width - circleOffset.x, y: circleOffset.y)
+                origin = CGPoint(x: previewFrame.width - layout.safeInsets.right - circleOffset.x, y: circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }
             case .bottomLeft:
-                origin = CGPoint(x: circleOffset.x, y: previewFrame.height - circleOffset.y)
+                origin = CGPoint(x: layout.safeInsets.left + circleOffset.x, y: previewFrame.height - circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: -180.0, dy: 0.0)
                 }
             case .bottomRight:
-                origin = CGPoint(x: previewFrame.width - circleOffset.x, y: previewFrame.height - circleOffset.y)
+                origin = CGPoint(x: previewFrame.width - layout.safeInsets.right - circleOffset.x, y: previewFrame.height - circleOffset.y)
                 if !isDualCameraEnabled {
                     origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }

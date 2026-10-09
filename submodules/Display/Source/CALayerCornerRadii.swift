@@ -32,6 +32,17 @@ public struct CornerRadii: Equatable {
             bottomRight: transform(self.bottomRight)
         )
     }
+
+    /// For the screen's own corner radii (`ContainerViewLayout.screenCornerRadii`): the radii a sheet that reaches the
+    /// screen's bottom edge gives its bottom corners, `inset` inside each screen corner, where those corners differ
+    /// (iPhone Duo's cover screen: 8pt on the hinge side, 59pt outside). Nil where they are uniform, so a sheet keeps
+    /// its own rule (usually one radius derived from `screenCornerRadius`) everywhere else.
+    public func sheetBottomCornerRadii(inset: CGFloat) -> (left: CGFloat, right: CGFloat)? {
+        if self.isUniform {
+            return nil
+        }
+        return (max(0.0, self.bottomLeft - inset), max(0.0, self.bottomRight - inset))
+    }
 }
 
 /// PRIVATE API. `CALayer` carries an undocumented `cornerRadii` property alongside the public
@@ -120,5 +131,19 @@ public extension CALayer {
 
     var cornerRadiiKeyPath: String {
         return cornerRadiiKey
+    }
+
+    /// Applies `radii` where given and the OS has per-corner radii, and returns true. Otherwise returns false, so the
+    /// caller applies its single `cornerRadius` as before, after undoing any per-corner radii this layer still has
+    /// (a posture change from iPhone Duo's cover screen to one with uniform corners).
+    func applyCornerRadiiIfNeeded(_ radii: CornerRadii?) -> Bool {
+        if let radii, CALayer.cornerRadiiSupported {
+            self.setCornerRadii(radii)
+            return true
+        }
+        if let current = self.cornerRadii, !current.isUniform {
+            self.setCornerRadii(CornerRadii(uniform: self.cornerRadius))
+        }
+        return false
     }
 }

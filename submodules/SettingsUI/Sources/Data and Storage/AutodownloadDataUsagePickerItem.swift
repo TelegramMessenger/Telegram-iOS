@@ -254,7 +254,7 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode, ItemL
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.highlightNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
@@ -335,7 +335,7 @@ private final class AutodownloadDataUsagePickerItemNode: ListViewItemNode, ItemL
                         if sliderView.superview == nil {
                             strongSelf.view.addSubview(sliderView)
                         }
-                        sliderView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - sliderSize.width) / 2.0), y: 37.0), size: sliderSize)
+                        sliderView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(params.leftInset + (params.width - params.leftInset - params.rightInset - sliderSize.width) / 2.0), y: 37.0), size: sliderSize)
                         sliderView.isUserInteractionEnabled = item.enabled
                         sliderView.alpha = item.enabled ? 1.0 : 0.4
                         sliderView.layer.allowsGroupOpacity = !item.enabled

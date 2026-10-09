@@ -100,7 +100,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         }
     }
     
-    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, rightSideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
             self.titleNode.attributedText = NSAttributedString(string: self.title, font: titleFont, textColor: theme.list.itemPrimaryTextColor)
@@ -111,7 +111,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         let height: CGFloat = 52.0
         let leftInset: CGFloat = 16.0
         
-        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 70.0 - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 70.0 - sideInset - rightSideInset, height: CGFloat.greatestFiniteMagnitude))
         
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: 16.0), size: titleSize))
         
@@ -122,7 +122,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
         
         textInset = max(measuredInset, textInset)
         
-        transition.updateFrame(node: self.textField, frame: CGRect(origin: CGPoint(x: textInset + sideInset, y: 5.0), size: CGSize(width: max(1.0, width - textInset - 8.0), height: 40.0)))
+        transition.updateFrame(node: self.textField, frame: CGRect(origin: CGPoint(x: textInset + sideInset, y: 5.0), size: CGSize(width: max(1.0, width - textInset - 8.0 - max(0.0, rightSideInset - sideInset)), height: 40.0)))
         
         return height
     }

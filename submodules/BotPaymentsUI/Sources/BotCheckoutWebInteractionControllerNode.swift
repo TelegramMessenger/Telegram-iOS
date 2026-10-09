@@ -83,7 +83,12 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.webView?.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - navigationBarHeight)))
+        // Beside a side strip (iPhone Duo) the page keeps to the band: a payment provider's page does not read the safe
+        // area, so laid out across the screen its controls run under the strip and its status corner. Equal side insets
+        // keep the full-width page.
+        let bandMinX: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.safeInsets.left : 0.0
+        let bandWidth: CGFloat = layout.safeInsets.left != layout.safeInsets.right ? layout.size.width - layout.safeInsets.left - layout.safeInsets.right : layout.size.width
+        self.webView?.frame = CGRect(origin: CGPoint(x: bandMinX, y: navigationBarHeight), size: CGSize(width: bandWidth, height: max(1.0, layout.size.height - navigationBarHeight)))
     }
     
     func animateIn() {

@@ -833,9 +833,17 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.remoteVideo = nil
             }
             let interfaceOrientation = layout.metrics.orientation ?? .portrait
+            var callScreenInsets = layout.insets(options: [.statusBar])
+            if layout.safeInsets.left != layout.safeInsets.right {
+                // iPhone Duo: the side strip is a safe inset, which `insets(options:)` leaves out. The screen keeps its
+                // content and top-right button clear of it; equal side insets keep the old insets.
+                callScreenInsets.left = max(callScreenInsets.left, layout.safeInsets.left)
+                callScreenInsets.right = max(callScreenInsets.right, layout.safeInsets.right)
+            }
+            self.callScreen.sideColumnBackButtonFrame = layout.sideColumnNavigationButtonFrame
             self.callScreen.update(
                 size: layout.size,
-                insets: layout.insets(options: [.statusBar]),
+                insets: callScreenInsets,
                 interfaceOrientation: interfaceOrientation,
                 deviceOrientation: self.deviceOrientation ?? deviceOrientationMatching(interfaceOrientation),
                 screenCornerRadius: layout.deviceMetrics.screenCornerRadius,

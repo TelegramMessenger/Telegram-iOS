@@ -20,6 +20,17 @@ struct NavigationLayout {
     var modal: [ModalContainerLayout]
 }
 
+/// Whether a `.modalInLargeLayout` controller opens as a sheet: only in a regular-width layout whose
+/// shorter side is at least 700pt. A smaller regular layout (iPhone Duo unfolded in landscape is 669pt
+/// tall) pushes it as a compact one does, since a phone-sized sheet on a short screen is cramped. The
+/// smallest iPad (744pt) keeps the sheet.
+func presentsModalInLargeLayout(_ layout: ContainerViewLayout) -> Bool {
+    guard case .regular = layout.metrics.widthClass else {
+        return false
+    }
+    return min(layout.size.width, layout.size.height) >= 700.0
+}
+
 func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewLayout, controllers: [ViewController]) -> NavigationLayout {
     var rootControllers: [ViewController] = []
     var modalStack: [ModalContainerLayout] = []
@@ -52,12 +63,7 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
             isStandalone = true
             isFlat = true
         case .modalInLargeLayout:
-            switch layout.metrics.widthClass {
-            case .compact:
-                requiresModal = false
-            case .regular:
-                requiresModal = true
-            }
+            requiresModal = presentsModalInLargeLayout(layout)
         case .modalInCompactLayout:
             switch layout.metrics.widthClass {
             case .compact:

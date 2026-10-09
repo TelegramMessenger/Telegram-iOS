@@ -11,6 +11,7 @@ import TelegramCore
 import StoryPeerListComponent
 import EdgeEffect
 import GlassBackgroundComponent
+import SideColumnLayout
 
 private func searchScrollHeightValue() -> CGFloat {
     return 54.0
@@ -59,6 +60,8 @@ public final class ChatListNavigationBar: Component {
     public let statusBarHeight: CGFloat
     public let leftInset: CGFloat
     public let rightInset: CGFloat
+    /// iPhone Duo: see `ChatListHeaderComponent.trailingButtonsInset`.
+    public let trailingButtonsInset: CGFloat
     public let search: Search?
     public let activeSearch: ActiveSearch?
     public let primaryContent: ChatListHeaderComponent.Content?
@@ -78,6 +81,10 @@ public final class ChatListNavigationBar: Component {
     public let activateSearch: (NavigationBarSearchContentNode) -> Void
     public let openStatusSetup: (UIView) -> Void
     public let allowAutomaticOrder: () -> Void
+    /// iPhone Duo: where the header's side column goes, in this bar's coordinates (the bar sits at its
+    /// host's origin); nil keeps every button in the row.
+    public let sideColumn: SideColumnRegion?
+    public let openSideColumnOverflow: ((UIView, [ChatListHeaderComponent.OverflowItem]) -> Void)?
     
     public init(
         context: AccountContext,
@@ -86,6 +93,7 @@ public final class ChatListNavigationBar: Component {
         statusBarHeight: CGFloat,
         leftInset: CGFloat,
         rightInset: CGFloat,
+        trailingButtonsInset: CGFloat = 0.0,
         search: Search?,
         activeSearch: ActiveSearch?,
         primaryContent: ChatListHeaderComponent.Content?,
@@ -104,7 +112,9 @@ public final class ChatListNavigationBar: Component {
         hasOwnGlassContainer: Bool = true,
         activateSearch: @escaping (NavigationBarSearchContentNode) -> Void,
         openStatusSetup: @escaping (UIView) -> Void,
-        allowAutomaticOrder: @escaping () -> Void
+        allowAutomaticOrder: @escaping () -> Void,
+        sideColumn: SideColumnRegion? = nil,
+        openSideColumnOverflow: ((UIView, [ChatListHeaderComponent.OverflowItem]) -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -112,6 +122,7 @@ public final class ChatListNavigationBar: Component {
         self.statusBarHeight = statusBarHeight
         self.leftInset = leftInset
         self.rightInset = rightInset
+        self.trailingButtonsInset = trailingButtonsInset
         self.search = search
         self.activeSearch = activeSearch
         self.primaryContent = primaryContent
@@ -131,6 +142,8 @@ public final class ChatListNavigationBar: Component {
         self.activateSearch = activateSearch
         self.openStatusSetup = openStatusSetup
         self.allowAutomaticOrder = allowAutomaticOrder
+        self.sideColumn = sideColumn
+        self.openSideColumnOverflow = openSideColumnOverflow
     }
 
     public static func ==(lhs: ChatListNavigationBar, rhs: ChatListNavigationBar) -> Bool {
@@ -150,6 +163,9 @@ public final class ChatListNavigationBar: Component {
             return false
         }
         if lhs.rightInset != rhs.rightInset {
+            return false
+        }
+        if lhs.trailingButtonsInset != rhs.trailingButtonsInset {
             return false
         }
         if lhs.search != rhs.search {
@@ -198,6 +214,9 @@ public final class ChatListNavigationBar: Component {
             return false
         }
         if lhs.hasOwnGlassContainer != rhs.hasOwnGlassContainer {
+            return false
+        }
+        if lhs.sideColumn != rhs.sideColumn {
             return false
         }
         return true
@@ -261,6 +280,8 @@ public final class ChatListNavigationBar: Component {
 
         private var currentHeight: CGFloat = 0.0
         private var pinnedFraction: CGFloat = 0.0
+        private var sideColumnContainer: GlassBackgroundContainerView?
+        private var appliedSideColumn: SideColumnRegion?
         
         override public init(frame: CGRect) {
             self.edgeEffectView = EdgeEffectView()
@@ -282,11 +303,18 @@ public final class ChatListNavigationBar: Component {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if point.y >= self.currentHeight {
+            if self.alpha.isZero {
                 return nil
             }
-            
-            if self.alpha.isZero {
+            // iPhone Duo: the side column hangs below the bar. Only its circle and capsule take touches
+            // (`sideColumnView` is a sparse container).
+            if let sideColumnContainer = self.sideColumnContainer, sideColumnContainer.isUserInteractionEnabled, sideColumnContainer.alpha > 0.0, let headerView = self.headerContent.view as? ChatListHeaderComponent.View {
+                let columnView = headerView.sideColumnView
+                if let result = columnView.hitTest(self.convert(point, to: columnView), with: event) {
+                    return result
+                }
+            }
+            if point.y >= self.currentHeight {
                 return nil
             }
             for view in self.subviews.reversed() {
@@ -297,6 +325,58 @@ public final class ChatListNavigationBar: Component {
             
             let result = super.hitTest(point, with: event)
             return result
+        }
+        
+        /// iPhone Duo: hosts the header's side column at the region in a glass container of its own (the
+        /// row's container is only the row's size). It fades during search and does not follow the row up.
+        private func updateSideColumn(component: ChatListNavigationBar, transition: ComponentTransition) {
+            let change = sideColumnPlacementChange(from: self.appliedSideColumn, to: component.sideColumn)
+            self.appliedSideColumn = component.sideColumn
+            guard let headerView = self.headerContent.view as? ChatListHeaderComponent.View else {
+                return
+            }
+            if component.sideColumn == nil && self.sideColumnContainer == nil {
+                return
+            }
+            let container: GlassBackgroundContainerView
+            if let current = self.sideColumnContainer {
+                container = current
+            } else {
+                container = GlassBackgroundContainerView()
+                container.alpha = 0.0
+                self.sideColumnContainer = container
+                self.addSubview(container)
+            }
+            if headerView.sideColumnView.superview !== container.contentView {
+                container.contentView.addSubview(headerView.sideColumnView)
+            }
+            if let region = component.sideColumn {
+                var frameTransition = transition
+                switch change {
+                case .appear:
+                    frameTransition = .immediate
+                case .move:
+                    // A rotation or the strip switching sides: fade instead of flying across the list.
+                    frameTransition = .immediate
+                    if case let .curve(duration, _) = transition.animation, container.alpha > 0.0, let snapshotView = container.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.isUserInteractionEnabled = false
+                        snapshotView.frame = container.frame
+                        self.insertSubview(snapshotView, aboveSubview: container)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                        container.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5, delay: duration * 0.5)
+                    }
+                case .none, .disappear, .animate:
+                    break
+                }
+                frameTransition.setFrame(view: container, frame: region.frame)
+                container.update(size: region.frame.size, isDark: component.theme.overallDarkAppearance, transition: frameTransition)
+                frameTransition.setFrame(view: headerView.sideColumnView, frame: CGRect(origin: CGPoint(), size: region.frame.size))
+            }
+            let isVisible = component.sideColumn != nil && component.activeSearch == nil
+            transition.setAlpha(view: container, alpha: isVisible ? 1.0 : 0.0)
+            container.isUserInteractionEnabled = isVisible
         }
         
         public func applyCurrentScroll(transition: ComponentTransition) {
@@ -425,7 +505,12 @@ public final class ChatListNavigationBar: Component {
                 searchFrameValue = searchFrame
                 transition.setFrameWithAdditivePosition(view: searchContentNode.view, frame: searchFrame)
                 
-                let _ = searchContentNode.updateLayout(size: searchSize, leftInset: component.leftInset, rightInset: component.rightInset, transition: transition.containedViewLayoutTransition)
+                // An active search takes the bar's row, so it ends left of a status island like the bar's buttons.
+                var searchRightInset = component.rightInset
+                if let activeSearch = component.activeSearch, !activeSearch.isExternal {
+                    searchRightInset += component.trailingButtonsInset
+                }
+                let _ = searchContentNode.updateLayout(size: searchSize, leftInset: component.leftInset, rightInset: searchRightInset, transition: transition.containedViewLayoutTransition)
                 
                 var searchAlpha: CGFloat = search.isEnabled ? 1.0 : 0.5
                 if let activeSearch = component.activeSearch, activeSearch.isExternal {
@@ -488,6 +573,7 @@ public final class ChatListNavigationBar: Component {
             let headerComponent = ChatListHeaderComponent(
                 leftInset: component.leftInset + 16.0,
                 rightInset: component.rightInset + 16.0,
+                trailingButtonsInset: component.trailingButtonsInset,
                 primaryContent: component.primaryContent,
                 secondaryContent: component.secondaryContent,
                 secondaryTransition: component.secondaryTransition,
@@ -511,7 +597,9 @@ public final class ChatListNavigationBar: Component {
                         return
                     }
                     component.context.sharedContext.appLockContext.lock()
-                }
+                },
+                sideColumnLength: component.sideColumn?.frame.height,
+                openSideColumnOverflow: component.openSideColumnOverflow
             )
             
             let animationHint = transition.userData(AnimationHint.self)
@@ -586,6 +674,8 @@ public final class ChatListNavigationBar: Component {
                     }
                 }
             }
+            
+            self.updateSideColumn(component: component, transition: transition)
             
             let bottomContentsContainerPosition: CGPoint
             if let activeSearch = component.activeSearch {
@@ -701,6 +791,7 @@ public final class ChatListNavigationBar: Component {
                     statusBarHeight: component.statusBarHeight,
                     leftInset: component.leftInset,
                     rightInset: component.rightInset,
+                    trailingButtonsInset: component.trailingButtonsInset,
                     search: component.search,
                     activeSearch: component.activeSearch,
                     primaryContent: component.primaryContent,
@@ -719,12 +810,15 @@ public final class ChatListNavigationBar: Component {
                     hasOwnGlassContainer: component.hasOwnGlassContainer,
                     activateSearch: component.activateSearch,
                     openStatusSetup: component.openStatusSetup,
-                    allowAutomaticOrder: component.allowAutomaticOrder
+                    allowAutomaticOrder: component.allowAutomaticOrder,
+                    sideColumn: component.sideColumn,
+                    openSideColumnOverflow: component.openSideColumnOverflow
                 )
                 if let currentLayout = self.currentLayout, let headerComponent = self.currentHeaderComponent {
                     let headerComponent = ChatListHeaderComponent(
                         leftInset: headerComponent.leftInset,
                         rightInset: headerComponent.rightInset,
+                        trailingButtonsInset: headerComponent.trailingButtonsInset,
                         primaryContent: headerComponent.primaryContent,
                         secondaryContent: headerComponent.secondaryContent,
                         secondaryTransition: headerComponent.secondaryTransition,
@@ -738,7 +832,9 @@ public final class ChatListNavigationBar: Component {
                         theme: headerComponent.theme,
                         strings: headerComponent.strings,
                         openStatusSetup: headerComponent.openStatusSetup,
-                        toggleIsLocked: headerComponent.toggleIsLocked
+                        toggleIsLocked: headerComponent.toggleIsLocked,
+                        sideColumnLength: headerComponent.sideColumnLength,
+                        openSideColumnOverflow: headerComponent.openSideColumnOverflow
                     )
                     self.currentHeaderComponent = headerComponent
                     

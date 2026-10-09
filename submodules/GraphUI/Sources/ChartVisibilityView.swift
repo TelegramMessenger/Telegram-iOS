@@ -141,7 +141,7 @@ class ChartVisibilityView: UIView {
             size.height = 0
             return size
         }
-        let frames = generateItemsFrames(frame: UIScreen.main.bounds, items: self.items)
+        let frames = generateItemsFrames(frame: mainWindowScreenBounds, items: self.items)
         guard let lastFrame = frames.last else { return .zero }
         let size = CGSize(width: frame.width, height: lastFrame.maxY + Constants.insets.bottom)
         return size

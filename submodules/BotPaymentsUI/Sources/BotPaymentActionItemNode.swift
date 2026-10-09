@@ -63,7 +63,7 @@ final class BotPaymentActionItemNode: BotPaymentItemNode {
         return 0.0
     }
     
-    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, rightSideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
             self.highlightedBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
@@ -72,12 +72,12 @@ final class BotPaymentActionItemNode: BotPaymentItemNode {
         
         let height: CGFloat = 52.0
         
-        self.buttonNode.frame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: width - sideInset * 2.0, height: height))
+        self.buttonNode.frame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: width - sideInset - rightSideInset, height: height))
         transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: height + UIScreenPixel)))
         
         let leftInset: CGFloat = 16.0
         
-        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 32.0 - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 32.0 - sideInset - rightSideInset, height: CGFloat.greatestFiniteMagnitude))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: 16.0), size: titleSize))
         
         return height

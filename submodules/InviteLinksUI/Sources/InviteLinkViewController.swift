@@ -1192,12 +1192,24 @@ public final class InviteLinkViewController: ViewController {
             let doneFrame = CGRect(origin: CGPoint(x: layout.size.width - doneSize.width - 16.0 - layout.safeInsets.right, y: 18.0), size: doneSize)
             transition.updateFrame(node: self.doneButton, frame: doneFrame)
             
-            let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: layout.size.width - editSize.width - doneSize.width - 20.0, height: headerHeight))
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: 30.0 - UIScreenPixel), size: subtitleSize)
+            // Beside iPhone Duo's side strip (the side insets differ, which moves Done in) the title stays between the two
+            // buttons, centred on the screen while it fits; elsewhere it keeps its screen-centred layout.
+            let titleMinX = editFrame.maxX + 8.0
+            let titleMaxX = doneFrame.minX - 8.0
+            let titleIsBetweenButtons = layout.safeInsets.left != layout.safeInsets.right
+            let titleConstrainedWidth: CGFloat = titleIsBetweenButtons ? max(1.0, titleMaxX - titleMinX) : layout.size.width - editSize.width - doneSize.width - 20.0
+            func titleOriginX(width: CGFloat) -> CGFloat {
+                if titleIsBetweenButtons {
+                    return horizontallyCenteredOrigin(width: width, containerWidth: layout.size.width, minX: titleMinX, maxX: titleMaxX)
+                }
+                return floor((layout.size.width - width) / 2.0)
+            }
+            let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: titleConstrainedWidth, height: headerHeight))
+            let subtitleFrame = CGRect(origin: CGPoint(x: titleOriginX(width: subtitleSize.width), y: 30.0 - UIScreenPixel), size: subtitleSize)
             transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
             
-            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - editSize.width - doneSize.width - 20.0, height: headerHeight))
-            let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: subtitleSize.height.isZero ? 18.0 : 10.0 + UIScreenPixel), size: titleSize)
+            let titleSize = self.titleNode.updateLayout(CGSize(width: titleConstrainedWidth, height: headerHeight))
+            let titleFrame = CGRect(origin: CGPoint(x: titleOriginX(width: titleSize.width), y: subtitleSize.height.isZero ? 18.0 : 10.0 + UIScreenPixel), size: titleSize)
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
         }
         

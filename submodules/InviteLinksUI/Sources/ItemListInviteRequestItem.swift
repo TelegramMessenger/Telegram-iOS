@@ -339,7 +339,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                                 }
                                 strongSelf.avatarListNode?.controlsContainerNode.alpha = 0.0
                                 let pinchController = makePinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
-                                    return UIScreen.main.bounds
+                                    return mainWindowScreenBounds
                                 })
                                 item.context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
                             }
@@ -621,9 +621,9 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     var extractedRect: CGRect
                     if case .blocks = item.style {
-                        extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset, dy: 0.0)
+                        extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     } else {
-                        extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset + 16.0, dy: 0.0)
+                        extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0))
                     }
                     var extractedHeight = extractedRect.height + expandedSubtitleLayout.size.height - subtitleLayout.size.height
                     var extractedVerticalOffset: CGFloat = 0.0
@@ -724,7 +724,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
                             
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                             strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }

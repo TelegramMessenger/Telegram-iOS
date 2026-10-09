@@ -88,13 +88,14 @@ private final class PeerInfoScreenDisclosureEncryptionKeyItemNode: PeerInfoScree
         self.selectionNode.pressed = item.action
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
+        let sideInsetRight: CGFloat = 16.0 + safeInsets.right
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         self.textNode.maximumNumberOfLines = 1
         self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
         
-        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0 - 44.0, height: .greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset - sideInsetRight - 44.0, height: .greatestFiniteMagnitude))
         
         let arrowInset: CGFloat = 18.0
         
@@ -109,7 +110,7 @@ private final class PeerInfoScreenDisclosureEncryptionKeyItemNode: PeerInfoScree
         }
         
         if let image = self.keyNode.image {
-            self.keyNode.frame = CGRect(origin: CGPoint(x: width - sideInset - arrowInset - image.size.width, y: floor((height - image.size.height) / 2.0)), size: image.size)
+            self.keyNode.frame = CGRect(origin: CGPoint(x: width - sideInsetRight - arrowInset - image.size.width, y: floor((height - image.size.height) / 2.0)), size: image.size)
         }
         
         transition.updateFrame(node: self.textNode, frame: textFrame)

@@ -356,7 +356,7 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
@@ -380,10 +380,12 @@ final class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 15.0, bottom: 4.0, right: 0.0)
                     
                     strongSelf.countryButton.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: 44.0 + 6.0))
-                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: 44.0), size: CGSize(width: params.width, height: 44.0))
+                    let leftShift = max(0.0, params.leftInset - params.rightInset)
+                    strongSelf.phoneBackground.frame = CGRect(origin: CGPoint(x: leftShift, y: 44.0), size: CGSize(width: params.width - leftShift, height: 44.0))
                     
-                    let countryCodeFrame = CGRect(origin: CGPoint(x: 11.0, y: 44.0), size: CGSize(width: 67.0, height: 44.0))
-                    let numberFrame = CGRect(origin: CGPoint(x: 92.0, y: 44.0), size: CGSize(width: layout.size.width - 70.0 - 8.0, height: 44.0))
+                    let rightShift = max(0.0, params.rightInset - params.leftInset)
+                    let countryCodeFrame = CGRect(origin: CGPoint(x: 11.0 + leftShift, y: 44.0), size: CGSize(width: 67.0, height: 44.0))
+                    let numberFrame = CGRect(origin: CGPoint(x: 92.0 + leftShift, y: 44.0), size: CGSize(width: layout.size.width - 70.0 - 8.0 - leftShift - rightShift, height: 44.0))
                     let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 8.0)
                     
                     let phoneInputFrame = countryCodeFrame.union(numberFrame)

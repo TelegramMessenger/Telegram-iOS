@@ -156,7 +156,8 @@ public func layoutAuthorizationItems(bounds: CGRect, items: [AuthorizationLayout
     for i in 0 ..< solvedItems.count {
         let item = solvedItems[i]
         verticalOrigin += item.spacingBefore!
-        let itemFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - item.item.size.width) / 2.0), y: verticalOrigin), size: item.item.size)
+        // Centered in `bounds` (every caller passed x = 0 until iPhone Duo's side strip needed a band).
+        let itemFrame = CGRect(origin: CGPoint(x: bounds.minX + floor((bounds.size.width - item.item.size.width) / 2.0), y: verticalOrigin), size: item.item.size)
         if let view = item.item.view {
             transition.updateFrame(view: view, frame: itemFrame)
         } else if let node = item.item.node {

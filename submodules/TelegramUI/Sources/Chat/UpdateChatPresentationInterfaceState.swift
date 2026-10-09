@@ -45,13 +45,7 @@ extension ChatControllerImpl {
             self.secondaryRightNavigationButton = nil
         }
 
-        var rightBarButtons: [UIBarButtonItem] = []
-        if let rightNavigationButton = self.rightNavigationButton {
-            rightBarButtons.append(rightNavigationButton.buttonItem)
-        }
-        if let secondaryRightNavigationButton = self.secondaryRightNavigationButton {
-            rightBarButtons.append(secondaryRightNavigationButton.buttonItem)
-        }
+        let rightBarButtons = self.barRightItems()
         var rightBarButtonsUpdated = false
         let currentRightBarButtons = self.navigationItem.rightBarButtonItems ?? []
         if rightBarButtons.count != currentRightBarButtons.count {
@@ -67,6 +61,7 @@ extension ChatControllerImpl {
         if rightBarButtonsUpdated {
             self.navigationItem.setRightBarButtonItems(rightBarButtons, animated: buttonsAnimated)
         }
+        self.updateSideColumn()
     }
 }
 
@@ -570,8 +565,8 @@ func updateChatPresentationInterfaceStateImpl(
                 animated = false
             }
             animated = false
-            selfController.navigationItem.setLeftBarButton(button.buttonItem, animated: animated && selfController.currentChatSwitchDirection == nil)
             selfController.leftNavigationButton = button
+            selfController.navigationItem.setLeftBarButton(selfController.barLeftItem(), animated: animated && selfController.currentChatSwitchDirection == nil)
         }
     } else if let _ = selfController.leftNavigationButton {
         selfController.navigationItem.setLeftBarButton(nil, animated: transition.isAnimated && selfController.currentChatSwitchDirection == nil)

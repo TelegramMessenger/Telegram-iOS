@@ -571,7 +571,9 @@ public class ReplaceBoostScreen: ViewController {
             transition.setFrame(view: self.containerView, frame: clipFrame)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
 
-            let footerInsets = UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right)
+            // A bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+            let footerBottomInsets = layout.bottomEdgeSideInsets()
+            let footerInsets = UIEdgeInsets(top: 0.0, left: footerBottomInsets.left, bottom: layout.intrinsicInsets.bottom, right: footerBottomInsets.right)
             
             transition.setFrame(view: self.footerView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: layout.size))
             self.footerHeight = self.footerView.update(size: layout.size, insets: footerInsets, theme: self.presentationData.theme, strings: self.presentationData.strings, count: Int32(self.selectedSlots.count))
@@ -978,6 +980,12 @@ public class ReplaceBoostScreen: ViewController {
         layout.statusBarHeight = nil
         
         self.applyNavigationBarLayout(layout, navigationLayout: navigationLayout, additionalBackgroundHeight: 0.0, additionalCutout: nil, transition: transition)
+    }
+    
+    /// The bar is moved into the sheet and moves with it, so its close button stays in it rather than in a side strip
+    /// (iPhone Duo), where it would stand still while the sheet is dragged.
+    override public var placesNavigationButtonInSideColumn: Bool {
+        return false
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

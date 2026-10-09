@@ -452,9 +452,11 @@ final class LanguageSelectionScreenNode: ViewControllerTracingNode {
         var listInsets = layout.insets(options: [.input])
         listInsets.top += navigationBarHeight
         if layout.size.width >= 320.0 {
-            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-            listInsets.left += inset
-            listInsets.right += inset
+            // iPhone Duo: a side with a side strip keeps the list 16pt clear of it; without a strip both
+            // margins are today's.
+            let margins = layout.listSideMargins(base: max(16.0, floor((layout.size.width - 674.0) / 2.0)))
+            listInsets.left += margins.left
+            listInsets.right += margins.right
         } else {
             listInsets.left += layout.safeInsets.left
             listInsets.right += layout.safeInsets.right

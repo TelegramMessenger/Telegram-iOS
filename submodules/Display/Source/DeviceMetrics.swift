@@ -309,6 +309,10 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return 62.0
             case .iPhoneAir:
                 return 62.0
+            case .iPhoneDuo:
+                // Measured from the simulator's screen masks: the unfolded screen's corners (the folded
+                // screen's outer corners are about 58pt, its hinge side about 6pt).
+                return 55.0
             case let .unknown(_, _, _, screenCornerRadius):
                 return screenCornerRadius
             default:

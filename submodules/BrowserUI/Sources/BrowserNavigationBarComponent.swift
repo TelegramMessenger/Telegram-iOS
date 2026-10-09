@@ -34,7 +34,12 @@ final class BrowserNavigationBarComponent: Component {
     let theme: PresentationTheme
     let topInset: CGFloat
     let height: CGFloat
-    let sideInset: CGFloat
+    /// Per side: on iPhone Duo one side's safe inset is the side strip, whose top corner holds the status
+    /// corner; the buttons keep clear of it and the address is centered in the band between the insets.
+    let leftInset: CGFloat
+    let rightInset: CGFloat
+    /// How much further left the right items sit to clear a top-right status island (iPhone Duo, unfolded portrait).
+    let trailingButtonsInset: CGFloat
     let metrics: LayoutMetrics
     let externalState: ExternalState?
     let leftItems: [AnyComponentWithIdentity<Empty>]
@@ -47,7 +52,9 @@ final class BrowserNavigationBarComponent: Component {
         theme: PresentationTheme,
         topInset: CGFloat,
         height: CGFloat,
-        sideInset: CGFloat,
+        leftInset: CGFloat,
+        rightInset: CGFloat,
+        trailingButtonsInset: CGFloat = 0.0,
         metrics: LayoutMetrics,
         externalState: ExternalState?,
         leftItems: [AnyComponentWithIdentity<Empty>],
@@ -59,7 +66,9 @@ final class BrowserNavigationBarComponent: Component {
         self.theme = theme
         self.topInset = topInset
         self.height = height
-        self.sideInset = sideInset
+        self.leftInset = leftInset
+        self.rightInset = rightInset
+        self.trailingButtonsInset = trailingButtonsInset
         self.metrics = metrics
         self.externalState = externalState
         self.leftItems = leftItems
@@ -79,7 +88,7 @@ final class BrowserNavigationBarComponent: Component {
         if lhs.height != rhs.height {
             return false
         }
-        if lhs.sideInset != rhs.sideInset {
+        if lhs.leftInset != rhs.leftInset || lhs.rightInset != rhs.rightInset || lhs.trailingButtonsInset != rhs.trailingButtonsInset {
             return false
         }
         if lhs.metrics != rhs.metrics {
@@ -142,7 +151,9 @@ final class BrowserNavigationBarComponent: Component {
             self.state = state
             
             var availableWidth = availableSize.width
-            let sideInset: CGFloat = (component.metrics.isTablet ? 20.0 : 16.0) + component.sideInset
+            let baseSideInset: CGFloat = component.metrics.isTablet ? 20.0 : 16.0
+            let leftSideInset: CGFloat = baseSideInset + component.leftInset
+            let rightSideInset: CGFloat = baseSideInset + component.rightInset + component.trailingButtonsInset
             
             let collapsedHeight: CGFloat = 54.0
             let expandedHeight = component.height
@@ -236,7 +247,7 @@ final class BrowserNavigationBarComponent: Component {
                 rightItemsWidth += itemSize.width
             }
             
-            var centerLeftInset = sideInset
+            var centerLeftInset = leftSideInset
             var leftItemX = 0.0
             for item in component.leftItems {
                 guard let (itemSize, itemTransition) = leftItemTransitions[item.id], let itemView = self.leftItems[item.id]?.view else {
@@ -256,7 +267,7 @@ final class BrowserNavigationBarComponent: Component {
                 centerLeftInset += itemSize.width + itemSpacing
             }
             
-            var centerRightInset = sideInset
+            var centerRightInset = rightSideInset
             var rightItemX = rightItemsWidth
             for item in component.rightItems.reversed() {
                 guard let (itemSize, itemTransition) = rightItemTransitions[item.id], let itemView = self.rightItems[item.id]?.view else {
@@ -279,7 +290,7 @@ final class BrowserNavigationBarComponent: Component {
             }
             
             if let leftItemsBackground {
-                let leftItemsFrame = CGRect(origin: CGPoint(x: sideInset - (leftItemsWidth / 2.0 * 0.35 * component.collapseFraction), y: component.topInset + contentHeight / 2.0 + verticalOffset - panelHeight / 2.0), size: CGSize(width: leftItemsWidth, height: panelHeight))
+                let leftItemsFrame = CGRect(origin: CGPoint(x: leftSideInset - (leftItemsWidth / 2.0 * 0.35 * component.collapseFraction), y: component.topInset + contentHeight / 2.0 + verticalOffset - panelHeight / 2.0), size: CGSize(width: leftItemsWidth, height: panelHeight))
                 leftItemsBackgroundTransition.setFrame(view: leftItemsBackground, frame: leftItemsFrame)
                 leftItemsBackground.update(size: leftItemsFrame.size, cornerRadius: leftItemsFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: leftItemsBackgroundTransition)
                 
@@ -291,7 +302,7 @@ final class BrowserNavigationBarComponent: Component {
             }
 
             if let rightItemsBackground {
-                let rightItemsFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - rightItemsWidth * (1.0 - component.collapseFraction) + (rightItemsWidth / 2.0 * 0.35 * component.collapseFraction), y: component.topInset + contentHeight / 2.0 + verticalOffset - panelHeight / 2.0), size: CGSize(width: rightItemsWidth, height: panelHeight))
+                let rightItemsFrame = CGRect(origin: CGPoint(x: availableSize.width - rightSideInset - rightItemsWidth * (1.0 - component.collapseFraction) + (rightItemsWidth / 2.0 * 0.35 * component.collapseFraction), y: component.topInset + contentHeight / 2.0 + verticalOffset - panelHeight / 2.0), size: CGSize(width: rightItemsWidth, height: panelHeight))
                 rightItemsBackgroundTransition.setFrame(view: rightItemsBackground, frame: rightItemsFrame)
                 rightItemsBackground.update(size: rightItemsFrame.size, cornerRadius: rightItemsFrame.height * 0.5, isDark: component.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: rightItemsBackgroundTransition)
                 
@@ -339,7 +350,7 @@ final class BrowserNavigationBarComponent: Component {
             if !component.leftItems.isEmpty || !component.rightItems.isEmpty {
                 availableWidth -= itemSpacing * CGFloat(max(0, component.leftItems.count - 1)) + itemSpacing * CGFloat(max(0, component.rightItems.count - 1)) + 30.0
             }
-            availableWidth -= component.sideInset * 2.0
+            availableWidth -= component.leftInset + component.rightInset
             
             let canCenter = availableWidth > 390.0
             availableWidth = min(390.0, availableWidth)
@@ -348,9 +359,21 @@ final class BrowserNavigationBarComponent: Component {
             
             var centerX = maxCenterInset + (availableSize.width - maxCenterInset * 2.0) / 2.0
             if canCenter {
-                centerX = availableSize.width / 2.0
+                centerX = component.leftInset + (availableSize.width - component.leftInset - component.rightInset) / 2.0
             } else {
                 centerX = centerLeftInset + (availableSize.width - centerLeftInset - centerRightInset) / 2.0
+            }
+            if component.trailingButtonsInset > 0.0 {
+                // Beside a status island the right items sit further in: the title stays centered on the screen and
+                // ends before them, or takes the space between the items when that is too narrow.
+                let symmetricWidth = (availableSize.width * 0.5 - maxCenterInset) * 2.0
+                if symmetricWidth >= 200.0 {
+                    centerX = availableSize.width * 0.5
+                    availableWidth = min(availableWidth, symmetricWidth)
+                } else {
+                    centerX = centerLeftInset + (availableSize.width - centerLeftInset - centerRightInset) / 2.0
+                    availableWidth = min(390.0, max(1.0, availableSize.width - centerLeftInset - centerRightInset))
+                }
             }
             
             var validCenterItemIds: Set<AnyHashable> = Set()

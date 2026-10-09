@@ -222,10 +222,8 @@ extension PeerInfoScreenNode {
         }
         
         var sourceView: UIView = source.view
-        if sourceView.isDescendant(of: self.headerNode.navigationButtonContainer.rightButtonsBackground) {
-            sourceView = self.headerNode.navigationButtonContainer.rightButtonsBackground
-        } else if sourceView.isDescendant(of: self.headerNode.navigationButtonContainer.leftButtonsBackground) {
-            sourceView = self.headerNode.navigationButtonContainer.leftButtonsBackground
+        if let containerView = self.headerNode.navigationButtonContainer.contextMenuSourceView(containing: sourceView) {
+            sourceView = containerView
         }
         
         let contextController = makeContextController(presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: items, gesture: gesture)

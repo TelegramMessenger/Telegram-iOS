@@ -251,7 +251,11 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 self.backgroundColor = environment.theme.list.plainBackgroundColor
             }
             
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
+            let bandCenterX: CGFloat = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
             
             let helpButtonSize = self.helpButton.update(
                 transition: transition,
@@ -275,7 +279,9 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 44.0)
             )
-            let helpButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - helpButtonSize.width, y: environment.navigationHeight - helpButtonSize.height - 6.0), size: helpButtonSize)
+            // iPhone Duo, unfolded portrait: the button is in the top bar's row, so it moves left of the status island
+            // like the bar's own trailing buttons (the inset is 0 everywhere else).
+            let helpButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - 16.0 - helpButtonSize.width, y: environment.navigationHeight - helpButtonSize.height - 6.0), size: helpButtonSize)
             if let helpButtonView = self.helpButton.view {
                 if helpButtonView.superview == nil {
                     self.addSubview(helpButtonView)
@@ -300,7 +306,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                     MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Login_Fee_Title, font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)))
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
                         
             let textColor = environment.theme.list.itemPrimaryTextColor
@@ -383,7 +389,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(List(items)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: availableSize.height)
             )
             
             let buttonHeight: CGFloat = 52.0
@@ -398,14 +404,14 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 if animationView.superview == nil {
                     self.addSubview(animationView)
                 }
-                animationView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - animationSize.width) / 2.0), y: originY), size: animationSize)
+                animationView.frame = CGRect(origin: CGPoint(x: floor(bandCenterX - animationSize.width / 2.0), y: originY), size: animationSize)
                 originY += animationSize.height + titleSpacing
             }
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
                 }
-                titleView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: originY), size: titleSize)
+                titleView.frame = CGRect(origin: CGPoint(x: floor(bandCenterX - titleSize.width / 2.0), y: originY), size: titleSize)
                 originY += titleSize.height + listSpacing
             }
             
@@ -413,7 +419,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 if listView.superview == nil {
                     self.addSubview(listView)
                 }
-                listView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - listSize.width) / 2.0), y: originY), size: listSize)
+                listView.frame = CGRect(origin: CGPoint(x: floor(bandCenterX - listSize.width / 2.0), y: originY), size: listSize)
             }
         
             let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 10.0 : bottomPanelPadding
@@ -437,6 +443,12 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 buttonSubtitle = environment.strings.Login_Fee_GetPremiumNone
             }
             
+            // iPhone Duo: beside a side strip the button is sized from the band it is centered in; with equal insets
+            // it keeps its full width. The bottom button spans the side strip; it keeps clear only of a corner block
+            // at the bottom.
+            let buttonSideInsets = environment.bottomEdgeSideInsets()
+            let buttonBandInset: CGFloat = environment.safeInsets.left != environment.safeInsets.right ? buttonSideInsets.left + buttonSideInsets.right : 0.0
+            let buttonBandCenterX: CGFloat = buttonSideInsets.left + (availableSize.width - buttonSideInsets.left - buttonSideInsets.right) / 2.0
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             let buttonSize = self.button.update(
                 transition: transition,
@@ -463,13 +475,13 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - 30.0 * 2.0, height: buttonHeight)
+                containerSize: CGSize(width: availableSize.width - buttonBandInset - 30.0 * 2.0, height: buttonHeight)
             )
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
-                buttonView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) / 2.0), y: availableSize.height - bottomPanelHeight + bottomPanelPadding), size: buttonSize)
+                buttonView.frame = CGRect(origin: CGPoint(x: floor(buttonBandCenterX - buttonSize.width / 2.0), y: availableSize.height - bottomPanelHeight + bottomPanelPadding), size: buttonSize)
             }
                           
             return availableSize

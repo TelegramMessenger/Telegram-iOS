@@ -400,7 +400,10 @@ final class SelectGiftPageContent: Component {
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             
+            // iPhone Duo: one side's safe inset is the side strip; the right margin is its own and centered
+            // content is centered in the band between the insets. With equal insets these are the old values.
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let rightSideInset: CGFloat = 16.0 + environment.safeInsets.right
             
             self.component = component
             self.state = state
@@ -416,7 +419,7 @@ final class SelectGiftPageContent: Component {
                     MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.Gift_Craft_Select_YourGifts.uppercased(), font: Font.semibold(14.0), textColor: environment.theme.actionSheet.secondaryTextColor)))
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
             let myGiftsTitleFrame = CGRect(origin: CGPoint(x: 26.0, y: contentHeight), size: myGiftsTitleSize)
             if let myGiftsTitleView = self.myGiftsTitle.view {
@@ -440,7 +443,7 @@ final class SelectGiftPageContent: Component {
                     MultilineTextComponent(text: .plain(NSAttributedString(string: saleTitle, font: Font.semibold(14.0), textColor: environment.theme.actionSheet.secondaryTextColor)))
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset - rightSideInset, height: 100.0)
             )
             let storeGiftsTitleFrame = CGRect(origin: CGPoint(x: 26.0, y: contentHeight), size: storeGiftsTitleSize)
             if let storeGiftsTitleView = self.storeGiftsTitle.view {
@@ -657,7 +660,7 @@ private final class SheetContainerComponent: CombinedComponent {
                         metrics: environment.metrics,
                         deviceMetrics: environment.deviceMetrics,
                         isDisplaying: environment.value.isVisible,
-                        isCentered: environment.metrics.widthClass == .regular,
+                        isCentered: environment.presentsFloatingPanels,
                         screenSize: context.availableSize,
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in

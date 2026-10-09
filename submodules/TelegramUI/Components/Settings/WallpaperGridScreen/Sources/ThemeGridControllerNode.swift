@@ -575,11 +575,11 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 transition.updateFrame(node: strongSelf.bottomBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height), size: CGSize(width: layout.size.width, height: 500.0)))
                 transition.updateFrame(node: strongSelf.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
                 
-                let sideInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                let sideMargins = layout.listSideMargins(base: max(16.0, floor((layout.size.width - 674.0) / 2.0)))
                 var listInsets = layout.safeInsets
                 if layout.size.width >= 320.0 {
-                    listInsets.left = sideInset
-                    listInsets.right = sideInset
+                    listInsets.left = sideMargins.left
+                    listInsets.right = sideMargins.right
                 }
                 
                 let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: listInsets.left, rightInset: listInsets.right, availableHeight: layout.size.height)
@@ -596,7 +596,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 transition.updateFrame(node: strongSelf.resetDescriptionItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height + 35.0 + resetLayout.contentSize.height), size: resetDescriptionLayout.contentSize))
                 
                 let maskSideInset = strongSelf.leftOverlayNode.frame.maxX
-                strongSelf.maskNode.frame = CGRect(origin: CGPoint(x: maskSideInset, y: strongSelf.separatorNode.frame.minY + UIScreenPixel), size: CGSize(width: layout.size.width - sideInset * 2.0, height: gridLayout.contentSize.height + 10.0))
+                strongSelf.maskNode.frame = CGRect(origin: CGPoint(x: maskSideInset, y: strongSelf.separatorNode.frame.minY + UIScreenPixel), size: CGSize(width: layout.size.width - sideMargins.left - sideMargins.right, height: gridLayout.contentSize.height + 10.0))
             }
         }
     }
@@ -776,10 +776,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
         } else {
             referenceImageSize = CGSize(width: 90.0, height: 150.0)
         }
-        let sideInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-        
-        let gridWidth = layout.size.width - sideInset * 2.0
-        
+        // iPhone Duo: a side with a side strip keeps the grid and the buttons above it 16pt clear of it;
+        // without a strip both margins are today's.
+        let sideMargins = layout.listSideMargins(base: max(16.0, floor((layout.size.width - 674.0) / 2.0)))
+
+        let gridWidth = layout.size.width - sideMargins.left - sideMargins.right
+
         let imageCount = Int((gridWidth - padding * 2.0) / (referenceImageSize.width))
         let imageSize = referenceImageSize.aspectFilled(CGSize(width: floorToScreenPixels((gridWidth - padding * 2.0 - CGFloat(imageCount - 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
         let spacing = floorToScreenPixels((gridWidth - padding * 2.0 - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount - 1))
@@ -792,8 +794,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         var listInsets = insets
         if layout.size.width >= 320.0 {
-            listInsets.left = sideInset
-            listInsets.right = sideInset
+            listInsets.left = sideMargins.left
+            listInsets.right = sideMargins.right
             if self.leftOverlayNode.supernode == nil {
                 self.gridNode.addSubnode(self.leftOverlayNode)
             }
@@ -883,9 +885,11 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         if self.currentState.editing {
             let panelHeight: CGFloat
+            // The bottom selection panel spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+            let selectionPanelInsets = layout.bottomEdgeSideInsets()
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedIds = self.currentState.selectedIds
-                panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: transition, metrics: layout.metrics)
+                panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: selectionPanelInsets.left, rightInset: selectionPanelInsets.right, maxHeight: 0.0, transition: transition, metrics: layout.metrics)
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
                 if let selectionPanelSeparatorNode = self.selectionPanelSeparatorNode {
                     transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
@@ -902,7 +906,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 let selectionPanel = ThemeGridSelectionPanelNode(theme: self.presentationData.theme)
                 selectionPanel.controllerInteraction = self.controllerInteraction
                 selectionPanel.selectedIds = self.currentState.selectedIds
-                panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: .immediate, metrics: layout.metrics)
+                panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: selectionPanelInsets.left, rightInset: selectionPanelInsets.right, maxHeight: 0.0, transition: .immediate, metrics: layout.metrics)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
                 

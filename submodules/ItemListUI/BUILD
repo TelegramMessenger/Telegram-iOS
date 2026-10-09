@@ -38,6 +38,8 @@ swift_library(
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/GlassControls",
         "//submodules/TelegramUI/Components/HorizontalTabsComponent",
+        "//submodules/TelegramUI/Components/SideColumnLayout",
+        "//submodules/TelegramUI/Components/SideColumnBarButtons",
     ],
     visibility = [
         "//visibility:public",

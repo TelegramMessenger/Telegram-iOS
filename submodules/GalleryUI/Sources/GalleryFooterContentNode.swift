@@ -40,6 +40,10 @@ open class GalleryFooterContentNode: ASDisplayNode {
     
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     public var controllerInteraction: GalleryControllerInteraction?
+    /// The screen's side safe insets. `updateLayout`'s `leftInset`/`rightInset` are the bottom edge's
+    /// (`bottomEdgeSideInsets()`), which leave out iPhone Duo's side strip; content that can rise to the strip's corner
+    /// block (an expanded caption) keeps to these. nil: use `leftInset`/`rightInset`.
+    public var screenSideInsets: (left: CGFloat, right: CGFloat)?
     
     var visibilityAlpha: CGFloat = 1.0
     open func setVisibilityAlpha(_ alpha: CGFloat, animated: Bool) {

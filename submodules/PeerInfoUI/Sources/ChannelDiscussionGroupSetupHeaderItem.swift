@@ -160,12 +160,12 @@ class ChannelDiscussionGroupSetupHeaderItemNode: ListViewItemNode {
                     strongSelf.imageNode.image = iconImage
                     
                     let iconSize = iconImage?.size ?? CGSize()
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((params.width - iconSize.width) / 2.0), y: 0.0), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((params.width - params.leftInset - params.rightInset - iconSize.width) / 2.0), y: 0.0), size: iconSize)
                     strongSelf.imageNode.frame = iconFrame
                     
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floor((params.width - labelLayout.size.width) / 2.0), y: iconFrame.minY + 63.0), size: labelLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((params.width - params.leftInset - params.rightInset - labelLayout.size.width) / 2.0), y: iconFrame.minY + 63.0), size: labelLayout.size)
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.size.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((params.width - params.leftInset - params.rightInset - titleLayout.size.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleLayout.size)
                 }
             })
         }

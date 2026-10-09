@@ -448,16 +448,22 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         var updateVisibleItems = false
         let resetContentOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout || !(self.initialAnchor ?? "").isEmpty
         
-        let scrollInsets = fullInsets
+        let band = self.pageBand(size: size, insets: insets)
+        var scrollInsets = fullInsets
+        if band.width != size.width {
+            // The scroll view is framed in the band already; side content insets would let it scroll sideways.
+            scrollInsets.left = 0.0
+            scrollInsets.right = 0.0
+        }
         if self.scrollNode.view.contentInset != scrollInsets {
             self.scrollNode.view.contentInset = scrollInsets
             self.scrollNode.view.scrollIndicatorInsets = scrollInsets
         }
-        
+
         self.wrapperNode.frame = CGRect(origin: .zero, size: size)
-        
-        let scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
-        let scrollFrameUpdated = self.scrollNode.bounds.size != scrollFrame.size
+
+        let scrollFrame = CGRect(origin: CGPoint(x: band.minX, y: 0.0), size: CGSize(width: band.width, height: size.height))
+        let scrollFrameUpdated = self.scrollNode.bounds.size != scrollFrame.size || self.scrollNode.frame.minX != scrollFrame.minX
         if scrollFrameUpdated {
             let widthUpdated = self.scrollNode.bounds.size.width != scrollFrame.width
             self.scrollNode.frame = scrollFrame
@@ -498,14 +504,26 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         }
     }
     
+    /// The horizontal band the page is laid out in, in this view's coordinates, and the safe inset the layout keeps
+    /// on both sides of it. Beside iPhone Duo's side strip (the side insets differ) the page keeps to the band
+    /// between the insets, where the symmetric layout inset would leave text under the strip on one side and a gap
+    /// on the other; equal insets keep the full-width page with its symmetric safe inset.
+    private func pageBand(size: CGSize, insets: UIEdgeInsets) -> (minX: CGFloat, width: CGFloat, safeInset: CGFloat) {
+        if insets.left != insets.right {
+            return (insets.left, size.width - insets.left - insets.right, 0.0)
+        }
+        return (0.0, size.width, insets.left)
+    }
+
     private func updatePageLayout() {
         guard let (size, insets, _) = self.containerLayout, let (webPage, instantPage) = self.resolvedWebPage() else {
             return
         }
-        
-        let currentLayout = instantPageLayoutForWebPage(webPage, instantPage: instantPage, userLocation: self.sourceLocation.userLocation, boundingWidth: size.width, sideInset: 17.0, safeInset: insets.left, strings: self.presentationData.strings, theme: self.theme, dateTimeFormat: self.presentationData.dateTimeFormat, webEmbedHeights: self.currentWebEmbedHeights, cachedMessageSyntaxHighlight: self.codeHighlight)
-        
-        let currentLayoutTiles = instantPageTilesFromLayout(currentLayout, boundingWidth: size.width)
+
+        let band = self.pageBand(size: size, insets: insets)
+        let currentLayout = instantPageLayoutForWebPage(webPage, instantPage: instantPage, userLocation: self.sourceLocation.userLocation, boundingWidth: band.width, sideInset: 17.0, safeInset: band.safeInset, strings: self.presentationData.strings, theme: self.theme, dateTimeFormat: self.presentationData.dateTimeFormat, webEmbedHeights: self.currentWebEmbedHeights, cachedMessageSyntaxHighlight: self.codeHighlight)
+
+        let currentLayoutTiles = instantPageTilesFromLayout(currentLayout, boundingWidth: band.width)
         
         var currentDetailsItems: [InstantPageDetailsItem] = []
         var currentLayoutItemsWithNodes: [InstantPageItem] = []
@@ -545,7 +563,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
             self.currentExpandedDetails = expandedDetails
         }
         
-        let accessibilityAreas = instantPageAccessibilityAreasFromLayout(currentLayout, boundingWidth: size.width)
+        let accessibilityAreas = instantPageAccessibilityAreasFromLayout(currentLayout, boundingWidth: band.width)
         
         self.currentLayout = currentLayout
         self.currentLayoutTiles = currentLayoutTiles
@@ -562,7 +580,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
         self.currentAccessibilityAreas = accessibilityAreas
         
         self.scrollNode.view.contentSize = currentLayout.contentSize
-        self.scrollNodeFooter.frame = CGRect(origin: CGPoint(x: 0.0, y: currentLayout.contentSize.height), size: CGSize(width: size.width, height: 2000.0))
+        self.scrollNodeFooter.frame = CGRect(origin: CGPoint(x: 0.0, y: currentLayout.contentSize.height), size: CGSize(width: band.width, height: 2000.0))
     }
 
     private func updateCodeHighlight() {

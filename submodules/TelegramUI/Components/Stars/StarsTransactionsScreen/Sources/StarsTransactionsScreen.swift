@@ -127,6 +127,9 @@ final class StarsTransactionsScreenComponent: Component {
         private var component: StarsTransactionsScreenComponent?
         private weak var state: EmptyComponentState?
         private var navigationMetrics: (navigationHeight: CGFloat, titleCenterY: CGFloat)?
+        /// iPhone Duo: the center of the band between the side safe insets (one of them is the side strip), which
+        /// the header and the content are centered on; the full width's center elsewhere.
+        private var bandCenterX: CGFloat?
         private var controller: (() -> ViewController?)?
         
         private var enableVelocityTracking: Bool = false
@@ -296,7 +299,7 @@ final class StarsTransactionsScreenComponent: Component {
                 let headerTransition: ComponentTransition = .immediate
                 
                 if let titleView = self.titleView.view {
-                    let titlePosition = CGPoint(x: scrollBounds.width / 2.0, y: max(topInset + 160.0 - titleOffset, navigationMetrics.titleCenterY))
+                    let titlePosition = CGPoint(x: self.bandCenterX ?? scrollBounds.width / 2.0, y: max(topInset + 160.0 - titleOffset, navigationMetrics.titleCenterY))
                     
                     headerTransition.setPosition(view: titleView, position: titlePosition)
                     headerTransition.setScale(view: titleView, scale: titleScale)
@@ -417,6 +420,8 @@ final class StarsTransactionsScreenComponent: Component {
                 navigationTitleCenterY = environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0
             }
             self.navigationMetrics = (environment.navigationHeight, navigationTitleCenterY)
+            let bandCenterX = environment.safeInsets.left + (availableSize.width - environment.safeInsets.left - environment.safeInsets.right) / 2.0
+            self.bandCenterX = bandCenterX
             
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
 
@@ -515,7 +520,7 @@ final class StarsTransactionsScreenComponent: Component {
                 containerSize: CGSize(width: min(414.0, availableSize.width), height: 220.0)
             )
             let starFrame = CGRect(
-                origin: CGPoint(x: (availableSize.width - starSize.width) / 2.0, y: environment.navigationHeight - 56.0 - 30.0),
+                origin: CGPoint(x: bandCenterX - starSize.width / 2.0, y: environment.navigationHeight - 56.0 - 30.0),
                 size: starSize
             )
             if let starView = self.starView.view {
@@ -602,7 +607,9 @@ final class StarsTransactionsScreenComponent: Component {
             )
             
             let topBalanceOriginY = navigationTitleCenterY - (topBalanceTitleSize.height + topBalanceValueSize.height) / 2.0
-            let topBalanceTitleFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceTitleSize.width - 16.0 - environment.safeInsets.right, y: topBalanceOriginY), size: topBalanceTitleSize)
+            // iPhone Duo, unfolded portrait: the balance sits in the bar's top row, so it moves left of the status island
+            // as the bar's trailing buttons do (0 elsewhere).
+            let topBalanceTitleFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceTitleSize.width - 16.0 - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset, y: topBalanceOriginY), size: topBalanceTitleSize)
             if let topBalanceTitleView = self.topBalanceTitleView.view {
                 if topBalanceTitleView.superview == nil {
                     topBalanceTitleView.alpha = 0.0
@@ -617,7 +624,7 @@ final class StarsTransactionsScreenComponent: Component {
                 starTransition.setFrame(view: topBalanceTitleView, frame: topBalanceTitleFrame)
             }
     
-            let topBalanceValueFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceValueSize.width - 16.0 - environment.safeInsets.right, y: topBalanceTitleFrame.maxY), size: topBalanceValueSize)
+            let topBalanceValueFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceValueSize.width - 16.0 - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset, y: topBalanceTitleFrame.maxY), size: topBalanceValueSize)
             if let topBalanceValueView = self.topBalanceValueView.view {
                 if topBalanceValueView.superview == nil {
                     topBalanceValueView.alpha = 0.0
@@ -665,7 +672,7 @@ final class StarsTransactionsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInsets - 8.0, height: 240.0)
             )
-            let descriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - descriptionSize.width) / 2.0), y: contentHeight + 20.0 - floor(descriptionSize.height / 2.0)), size: descriptionSize)
+            let descriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - descriptionSize.width / 2.0), y: contentHeight + 20.0 - floor(descriptionSize.height / 2.0)), size: descriptionSize)
             if let descriptionView = self.descriptionView.view {
                 if descriptionView.superview == nil {
                     self.scrollView.addSubview(descriptionView)
@@ -716,7 +723,7 @@ final class StarsTransactionsScreenComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
                 )
-                let proceedsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - proceedsSize.width) / 2.0), y: contentHeight), size: proceedsSize)
+                let proceedsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - proceedsSize.width / 2.0), y: contentHeight), size: proceedsSize)
                 if let proceedsView = self.proceedsView.view {
                     if proceedsView.superview == nil {
                         self.scrollView.addSubview(proceedsView)
@@ -823,7 +830,7 @@ final class StarsTransactionsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
             )
-            let balanceFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - balanceSize.width) / 2.0), y: contentHeight), size: balanceSize)
+            let balanceFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - balanceSize.width / 2.0), y: contentHeight), size: balanceSize)
             if let balanceView = self.balanceView.view {
                 if balanceView.superview == nil {
                     self.scrollView.addSubview(balanceView)
@@ -855,7 +862,7 @@ final class StarsTransactionsScreenComponent: Component {
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
                                 itemGenerator: ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), icon: PresentationResourcesSettings.earnStars, title: environment.strings.Monetization_EarnStarsInfo_Title, titleBadge: nil, label: environment.strings.Monetization_EarnStarsInfo_Text, labelStyle: .multilineDetailText, sectionId: 0, style: .blocks, action: {
                                 }),
-                                params: ListViewItemLayoutParams(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true),
+                                params: ListViewItemLayoutParams(width: availableSize.width - sideInsets, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true),
                                 action: { [weak self] in
                                     guard let self, let component = self.component else {
                                         return
@@ -875,7 +882,7 @@ final class StarsTransactionsScreenComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
                 )
-                let earnStarsSectionFrame = CGRect(origin: CGPoint(x: sideInsets * 0.5, y: contentHeight), size: earnStarsSectionSize)
+                let earnStarsSectionFrame = CGRect(origin: CGPoint(x: bandCenterX - earnStarsSectionSize.width / 2.0, y: contentHeight), size: earnStarsSectionSize)
                 if let earnStarsSectionView = self.earnStarsSection.view {
                     if earnStarsSectionView.superview == nil {
                         self.scrollView.addSubview(earnStarsSectionView)
@@ -1059,7 +1066,7 @@ final class StarsTransactionsScreenComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
                 )
-                let subscriptionsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - subscriptionsSize.width) / 2.0), y: contentHeight), size: subscriptionsSize)
+                let subscriptionsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(bandCenterX - subscriptionsSize.width / 2.0), y: contentHeight), size: subscriptionsSize)
                 if let subscriptionsView = self.subscriptionsView.view {
                     if subscriptionsView.superview == nil {
                         self.scrollView.addSubview(subscriptionsView)

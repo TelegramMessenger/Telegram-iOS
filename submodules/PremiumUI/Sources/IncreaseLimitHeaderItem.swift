@@ -81,7 +81,7 @@ private let boldTextFont = Font.semibold(15.0)
 class IncreaseLimitHeaderItemNode: ListViewItemNode {
     private var hostView: ComponentHostView<Empty>?
     
-    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout, CGSize)?
+    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout, CGSize, CGFloat, CGFloat)?
     
     private let titleNode: TextNode
     private let textNode: TextNode
@@ -112,21 +112,21 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
         self.hostView = hostView
         self.view.addSubview(hostView)
         
-        if let (component, containerSize, layout, textSize) = self.params {
+        if let (component, containerSize, layout, textSize, leftInset, rightInset) = self.params {
             var size = hostView.update(
                 transition: .immediate,
                 component: component,
                 environment: {},
                 containerSize: containerSize
             )
-            hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
+            hostView.frame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((layout.size.width - leftInset - rightInset - size.width) / 2.0), y: -30.0), size: size)
             
             if let item = self.item, item.isPremiumDisabled {
                 size.height -= 54.0
             }
             
             let textSpacing: CGFloat = -6.0
-            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textSize.width) / 2.0), y: size.height + textSpacing), size: textSize)
+            self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + floorToScreenPixels((layout.size.width - leftInset - rightInset - textSize.width) / 2.0), y: size.height + textSpacing), size: textSize)
         }
     }
     
@@ -213,11 +213,11 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                         if item.isPremiumDisabled {
                             size.height -= 54.0
                         }
-                        hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textLayout.size.width) / 2.0), y: size.height + textSpacing), size: textLayout.size)
+                        hostView.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((layout.size.width - params.leftInset - params.rightInset - size.width) / 2.0), y: -30.0), size: size)
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floorToScreenPixels((layout.size.width - params.leftInset - params.rightInset - textLayout.size.width) / 2.0), y: size.height + textSpacing), size: textLayout.size)
                     }
                     
-                    strongSelf.params = (component, containerSize, layout, textLayout.size)
+                    strongSelf.params = (component, containerSize, layout, textLayout.size, params.leftInset, params.rightInset)
                 }
             })
         }

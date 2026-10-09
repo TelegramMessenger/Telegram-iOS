@@ -184,9 +184,12 @@ public final class GiftStoreContentComponent: Component {
             let visibleBounds = bounds.insetBy(dx: 0.0, dy: -10.0)
             if let starGifts = self.effectiveGifts {
                 let sideInset: CGFloat = 16.0 + component.safeInsets.left
+                // iPhone Duo: the right margin is the right side's own (the side strip), so the third column stays out of
+                // the strip. With equal insets this is the old width.
+                let rightSideInset: CGFloat = 16.0 + component.safeInsets.right
                 
                 let optionSpacing: CGFloat = 10.0
-                let optionWidth = (availableWidth - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
+                let optionWidth = (availableWidth - sideInset - rightSideInset - optionSpacing * 2.0) / 3.0
                 let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
                 
                 var validIds: [AnyHashable] = []
@@ -956,6 +959,8 @@ public final class GiftStoreContentComponent: Component {
                                     
             let bottomContentInset: CGFloat = 56.0
             let sideInset: CGFloat = 16.0 + component.safeInsets.left
+            // iPhone Duo: the right side's own margin (the side strip), matching `updateScrolling`.
+            let rightSideInset: CGFloat = 16.0 + component.safeInsets.right
                         
             var contentHeight: CGFloat = 0.0
             contentHeight += component.navigationHeight
@@ -966,7 +971,7 @@ public final class GiftStoreContentComponent: Component {
             }
             
             let optionSpacing: CGFloat = 10.0
-            let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
+            let optionWidth = (availableSize.width - sideInset - rightSideInset - optionSpacing * 2.0) / 3.0
                          
             var sortingTitle = strings.Gift_Store_Sort_Date
             var sortingIcon: String = "GiftFilterDate"
@@ -1396,7 +1401,7 @@ final class GiftStoreScreenComponent: Component {
                 }
                 balanceView.frame = balanceFrame
 
-                let balanceBackgroundFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - 16.0 - balanceSize.width, y: environment.navigationHeight - 60.0 + 2.0 + floor((60.0 - 44.0) * 0.5)), size: balanceSize)
+                let balanceBackgroundFrame = CGRect(origin: CGPoint(x: availableSize.width - environment.safeInsets.right - environment.navigationBarTrailingButtonsInset - 16.0 - balanceSize.width, y: environment.navigationHeight - 60.0 + 2.0 + floor((60.0 - 44.0) * 0.5)), size: balanceSize)
                 
                 transition.setFrame(view: self.balanceBackgroundView, frame: balanceBackgroundFrame)
                 self.balanceBackgroundView.update(size: balanceBackgroundFrame.size, cornerRadius: balanceBackgroundFrame.height * 0.5, isDark: environment.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: true, transition: transition)
@@ -1639,6 +1644,6 @@ private final class GiftStoreReferenceContentSource: ContextReferenceContentSour
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds)
     }
 }

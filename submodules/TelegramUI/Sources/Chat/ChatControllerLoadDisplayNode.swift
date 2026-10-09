@@ -127,6 +127,7 @@ import ChatSendAsContextMenu
 import GlobalControlPanelsContext
 import ComponentFlow
 import ComponentDisplayAdapters
+import UIKitRuntimeUtils
 
 extension ChatControllerImpl {
     func reloadChatLocation(chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, historyNode: ChatHistoryListNodeImpl, apply: @escaping ((ContainedViewLayoutTransition?) -> Void) -> Void) {
@@ -692,6 +693,16 @@ extension ChatControllerImpl {
         }
         
         self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, statusBar: self.statusBar, backgroundNode: self.chatBackgroundNode, controller: self)
+        // iPhone Duo's side column: registered once per chat (contentDataUpdated runs on every update).
+        self.chatDisplayNode.sideColumnNode.backPressed = { [weak self] in
+            self?.navigationBar?.backPressed()
+        }
+        self.chatDisplayNode.sideColumnNode.searchPressed = { [weak self] in
+            self?.beginMessageSearch("")
+        }
+        let _ = self.navigationItem.addSetBadgeListener { [weak self] text in
+            self?.chatDisplayNode.sideColumnNode.updateBadgeText(text ?? "")
+        }
         
         if let currentItem = self.globalControlPanelsContext?.tempVoicePlaylistCurrentItem {
             self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)

@@ -921,6 +921,7 @@ private final class ChatSendStarsScreenComponent: Component {
         private let backgroundHandleView: UIImageView
         private let leftButton = ComponentView<Empty>()
         private let peerSelectorButton = ComponentView<Empty>()
+        private var peerSelectorButtonIslandLayout: (frame: CGRect, inset: CGFloat, islandHeight: CGFloat)?
         private let closeButton = ComponentView<Empty>()
         
         private let title = ComponentView<Empty>()
@@ -958,6 +959,8 @@ private final class ChatSendStarsScreenComponent: Component {
         private var isUpdating: Bool = false
         private var environment: ViewControllerComponentContainer.Environment?
         private var itemLayout: ItemLayout?
+        /// The container's bottom corners where the screen's differ (iPhone Duo's cover screen); nil elsewhere.
+        private var containerBottomCornerRadii: CornerRadii?
         
         private var topOffsetDistance: CGFloat?
         
@@ -1138,6 +1141,11 @@ private final class ChatSendStarsScreenComponent: Component {
             transition.setTransform(layer: self.backgroundLayer, transform: CATransform3DMakeTranslation(0.0, topOffset + itemLayout.containerInset, 0.0))
             
             transition.setPosition(view: self.navigationBarContainer, position: CGPoint(x: 0.0, y: topOffset + itemLayout.containerInset))
+            if let peerSelectorButtonView = self.peerSelectorButton.view, let islandLayout = self.peerSelectorButtonIslandLayout {
+                // Slides clear of the status island as the sheet's top rises beside it (iPhone Duo, unfolded portrait).
+                let shift = statusIslandTrailingShift(rowMinY: topOffset + itemLayout.containerInset + islandLayout.frame.minY, rowHeight: islandLayout.frame.height, islandHeight: islandLayout.islandHeight, inset: islandLayout.inset)
+                transition.setPosition(view: peerSelectorButtonView, position: CGPoint(x: islandLayout.frame.midX - shift, y: islandLayout.frame.midY))
+            }
             
             var topOffsetFraction = self.scrollView.bounds.minY / 100.0
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
@@ -1157,7 +1165,9 @@ private final class ChatSendStarsScreenComponent: Component {
             containerTransform = CATransform3DScale(containerTransform, scale, scale, scale)
             #endif
             transition.setTransform(view: self.containerView, transform: containerTransform)
-            transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
+            if !self.containerView.layer.applyCornerRadiiIfNeeded(self.containerBottomCornerRadii) {
+                transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: scaledCornerRadius)
+            }
         }
         
         func animateIn() {
@@ -1393,11 +1403,16 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
+            // Narrowed by the side safe insets only where there is one on each side. Beside iPhone Duo's side strip
+            // (one side only) the screen-centered sheet keeps its width: in landscape it already sits clear of the
+            // strip, and in folded portrait it spans the strip as a bottom panel. Subtracting the left inset twice
+            // made it 168pt narrower in landscape-right than in landscape-left.
+            let fillingSideInset: CGFloat = environment.safeInsets.left == environment.safeInsets.right ? environment.safeInsets.left : 0.0
             let fillingSize: CGFloat
             if case .regular = environment.metrics.widthClass {
-                fillingSize = min(availableSize.width, 414.0) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, 414.0) - fillingSideInset * 2.0
             } else {
-                fillingSize = min(availableSize.width, 428.0) - environment.safeInsets.left * 2.0
+                fillingSize = min(availableSize.width, 428.0) - fillingSideInset * 2.0
             }
             let sideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5) + 16.0
             
@@ -1811,6 +1826,7 @@ private final class ChatSendStarsScreenComponent: Component {
                 contentHeight += 64.0
             }
             
+            self.peerSelectorButtonIslandLayout = nil
             switch component.initialData.subjectInitialData {
             case let .react(reactData):
                 var sendAsPeers: [EnginePeer] = [reactData.myPeer]
@@ -1835,7 +1851,16 @@ private final class ChatSendStarsScreenComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: 120.0, height: 100.0)
                 )
-                let peerSelectorButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - peerSelectorButtonSize.width, y: floor((78.0 - peerSelectorButtonSize.height) * 0.5)), size: peerSelectorButtonSize)
+                // Clear of the side strip's status corner when the sheet spans it (iPhone Duo, folded portrait); on the
+                // unfolded screen in portrait `updateScrolling` moves it clear of the status island while the sheet's top
+                // is beside it.
+                let sheetMinX = floor((availableSize.width - fillingSize) * 0.5)
+                let peerSelectorStripInset = max(0.0, environment.safeInsets.right - sheetMinX)
+                let peerSelectorButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - peerSelectorStripInset - peerSelectorButtonSize.width, y: floor((78.0 - peerSelectorButtonSize.height) * 0.5)), size: peerSelectorButtonSize)
+                if environment.navigationBarTrailingButtonsInset > 0.0, let island = environment.reservedCorners.topRight {
+                    let islandInset = max(0.0, environment.safeInsets.right + environment.navigationBarTrailingButtonsInset - sheetMinX) - peerSelectorStripInset
+                    self.peerSelectorButtonIslandLayout = (peerSelectorButtonFrame, islandInset, island.height)
+                }
                 if let peerSelectorButtonView = self.peerSelectorButton.view {
                     if peerSelectorButtonView.superview == nil {
                         self.navigationBarContainer.addSubview(peerSelectorButtonView)
@@ -2519,6 +2544,16 @@ private final class ChatSendStarsScreenComponent: Component {
             }
             
             let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 54.0, sideInset: 32.0)
+            // iPhone Duo: beside a side strip the button and the footnote below it keep to the sheet, which is centered
+            // clear of the strip in landscape; across the full width they ran under the strip and the corner block at
+            // its end. Where the sheet spans the strip (folded portrait) or the side insets are equal they keep the
+            // full width.
+            let bottomPanelBand: (minX: CGFloat, width: CGFloat)
+            if environment.safeInsets.left != environment.safeInsets.right && fillingSize <= availableSize.width - environment.safeInsets.left - environment.safeInsets.right {
+                bottomPanelBand = (floor((availableSize.width - fillingSize) * 0.5), fillingSize)
+            } else {
+                bottomPanelBand = (0.0, availableSize.width)
+            }
             
             let actionButtonSize = actionButton.update(
                 transition: transition,
@@ -2629,7 +2664,7 @@ private final class ChatSendStarsScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - buttonInsets.left - buttonInsets.right, height: 54.0)
+                containerSize: CGSize(width: bottomPanelBand.width - buttonInsets.left - buttonInsets.right, height: 54.0)
             )
             
             var buttonDescriptionTextSize: CGSize?
@@ -2663,13 +2698,13 @@ private final class ChatSendStarsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset, height: 1000.0)
+                    containerSize: CGSize(width: bottomPanelBand.width - (sideInset - bottomPanelBand.minX), height: 1000.0)
                 )
             }
             let buttonDescriptionSpacing: CGFloat = 14.0
             
             var bottomPanelHeight = 13.0 + buttonInsets.bottom + actionButtonSize.height
-            var actionButtonFrame = CGRect(origin: CGPoint(x: buttonInsets.left, y: availableSize.height - buttonInsets.bottom - actionButtonSize.height), size: actionButtonSize)
+            var actionButtonFrame = CGRect(origin: CGPoint(x: bottomPanelBand.minX + buttonInsets.left, y: availableSize.height - buttonInsets.bottom - actionButtonSize.height), size: actionButtonSize)
             if let buttonDescriptionTextSize {
                 bottomPanelHeight += buttonDescriptionSpacing + buttonDescriptionTextSize.height
                 actionButtonFrame.origin.y -= (buttonDescriptionSpacing + buttonDescriptionTextSize.height)
@@ -2704,6 +2739,11 @@ private final class ChatSendStarsScreenComponent: Component {
             
             self.scrollContentClippingView.layer.cornerRadius = 10.0
             
+            // iPhone Duo's cover screen: the container's bottom corners, which reach the screen's, follow each screen
+            // corner (8pt on the hinge side, 59pt outside) instead of one radius. Nil where the corners are uniform.
+            self.containerBottomCornerRadii = environment.screenCornerRadii.sheetBottomCornerRadii(inset: 0.0).map { CornerRadii(topLeft: 0.0, topRight: 0.0, bottomLeft: $0.left, bottomRight: $0.right) }
+            // The scroll content's clip keeps its bottom corners within the container's.
+            let _ = self.scrollContentClippingView.layer.applyCornerRadiiIfNeeded(self.containerBottomCornerRadii.map { CornerRadii(topLeft: 10.0, topRight: 10.0, bottomLeft: min(10.0, $0.bottomLeft), bottomRight: min(10.0, $0.bottomRight)) })
             self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, containerCornerRadius: environment.deviceMetrics.screenCornerRadius, bottomInset: environment.safeInsets.bottom, topInset: topInset)
             
             transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: availableSize.width, height: contentHeight)))
@@ -3558,7 +3598,7 @@ final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.actionsOnTop ? .top : .bottom)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: mainWindowScreenBounds, actionsPosition: self.actionsOnTop ? .top : .bottom)
     }
 }
 

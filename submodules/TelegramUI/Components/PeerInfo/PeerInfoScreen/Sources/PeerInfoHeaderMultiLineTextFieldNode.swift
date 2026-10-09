@@ -20,7 +20,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
     
     private var fontSize: PresentationFontSize?
     private var theme: PresentationTheme?
-    private var currentParams: (width: CGFloat, safeInset: CGFloat)?
+    private var currentParams: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat)?
     private var currentMeasuredHeight: CGFloat?
     
     var text: String {
@@ -97,8 +97,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         self.updateClearButtonVisibility()
     }
     
-    func update(width: CGFloat, safeInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
-        self.currentParams = (width, safeInset)
+    func update(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
+        self.currentParams = (width, leftInset, rightInset)
         
         self.fontSize = presentationData.listsFontSize
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
@@ -124,8 +124,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         
         let separatorRightInset: CGFloat = 16.0
         
-        let separatorX = safeInset + (hasPrevious ? 16.0 : 0.0)
-        self.topSeparator.frame = CGRect(origin: CGPoint(x: separatorX, y: 0.0), size: CGSize(width: width - separatorX - safeInset - separatorRightInset, height: UIScreenPixel))
+        let separatorX = leftInset + (hasPrevious ? 16.0 : 0.0)
+        self.topSeparator.frame = CGRect(origin: CGPoint(x: separatorX, y: 0.0), size: CGSize(width: width - separatorX - rightInset - separatorRightInset, height: UIScreenPixel))
         
         let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
         if self.textNode.attributedPlaceholderText == nil || !self.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
@@ -143,7 +143,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         }
         let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .gray)
         self.measureTextNode.attributedText = attributedMeasureText
-        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
+        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - (leftInset + rightInset) - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
         self.measureTextNode.frame = CGRect(origin: CGPoint(), size: measureTextSize)
         self.currentMeasuredHeight = measureTextSize.height
         
@@ -151,23 +151,23 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         let height = measureTextSize.height + verticalInset * 2.0
         
         let buttonSize = CGSize(width: 38.0, height: height)
-        self.clearButtonNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width, y: 0.0), size: buttonSize)
+        self.clearButtonNode.frame = CGRect(origin: CGPoint(x: width - rightInset - buttonSize.width, y: 0.0), size: buttonSize)
         if let image = self.clearIconNode.image {
-            self.clearIconNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((height - image.size.height) / 2.0)), size: image.size)
+            self.clearIconNode.frame = CGRect(origin: CGPoint(x: width - rightInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((height - image.size.height) / 2.0)), size: image.size)
         }
         
-        let textNodeFrame = CGRect(origin: CGPoint(x: safeInset + 16.0, y: 15.0), size: CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: max(height, 1000.0)))
+        let textNodeFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 15.0), size: CGSize(width: width - (leftInset + rightInset) - 16.0 * 2.0 - 38.0, height: max(height, 1000.0)))
         self.textNodeContainer.frame = textNodeFrame
         self.textNode.frame = CGRect(origin: CGPoint(), size: textNodeFrame.size)
         
-        self.backgroundNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: max(1.0, width - safeInset * 2.0), height: height))
+        self.backgroundNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: max(1.0, width - (leftInset + rightInset)), height: height))
         
-        let hasCorners = safeInset > 0.0 && (!hasPrevious || !hasNext)
+        let hasCorners = (leftInset > 0.0 || rightInset > 0.0) && (!hasPrevious || !hasNext)
         let hasTopCorners = hasCorners && !hasPrevious
         let hasBottomCorners = hasCorners && !hasNext
         
         self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners, glass: true) : nil
-        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: width - safeInset - safeInset, height: height))
+        self.maskNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: height))
         
         return height
     }
@@ -204,14 +204,14 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
     }
     
     func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
-        if let (width, safeInset) = self.currentParams {
+        if let (width, leftInset, rightInset) = self.currentParams {
             var measureText = self.textNode.attributedText?.string ?? ""
             if measureText.hasSuffix("\n") || measureText.isEmpty {
                measureText += "|"
             }
             let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
             self.measureTextNode.attributedText = attributedMeasureText
-            let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
+            let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - (leftInset + rightInset) - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
             if let currentMeasuredHeight = self.currentMeasuredHeight, abs(measureTextSize.height - currentMeasuredHeight) > 0.1 {
                 self.requestUpdateHeight()
             }

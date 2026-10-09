@@ -129,7 +129,7 @@ public final class DrawingMessageRenderer {
                 mockPresentationData = mockPresentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkTheme.chat.defaultWallpaper)
             }
             
-            let layout = ContainerViewLayout(size: CGSize(width: 360.0, height: 640.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: .zero, safeInsets: .zero, additionalInsets: .zero, statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false)
+            let layout = ContainerViewLayout(size: CGSize(width: 360.0, height: 640.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: .zero, safeInsets: .zero, reservedCorners: .none, division: nil, additionalInsets: .zero, statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false, presentedInFormSheet: false)
             let size = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             let _ = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             

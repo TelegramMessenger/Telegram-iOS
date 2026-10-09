@@ -109,6 +109,8 @@ final class OverlayMediaControllerNode: ASDisplayNode, ASGestureRecognizerDelega
             layoutInsets.top += 38.0
         }
         let inset: CGFloat = 4.0 + layout.safeInsets.left
+        // The right edge keeps the right safe inset: beside iPhone Duo's side strip the two differ.
+        let rightInset: CGFloat = 4.0 + layout.safeInsets.right
         var result = CGPoint()
         if location.x.isZero {
             if isMinimized {
@@ -120,15 +122,19 @@ final class OverlayMediaControllerNode: ASDisplayNode, ASGestureRecognizerDelega
             }
         } else {
             if isMinimized {
-                result.x = layout.size.width - inset - 40.0
+                result.x = layout.size.width - rightInset - 40.0
             } else if hidden {
-                result.x = layout.size.width + inset
+                result.x = layout.size.width + rightInset
             } else {
-                result.x = layout.size.width - inset - size.width
+                result.x = layout.size.width - rightInset - size.width
             }
         }
         if location.y.isZero {
             result.y = layoutInsets.top + inset
+            if !location.x.isZero, let island = layout.topBarStatusIsland {
+                // Top right: below a status island in that corner (iPhone Duo, unfolded portrait).
+                result.y = max(result.y, island.height + 4.0)
+            }
         } else {
             result.y = layout.size.height - layoutInsets.bottom - inset - size.height
         }
