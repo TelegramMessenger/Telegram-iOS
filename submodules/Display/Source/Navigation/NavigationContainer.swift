@@ -233,6 +233,8 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
                     return
                 }
                 
+                topController.cancelInteractiveKeyboardGestures()
+                topController.isBeingInteractivelyPopped = true
                 topController.viewWillDisappear(true)
                 let topNode = topController.displayNode
                 var bottomControllerLayout = layout
@@ -299,6 +301,7 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
                         strongSelf.state.transition = nil
                         
                         strongSelf.controllerRemoved(top.value)
+                        topController.isBeingInteractivelyPopped = false
                         strongSelf.ignoreInputHeight = false
                     })
                 } else {
@@ -307,7 +310,8 @@ public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelega
                             return
                         }
                         strongSelf.state.transition = nil
-                            
+
+                        top.value.isBeingInteractivelyPopped = false
                         top.value.viewDidAppear(true)
                         transition.previous.value.viewDidDisappear(true)
                     })

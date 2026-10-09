@@ -127,13 +127,6 @@ class KeyboardManager {
     }
 }
 
-private func endAnimations(view: UIView) {
-    view.layer.removeAllAnimations()
-    for subview in view.subviews {
-        endAnimations(view: subview)
-    }
-}
-
 public func viewTreeContainsFirstResponder(view: UIView) -> Bool {
     if view.isFirstResponder {
         return true
@@ -149,6 +142,7 @@ public func viewTreeContainsFirstResponder(view: UIView) -> Bool {
 
 public final class KeyboardViewManager {
     private let host: StatusBarHost
+    var willDismissEditingWithoutAnimation: (() -> Void)?
     
     init(host: StatusBarHost) {
         self.host = host
@@ -156,11 +150,9 @@ public final class KeyboardViewManager {
     
     public func dismissEditingWithoutAnimation(view: UIView) {
         if viewTreeContainsFirstResponder(view: view) {
-            view.endEditing(true)
-            if let keyboardWindow = self.host.keyboardWindow {
-                for view in keyboardWindow.subviews {
-                    endAnimations(view: view)
-                }
+            self.willDismissEditingWithoutAnimation?()
+            UIView.performWithoutAnimation {
+                view.endEditing(true)
             }
         }
     }
