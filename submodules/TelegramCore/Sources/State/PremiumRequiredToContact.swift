@@ -1,6 +1,6 @@
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public enum RequirementToContact {
     case premium

@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
-import TelegramApi
+internal import TelegramApi
 
 
 public struct AppUpdateInfo: Equatable {

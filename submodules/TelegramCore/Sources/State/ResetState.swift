@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Never, NoError> {
     return network.request(Api.functions.updates.getState())

@@ -1,5 +1,5 @@
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 import Foundation
 

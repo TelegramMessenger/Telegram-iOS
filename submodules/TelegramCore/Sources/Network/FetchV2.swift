@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 import RangeSet
-import TelegramApi
+internal import TelegramApi
 
 private let possiblePartLengths: [Int64] = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576]
 
@@ -469,15 +469,8 @@ private final class FetchImpl {
             self.masterPendingParts = self.fastDownloads ? fastDownloadMasterPendingParts : 6
             self.cdnPendingParts = self.fastDownloads ? fastDownloadCdnPendingParts : 6
             
-            if let resource = resource as? TelegramCloudMediaResource {
-                if let apiInputLocation = resource.apiInputLocation(fileReference: Data()) {
-                    self.loggingIdentifier = "\(apiInputLocation)"
-                } else {
-                    self.loggingIdentifier = "unknown cloud"
-                }
-            } else {
-                self.loggingIdentifier = "unknown"
-            }
+            // The resource id tells concurrent downloads apart; an Api value prints only its constructor name.
+            self.loggingIdentifier = resource.id.stringRepresentation
             
             self.update()
             

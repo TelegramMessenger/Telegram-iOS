@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 
 private func keyFingerprintFromBytes(_ bytes: Buffer) -> Int64 {

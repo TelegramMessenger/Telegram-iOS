@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import MtProtoKit
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 public final class StarGiftsList: Codable, Equatable {
     public let items: [StarGift]

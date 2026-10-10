@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 func managedAnimatedEmojiUpdates(postbox: Postbox, network: Network) -> Signal<Void, NoError> {

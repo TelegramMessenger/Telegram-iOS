@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 public func _internal_updateCloseFriends(account: Account, peerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {

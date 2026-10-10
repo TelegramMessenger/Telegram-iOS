@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 func _internal_setMainProfileTab(account: Account, peerId: PeerId, tab: TelegramProfileTab) -> Signal<Never, NoError> {

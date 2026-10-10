@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 func _internal_togglePeerMuted(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in

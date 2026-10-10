@@ -1,6 +1,6 @@
 import Foundation
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 /// A server error about a new bot's username, from `bots.checkUsername` or `bots.createBot`.
