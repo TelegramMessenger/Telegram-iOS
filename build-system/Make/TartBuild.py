@@ -871,7 +871,13 @@ class TartBuildSession(RemoteBuildSessionInterface):
             raise TartBuildError("VM is not ready for file operations")
             
         print(f"Downloading {remote_path} to {local_path}...")
-        
+
+        # scp creates the destination itself but not its parent: in a fresh CI clone
+        # build/ does not exist yet, and `scp -r … build/artifacts` fails with "mkdir …
+        # No such file or directory". Create only the parent: if the destination already
+        # existed, `scp -r` would copy the directory INTO it (build/artifacts/artifacts).
+        os.makedirs(os.path.dirname(os.path.abspath(local_path)), exist_ok=True)
+
         try:
             # Use scp to download files
             cmd = [
