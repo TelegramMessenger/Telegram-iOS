@@ -219,8 +219,8 @@ public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: 
 
 /// The LEGACY composer's insert of `text` at the selection (the chat's emoji keyboard): the text
 /// inherits a quote at the caret and the character formatting before it, then the flat text is
-/// rebuilt. Moved verbatim from `ChatControllerLoadDisplayNode`'s `insertText` closure so the chat and
-/// the composer harness share it; the chat reaches it only when the input node declines the insert
+/// rebuilt. Moved from `ChatControllerLoadDisplayNode`'s `insertText` closure (the formatting
+/// inheritance below is new) so the chat and the composer harness share it; the chat reaches it only when the input node declines the insert
 /// (`chatComposerInsertTextOnUsersBehalf`), since on the rich editor the rebuild retypes every block.
 public func chatTextInputStateInsertingText(_ textInputState: ChatTextInputState, text: NSAttributedString) -> ChatTextInputState {
     let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
@@ -248,6 +248,10 @@ public func chatTextInputStateInsertingText(_ textInputState: ChatTextInputState
     // The source is the character BEFORE the caret — what the user was last typing in —
     // falling back to the one at it, so inserting at the very end of a spoiler still
     // continues it.
+    //
+    // Inline CODE is never inherited by a custom emoji: a `Code` entity holds no other entity on
+    // the wire, so a code-formatted custom emoji goes out as overlapping `Code` and `CustomEmoji`
+    // (`HarnessEmojiInsertAfterInlineCodeTests`). Plain text still continues the code.
     let formattingSource = range.lowerBound > 0
         ? range.lowerBound - 1
         : (inputText.length > 0 ? 0 : nil)
@@ -259,7 +263,14 @@ public func chatTextInputStateInsertingText(_ textInputState: ChatTextInputState
             guard let value = source[key] else { continue }
             let whole = NSRange(location: 0, length: updatedText.length)
             updatedText.enumerateAttribute(key, in: whole, options: []) { existing, range, _ in
-                if existing == nil {
+                guard existing == nil else { return }
+                if key == ChatTextInputAttributes.monospace {
+                    updatedText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: range, options: []) { emoji, subrange, _ in
+                        if emoji == nil {
+                            updatedText.addAttribute(key, value: value, range: subrange)
+                        }
+                    }
+                } else {
                     updatedText.addAttribute(key, value: value, range: range)
                 }
             }
