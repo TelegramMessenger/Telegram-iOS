@@ -1,6 +1,6 @@
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public final class SparseMessageList {
     /// One peer's shared media: its newest local messages (the top section) joined with the

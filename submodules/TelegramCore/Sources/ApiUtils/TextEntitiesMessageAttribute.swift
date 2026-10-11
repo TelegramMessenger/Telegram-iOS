@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 
 func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associatedPeers: SimpleDictionary<PeerId, Peer>) -> [Api.MessageEntity] {

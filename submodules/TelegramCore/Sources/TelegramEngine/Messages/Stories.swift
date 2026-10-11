@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data, stickers: [TelegramMediaFile])

@@ -42,6 +42,32 @@ rust.toolchain(
         "aarch64-apple-ios-sim",
         "x86_64-apple-ios",
     ],
+    # rules_rust 0.74.0 knows archive checksums only up to Rust 1.98.0. Without one, a toolchain download
+    # skips the repository cache, and the remote downloader (bazel-remote) cannot look the archive up in its
+    # store either: every build fetches the toolchain from static.rust-lang.org again and runs past the 60s
+    # remote deadline (DEADLINE_EXCEEDED). Update these together with `versions` (each archive's checksum is
+    # at static.rust-lang.org/dist/<archive>.sha256), or drop them once known_shas.bzl covers the version.
+    sha256s = {
+        "cargo-1.98.1-aarch64-apple-darwin.tar.xz": "de51d4fade4f31ad8ec405261cc96bedc000d905f98980027610d6e288dbe21b",
+        "cargo-1.98.1-x86_64-apple-darwin.tar.xz": "74b1282253c31fb89926d51d57e47a06c6cd26c93657de72edf622a4ab66396f",
+        "clippy-1.98.1-aarch64-apple-darwin.tar.xz": "1ad080040ff0f4f8af0751bd7fa1fb1901212f8d164cecaa3c47b0654e0916f2",
+        "clippy-1.98.1-x86_64-apple-darwin.tar.xz": "f0fdf89c5f4a9f05fa893a75791d274799989371655985bce34358b5e8b1d231",
+        "llvm-tools-1.98.1-aarch64-apple-darwin.tar.xz": "9b68ac31be7c6d25a08ce34dbd2c1d026b8006905e74415b6d9576678379ecbc",
+        "llvm-tools-1.98.1-x86_64-apple-darwin.tar.xz": "3e2649efa7ebd72b96ba23aef4a301dbf9049ce29fb81f6f459772b73451306c",
+        "rust-1.98.1-aarch64-apple-darwin.tar.xz": "8f7c9de34c12c66dc55a6dbdd63b2b9645d4418775d4b975b0078a602f66e3e8",
+        "rust-1.98.1-x86_64-apple-darwin.tar.xz": "0d5aea6011d3b553e5aa71580b0cd7f9f0614eef17f7e5767e6bc161541ed85f",
+        "rust-analyzer-1.98.1-aarch64-apple-darwin.tar.xz": "e79c1c2f2cef01e3f6044e9e9e46b9963ac7c664f681d935ef900fb33828af9a",
+        "rust-analyzer-1.98.1-x86_64-apple-darwin.tar.xz": "25043ec861d7dcda87e9a96aacbdec6dd3b3909d1d13140563d21933a0d459d6",
+        "rust-std-1.98.1-aarch64-apple-darwin.tar.xz": "2de831ef563ce772519a4d18ba2659f0f7428d497ef66dad24b5a35e8f8cd177",
+        "rust-std-1.98.1-aarch64-apple-ios-sim.tar.xz": "63c2a5337695522b3158bd2d67dca8f5ed517321be303b8174447b3900c9a982",
+        "rust-std-1.98.1-aarch64-apple-ios.tar.xz": "ce5ddfb5d970ba38e26dbf657da7a4dd11e747d215786ed44c541f521e84881a",
+        "rust-std-1.98.1-x86_64-apple-darwin.tar.xz": "48b9835058a8baa4ff5e4387f3772c572a017a2b13393c46e151615c54e322e9",
+        "rust-std-1.98.1-x86_64-apple-ios.tar.xz": "e31f61ee797e63e9ab2a381a8efbe8a3fb37987f04e4f92eae2930a2dc6f68cf",
+        "rustc-1.98.1-aarch64-apple-darwin.tar.xz": "738e3f60114b20550fcf4f8a57c9cea0544239f214709f45594ff3fde327f577",
+        "rustc-1.98.1-x86_64-apple-darwin.tar.xz": "641c301bd19c3cead114cbb61919c5ed2475ce53e2d011fe0c990e16c5a1b04b",
+        "rustfmt-1.98.1-aarch64-apple-darwin.tar.xz": "86aa28e2f23edb0045a85288c3f69998dd30294fd2d3f1480efa9485cf137bfd",
+        "rustfmt-1.98.1-x86_64-apple-darwin.tar.xz": "35014248dd2ab9c9c194a86569aacb2e14784b82517ca9b9c806afb946ef3648",
+    },
     versions = ["1.98.1"],
 )
 use_repo(rust, "rust_toolchains")

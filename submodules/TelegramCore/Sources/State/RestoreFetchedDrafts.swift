@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 func _internal_synchronizeableChatInputState(accountPeerId: PeerId, peerId: PeerId, apiDraft: Api.DraftMessage) -> SynchronizeableChatInputState? {
     switch apiDraft {

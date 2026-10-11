@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 func _internal_editMessageFactCheck(account: Account, messageId: EngineMessage.Id, text: String, entities: [MessageTextEntity]) -> Signal<Never, NoError> {

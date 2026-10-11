@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [MediaResourceId]) {
     if let image = media as? TelegramMediaImage {

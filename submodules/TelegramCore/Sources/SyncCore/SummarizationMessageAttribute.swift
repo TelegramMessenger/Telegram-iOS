@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public final class SummarizationMessageAttribute: Equatable, MessageAttribute {
     public struct Summary: Equatable, Codable, PostboxCoding {

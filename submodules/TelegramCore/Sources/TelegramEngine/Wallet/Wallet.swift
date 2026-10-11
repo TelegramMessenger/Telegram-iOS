@@ -2,7 +2,7 @@ import Foundation
 import MtProtoKit
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 public struct TonApiRequestError: Error, Equatable, Sendable {
     public let code: Int32
@@ -280,7 +280,7 @@ public enum WalletOperationError: Error, Equatable {
 }
 
 extension WalletState {
-    public init(apiState: Api.WalletState) {
+    init(apiState: Api.WalletState) {
         switch apiState {
         case let .walletState(state):
             self = .ready(

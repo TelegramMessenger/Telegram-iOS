@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import MtProtoKit
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 import FlatBuffers
 import FlatSerialization
 

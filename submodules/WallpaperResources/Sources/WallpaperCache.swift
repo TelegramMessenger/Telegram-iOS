@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
-import TelegramApi
 import TelegramCore
 import TelegramUIPreferences
 import PersistentStringHash

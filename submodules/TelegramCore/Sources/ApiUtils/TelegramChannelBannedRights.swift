@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 extension TelegramChatBannedRights {
     init(apiBannedRights: Api.ChatBannedRights) {

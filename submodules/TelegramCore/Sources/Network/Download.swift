@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import MtProtoKit
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 private func roundUp(_ value: Int, to multiple: Int) -> Int {
     if multiple == 0 {

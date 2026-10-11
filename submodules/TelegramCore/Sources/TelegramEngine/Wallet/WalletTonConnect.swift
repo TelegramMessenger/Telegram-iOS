@@ -2,7 +2,7 @@ import Foundation
 import MtProtoKit
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 public struct WalletTonConnectIcon: Equatable, Codable, Sendable {
     public let url: String

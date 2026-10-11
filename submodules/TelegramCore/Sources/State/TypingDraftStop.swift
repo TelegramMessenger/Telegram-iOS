@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 // Applies a stop to the live draft at `peerAndThreadId`. Shared by the incoming
 // sendMessageStopDraftAction update and by the local Stop button, which cannot wait for a

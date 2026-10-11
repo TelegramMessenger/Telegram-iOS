@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 extension ReplyMarkupButtonAction.PeerTypes {
     init(apiType: [Api.InlineQueryPeerType]) {
@@ -59,7 +59,7 @@ extension ReplyMarkupButtonRequestPeerType {
 public extension ReplyMarkupButtonAction {
     /// Reply-keyboard button behaviours. `fwdText` is always nil here — only the urlAuth
     /// constructors carry `fwd_text`, and those are inline-only.
-    static func from(apiType: Api.ButtonType) -> (action: ReplyMarkupButtonAction, fwdText: String?) {
+    internal static func from(apiType: Api.ButtonType) -> (action: ReplyMarkupButtonAction, fwdText: String?) {
         switch apiType {
         case .buttonTypeDefault:
             return (.text, nil)
@@ -90,7 +90,7 @@ public extension ReplyMarkupButtonAction {
     /// Inline button behaviours. Stage 2 reuses this for InstantPage page buttons — the 10
     /// distinct actions it can return are exactly the ones representable in the
     /// `InstantPageButtonAction` FlatBuffers union.
-    static func from(apiType: Api.InlineButtonType) -> (action: ReplyMarkupButtonAction, fwdText: String?) {
+    internal static func from(apiType: Api.InlineButtonType) -> (action: ReplyMarkupButtonAction, fwdText: String?) {
         switch apiType {
         case let .inlineButtonTypeUrl(data):
             return (.url(data.url), nil)
@@ -101,9 +101,9 @@ public extension ReplyMarkupButtonAction {
         case let .inlineButtonTypeWebView(data):
             return (.openWebView(url: data.url, simple: false), nil)
         case let .inlineButtonTypeCallback(data):
-            let memory = malloc(data.data.size)!
-            memcpy(memory, data.data.data, data.data.size)
-            let dataBuffer = MemoryBuffer(memory: memory, capacity: data.data.size, length: data.data.size, freeWhenDone: true)
+            // `data.data` is a fresh Buffer per access, so copy through makeData(): a raw
+            // pointer taken from the temporary dangles once it is released.
+            let dataBuffer = MemoryBuffer(data: data.data.makeData())
             return (.callback(requiresPassword: (data.flags & (1 << 0)) != 0, data: dataBuffer), nil)
         case .inlineButtonTypeGame:
             return (.openWebApp, nil)

@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public class RichTextMessageAttribute: MessageAttribute, Equatable {
     public let instantPage: InstantPage

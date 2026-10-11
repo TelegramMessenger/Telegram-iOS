@@ -1,11 +1,11 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 public extension ReplyMarkupButton.Style.Color {
     /// `richButtonStyle flags:# bg_primary:flags.0?true bg_danger:flags.1?true bg_success:flags.2?true`
     /// maps onto the reply-markup colour palette, which already has exactly these three values.
-    init?(apiRichStyle: Api.RichButtonStyle) {
+    internal init?(apiRichStyle: Api.RichButtonStyle) {
         switch apiRichStyle {
         case let .richButtonStyle(data):
             if data.flags & (1 << 0) != 0 {
@@ -112,7 +112,7 @@ public extension InstantPageButton {
     /// Public — like `InstantPageButtonRowAlignment.init(apiFlags:)` and for the same reason —
     /// because `InstantPageButton.init(apiButton:)` is internal to TelegramCore, so the bit mapping
     /// would otherwise be untestable.
-    static func isLinkStyle(_ apiRichStyle: Api.RichButtonStyle?) -> Bool {
+    internal static func isLinkStyle(_ apiRichStyle: Api.RichButtonStyle?) -> Bool {
         guard let apiRichStyle else {
             return false
         }

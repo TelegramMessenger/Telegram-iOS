@@ -36,9 +36,6 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/Postbox:Postbox",
-        # Needed by ReplyMarkupButtonActionTests to construct Api.ButtonType /
-        # Api.InlineButtonType values for the shared action mappers.
-        "//submodules/TelegramApi:TelegramApi",
         # Needed by the FlatBuffers round-trip tests: the flatc-generated
         # TelegramCore_* types live in the FlatSerialization module.
         "//submodules/TelegramCore/FlatSerialization",

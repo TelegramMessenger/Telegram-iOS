@@ -1,6 +1,6 @@
 import Foundation
 import MtProtoKit
-import TelegramApi
+internal import TelegramApi
 
 private let apiPrefix: String = {
     let type = _typeName(Api.User.self)

@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import SwiftSignalKit
 
 func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Bool, NoError> {

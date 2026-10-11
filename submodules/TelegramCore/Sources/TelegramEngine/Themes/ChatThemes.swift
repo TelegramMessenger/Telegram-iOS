@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 public final class ChatThemes: Codable, Equatable {
     public let chatThemes: [TelegramTheme]

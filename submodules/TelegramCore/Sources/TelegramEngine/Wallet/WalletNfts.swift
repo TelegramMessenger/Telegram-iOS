@@ -1,6 +1,6 @@
 import Foundation
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 public struct WalletNftFile: Codable, Equatable, Sendable {
     public let url: String

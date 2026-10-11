@@ -1,6 +1,6 @@
 
 import Postbox
-import TelegramApi
+internal import TelegramApi
 import SwiftSignalKit
 
 public func _internal_exportMessageLink(postbox: Postbox, network: Network, peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {

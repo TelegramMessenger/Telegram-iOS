@@ -71,8 +71,6 @@ submodules/OpenSSLEncryptionProvider/SharedHeaders/*
 submodules/TelegramCore/FlatSerialization/Sources/*
 .build/**
 **/.build/**
-spm-files
-xcode-files
 /.claude/
 **/.claude/settings.local.json
 /buildbox/*

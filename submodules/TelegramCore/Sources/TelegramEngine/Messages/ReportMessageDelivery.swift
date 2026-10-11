@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import TelegramApi
+internal import TelegramApi
 
 public func _internal_reportMessageDelivery(postbox: Postbox, network: Network, messageIds: [EngineMessage.Id], fromPushNotification: Bool) -> Signal<Bool, NoError> {
     var signals: [Signal<Void, NoError>] = []

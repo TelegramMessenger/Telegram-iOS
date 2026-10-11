@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-import TelegramApi
+internal import TelegramApi
 
 func isPeerHiddenByCollapsedCommunity(transaction: Transaction, peerId: PeerId, peer: Peer? = nil) -> Bool {
     if let channel = (peer ?? transaction.getPeer(peerId)) as? TelegramChannel, let linkedCommunityId = channel.linkedCommunityId {
