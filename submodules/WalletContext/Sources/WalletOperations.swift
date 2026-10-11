@@ -26,8 +26,6 @@ final class WalletImportRequestState {
         do {
             return try await request()
         } catch let error as TelegramCore.WalletOperationError {
-            // Password preflight and explicit RPC rejections did not accept
-            // this replacement. A transport failure leaves the outcome unknown.
             self.preserveCandidate = previouslyPending || error == .network
             throw error
         }
@@ -1644,11 +1642,8 @@ extension WalletContextImpl {
                resolved.amount <= balance,
                feesAreCovered || (resolved.amount < balance && estimatedFee < balance - resolved.amount) {
                 fee = estimatedFee
-                // Bound the local request; signing still obtains fresh chain state and its own validUntil.
                 expiresAt = Int32(clamping: Int64(currentWalletTimestamp()) + 300)
             } else {
-                // External-message emulation requires funds for fees. Estimate with zero value
-                // when gasless covers them; the signed intent keeps the exact requested amount.
                 let previewIntent = feesAreCovered ? SendIntent(
                     expiration: resolved.expiration,
                     messages: [resolved.destination.message(amount: .exact(nanograms: "0"), body: body)]
@@ -2180,8 +2175,12 @@ extension WalletContextImpl {
                     }
                     return result.shouldContinue
                 })
+                if self.currentState.transactions.isLoadingMore {
+                    self.updateTransactionsPagination(isLoadingMore: false, error: self.currentState.transactions.error)
+                }
             } catch {
                 guard self.isCurrentPaginationOperation(operationId, generation: generation) else {
+                    self.finishAbandonedTransactionsPagination(operationId)
                     throw CancellationError()
                 }
                 let isCancelled = Task.isCancelled || error is CancellationError
@@ -2251,6 +2250,13 @@ extension WalletContextImpl {
         guard self.isCurrentPaginationOperation(operationId, generation: generation) else {
             throw CancellationError()
         }
+    }
+
+    private func finishAbandonedTransactionsPagination(_ operationId: UUID) {
+        guard !self.isShutdown, self.currentState.transactions.isLoadingMore,
+              self.activeOperationId == operationId
+                || self.currentState.activeOperation != .loadingMoreTransactions else { return }
+        self.updateTransactionsPagination(isLoadingMore: false, error: self.currentState.transactions.error)
     }
 
     private func updateTransactionsPagination(isLoadingMore: Bool, error: SynchronizationError?) {

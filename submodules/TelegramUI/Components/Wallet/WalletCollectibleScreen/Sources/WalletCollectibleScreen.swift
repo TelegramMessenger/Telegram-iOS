@@ -53,7 +53,8 @@ private func walletCollectibleRarityText(_ rarity: StarGift.UniqueGift.Attribute
 }
 
 private func walletCollectibleExplorerUrl(explorerUrl: String, address: String) -> String? {
-    guard let encodedAddress = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+    guard let address = WalletContext.transferAddress(from: address, preserveBounce: true),
+          let encodedAddress = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
           !encodedAddress.isEmpty else {
         return nil
     }
