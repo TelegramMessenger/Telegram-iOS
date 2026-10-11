@@ -261,6 +261,39 @@ extension DocumentCanvasView {
         })
     }
 
+    /// The chat's ⇧⌘N: every inline mark the toggles set — inline code, bold, italic, underline,
+    /// strikethrough, spoiler — leaves the selection, and no block changes. Built from the toggles
+    /// themselves, so each keeps its own region guards (an author line's ambient bold, a code
+    /// language). A toggle over a range only PART of which carries its format SETS it, so such a
+    /// format is pressed twice. Every toggle runs in this one event and the canvas's private undo
+    /// manager groups by event, so the whole command is ONE undo step. A collapsed caret changes
+    /// nothing, as the legacy composer's shortcut does not.
+    func clearInlineFormatting() {
+        guard !characterFormatTargets().isEmpty else { return }
+        let formats: [(isSet: (NSTextStorage, NSRange) -> Bool, toggle: () -> Void)] = [
+            (rangeIsInlineCode, toggleInlineCode),
+            (rangeIsBold, toggleBold),
+            (rangeIsItalic, toggleItalic),
+            (rangeIsUnderline, toggleUnderline),
+            (rangeIsStrikethrough, toggleStrikethrough),
+            (rangeIsSpoiler, toggleSpoiler),
+        ]
+        for format in formats {
+            let targets = characterFormatTargets()
+            let anyCarries = targets.contains { target in
+                var found = false
+                target.storage.enumerateAttributes(in: target.range, options: []) { _, sub, stop in
+                    if format.isSet(target.storage, sub) { found = true; stop.pointee = true }
+                }
+                return found
+            }
+            guard anyCarries else { continue }
+            let allCarry = targets.allSatisfy { format.isSet($0.storage, $0.range) }
+            if !allCarry { format.toggle() }   // mixed → set everywhere first
+            format.toggle()                    // all set → removed everywhere
+        }
+    }
+
     /// Inline code swaps the run's font for a monospaced one (and marks it). GFM code spans can't
     /// carry emphasis, so toggling off restores a plain system font at the same size (any bold/italic
     /// inside is intentionally dropped); the named-style font returns on the next model round-trip.

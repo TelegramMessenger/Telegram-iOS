@@ -575,6 +575,9 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     var canvasForTesting: DocumentCanvasView { canvas }
 
     public func toggleBold() { canvas.toggleBold() }
+    /// The chat's ⇧⌘N: removes every inline mark from the selection as one undo step (see the canvas's
+    /// `clearInlineFormatting`). Also the `RichTextEditor` protocol's requirement, whose default does nothing.
+    public func clearInlineFormatting() { canvas.clearInlineFormatting() }
     public func toggleItalic() { canvas.toggleItalic() }
     public func toggleStrikethrough() { canvas.toggleStrikethrough() }
     public func toggleUnderline() { canvas.toggleUnderline() }
