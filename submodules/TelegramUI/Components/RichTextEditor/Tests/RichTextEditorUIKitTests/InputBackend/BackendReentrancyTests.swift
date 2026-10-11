@@ -122,7 +122,12 @@ class BackendReentrancyTests: BackendContractCases {
     /// `log.kinds.last` (became `"lifecyclePublish"` instead of `"lifecycleWillDetach"`) and
     /// `lastMutationEvent < presentationTearDown` (flipped, since the late-delivered outer
     /// `lifecyclePublish` now sits AFTER `presentationTearDown`) went red — then reverted.
-    func test_detachDuringMutation_runsAtTheTransactionBoundary() {
+    /// R1: was `[...].compactMap { $0 }.max()!` followed by `log.index(of: "presentationTearDown")!`
+    /// — both bare force-unwraps, measured crashing the process directly (`Fatal error: Unexpectedly
+    /// found nil while unwrapping an Optional value`) against a real gate-open `.inputDec` run where
+    /// none of the three mutation events landed before the (still-genuinely-missing) teardown event.
+    /// `try XCTUnwrap` reports the same "an expected event never fired" failure without trapping.
+    func test_detachDuringMutation_runsAtTheTransactionBoundary() throws {
         // Contrast half — nothing drains for an ordinary mutation with no detach requested.
         backend.insertText("a")
         XCTAssertFalse(log.contains("presentationTearDown"), "nothing should drain when nothing was requested")
@@ -134,10 +139,10 @@ class BackendReentrancyTests: BackendContractCases {
             backendUnderTest?.detach()
         }
         backend.insertText("x")
-        let lastMutationEvent = [log.index(of: "documentCommit"),
-                                 log.index(of: "presentationApply"),
-                                 log.index(of: "lifecyclePublish")].compactMap { $0 }.max()!
-        XCTAssertLessThan(lastMutationEvent, log.index(of: "presentationTearDown")!)
+        let lastMutationEvent = try XCTUnwrap([log.index(of: "documentCommit"),
+                                               log.index(of: "presentationApply"),
+                                               log.index(of: "lifecyclePublish")].compactMap { $0 }.max())
+        XCTAssertLessThan(lastMutationEvent, try XCTUnwrap(log.index(of: "presentationTearDown")))
         XCTAssertEqual(log.kinds.last, "lifecycleWillDetach")
         XCTAssertFalse(backend.isAttached)
         XCTAssertFalse(log.contains("contractViolation"), "a well-ordered reentrant detach is not caller misuse")
@@ -464,6 +469,17 @@ class BackendReentrancyTests: BackendContractCases {
     /// `log.index(of: "lifecyclePublish")` would no longer be less than `presentationTearDown`'s index.
     /// Confirmed red against exactly that mutation, then reverted.
     func test_detachFromInsideAPreserveIfRebasableRebaseCallout_stillLatchesToTheBoundary() {
+        // R5 (Family 6, cluster 2 diagnosis) — under the ID backend, `setMarkedText` only populates
+        // `state.markedRange` (and so lets `synchronizeAfterExternalChange` reach `rebase` at all)
+        // from whatever `RichTextInputMutationResult.markedRange` the document CLIENT reports on
+        // commit; the shared `FakeInputDocumentClient` answers `commitMarkedRange` (default nil)
+        // unless a test arranges it — see `BackendMarkedTextPolicyTests.seedComposition`'s own doc
+        // comment for the full diagnosis. Without this, `onRebase` below never fires at all (the
+        // reconciliation short-circuits on `currentMarkedRange == nil`), so the reentrant `detach()`
+        // this test exists to probe never runs. Harmless for `ReferenceMutationBackend`
+        // (this suite's default `makeBackend()`), whose own `setMarkedText` never reads the document
+        // client.
+        fakeHost!.fakeDocumentClient.commitMarkedRange = NSRange(location: 0, length: 2)
         backend.setMarkedText("hi", selectedRange: NSRange(location: 2, length: 0))
         let backendUnderTest = backend
         var reentered = false
@@ -552,7 +568,11 @@ class BackendReentrancyTests: BackendContractCases {
     /// OUTER's own (still-pending) `lifecyclePublish` would be delivered AFTER `presentationTearDown`/
     /// `lifecycleWillDetach` instead of before, and `log.kinds.last` would read `"lifecyclePublish"`
     /// instead of `"lifecycleWillDetach"`. Confirmed red against exactly that mutation, then reverted.
-    func test_nestedSetSelectionAfterALatchedDetach_doesNotEndTheOuterTransactionEarly() {
+    /// R1: was `log.kinds.lastIndex(of: "lifecyclePublish")!` / `log.index(of: "presentationTearDown")!`
+    /// — both bare force-unwraps, measured crashing the process directly against a real gate-open
+    /// `.inputDec` run where `"lifecyclePublish"` genuinely never appeared in the log. `try
+    /// XCTUnwrap` reports that same absence as a failure instead of a trap.
+    func test_nestedSetSelectionAfterALatchedDetach_doesNotEndTheOuterTransactionEarly() throws {
         var fired = false
         let backendUnderTest = backend
         fakeHost!.fakePresentationClient.onApply = { [weak backendUnderTest] in
@@ -564,8 +584,8 @@ class BackendReentrancyTests: BackendContractCases {
 
         backend.insertText("x")
 
-        let lastPublishIndex = log.kinds.lastIndex(of: "lifecyclePublish")!
-        XCTAssertLessThan(lastPublishIndex, log.index(of: "presentationTearDown")!,
+        let lastPublishIndex = try XCTUnwrap(log.kinds.lastIndex(of: "lifecyclePublish"))
+        XCTAssertLessThan(lastPublishIndex, try XCTUnwrap(log.index(of: "presentationTearDown")),
                           "the OUTER transaction's own publish must be delivered before teardown, not " +
                           "after — a nested endTransaction() draining the latch early delivers it late")
         XCTAssertEqual(log.kinds.last, "lifecycleWillDetach")
@@ -593,7 +613,10 @@ class BackendReentrancyTests: BackendContractCases {
     ///
     /// RED IF: the SAME `endTransaction()` nesting mutation as the test above. Confirmed red against
     /// exactly that mutation, then reverted.
-    func test_nestedClearCompositionStateAfterALatchedDetach_doesNotEndTheOuterTransactionEarly() {
+    /// R1: same force-unwrap-to-`XCTUnwrap` conversion as the `setSelection` sibling above — measured
+    /// crashing the process identically (`"lifecyclePublish"` missing from the log against
+    /// `.inputDec`).
+    func test_nestedClearCompositionStateAfterALatchedDetach_doesNotEndTheOuterTransactionEarly() throws {
         var fired = false
         let backendUnderTest = backend
         fakeHost!.fakePresentationClient.onApply = { [weak backendUnderTest] in
@@ -605,8 +628,8 @@ class BackendReentrancyTests: BackendContractCases {
 
         backend.insertText("x")
 
-        let lastPublishIndex = log.kinds.lastIndex(of: "lifecyclePublish")!
-        XCTAssertLessThan(lastPublishIndex, log.index(of: "presentationTearDown")!,
+        let lastPublishIndex = try XCTUnwrap(log.kinds.lastIndex(of: "lifecyclePublish"))
+        XCTAssertLessThan(lastPublishIndex, try XCTUnwrap(log.index(of: "presentationTearDown")),
                           "the OUTER transaction's own publish must be delivered before teardown, not " +
                           "after — a nested endTransaction() draining the latch early delivers it late")
         XCTAssertEqual(log.kinds.last, "lifecycleWillDetach")
@@ -773,13 +796,27 @@ class BackendReentrancyTests: BackendContractCases {
     /// call (the hook would fire a third time here too), so `stashFireCount` would read 3 instead of 2
     /// and `documentRevision` would already be `old + 206` before the later `setSelection` call ever
     /// runs. Confirmed red against exactly that reversion, then reverted.
+    /// R1: `onDidPublishState` below re-stashes unconditionally on every `.externalSynchronization`
+    /// publish, with no bound — the doc comment above only anticipates a bounded, off-by-one
+    /// divergence ("the THIRD change would ALSO apply … `stashFireCount` would read 3 instead of
+    /// 2"). Measured directly against a real gate-open `.inputDec` run: the divergence is NOT
+    /// bounded at 3 — `endTransaction()`'s depth gate does not stop the chain the way it does for
+    /// `.legacy`, so the callback re-enters unboundedly and the process never produces a verdict
+    /// (no crash text at all; `xcodebuild` restarts it after its own ~20s stall timeout — a hang, a
+    /// THIRD distinct crash mechanism alongside the fatalError and the force-unwraps elsewhere in
+    /// this file). `stashCap` bounds the re-stash to a safe, generous ceiling so a genuinely
+    /// unbounded chain still terminates in well under a second and reports its real (non-2) count as
+    /// an ordinary `XCTAssertEqual` failure below — it does not change what "correct" means, and a
+    /// backend that behaves like `.legacy` never approaches the cap.
     func test_aChangeReStashedDuringTheOneDrainThisTransactionPerforms_isLeftPendingNotChainedHere() {
         let backendUnderTest = backend
         let old = fakeHost!.fakeDocumentClient.revision
         var stashFireCount = 0
+        let stashCap = 25
         fakeHost!.fakeLifecycleClient.onDidPublishState = { [weak backendUnderTest] _, reason in
             guard case .externalSynchronization = reason, let backendUnderTest else { return }
             stashFireCount += 1
+            guard stashFireCount <= stashCap else { return }
             let current = backendUnderTest.state.documentRevision
             backendUnderTest.synchronizeAfterExternalChange(RichTextInputExternalChange(
                 oldRevision: current, newRevision: current + 100, reason: .remoteUpdate,

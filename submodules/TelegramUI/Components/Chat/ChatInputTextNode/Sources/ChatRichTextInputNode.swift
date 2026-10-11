@@ -53,9 +53,11 @@ public struct ChatRichTextThemeColors {
 
 /// Format commands routable from the new editor backend's context menu. `Link` is intentionally absent —
 /// it is handled host-side via `openLinkEditing` (it needs a URL-entry UI). `code`/`date` have no native
-/// editor representation yet and are no-ops on the new backend.
+/// editor representation yet and are no-ops on the new backend. `clearFormatting` is the chat's ⇧⌘N: it removes
+/// the inline marks the other commands set (bold, italic, underline, strikethrough, monospace, spoiler) from the
+/// selection, as one step, and leaves the blocks alone.
 public enum ChatRichTextFormatAction {
-    case bold, italic, monospace, strikethrough, underline, spoiler, quote, pullQuote, code, date
+    case bold, italic, monospace, strikethrough, underline, spoiler, quote, pullQuote, code, date, clearFormatting
 }
 
 /// The owner-facing media-control descriptor: the resolved `EngineMedia` ("what we're dealing with") plus
@@ -271,10 +273,15 @@ public protocol ChatRichTextInputNode: AnyObject {
 
     /// Lay out the editor's content for a size.
     func updateLayout(size: CGSize)
+    /// As above, and says what the pass means about the caret. The editor does not scroll itself
+    /// to follow the caret; a pass that applies a new field height is the one its visibility
+    /// depends on. See the RichTextEditor `CLAUDE.md`, "The host decides when the caret is revealed".
+    func updateLayout(size: CGSize, caretReveal: RichTextEditorCaretReveal)
 
     /// Force an immediate layout pass of the editor child (distinct name: `ASDisplayNode`
     /// already has `layout()`, which targets the wrapper).
     func layoutInputField()
+    func layoutInputField(caretReveal: RichTextEditorCaretReveal)
 
     /// The editor child's own frame, inset within `asNode` per the Model-A geometry.
     /// Distinct from `asNode.frame` (the full-size wrapper).
@@ -356,6 +363,10 @@ public protocol ChatRichTextInputNode: AnyObject {
     /// Apply a format command through the backend's native engine. No-op on the legacy backend.
     func performFormatAction(_ action: ChatRichTextFormatAction)
 
+    /// Whether `performFormatAction(action)` would change anything over the current selection, so a
+    /// menu can show a command that cannot apply (Italic inside a pull quote) as disabled.
+    func canPerformFormatAction(_ action: ChatRichTextFormatAction) -> Bool
+
     /// The link URL the current selection carries (for prefilling a link editor), or nil.
     func currentRichTextLinkURL() -> String?
 
@@ -369,6 +380,32 @@ public protocol ChatRichTextInputNode: AnyObject {
     /// implementations bridge through `attributedText`/`selectedRange` + the TextFormat conversion utility.
     func currentInputContent() -> (content: ChatInputContent, selection: ChatInputSelection)
     func setInputContent(_ content: ChatInputContent, selection: ChatInputSelection)
+
+    /// Runs `body` — the USER's edit made through the chat rather than the editor: a transform of the
+    /// current input state handed to `ChatPanelInterfaceInteraction.updateTextInputStateAndMode`
+    /// (mention / hashtag / command autocomplete, an emoji-search suggestion, the chat's emoji
+    /// keyboard, the context menu's Mention, the date editor, the Commands button, Translate). The chat
+    /// pushes the new state back SYNCHRONOUSLY (`ChatControllerNode` → `updateInputTextState` →
+    /// `setInputContent`), and a content-changing set that lands inside `body` is applied as ONE
+    /// undoable step on top of the existing stack; outside it (Send's clear, a draft sync, a draft
+    /// restore) a set empties the stack, as a stock text view's does. The interaction's closure
+    /// wraps every transform in this (`ChatControllerLoadDisplayNode`).
+    ///
+    /// Defaulted to running `body` unchanged: the legacy backend's set behaves as it always has (its
+    /// Format commands take `ChatInputTextView.performUndoableTextChange` in the panel instead).
+    func performUndoableInputChange(_ body: () -> Void)
+
+    /// Inserts `text` — an insert the CHAT makes on the user's behalf: an emoji from its emoji keyboard
+    /// (static, or custom via `ChatTextInputAttributes.customEmoji`), the avatar menu's Mention — at the
+    /// editor's own selection, as one undo step, keeping every block. Answers whether the backend took
+    /// it; on `false` the caller transforms the input state as it always has.
+    ///
+    /// The shared decision is `chatComposerInsertTextOnUsersBehalf` / `chatComposerInsertMention` in
+    /// `ChatTextInputPanelNode`, which both the chat and the composer harness call.
+    ///
+    /// Defaulted to `false`: the legacy backend's flat state IS its whole content, so the state
+    /// transform loses nothing there and stays byte-identical.
+    func insertTextOnUsersBehalf(_ text: NSAttributedString) -> Bool
 
     /// Supply the host rendering inputs the LEGACY backend needs to decorate a `ChatInputContent` into the
     /// displayed `NSAttributedString` inside `setInputContent` (fonts/colors/spoiler/emoji overlays) AND to run
@@ -423,6 +460,12 @@ public extension ChatRichTextInputNode {
     func setInputContent(_ content: ChatInputContent, selection: ChatInputSelection) {
         self.attributedText = attributedString(from: content)
         self.selectedRange = selection.nsRange(in: content)
+    }
+    func performUndoableInputChange(_ body: () -> Void) {
+        body()
+    }
+    func insertTextOnUsersBehalf(_ text: NSAttributedString) -> Bool {
+        return false
     }
     func applyRenderingConfig(context: AnyObject, baseFontSize: CGFloat, textColor: UIColor, primaryTextColor: UIColor, accentTextColor: UIColor, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) {}
     func decorateAfterTextChange(context: AnyObject, baseFontSize: CGFloat, textColor: UIColor, primaryTextColor: UIColor, accentTextColor: UIColor, spoilersRevealed: Bool, fullTranslucency: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) {
@@ -959,8 +1002,21 @@ final class ChatRichTextInputNodeImpl: ASDisplayNode, ChatRichTextInputNode {
         self.textInputNodeImpl.updateLayout(size: size)
     }
 
+    /// This backend is a `UITextView`, which follows its own caret and offers no seam to take that
+    /// over, so the request is accepted and ignored rather than faked. The contract exists for the
+    /// editors that DO hand the decision to the host.
+    func updateLayout(size: CGSize, caretReveal: RichTextEditorCaretReveal) {
+        _ = caretReveal
+        self.updateLayout(size: size)
+    }
+
     func layoutInputField() {
         self.textInputNodeImpl.layout()
+    }
+
+    func layoutInputField(caretReveal: RichTextEditorCaretReveal) {
+        _ = caretReveal
+        self.layoutInputField()
     }
 
     var textFieldFrame: CGRect {
@@ -1022,6 +1078,8 @@ final class ChatRichTextInputNodeImpl: ASDisplayNode, ChatRichTextInputNode {
     public var pastedMarkdownFragmentParser: ((String) -> Document?)?
 
     func performFormatAction(_ action: ChatRichTextFormatAction) {}
+    // The legacy backend performs no format action, so it has no inert one to report either.
+    func canPerformFormatAction(_ action: ChatRichTextFormatAction) -> Bool { return true }
     func performRichPaste() {}
     func currentRichTextLinkURL() -> String? { return nil }
     func selectedRichText() -> String { return "" }

@@ -3,6 +3,10 @@ import XCTest
 import UIKit
 @testable import RichTextEditorUIKit
 import RichTextEditorCore
+// Task C7: `storageFacade` below is typed `TGRichTextInputDecTextStorageFacade?`, so this file
+// needs the defining module directly — `@testable import RichTextEditorUIKit` alone does not
+// re-export it (that module itself only `import`s, never `@_exported import`s, RichTextInputDecObjC).
+import RichTextInputDecObjC
 
 /// Which `RichTextInputBackend` conformer `makeBackendHarness` wires into the canvas it builds.
 ///
@@ -12,6 +16,10 @@ import RichTextEditorCore
 /// arm below (see the "exactly one place" test in `RichTextInputBackendHarnessTests.swift`).
 enum RichTextInputBackendKind {
     case legacy
+    /// Added by the InputDec project. Every test using it MUST
+    /// `XCTSkipUnless(IDTextEditorBackend.isSupported())` — the kernel is certified against
+    /// exactly one OS build (26.5 / 23F73) and answers false everywhere else.
+    case inputDec
 }
 
 /// Which `BlockLayoutEngine` conformer backs every box the harness builds, mirroring the
@@ -89,6 +97,29 @@ final class RichTextInputBackendHarness {
 
     var revision: UInt64 { canvas.documentRevision }
     var layoutGeneration: UInt64 { canvas.layoutGeneration }
+
+    /// The attached backend, as the protocol. Forwards to the canvas's own
+    /// `private(set) var inputBackend: any RichTextInputBackend` (seam Task 20 Step 5) — the
+    /// harness does not hold a second reference, so there is no way for the two to disagree.
+    var backend: any RichTextInputBackend { canvas.inputBackend }
+
+    /// The ID backend's mutation-entry-point facade, or nil under `.legacy`. Family 4 drives it
+    /// directly, because UIKit's real mutation entry point is a raw range replace on it.
+    ///
+    /// Task C7 retypes this to the brief's own `TGRichTextInputDecTextStorageFacade?` — the class
+    /// C0 had to substitute a plain `NSTextStorage` for (`IDTextEditorBackendClientBridge.swift`'s
+    /// own doc comment recorded that DEVIATION; it is now built) is retyped here as one of exactly
+    /// three sites this task retypes — see its report. Stays OPTIONAL (unlike
+    /// `IDFakeClientHarness.storageFacade`, which force-unwraps): `IDHarnessTests
+    /// .test_storageFacadeIsVendedForInputDecAndNilForLegacy` asserts this is `nil` for `.legacy`
+    /// and non-nil (but still reached through an Optional read) for `.inputDec` — an
+    /// unconditional force-unwrap here would crash that test's `.legacy` arm. Not `@available`-gated
+    /// itself (unlike `IDTextEditorBackend`, which requires iOS 17): the `#available` check stays
+    /// local to the body so ~2400 existing, pre-iOS-17-floor callers of this class are unaffected.
+    var storageFacade: TGRichTextInputDecTextStorageFacade? {
+        guard #available(iOS 17.0, *) else { return nil }
+        return (backend as? IDTextEditorBackend)?.storageFacadeForTesting
+    }
 
     /// `canvas.markedRange` is a bare `(from: Int, to: Int)?` tuple (DocumentCanvasView.swift); this
     /// mirrors `RichTextInputEventRecorder.record(_:)`'s own flatten-then-map so the two never disagree
@@ -182,12 +213,52 @@ final class RichTextInputBackendHarness {
     /// process-global (BlockLayoutEngine.swift:148), so a leaked `true` silently converts every
     /// later suite in the bundle into a TextKit-1 run — a failure that looks like an unrelated
     /// layout regression hundreds of tests away.
+    ///
+    /// R1: also clears `RichTextInputContractViolation.reporter`, undoing the install
+    /// `makeBackendHarness` performs below — see that factory's own comment for why.
+    ///
+    /// Task R12 (cluster 20) — also detaches the `.inputDec` backend, mirroring
+    /// `IDFakeClientHarness.tearDown()`'s own first step one file over. This method never called
+    /// `backend.detach()` at all — the ONLY cleanup here was recorder/window/engine-flag/reporter
+    /// bookkeeping, so `canvas.inputBackend` (and, for `.inputDec`, the associated
+    /// `TGRichTextInputDecAttachedBridge`) stayed live past every caller's `tearDown()`.
+    /// `IDHarnessTests.test_harnessTearsDownWithoutLeavingAnAttachedBridge` is the pin: R1's own
+    /// clustering had mis-read this method as already calling `detach()` ("`TGRichTextInputDecAttachedBridge(canvas)
+    /// is non-nil after h.tearDown() (→ backend.detach())`"), when in fact the arrow never existed.
+    ///
+    /// **Scoped to `backendKind == .inputDec`, NOT unconditional — measured, not assumed.** A first
+    /// draft called `detach()` for BOTH backend kinds and a full-suite run surfaced a genuine
+    /// process CRASH in a completely unrelated Legacy test
+    /// (`RichTextInputEventRecorderTests.test_facadeOnChangeFromASelectionMoveIsAsyncCoalesced`,
+    /// the legacy backend's own `+TextReads.swift:97`, `"beginningOfDocument read while no canvas
+    /// is attached"`) — some earlier Legacy-harness-based test leaves a stray async callback queued
+    /// past its own `tearDown()`, and that callback fires later (when a DIFFERENT test's
+    /// `drainMainQueue` spins the run loop), reading a witness on what is now, for the first time
+    /// ever, a genuinely DETACHED Legacy backend, with no contract-violation reporter installed at
+    /// that point — `assertionFailure()`, a hard crash. Legacy's OWN harness use has run un-detached
+    /// for the whole life of this suite; cluster 20 is specifically about `.inputDec`'s bridge
+    /// association (`TGRichTextInputDecAttachedBridge`), a concept Legacy does not even have, so
+    /// scoping this fix to `.inputDec` closes the ACTUAL gap the failing test describes without
+    /// perturbing Legacy's steady state at all — Legacy is the reference implementation every ID fix
+    /// is measured against, and this crash is exactly the kind of baseline move that must not ship.
+    /// Re-run confirmed clean (0 crashes) after scoping; see this task's report.
+    ///
+    /// `detach()` is idempotent (`guard isAttached … else { return }` on both backends) and safe to
+    /// call unconditionally FOR `.inputDec` regardless of what a test already did to `backend` —
+    /// matching `IDBackendAttachAtomicityTests.test_detachIsIdempotentAndClearsTheAssociatedBridge`'s
+    /// own proof that a second `detach()` is a harmless no-op. Run FIRST, before `recorder.reset()`,
+    /// so any detach-triggered events are cleared by the very next line rather than left to leak into
+    /// a caller that (incorrectly) inspected the recorder after `tearDown()`.
     func tearDown() {
+        if backendKind == .inputDec {
+            canvas.inputBackend.detach()
+        }
         recorder.reset()
         window?.isHidden = true
         window?.resignKey()
         window = nil
         BlockLayoutBackend.forceTextKit1 = previousEngine
+        RichTextInputContractViolation.reporter = nil
     }
 }
 
@@ -218,6 +289,20 @@ func makeBackendHarness(backend: RichTextInputBackendKind = .legacy,
                         facade: Bool = false,
                         paragraphs: [String] = ["Alpha", "Beta"],
                         width: CGFloat = 300) -> RichTextInputBackendHarness {
+    // R1: every `.inputDec` witness this harness's canvas can be driven through (`caretRect(for:)`,
+    // `setMarkedText`, the `tokenizer` Family-1 follow-on gap, …) can hit
+    // `IDTextEditorBackend.reportKernelFailure(_:witness:)`, which routes into
+    // `RichTextInputContractViolation.report(...)` — an `assertionFailure()` in DEBUG unless a
+    // reporter is installed first. This is the ONE factory every `IDBackendFamilyNTests`/
+    // `IDHarnessTests`/`BackendSemanticContractCases` suite builds its `.inputDec` canvas through
+    // (`RichTextInputCanvasFactory.make(.inputDecRequired)` below), so installing it here — rather
+    // than in each of those many individual test files — covers all of them at once, following the
+    // same "install here, clear in tearDown" pattern `BackendContractCases` already uses for the
+    // eight stage-1 contract suites. Harmless for `.legacy` (nothing in that arm can trigger a
+    // kernel witness failure). `tearDown()` below clears it.
+    RichTextInputContractViolation.reporter = { message in
+        NSLog("RichTextInput contract violation (recorded, not trapped, by the test harness): %@", message)
+    }
     let previousEngine = BlockLayoutBackend.forceTextKit1
     BlockLayoutBackend.forceTextKit1 = (engine == .textKit1)
 
@@ -225,6 +310,10 @@ func makeBackendHarness(backend: RichTextInputBackendKind = .legacy,
     switch backend {
     case .legacy:
         canvas = DocumentCanvasView(inputBackend: LegacyRichTextInputBackend())
+    case .inputDec:
+        // `.inputDecRequired`, not `.inputDecIfSupported`: a silent fallback to the legacy
+        // canvas would make every `.inputDec` test pass while testing the wrong backend.
+        canvas = RichTextInputCanvasFactory.make(.inputDecRequired)
     }
 
     canvas.setParagraphs(paragraphs.enumerated().map {

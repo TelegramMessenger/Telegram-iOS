@@ -292,7 +292,7 @@ extension DocumentCanvasView: UITextInput {
     // now writes `DocumentTokenizer(canvas:)` itself, in `attach(to:)`, so the tokenizer is
     // constructed AND owned on one side of the seam instead of minted on the other and cached on this
     // one. The canvas kept nothing: `inputTokenizer` is gone from `DocumentCanvasView.swift` too.
-    // `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyOneConstructionSite` is what makes
+    // `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyTwoConstructionSites` is what makes
     // "one construction site" checkable — the obvious runtime spelling of that claim,
     // `responds(to: Selector(("legacyMakeTokenizer")))`, is VACUOUS on a non-`@objc` Swift method and
     // passed against the un-migrated tree. (FIX ROUND 1: that rule's FIRST version was itself evadable

@@ -149,7 +149,7 @@ final class DelegateOwnershipTests: XCTestCase {
     /// recording: it read `XCTAssertFalse(v.responds(to: Selector(("legacyMakeTokenizer"))))`, which
     /// passes whether or not the method exists, because a plain Swift method is not `@objc`. It was RUN
     /// against the unmodified tree and passed, which is how it was caught. The real pin is
-    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyOneConstructionSite` — which the
+    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyTwoConstructionSites` — which the
     /// review then found evadable in ITS first version too (`DocumentTokenizer.init(canvas:)` slipped
     /// past its regex), so it is now a construction scan plus an exact mention allowance, with all
     /// five valid spellings planted and reddened. Two rounds to replace one vacuous assertion.

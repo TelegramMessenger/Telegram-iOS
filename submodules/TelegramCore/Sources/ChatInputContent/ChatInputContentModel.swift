@@ -612,6 +612,18 @@ public struct ChatInputCode: Equatable, Codable {
     public var text: String { runs.map(\.text).joined() }
 }
 
+/// A code block's language as it is SENT: trimmed, and nil when nothing is left. A `Pre` entity's language
+/// (and a rich message's `preformatted` language) is a token naming a highlighter; the composer's model holds
+/// the language line exactly as typed — an edge space included, the space before the next word of
+/// "objective c" — so model and editor agree on every offset while the user types (composer harness p24,
+/// `HarnessCodeLanguageEdgeWhitespaceTests`). The wire never carries that whitespace.
+public func chatInputCodeLanguageForSending(_ language: String?) -> String? {
+    guard let trimmed = language?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+        return nil
+    }
+    return trimmed
+}
+
 public struct ChatInputPullQuote: Equatable {
     public var runs: [ChatInputRun]
     /// Optional attribution ("author") line. `[]` = empty. Off the flat axis (never in plainText).

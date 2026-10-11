@@ -218,6 +218,12 @@ All inline / structural features round-trip losslessly through the native compos
   Enter inserts an interior newline (exits on an empty trailing line), backspace in an empty block un-codes it.
   Multi-line quotes also emit **one contiguous blockquote** on send. **Deferred:** language picker (creation
   sets `language = nil`; incoming language round-trips), code in table cells, inline formatting inside code.
+  Since the composer harness's p24 fix wave the model holds a language **as typed** (edge spaces included; an
+  emptied line is nil) and the wire trims it (`chatInputCodeLanguageForSending`, at the `Pre` entity and the
+  rich `preformatted` block); a code body holds plain text only (atoms become their text). A content set the
+  engine composer normalises is reported back to the chat **whenever its read-back differs from what was
+  set** (`RichTextEditorChatInputNode.setInputContent`), and the panel's length counter counts what the text
+  route sends (code bodies included).
 - **Inline media:** an attached image/video renders inline in the native composer and survives expand↔collapse
   + drafts, carried by `ChatInputContent.media`. The concrete view is the shared
   `RichTextEditorMediaView.MediaItemNodeView` (also used by the article editor), resolved via the injected
@@ -331,7 +337,13 @@ as a **`RichTextMessageAttribute`** carrying an `InstantPage`, rendered by the V
   `editMessage == nil && !content.isEntityExpressible() && !content.isEmpty`, enqueues **one**
   `.message(text: "", attributes: [RichTextMessageAttribute(instantPage: instantPage(from: content), …)], …)`.
   Entity-expressible content keeps the existing `breakChatInputText` text+entities loop **byte-identical**. The
-  custom-emoji premium-lock harvest + early-return stays **before** the branch.
+  custom-emoji premium-lock harvest + early-return stays **before** the branch. The route decision and the text
+  loop (markdown conversion, trim, 4096 split, per-piece entities) live in TextFormat
+  (`chatComposerSendRoute` / `chatComposerTextMessages`, `ChatComposerSendPlan.swift`, p20 fix wave) so the
+  composer harness's send-path oracle calls the code the chat calls. A code block is plain text on both
+  routes as far as the native editor is concerned (a `Pre` entity holds no other entity; the engine refuses
+  inline formats in code — `RichTextEditor/CLAUDE.md`, p20 rules), and a spoilered formula is sent as a
+  paragraph holding it, never as a standalone `.formula` block.
 - **Edit** (`ChatControllerLoadDisplayNode`): LOAD seeds `ChatTextInputState(content: chatInputContent(fromInstantPage:
   richTextAttribute.instantPage))` (structural, media preserved — *not* a markdown flatten); DONE routes by
   `isEntityExpressible()` — non-entity → rebuild `RichTextMessageAttribute` + pass `richText:` (so the backend

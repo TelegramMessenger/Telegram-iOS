@@ -18,4 +18,8 @@ func quoteAuthorStripAmbientStyle(_ runs: [TextRun], textColor: RGBAColor?, ital
     runs.map { var r = $0; r.attributes.bold = false; if italic { r.attributes.italic = false }
                if r.attributes.foreground == textColor { r.attributes.foreground = nil }; return r }
 }
+/// The quote author-line placeholder the ENGINE editor draws. The legacy canvas draws the host's
+/// localized `RichTextEditorPlaceholders.quoteAuthor` instead; the engine does not take host
+/// placeholders yet, so it shows the default.
+public let quoteAuthorPlaceholderText = RichTextEditorPlaceholders.default.quoteAuthor
 #endif

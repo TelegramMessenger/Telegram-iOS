@@ -59,12 +59,18 @@ class BackendPublicationContractTests: BackendContractCases {
     /// The spec's step 9 does NOT fix the order of presentationApply vs lifecyclePublish, so this
     /// FREEZES whatever Phase 0 recorded. If it ever fails, the seam changed an observable order —
     /// do not "fix" the expectation without re-running the Phase-0 golden traces.
-    func test_presentationApplyAndLifecyclePublish_keepTheirPinnedOrder() {
+    /// R1: was `XCTAssertNotNil(apply); XCTAssertNotNil(publish)` followed by a bare `apply!, publish!`
+    /// force-unwrap — `XCTAssertNotNil` records a failure but does not stop execution, so a genuine
+    /// `.inputDec` divergence (the ID backend does not emit one of these two events for a plain
+    /// `insertText`) reached the force-unwrap and trapped the process (`Fatal error: Unexpectedly
+    /// found nil while unwrapping an Optional value`, measured directly against a real gate-open run,
+    /// not assumed). `try XCTUnwrap` reports the identical failure — the event genuinely missing —
+    /// without crashing; the test's discriminating power is unchanged.
+    func test_presentationApplyAndLifecyclePublish_keepTheirPinnedOrder() throws {
         backend.insertText("x")
-        let apply = log.index(of: "presentationApply")
-        let publish = log.index(of: "lifecyclePublish")
-        XCTAssertNotNil(apply); XCTAssertNotNil(publish)
-        XCTAssertLessThan(apply!, publish!, "presentation is applied before the state is published")
+        let apply = try XCTUnwrap(log.index(of: "presentationApply"))
+        let publish = try XCTUnwrap(log.index(of: "lifecyclePublish"))
+        XCTAssertLessThan(apply, publish, "presentation is applied before the state is published")
     }
 
     // MARK: - 2. One committed mutation publishes exactly one snapshot — contrasted against zero
@@ -107,14 +113,17 @@ class BackendPublicationContractTests: BackendContractCases {
     ///
     /// RED IF: `runMutation` ever published before `notifySelectionDidChange`/`notifyTextDidChange`
     /// (e.g. a reordering that moved the publish step earlier "for efficiency").
-    func test_publicationFollowsDidChangeNotifications() {
+    /// R1: was the same assert-then-force-unwrap shape as test 1 above (`selectionDidChange!,
+    /// publish!` / `textDidChange!, publish!`) — measured crashing the process directly against a
+    /// real gate-open `.inputDec` run when one of the three events was genuinely absent. `try
+    /// XCTUnwrap` converts the crash into the same failure the missing event already deserves.
+    func test_publicationFollowsDidChangeNotifications() throws {
         backend.insertText("x")
-        let selectionDidChange = log.index(of: "delegateSelectionDidChange")
-        let textDidChange = log.index(of: "delegateTextDidChange")
-        let publish = log.index(of: "lifecyclePublish")
-        XCTAssertNotNil(selectionDidChange); XCTAssertNotNil(textDidChange); XCTAssertNotNil(publish)
-        XCTAssertLessThan(selectionDidChange!, publish!)
-        XCTAssertLessThan(textDidChange!, publish!)
+        let selectionDidChange = try XCTUnwrap(log.index(of: "delegateSelectionDidChange"))
+        let textDidChange = try XCTUnwrap(log.index(of: "delegateTextDidChange"))
+        let publish = try XCTUnwrap(log.index(of: "lifecyclePublish"))
+        XCTAssertLessThan(selectionDidChange, publish)
+        XCTAssertLessThan(textDidChange, publish)
     }
 
     // MARK: - 4. A selection-only change publishes with reason .selection and touches no text delegate calls

@@ -1,6 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("@build_bazel_rules_apple//apple:resources.bzl", "apple_resource_bundle")
 load("//build-system/bazel-utils:plist_fragment.bzl", "plist_fragment")
+# Bazel 9 removed the built-in `objc_library`; it must be loaded explicitly.
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
 
 swift_library(
     name = "RichTextEditorCore",
@@ -60,17 +62,212 @@ apple_resource_bundle(
 # pointed the reader at exactly the wrong conclusion. **A verification command recorded next to the
 # thing it verifies must survive being written down there.** Match on structure
 # (`grep -nE '^[[:space:]]*copts[[:space:]]*='`), then re-run it where it will live.
+# Vendored InputDec UIKit behavior kernel. These sources live OUTSIDE Sources/RichTextEditorUIKit,
+# whose glob is `**/*.swift` and would silently ignore .m/.h files.
+# DO NOT HAND-EDIT — see Sources/RichTextInputDecObjC/Vendor/VENDOR.md.
+objc_library(
+    name = "RichTextInputDecObjC",
+    module_name = "RichTextInputDecObjC",
+    enable_modules = True,
+    srcs = glob([
+        "Sources/RichTextInputDecObjC/**/*.m",
+        "Sources/RichTextInputDecObjC/**/*.h",
+    ], exclude = [
+        "Sources/RichTextInputDecObjC/include/**/*.h",
+    ], allow_empty = False),
+    hdrs = glob([
+        "Sources/RichTextInputDecObjC/include/**/*.h",
+    ]),
+    includes = [
+        "Sources/RichTextInputDecObjC/include",
+        "Sources/RichTextInputDecObjC/include/Kernel",
+    ],
+    copts = [
+        "-fobjc-arc",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+# The InputDec text engine (78 files, 16,492 lines), brought across from ~/Documents/InputDec and
+# OWNED HERE since 2026-09-15: that tree lost its .git and is an archive, so these files are edited
+# in this repo like any other source. The SHA-256 lists and Scripts/verify-ported-files.sh that used
+# to keep the two copies in step are deleted with the workflow they served. Where the code came
+# from, the revision each file was last taken at, and every deviation from that tree are recorded in
+# Sources/RichTextInputDecUpstream/PROVENANCE.md — read it before editing, those deviations are
+# facts about the code.
+#
+# Headers are FLAT in include/ although upstream keeps them under TextView/, TextView/Autoscroll/
+# and PrivateUIKit/. That is deliberate and load-bearing: every quoted #import in these 78 files
+# is a bare basename, and three of them cross an upstream directory boundary
+# (IDBlockTextViewInternal.h -> IDVerticalAutoscrollGeometry.h and two kernel headers). Flat
+# headers make every header-to-header import resolve sibling-relative, so neither build system
+# needs a search path to compile a header — which matters because SwiftPM propagates only
+# publicHeadersPath to dependents, not cSettings header search paths. The .m files keep upstream's
+# TextView/ vs PrivateUIKit/ grouping; they import headers via `includes` below.
+#
+# NO `-warnings-as-errors`, matching the RichTextInputDecObjC sibling above and unlike most of
+# this repo. Deliberate: this is verbatim third-party source, and the alternative to tolerating
+# its warnings is editing it to silence them, which is precisely what the port exists to avoid.
+objc_library(
+    name = "RichTextInputDecUpstream",
+    module_name = "RichTextInputDecUpstream",
+    enable_modules = True,
+    srcs = glob([
+        "Sources/RichTextInputDecUpstream/**/*.m",
+        "Sources/RichTextInputDecUpstream/Internal/**/*.h",
+    ], allow_empty = False),
+    hdrs = glob([
+        "Sources/RichTextInputDecUpstream/include/**/*.h",
+    ]),
+    includes = [
+        # PUBLIC only. `includes` propagates transitively, so anything listed here lands on the
+        # header search path of every dependent -- which is exactly what deviation 6 exists to
+        # prevent for Internal/. That one is a private -I in copts below instead.
+        "Sources/RichTextInputDecUpstream/include",
+    ],
+    copts = [
+        "-fobjc-arc",
+        "-Isubmodules/TelegramUI/Components/RichTextEditor/Sources/RichTextInputDecUpstream/Internal",
+    ],
+    deps = [
+        # For the vendored behavior kernel headers: IDBlockTextViewInternal.h imports
+        # IDUIKitBehaviorBackend.h / IDUIKitBehaviorCapabilities.h, and IDBlockTextView.m imports
+        # IDUIKitBehaviorKernel.h. Their include dirs are propagated by that target's `includes`.
+        ":RichTextInputDecObjC",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+# The HOST LAYER over the ported engine: observation and host-driven content replacement, added by
+# subclass and handler-chaining. It edits no ported file.
+#
+# It needs the engine's Internal/ headers, which `RichTextInputDecUpstream` deliberately does NOT
+# propagate (that module keeps Internal/ as a private -I precisely so dependents do not inherit it).
+# So this target repeats the private -I for itself.
+objc_library(
+    name = "RichTextInputDecHost",
+    module_name = "RichTextInputDecHost",
+    enable_modules = True,
+    srcs = glob([
+        "Sources/RichTextInputDecHost/**/*.m",
+    ], allow_empty = False),
+    hdrs = glob([
+        "Sources/RichTextInputDecHost/include/**/*.h",
+    ]),
+    includes = [
+        "Sources/RichTextInputDecHost/include",
+    ],
+    copts = [
+        "-fobjc-arc",
+        "-Isubmodules/TelegramUI/Components/RichTextEditor/Sources/RichTextInputDecUpstream/Internal",
+    ],
+    deps = [
+        ":RichTextInputDecUpstream",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+# The engine-backed editor. THIS TARGET IS WHY THE ENGINE IS IN THE APP AT ALL.
+#
+# Until upstream 442f395 no target here could depend on `:RichTextInputDecUpstream`, because
+# `IDBlockTextView.m` declared a `+load` that ran before `main()` and `@throw`s on four paths — a
+# launch-time abort no runtime flag could gate. That commit moved the install into the initializer's
+# `@try`, so the throw is now a failed CONSTRUCTION a host can fall back from, and the edge is safe.
+#
+# The guarantee is mechanically pinned, and the pin moved with the reason:
+# `Tests/RichTextEditorCoreTests/SourceBoundary/InputDecUpstreamAdapterBoundaryTests.swift` used to
+# assert these two targets could not exist. It now asserts they DO exist and that the port contains
+# no `+load` at all — the real invariant rather than a proxy for it.
+swift_library(
+    name = "RichTextEngineEditor",
+    module_name = "RichTextEngineEditor",
+    srcs = glob([
+        "Sources/RichTextEngineEditor/**/*.swift",
+    ], allow_empty = False),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        ":RichTextEditorCore",
+        ":RichTextEditorUIKit",
+        ":RichTextInputDecUpstream",
+        ":RichTextInputDecHost",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
 swift_library(
     name = "RichTextEditorUIKit",
     module_name = "RichTextEditorUIKit",
     srcs = glob([
         "Sources/RichTextEditorUIKit/**/*.swift",
+    ], exclude = [
+        # PHASE 2 OF THE INPUTDEC PORT — the adapter over the REAL upstream engine
+        # (`IDUpstreamInputBackend`). It `import`s `RichTextInputDecUpstream`, so compiling it into
+        # this target would require a `deps` edge to that module, and that edge is exactly what
+        # phase 1 removed: `IDBlockTextView.m` has a `+load` that runs before `main()` on every
+        # launch for every user and `@throw`s an UNCAUGHT NSException if its private-protocol
+        # lookup fails. See the long note in `deps` below.
+        #
+        # So the app build does not compile these files, deliberately, and the SwiftPM package
+        # (which is TEST-ONLY here — Bazel builds the app) does, by adding the dependency there.
+        # `bazel query 'somepath(//Telegram:Telegram, //…:RichTextInputDecUpstream)'` must keep
+        # returning `INFO: Empty results`.
+        #
+        # THE DIVERGENCE IS MECHANICALLY PINNED, because "a file missing from a target's srcs
+        # silently does not exist" is a trap this repo has paid for:
+        # `Tests/RichTextEditorCoreTests/SourceBoundary/InputDecUpstreamAdapterBoundaryTests.swift`
+        # asserts this exclude line is here, that it matches live files, and that `deps` below still
+        # has NO edge to `:RichTextInputDecUpstream`. Deleting the exclude without adding the edge
+        # is a loud compile error (`no such module`); adding the edge is what the boundary test
+        # catches.
+        #
+        # Remove BOTH — this exclude and the `deps` prohibition — in the same commit, when the port
+        # is reachable behind `ExperimentalUISettings.inputDecTextBackend` and the `+load` has been
+        # assessed on a real launch.
+        "Sources/RichTextEditorUIKit/InputBackend/InputDec/Upstream/**/*.swift",
     ]),
+    # Task B6: enables the InputDec backend's isSupported() gate (Swift needs `swiftc -D`, not a
+    # C preprocessor define, hence `copts` rather than `defines`). Mirrors Package.swift's
+    # `swiftSettings: [.define(...)]` on the same target. Safe at this stage: Stage B still has
+    # no production call site that selects anything but `.legacy` (RichTextInputCanvasFactory).
+    copts = [
+        "-DTG_RICHTEXT_INPUTDEC_ENABLED",
+    ],
     data = [
         ":RichTextEditorUIKitResources",
     ],
     deps = [
         ":RichTextEditorCore",
+        ":RichTextInputDecObjC",
+        # NO EDGE TO :RichTextInputDecUpstream, DELIBERATELY. Adding one puts the ported engine in
+        # the shipped app, and IDBlockTextView.m's `+load` then runs BEFORE main() on every launch
+        # for every user: it resolves the private UIKeyboardInput protocol by name and @throws an
+        # UNCAUGHT NSException if that lookup or class_addProtocol fails (IDPrivateUIKit.m:1413-1425).
+        # That is pre-main, so TGRichTextInputDecExceptionGuard cannot wrap it and no feature flag
+        # can turn it off -- a launch-time abort with no telemetry, while the port is reachable from
+        # nothing. Phase 1's brief says production must not move, and an edge here moves it.
+        #
+        # The edge existed briefly as an anti-rot measure ("a file absent from a target's srcs
+        # silently does not exist"). What replaces it: the SwiftPM test target depends on this
+        # module and InputDecUpstreamHostSmokeTests cannot pass unless it compiles AND runs for iOS,
+        # and the target below is buildable on demand and verified green:
+        #   bazel build //submodules/TelegramUI/Components/RichTextEditor:RichTextInputDecUpstream \
+        #     --platforms=@build_bazel_apple_support//platforms:ios_sim_arm64
+        # That is weaker than the app build, and the honest reason it is enough is that this module
+        # depends on nothing in Telegram except the vendored kernel -- the dependency runs the other
+        # way -- so no change to Telegram code can break it without the test noticing.
+        #
+        # Restore the edge when the port is reachable behind ExperimentalUISettings.inputDecTextBackend
+        # AND the pre-main +load has been assessed on a real launch, not before.
         "//submodules/AppBundle",
         "//submodules/MosaicLayout:MosaicLayout",
     ],

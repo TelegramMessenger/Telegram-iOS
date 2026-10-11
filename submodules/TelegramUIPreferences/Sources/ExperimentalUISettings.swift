@@ -76,7 +76,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var forceClearGlass: Bool
     public var debugRipple: Bool
     public var forceNewTextInput: Bool
+    public var useInputDecEngine: Bool
     public var coreListChatBackend: Bool
+    public var inputDecTextBackend: Bool
     public var forceRLottieBackend: Bool
     public var respectSystemMicrophone: Bool
     public var useModernVideoMessagePipeline: Bool?
@@ -131,7 +133,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
             forceClearGlass: false,
             debugRipple: false,
             forceNewTextInput: false,
+            useInputDecEngine: false,
             coreListChatBackend: false,
+            inputDecTextBackend: false,
             forceRLottieBackend: false,
             respectSystemMicrophone: false,
             useModernVideoMessagePipeline: nil
@@ -187,7 +191,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         forceClearGlass: Bool,
         debugRipple: Bool,
         forceNewTextInput: Bool,
+        useInputDecEngine: Bool,
         coreListChatBackend: Bool,
+        inputDecTextBackend: Bool,
         forceRLottieBackend: Bool,
         respectSystemMicrophone: Bool,
         useModernVideoMessagePipeline: Bool? = nil
@@ -240,7 +246,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceClearGlass = forceClearGlass
         self.debugRipple = debugRipple
         self.forceNewTextInput = forceNewTextInput
+        self.useInputDecEngine = useInputDecEngine
         self.coreListChatBackend = coreListChatBackend
+        self.inputDecTextBackend = inputDecTextBackend
         self.forceRLottieBackend = forceRLottieBackend
         self.respectSystemMicrophone = respectSystemMicrophone
         self.useModernVideoMessagePipeline = useModernVideoMessagePipeline
@@ -297,7 +305,11 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceClearGlass = try container.decodeIfPresent(Bool.self, forKey: "forceClearGlass") ?? false
         self.debugRipple = try container.decodeIfPresent(Bool.self, forKey: "debugRipple") ?? false
         self.forceNewTextInput = try container.decodeIfPresent(Bool.self, forKey: "forceNewTextInput") ?? false
+        // `?? false` like its neighbours: an existing settings blob predates this key, and a
+        // decode failure here would reset every other experimental flag the user has set.
+        self.useInputDecEngine = try container.decodeIfPresent(Bool.self, forKey: "useInputDecEngine") ?? false
         self.coreListChatBackend = try container.decodeIfPresent(Bool.self, forKey: "coreListChatBackend") ?? false
+        self.inputDecTextBackend = try container.decodeIfPresent(Bool.self, forKey: "inputDecTextBackend") ?? false
         self.forceRLottieBackend = try container.decodeIfPresent(Bool.self, forKey: "forceRLottieBackend") ?? false
         self.respectSystemMicrophone = try container.decodeIfPresent(Bool.self, forKey: "respectSystemMicrophone") ?? false
         self.useModernVideoMessagePipeline = try container.decodeIfPresent(Bool.self, forKey: "useModernVideoMessagePipeline")
@@ -354,7 +366,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.forceClearGlass, forKey: "forceClearGlass")
         try container.encodeIfPresent(self.debugRipple, forKey: "debugRipple")
         try container.encodeIfPresent(self.forceNewTextInput, forKey: "forceNewTextInput")
+        try container.encodeIfPresent(self.useInputDecEngine, forKey: "useInputDecEngine")
         try container.encodeIfPresent(self.coreListChatBackend, forKey: "coreListChatBackend")
+        try container.encodeIfPresent(self.inputDecTextBackend, forKey: "inputDecTextBackend")
         try container.encodeIfPresent(self.forceRLottieBackend, forKey: "forceRLottieBackend")
         try container.encodeIfPresent(self.respectSystemMicrophone, forKey: "respectSystemMicrophone")
         try container.encodeIfPresent(self.useModernVideoMessagePipeline, forKey: "useModernVideoMessagePipeline")

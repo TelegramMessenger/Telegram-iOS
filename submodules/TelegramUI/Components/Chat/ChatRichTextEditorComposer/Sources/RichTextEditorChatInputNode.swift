@@ -9,6 +9,7 @@ import TextFormat
 import TelegramCore
 import RichTextEditorCore
 import RichTextEditorUIKit
+import RichTextEngineEditor
 import RichTextButtonIcons
 import ChatInputTextNode
 import CheckNode
@@ -42,7 +43,14 @@ private final class HostChecklistCheckboxView: UIView, RichTextChecklistMarkerVi
 public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInputNode {
     private let strings: PresentationStrings
     
-    private let editorView = RichTextEditorView()
+    /// Built for the backend the host selected. The panel supplies it from the
+    /// `inputDecTextBackend` experimental setting; everything else keeps the production
+    /// `.legacy` default.
+    /// `any RichTextEditor`, not a concrete view: the Debug Settings flag chooses between the
+    /// legacy canvas and the InputDec-engine editor at construction, and both answer this protocol.
+    /// The protocol is class-constrained to `UIView`, so positioning and hit-testing still work
+    /// through it.
+    private let editorView: any RichTextEditor
     private let baseFontSize: CGFloat = 17.0
 
     private var trackedInsets: UIEdgeInsets = .zero
@@ -108,13 +116,49 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
 
     public var asNode: ASDisplayNode { self }
 
-    public init(strings: PresentationStrings) {
+    /// `inputBackend` names which input backend the composed `RichTextEditorView` is built for.
+    /// Defaults to `.legacy`, so every existing caller keeps today's behaviour; the chat panel
+    /// passes `.inputDecIfSupported` when the `inputDecTextBackend` experimental setting is on.
+    /// `inputBackend` names which backend the composed legacy `RichTextEditorView` is built for.
+    /// `useInputDecEngine` selects the ENGINE editor instead — a different type entirely, not
+    /// another backend of the same view.
+    ///
+    /// The flag is read ONCE, here. Re-reading it per update would let the editor change identity
+    /// mid-session with a live document and first responder in it.
+    public init(strings: PresentationStrings,
+                inputBackend: RichTextEditorInputBackendPreference = .legacy,
+                useInputDecEngine: Bool = false) {
         #if DEBUG && false
         RichTextEditorView.debugShowLayoutOverlay = true
         #endif
-        
+
         self.strings = strings
-        
+        // `if #available` because the engine's public header uses UIKit types newer than this
+        // module's floor, so `IDBlockTextView` — and everything built on it — is gated at 18.4.
+        // Below that the flag simply has no effect, which is the correct behaviour for a debug
+        // toggle: no crash, no silent half-state, just the shipping editor.
+        if useInputDecEngine, #available(iOS 18.4, *) {
+            let engineEditor = RichTextEngineEditorView(frame: .zero)
+            // What VoiceOver reads for a media atom: the chat list's own words for each kind.
+            engineEditor.accessibilityMediaName = { kind in
+                switch kind {
+                case .image: return strings.Message_Photo
+                case .video: return strings.Message_Video
+                case .location: return strings.Message_Location
+                case .audio: return strings.Message_Audio
+                case .document: return strings.Message_File
+                }
+            }
+            self.editorView = engineEditor
+        } else {
+            self.editorView = RichTextEditorView(frame: .zero, inputBackend: inputBackend)
+        }
+
+        // Names the editor that was ACTUALLY built, so a silent fallback is visible rather than
+        // mistaken for the engine. The host app reports its canvas the same way and for the same
+        // reason: under the previous attempt a fallback read exactly like a passing arm.
+        self.editorView.accessibilityIdentifier = "composer.editor.\(type(of: self.editorView))"
+
         super.init()
     }
 
@@ -138,7 +182,7 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// Measured: 33pt → 21pt for one line; it clamps at 0, so 6 is "remove it entirely".
     private static let composerEdgeSpacingReduction: CGFloat = 6.0
 
-    private static func applyComposerLayoutMetrics(to editor: RichTextEditorView) {
+    private static func applyComposerLayoutMetrics(to editor: any RichTextEditor) {
         editor.contentPageMargin = 0.0
         editor.minimumContentHeight = 0.0
         var metrics = RichTextRenderMetrics.default
@@ -173,7 +217,9 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // draws its own placeholder ("Message", etc.), so the editor's would double up.
         
         self.editorView.placeholders = RichTextEditorPlaceholders(body: "", listEnd: "", listOutdent: "", pullQuote: self.strings.RichText_PlaceholderQuote, blockQuote: self.strings.RichText_PlaceholderQuote, codeBlock: self.strings.RichText_PlaceholderCode, codeLanguage: self.strings.RichText_PlaceholderCodeLanguage, detailsTitle: self.strings.RichText_PlaceholderDetailTitle, quoteAuthor: self.strings.RichText_PlaceholderQuoteAuthor, caption: self.strings.RichText_PlaceholderCaption)
-        self.editorView.editMenuStrings = RichTextEditorMenuStrings(
+        // Only the canvas editor has built-in custom menu items to title. The engine editor has none:
+        // Telegram's items reach it through `contextMenuItemsProvider`, so it takes no menu strings.
+        (self.editorView as? RichTextEditorView)?.editMenuStrings = RichTextEditorMenuStrings(
             format: self.strings.TextFormat_Format,
             bold: self.strings.TextFormat_Bold,
             italic: self.strings.TextFormat_Italic,
@@ -257,6 +303,19 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // ChatInputTextViewImpl's own \r keyCommand; the native editor surfaces it as onHardwareReturn.
         self.editorView.onHardwareReturn = { [weak self] modifierFlags in
             return self?.storedDelegate?.chatInputTextNodeShouldReturn(modifierFlags: modifierFlags) ?? true
+        }
+
+        // The caret's own signal, answered by re-applying the field's CURRENT geometry with the
+        // reveal attached. `.immediate` on purpose: when the panel is growing the field it is already
+        // animating that height, and animating the offset inside it animates the text twice; and a
+        // reveal owed to a caret that moved must settle before the next key event in any case.
+        //
+        // This is also what makes the composer's flicker impossible rather than merely unlikely: the
+        // editor no longer scrolls between the keystroke and the panel's pass, so there is no
+        // intermediate state for the height animation to fight.
+        self.editorView.onCaretRevealNeeded = { [weak self] in
+            guard let self, self.editorView.bounds.width > 0.0 else { return }
+            self.layoutInputField(caretReveal: .ifNeeded(.immediate))
         }
 
         self.editorView.onChange = { [weak self] in
@@ -411,15 +470,22 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         }
     }
     public var text: String {
-        // Read plain text straight from the document model rather than round-tripping through the full
-        // `Document → NSAttributedString` conversion — `text` is a hot path (the send-button counter
-        // re-reads it on every keystroke). Mirrors ChatInputContent.plainText recursion: paragraphs +
-        // block-quote children joined by "\n" (non-paragraph atoms and table blocks contribute nothing).
+        // What the panel's length COUNTER and a length-limited edit's Send guard count
+        // (`updateCounterTextNode`, `sendButtonPressed`): the text the text route SENDS — every flat-axis
+        // block's text joined by "\n", as `ChatInputContent.plainText` and the chat's `inputText` lay it out.
+        // A code block counts its body (sent as a `Pre`, the language is entity data, not text); a pull quote
+        // its text; a quote its children, a FOLDED one too (the send expands it); media, tables, details and
+        // button rows nothing (they go on the rich route, which no limit counts). Until p24 only paragraphs
+        // and quotes counted, so a caption edit whose code block took it over the limit showed no counter and
+        // passed the guard (composer harness p24, `HarnessLengthCounterCodeBlockTests`). Read straight from the
+        // document — this is a hot path (every keystroke) — rather than through the full conversion.
         func blockText(_ block: Block) -> String? {
             switch block {
             case .paragraph(let p): return p.text
+            case .code(let code): return code.text
+            case .pullQuote(let quote): return quote.text
             case .blockQuote(let bq): return bq.children.compactMap(blockText).joined(separator: "\n")
-            default: return nil
+            case .media, .table, .details, .buttonRow: return nil
             }
         }
         return self.editorView.document.blocks.compactMap(blockText).joined(separator: "\n")
@@ -480,6 +546,82 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// flatten structure beyond the `ChatTextInputAttributes` vocabulary, e.g. tables) and runs the same refresh
     /// `onChange` performs (so the panel re-lays-out and re-reads content), preserving the refresh/`didUpdateText`
     /// ordering, then restores the flat composer selection.
+    /// **Whose caret is it?** While the editor has focus, the editor's — and a content-equal
+    /// `setInputContent` may not move it.
+    ///
+    /// The host's copy of the selection is a LAGGING MIRROR. The editor reports a selection change
+    /// asynchronously (coalesced to the next run-loop turn, `scheduleSelectionDrivenOnChange`), and
+    /// the chat interface state then takes its own turns to settle, so any layout pass in that window
+    /// re-applies a selection older than the one the editor holds. Measured on K3 against the shipped
+    /// build, breakpointing `-[IDBlockTextView setSelectedTextRange:]` and printing the caller —
+    /// three taps, each placing the caret and each overwritten ~100ms later by the echo:
+    ///
+    ///     tap  -> 39   (no composer frames)
+    ///     echo -> 15   via RichTextEditorChatInputNode.setInputContent
+    ///
+    /// 15 was the caret from the PREVIOUS tap. Reported as "I tapped the input field somewhere, the
+    /// cursor blinked there briefly, and moved"; intermittent because it needs a chat state update to
+    /// land inside that window. Reproduced from a clean launch, so it is not an artifact of the probe.
+    ///
+    /// The focus test is what keeps this from being "never move the caret": an UNFOCUSED set is the
+    /// host legitimately placing a caret the editor has no opinion about — a draft restore, a
+    /// programmatic move — and that still applies. A focused caret move with UNCHANGED content does
+    /// not otherwise exist: an edit changes content and takes the rebuild branch, and the panel's own
+    /// deliberate moves go through `selectedRange` directly rather than through here.
+    ///
+    /// `wouldCollapseLiveRange` predates this and is kept because it covers the case where the editor
+    /// is NOT focused yet still holds a range. It was the same race found one branch earlier — a
+    /// double-tap word selection collapsing back to a caret — and fixing only the shape that had been
+    /// seen is how the caret-to-caret half survived.
+    ///
+    /// Static and pure so it can be tested: constructing a `RichTextEditorChatInputNode` reaches
+    /// `AccountContext`, which a test bundle cannot link (see the project `CLAUDE.md`'s
+    /// `ios_unit_test` dep-link ceiling), which is the same reason `storedMargins` /
+    /// `measurementMargins` are static.
+    internal static func echoedSelectionShouldApply(target: NSRange,
+                                                    live: NSRange,
+                                                    editorHasFocus: Bool) -> Bool {
+        if target == live { return false }
+        // A content-equal set that would COLLAPSE the editor's live RANGE to a caret is always a
+        // lagging echo, focused or not.
+        if live.length > 0 && target.length == 0 { return false }
+        // The editor owns its caret while it has focus.
+        if editorHasFocus { return false }
+        return true
+    }
+
+    /// How many `performUndoableInputChange` bodies are running: a content-changing
+    /// `setInputContent` inside one is the user's edit, applied as one undo step.
+    private var undoableInputChangeDepth: Int = 0
+
+    public func performUndoableInputChange(_ body: () -> Void) {
+        self.undoableInputChangeDepth += 1
+        defer { self.undoableInputChangeDepth -= 1 }
+        body()
+    }
+
+    /// The chat's insert on the user's behalf (its emoji keyboard, the avatar menu's Mention), made
+    /// through the editor at its own selection (`RichTextEditor.insertInlineRunsOnUsersBehalf`) instead
+    /// of through a transform of the flat input state, which retyped every block as body. The text is
+    /// converted through the same bridge a content set uses, so a custom emoji's file is registered
+    /// for the editor's emoji-view provider exactly as it would be by `setInputContent`. `false` — the
+    /// editor has no such verb (the non-engine native editor) — leaves the chat on its old path.
+    public func insertTextOnUsersBehalf(_ text: NSAttributedString) -> Bool {
+        let content = ChatInputContent(blocks: [.paragraph(ChatInputParagraph(runs: chatInputRuns(fromAttributedString: text)))])
+        let converted = document(
+            fromChatInputContent: content,
+            registerEmoji: { [weak self] fileId, file in self?.registerEmojiRef(fileId: fileId, file: file) ?? EmojiRef(id: String(fileId), instanceID: BlockID.generate().rawValue, altText: nil) },
+            registerMedia: { [weak self] media in self?.registerMediaValue(media) ?? "" }
+        )
+        var runs: [TextRun] = []
+        for block in converted.blocks {
+            if case let .paragraph(paragraph) = block {
+                runs.append(contentsOf: paragraph.runs)
+            }
+        }
+        return self.editorView.insertInlineRunsOnUsersBehalf(runs)
+    }
+
     public func setInputContent(_ content: ChatInputContent, selection: ChatInputSelection) {
         // CONTENT-EQUALITY GUARD (the load-bearing fix for "selection/scroll reset at random times").
         //
@@ -521,8 +663,9 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
             // echo — a real edit changes content (→ the rebuild branch below), and a deliberate caret move goes
             // through the editor first (so `liveRange` is already that caret). Skip it and keep the live range;
             // every other move (including the unfocused/programmatic caret set) still applies.
-            let wouldCollapseLiveRange = liveRange.length > 0 && targetRange.length == 0
-            if liveRange != targetRange, !wouldCollapseLiveRange {
+            if Self.echoedSelectionShouldApply(target: targetRange,
+                                               live: liveRange,
+                                               editorHasFocus: self.editorView.isFirstResponder) {
                 self.selectedRange = targetRange
             }
             return
@@ -536,14 +679,47 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         // Programmatic set (draft restore / send-clear / state echo): the assignment fires `onChange`
         // synchronously (reload → setBlocks → notifyContentSizeChanged); flag it so the typing-activity
         // path in `onChange` doesn't treat this structural re-apply as the user typing.
-        self.isApplyingProgrammaticContent = true
-        self.editorView.document = newDocument
-        self.isApplyingProgrammaticContent = false
+        let applyDocument = {
+            self.isApplyingProgrammaticContent = true
+            self.editorView.document = newDocument
+            self.isApplyingProgrammaticContent = false
+        }
+        if self.undoableInputChangeDepth > 0 {
+            // The USER's edit through the chat (`performUndoableInputChange`: autocomplete, the emoji
+            // keyboard, Translate…): ONE undo step on top of the stack, so both the edit and the typing
+            // before it stay undoable (composer harness, `HarnessChatSideEditUndoTests`). Emptying the
+            // stack here made a picked mention un-undoable and took the typed "@al" with it.
+            self.editorView.performAsOneUndoStep(applyDocument)
+        } else {
+            applyDocument()
+            // An EXTERNAL set (a draft sync, Send's clear, anything the chat pushes that differs from
+            // what the editor holds) empties the undo and redo stacks, as a stock `UITextView` and the
+            // legacy composer do on a set: a step typed before it would restore the document as it was
+            // BEFORE the set and throw the pushed content away (composer harness p15,
+            // `HarnessExternalSetUndoTests`). The echo above returned before this and keeps the stack.
+            self.editorView.discardUndoHistory()
+        }
         if self.editorView.bounds.width > 0.0 {
             _ = self.editorView.update(size: self.editorView.bounds.size, insets: self.trackedInsets, contentMargins: self.trackedContentMargins, scrollIndicatorInsets: self.trackedScrollIndicatorInsets)
         }
         self.storedDelegate?.chatInputTextNodeDidUpdateText()
         self.selectedRange = selection.nsRange(in: content)
+        // A set the editor NORMALISES is reported back, so the chat's copy — what Send reads — is what the
+        // editor shows. BY CONSTRUCTION, not by a list: whenever the read-back after the set differs from the
+        // content set, the editor changed something on the way in — a line break in a one-line field
+        // (`EngineDocumentBridge.oneLineText`), inline code over an entity (`withoutInlineCodeOverLinks`), a
+        // multi-emoji custom-emoji run, formatting / an entity / an atom in a code body (`plainCodeRuns`), an
+        // empty code language, `U+2028` / CR / `U+2029` in a body (read back as "\n"), a coalesced pair of formulas
+        // — and any normalisation added later is covered without touching this. Until p24 a hand-kept list
+        // (`holdsContentTheEditorNormalises`, p23) named three of them and the chat sent the others as set
+        // (composer harness p24, `HarnessUnreportedSetNormalisationTests`). The report above is swallowed while
+        // the panel is pushing this very set (`ignoreChatInputTextNodeDidUpdateText`), so it goes a turn later;
+        // the echo it causes is content-equal and returns at the guard above.
+        if self.currentInputContent().content != content {
+            DispatchQueue.main.async { [weak self] in
+                self?.storedDelegate?.chatInputTextNodeDidUpdateText()
+            }
+        }
     }
 
     /// Direct-bridge `resolveEmoji`: map an editor `EmojiRef` (whose `id` is the fileId STRING, by the node's
@@ -616,7 +792,11 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// `size` using the tracked scroll insets + content margins. Trailing scroll inset stays `.zero` in
     /// Phase 1 (the composer field is short and grows; the keyboard inset is the panel's concern).
     public func updateLayout(size: CGSize) {
-        _ = self.editorView.update(size: size, insets: self.trackedInsets, contentMargins: self.trackedContentMargins, scrollIndicatorInsets: self.trackedScrollIndicatorInsets)
+        self.updateLayout(size: size, caretReveal: .none)
+    }
+
+    public func updateLayout(size: CGSize, caretReveal: RichTextEditorCaretReveal) {
+        _ = self.editorView.update(size: size, insets: self.trackedInsets, contentMargins: self.trackedContentMargins, scrollIndicatorInsets: self.trackedScrollIndicatorInsets, caretReveal: caretReveal)
     }
     /// Measures the editor's content height at `width` with a stateless, side-effect-free measure
     /// (`RichTextEditorView.height(forWidth:)`) — it does NOT reflow the live editor or touch its
@@ -629,7 +809,9 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     /// pass (the pre-set-text "jump").
     public func textHeightForWidth(_ width: CGFloat, rightInset: CGFloat) -> CGFloat {
         self.trackedRightInset = rightInset
-        return self.editorView.height(forWidth: width, contentMargins: self.trackedContentMargins)
+        return self.editorView.height(forWidth: width,
+                                      contentMargins: Self.measurementMargins(applying: rightInset,
+                                                                              to: self.trackedContentMargins))
     }
     public func measuredTextFieldHeight(forWidth width: CGFloat, lineCount: Int) -> CGFloat {
         // Measure the probe with THIS composer's live content margins (the same value the live `textHeightForWidth`
@@ -638,29 +820,70 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
             RichTextEditorChatInputNode.applyComposerLayoutMetrics(to: editor)
         })
     }
+    /// `caretReveal` defaults to `.none`, which is right for every caller that is laying the field
+    /// out for some other reason — a theme change, a draft being applied, the send-options preview.
+    /// The panel passes `.ifNeeded` on the pass that applies a NEW field size, which is the pass the
+    /// caret's visibility actually depends on.
     public func layoutInputField() {
-        _ = self.editorView.update(size: self.editorView.bounds.size, insets: self.trackedInsets, contentMargins: self.trackedContentMargins, scrollIndicatorInsets: self.trackedScrollIndicatorInsets)
+        self.layoutInputField(caretReveal: .none)
+    }
+
+    public func layoutInputField(caretReveal: RichTextEditorCaretReveal) {
+        _ = self.editorView.update(size: self.editorView.bounds.size, insets: self.trackedInsets, contentMargins: self.trackedContentMargins, scrollIndicatorInsets: self.trackedScrollIndicatorInsets, caretReveal: caretReveal)
     }
     public var textFieldFrame: CGRect {
         get { self.editorView.frame }
         set { self.editorView.frame = newValue }
     }
     public var inputView: UIView { self.editorView }
+    /// **The panel's vertical insets are a SYMMETRIC pair, and this must not break them.**
+    ///
+    /// The field's total vertical inset is the node's frame inset plus this one:
+    /// `textInputViewInternalInsets` is top 5.0 / bottom 4.0 and `calculateTextFieldRealInsets`
+    /// returns top 4.5 / bottom 5.5 at the 17pt base size, which sums to **9.5 / 9.5** — the two
+    /// halves are deliberately lopsided in opposite directions so the total is even, and the legacy
+    /// text view gets exactly that.
+    ///
+    /// This accessor used to subtract 1.0 from the bottom on the way in and add it back on the way
+    /// out. The round trip was lossless, so nothing read the difference — but what was STORED, and
+    /// therefore what the field laid out and measured against, was 4.5 / 4.5, making the total
+    /// 9.5 / 8.5. The text sat a point high in the panel and the field measured a point shorter than
+    /// the legacy one for the same content. (The `top ± 0.0` beside it was a fossil of the same
+    /// edit.) Removing both halves keeps the round trip lossless and restores the pair.
     public var textContainerInset: UIEdgeInsets {
         get {
             var updated = self.trackedContentMargins
-            updated.top += 0.0
-            updated.bottom += 1.0
-            updated.right -= 14.0
+            updated.right -= Self.accessoryReservation
             return updated
         }
-        set {
-            var updated = newValue
-            updated.top -= 0.0
-            updated.bottom -= 1.0
-            updated.right += 14.0
-            self.trackedContentMargins = updated
-        }
+        set { self.trackedContentMargins = Self.storedMargins(forPanelInset: newValue) }
+    }
+
+    /// The extra right margin the field reserves beyond what the panel asks for.
+    internal static let accessoryReservation: CGFloat = 14.0
+
+    /// What the field's margins ARE, for a set of panel insets. One function, because the measure and
+    /// the layout must agree about the column: a draft measured against a wider column than it is laid
+    /// out in wraps into fewer lines, and the field is built one line too short.
+    internal static func storedMargins(forPanelInset inset: UIEdgeInsets) -> UIEdgeInsets {
+        var updated = inset
+        updated.right += accessoryReservation
+        return updated
+    }
+
+    /// The margins a measure should use, given the right inset the caller is committing to THIS pass.
+    ///
+    /// It is not `trackedContentMargins`: the panel measures the field's height and applies the real
+    /// insets afterwards, in the same pass, so the tracked value is one pass stale. Measured in the
+    /// running app while opening a chat, the panel asked for a right inset of 88 while the tracked
+    /// margins still said 56 — 46pt of column the text would not get, which is how a seven-line draft
+    /// measured as six and opened scrolling inside a six-line field.
+    internal static func measurementMargins(applying rightInset: CGFloat,
+                                            to tracked: UIEdgeInsets) -> UIEdgeInsets {
+        var updated = tracked
+        updated.right = storedMargins(forPanelInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0,
+                                                                  right: rightInset)).right
+        return updated
     }
     public var currentRightInset: CGFloat { self.trackedRightInset }
 
@@ -705,6 +928,17 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
         case .date:
             // TODO: no timestamp-entity model in the editor (deferred). No-op for now.
             break
+        case .clearFormatting: self.editorView.clearInlineFormatting()
+        }
+    }
+
+    public func canPerformFormatAction(_ action: ChatRichTextFormatAction) -> Bool {
+        switch action {
+        case .italic: return self.editorView.italicReachesSelection
+        case .bold, .strikethrough, .underline, .spoiler: return self.editorView.inlineFormatsReachSelection
+        // Not over a mention, a date or a link (composer harness p23, `HarnessInlineCodeOverEntityTests`).
+        case .monospace: return self.editorView.inlineCodeReachesSelection
+        case .quote, .pullQuote, .code, .date, .clearFormatting: return true
         }
     }
 
@@ -826,8 +1060,30 @@ public final class RichTextEditorChatInputNode: ASDisplayNode, ChatRichTextInput
     public func resetInitialPrimaryLanguage() { self.editorView.resetInputPrimaryLanguage() }
     public var keyboardAppearance: UIKeyboardAppearance = .default
     public var autocorrectionType: UITextAutocorrectionType = .default
-    public var inputTintColor: UIColor?
-    public func didChangeInputTintColor() { }
-    public var inputCaretColor: UIColor = .clear
+    /// The theme accent the panel passes (`theme.list.itemAccentColor`), applied the way the legacy node
+    /// applies it: as this node's own `tintColor`, which the editor view and the engine text view inside it
+    /// inherit. UIKit draws the caret, the selection highlight and the handles with the text view's
+    /// `tintColor`, so without this they were always the system blue (composer harness, 2026-09-23,
+    /// `HarnessCaretTintTests`: engine `systemBlue` where legacy drew the dark theme's white accent).
+    public var inputTintColor: UIColor? {
+        get { return self.tintColor }
+        set { self.tintColor = newValue }
+    }
+    public func didChangeInputTintColor() {
+        self.tintColorDidChange()
+    }
+    /// The caret/selection tint of the editor view itself; the panel clears it around a snapshot and puts
+    /// back what it read. Putting back the INHERITED colour stores nil rather than pinning it, so a later
+    /// `inputTintColor` change still reaches the caret.
+    public var inputCaretColor: UIColor {
+        get { return self.editorView.tintColor }
+        set {
+            if let inherited = self.editorView.superview?.tintColor, newValue == inherited {
+                self.editorView.tintColor = nil
+            } else {
+                self.editorView.tintColor = newValue
+            }
+        }
+    }
     public var inputTheme: ChatInputTextView.Theme?
 }

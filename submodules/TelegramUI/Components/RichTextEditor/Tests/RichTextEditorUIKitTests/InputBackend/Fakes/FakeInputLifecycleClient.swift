@@ -29,6 +29,11 @@ final class FakeInputLifecycleClient: RichTextInputLifecycleClient {
     private(set) var willDetachCallCount = 0
     private(set) var lastPublishedState: RichTextInputStateSnapshot? = nil
     private(set) var lastPublishReason: RichTextInputStateChangeReason? = nil
+    /// Every state the backend published, in order. `didAttachCallCount` cannot express "published
+    /// exactly one initial snapshot"; this can. Additive — no existing assertion reads it. Recorded
+    /// at the TOP of `backendDidPublishState`, before `onDidPublishState` fires, so a hook that
+    /// detaches still leaves the record.
+    private(set) var publishedStates: [RichTextInputStateSnapshot] = []
     private(set) var lastRejectedMutation: RichTextInputMutation? = nil
     private(set) var lastRejectionReason: RichTextInputMutationRejection? = nil
     private(set) var lastLayoutRequestRange: NSRange? = nil
@@ -58,6 +63,7 @@ final class FakeInputLifecycleClient: RichTextInputLifecycleClient {
         log.record(.lifecycleDidEndEditing)
     }
     func backendDidPublishState(_ state: RichTextInputStateSnapshot, reason: RichTextInputStateChangeReason) {
+        publishedStates.append(state)
         lastPublishedState = state
         lastPublishReason = reason
         log.record(.lifecyclePublish(revision: state.documentRevision, reason: "\(reason)"))

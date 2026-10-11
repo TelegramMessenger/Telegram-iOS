@@ -31,6 +31,7 @@ swift_library(
         "//submodules/Components/ResizableSheetComponent",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorCore",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorUIKit",
+        "//submodules/TelegramUI/Components/RichTextEditor:RichTextEngineEditor",
         "//submodules/TelegramUI/Components/RichTextButtonIcons",
         "//submodules/TelegramUI/Components/RichTextEditorMediaView",
         "//submodules/Components/ViewControllerComponent",

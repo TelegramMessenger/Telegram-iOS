@@ -18,7 +18,7 @@ public extension InstantPageTextCategories {
     ///
     /// This was three hand-copied tables — the bubble, the long-press send preview, and the
     /// TextProcessing screen — which had DRIFTED apart: the bubble carried heading
-    /// `lineSpacingFactor` 1.0 and body 0.9, the other two 0.685 and 1.0, so the send preview did not
+    /// `lineSpacingFactor` 1.0 and body 0.9 (0.95 today), the other two 0.685 and 1.0, so the send preview did not
     /// match the bubble it was previewing. The bubble's values won because it is the surface the
     /// recipient actually sees.
     ///
@@ -30,7 +30,12 @@ public extension InstantPageTextCategories {
             kicker: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: primaryText),
             header: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: 24.0, lineSpacingFactor: 1.0, weight: .medium), color: primaryText),
             subheader: InstantPageTextAttributes(font: InstantPageFont(style: .serif, size: instantPageNominalSubheaderFontSize, lineSpacingFactor: 1.0, weight: .medium), color: primaryText),
-            paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 0.9), color: primaryText),
+            // 0.95, not 0.9, since 2026-09-15: body line spacing 10 → 11pt, baseline-to-baseline
+            // 22 → 23. The factor multiplies the REDUCED box (`floor(ascender + descender)` = 12pt
+            // here) and the product is floored, so anything in [11/12, 1.0) buys the same point and
+            // 0.95 sits mid-interval — it still reads as one more point if the font's metrics shift.
+            // A quote carries this factor at 15pt, where 0.9 and 0.95 both floor to 9: unmoved.
+            paragraph: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 17.0, lineSpacingFactor: 0.95), color: primaryText),
             caption: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: secondaryText),
             credit: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 13.0, lineSpacingFactor: 1.0), color: secondaryText),
             table: InstantPageTextAttributes(font: InstantPageFont(style: .sans, size: 15.0, lineSpacingFactor: 1.0), color: primaryText),

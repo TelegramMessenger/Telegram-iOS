@@ -10,7 +10,12 @@ import UIKit
 /// Selected by `makeBlockLayout(...)`: an `RTE_TK1` build forces TextKit 1; otherwise TextKit 2 is used
 /// where available, falling back to TextKit 1 below iOS 17. (This factory + protocol is also what the real
 /// iOS-15 back-port needs — the seam was introduced as a feasibility spike, see the project CLAUDE.md.)
-protocol BlockLayoutEngine: AnyObject {
+/// **Public since R7-collapse-fidelity**, so `RichTextEngineEditor` can drive one for a folded
+/// quote's preview. Visibility only: Swift will not expose an `internal` protocol through a
+/// `public typealias`, so republishing it (`RichTextLayoutSurface.swift`) requires this. The
+/// alternative was a second text layout in the other module, which is exactly what a seam exists to
+/// prevent.
+public protocol BlockLayoutEngine: AnyObject {
     var attributedString: NSAttributedString { get set }
     var length: Int { get }
     var renderVersion: Int { get }
@@ -23,6 +28,20 @@ protocol BlockLayoutEngine: AnyObject {
 
     func bumpRenderVersion()
     func setWidth(_ width: CGFloat)
+
+    /// Caps the laid-out text to `lines` visible lines (0 = uncapped, `NSTextContainer`'s own
+    /// convention), truncating the last visible one with `mode`. `UILabel`'s `numberOfLines` +
+    /// `lineBreakMode` pair, on this seam.
+    ///
+    /// **ONE call carrying both halves, deliberately.** A cap without a truncation mode drops the
+    /// overflow with no ellipsis, so a folded quote would end mid-word and read as lost text; a
+    /// truncation mode without a cap makes the text system truncate the FIRST line instead of
+    /// wrapping to three — which is not hypothetical, it is the exact defect this was added for, and
+    /// it had already been met once on the MEASUREMENT path (`CollapsedQuoteTextAttachment.measuring`
+    /// exists because `boundingRect` under a truncating mode measures one line however long the
+    /// string is). "A pair of raw members is a pair a backend can half-implement" — the project's own
+    /// rule, and these two halves are each other's silent failure mode.
+    func capLines(_ lines: Int, truncating mode: NSLineBreakMode)
     func caretRect(atOffset offset: Int) -> CGRect
     func selectionRects(start: Int, end: Int) -> [CGRect]
     func selectionFillRects(start: Int, end: Int, fillTrailingLine: Bool, isRTL: Bool) -> [CGRect]

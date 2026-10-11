@@ -126,15 +126,29 @@ class BackendSelectionContractTests: BackendContractCases {
     /// inert here (this test's subject is ordering, not clamping — see test 7's own note).
     ///
     /// RED IF: the getter built its `UITextRange` from `normalizedRange` (or any `min`/`max`) instead
-    /// of the two endpoints directly — `.from.offset` would then read 2 (the min), not 7. Equally red
+    /// of the two endpoints directly — `.from` would then read 2 (the min), not 7. Equally red
     /// if the SETTER reordered them on the way in.
+    ///
+    /// **TASK R11 (cluster 19) — the write/read now go through `makeSelectedTextRange(from:to:)`/
+    /// `readSelectedTextRange(_:)` (`BackendContractCases`) instead of constructing/downcasting
+    /// `DocumentTextRange` inline.** `DocumentTextRange`/`DocumentTextPosition` are Legacy's OWN
+    /// opaque UIKit identity type (R6) — a `final class` with no shared protocol a second backend's
+    /// identity type could satisfy — so the inline form was silently Legacy-only: under
+    /// `IDTextEditorBackend` the write's `as? TGRichTextInputDecPosition` cast could never succeed
+    /// (unrelated final classes) and the read's `as? DocumentTextRange` cast on a `TGRichTextInputDecRange`
+    /// could never succeed either, regardless of what the backend does. Proven, not assumed: read
+    /// `IDTextEditorBackend.mintKernelSelectedTextRange()` — it unconditionally returns a
+    /// `TGRichTextInputDecRange`, no fallback branch. The hooks preserve this test's exact assertion
+    /// strength (same endpoint-identity/ordering checks) while letting each backend supply its own
+    /// concrete type; the base implementation is byte-identical to the code this replaced, so
+    /// `BackendSelectionContractTests`/`ReferenceMutationBackend` (real Legacy code) is unaffected.
     func test_selectedTextRangeGetter_handsUIKitAnUnorderedRange_forAReversedSelection() {
-        backend.selectedTextRange = DocumentTextRange(DocumentTextPosition(7), DocumentTextPosition(2))
-        guard let range = backend.selectedTextRange as? DocumentTextRange else {
-            XCTFail("expected a DocumentTextRange"); return
+        backend.selectedTextRange = makeSelectedTextRange(from: 7, to: 2)
+        guard let range = readSelectedTextRange(backend.selectedTextRange) else {
+            XCTFail("expected the active backend's own native selectedTextRange type"); return
         }
-        XCTAssertEqual(range.from.offset, 7, "from must be the ANCHOR, not min()")
-        XCTAssertEqual(range.to.offset, 2, "to must be the HEAD, not max()")
+        XCTAssertEqual(range.from, 7, "from must be the ANCHOR, not min()")
+        XCTAssertEqual(range.to, 2, "to must be the HEAD, not max()")
         XCTAssertEqual(backend.canonicalSelection.anchor.utf16Offset, 7,
                        "the same write must record the applied ANCHOR in the backend's own canonical " +
                        "store — without this the assertions above could pass on a getter that read a " +
@@ -259,6 +273,21 @@ class BackendSelectionContractTests: BackendContractCases {
     /// would move to the ignored offset), failed to resume accepting writes after `endFloatingCursor()`
     /// (the contrasting write would ALSO be dropped), or a session left active survived detach/reattach
     /// (the post-reattach write would still be dropped).
+    ///
+    /// **TASK R11 (cluster 15) — the writes below now go through `makeSelectedTextRange(from:to:)`
+    /// (see that hook's own doc comment).** R1's own hypothesis for this cluster was "floating-cursor
+    /// state leaks across detach/reattach" — FALSIFIED. Traced directly: under `IDTextEditorBackend`,
+    /// the three inline `DocumentTextRange(DocumentTextPosition(5/9))` writes here always failed their
+    /// `as? TGRichTextInputDecPosition` cast (Legacy's identity type is unrelated to the ID backend's
+    /// own), so EVERY write — including the "must be accepted" ones after `endFloatingCursor()` and
+    /// after a fresh attach — silently collapsed to offset 0 regardless of `floatingCursorActive`'s
+    /// real value; the failing assertions read literal `"0"`, not the settled/ignored value, which is
+    /// the signature of that collapse, not of stale suppression state. Once the writes carry a
+    /// backend-native range, `beginFloatingCursor(at:)`/`endFloatingCursor()`'s existing
+    /// `setFloatingCursorActive(_:)` bracket (already proven correct by
+    /// `IDBackendFamily3Tests.test_selectedTextRangeSetterIsIgnoredDuringFloatingCursor`, which drives
+    /// the same suppression via `setFloatingCursorActive` directly) suppresses/resumes correctly with
+    /// no further backend change needed.
     func test_selectedTextRangeSetter_isIgnoredWhileFloatingCursorIsActive() throws {
         backend.setSelection(.caret(at: .downstream(3)), reason: .programmatic)
         let settled = backend.canonicalSelection
@@ -270,12 +299,12 @@ class BackendSelectionContractTests: BackendContractCases {
         // the ABSENCE of clamping as if it were a guarantee, forcing Task 26 to edit this test when it
         // moves the canvas's clamping body in; an in-range value asserts only what this test means to.
         backend.beginFloatingCursor(at: CGPoint(x: 10, y: 10))
-        backend.selectedTextRange = DocumentTextRange(DocumentTextPosition(5), DocumentTextPosition(5))
+        backend.selectedTextRange = makeSelectedTextRange(from: 5, to: 5)
         XCTAssertEqual(backend.canonicalSelection, settled,
                        "a write while the floating cursor owns the caret must be ignored")
 
         backend.endFloatingCursor()
-        backend.selectedTextRange = DocumentTextRange(DocumentTextPosition(5), DocumentTextPosition(5))
+        backend.selectedTextRange = makeSelectedTextRange(from: 5, to: 5)
         XCTAssertEqual(backend.canonicalSelection.head.utf16Offset, 5,
                        "the SAME write must be accepted once the floating cursor has ended — the " +
                        "contrast that makes the ignored write above non-vacuous")
@@ -287,7 +316,7 @@ class BackendSelectionContractTests: BackendContractCases {
         try backend.attach(to: freshHost)
         withExtendedLifetime(freshHost) {
             log.reset()   // discard this attach's own lifecycleDidAttach noise
-            backend.selectedTextRange = DocumentTextRange(DocumentTextPosition(9), DocumentTextPosition(9))
+            backend.selectedTextRange = makeSelectedTextRange(from: 9, to: 9)
             XCTAssertEqual(backend.canonicalSelection.head.utf16Offset, 9,
                            "a fresh attach must not inherit a stuck floating-cursor session from the " +
                            "previous one — the write above would otherwise still be dropped")

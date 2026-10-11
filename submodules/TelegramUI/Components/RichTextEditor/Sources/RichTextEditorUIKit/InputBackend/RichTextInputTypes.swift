@@ -683,6 +683,61 @@ enum RichTextInteractionCancellationReason {
     case backendDetach
 }
 
+// MARK: - Responder-role ownership (PHASE 3b)
+
+/// **Who took the UIKit first-responder role — the backend's own responder, or nobody yet because
+/// the role belongs to the host?**
+///
+/// This is the answer to `acquireFirstResponder()` / `relinquishFirstResponder()`
+/// (`RichTextInputResponderBackend`), and it exists because the two conformers genuinely differ on
+/// where the editing surface lives:
+///
+///   * `LegacyRichTextInputBackend`'s editing surface **is** the host — `DocumentCanvasView` draws
+///     the text, owns the caret and is the first responder. It answers `.hostOwnsTheRole`.
+///   * The InputDec adapter's editing surface is a **separate `UIView` inside the host** (the ported
+///     `IDBlockTextView`), and phase 3 measured that UIKit will not raise a keyboard or bind an
+///     `inputDelegate` for the host — only for whichever object actually holds the role. It answers
+///     `.performedByBackend`.
+///
+/// # Why this is a returned VALUE rather than a separate `Bool` the caller asks first
+///
+/// A `holdsTheRoleItself` flag beside a `Bool`-returning `acquireFirstResponder()` is "a pair a
+/// backend can half-implement" — the flag could say one thing and the action do another, and the
+/// disagreement would be silent. There is only one member here, so there is nothing to disagree
+/// with. It is also why `.performedByBackend` carries `succeeded:` rather than folding a failure
+/// into a third case: a backend that took the role and failed must not be confusable with a backend
+/// that never claimed it (measured wiring **W2** in `IDUpstreamInputBackend+Responder.swift` is
+/// exactly that confusion, and it makes `becomeFirstResponder()` answer `false` on success).
+@available(iOS 13.0, *)
+enum RichTextInputResponderTransition: Equatable {
+    /// The backend performed the transition on its own responder. `succeeded` is UIKit's answer to
+    /// the `becomeFirstResponder()` / `resignFirstResponder()` the backend sent, and is what the
+    /// host must return to ITS caller.
+    ///
+    /// The host must NOT call `super`, and must NOT emit any of the six
+    /// `host{Will,Did,DidFailTo}{Become,Resign}FirstResponder` notifications: under this case the
+    /// host has no responder transition of its own to announce.
+    case performedByBackend(succeeded: Bool)
+
+    /// This backend's editing surface IS the host, so the role stays with the host and the backend
+    /// did nothing. The host takes the role itself — `super.becomeFirstResponder()` /
+    /// `super.resignFirstResponder()`, bracketed by the six notifications — exactly as
+    /// `DocumentCanvasView` does today.
+    ///
+    /// **A backend answering this must not touch the responder chain.** That is what lets a host route
+    /// its override through `acquireFirstResponder()` unconditionally: a conformer that honours the
+    /// rule cannot re-enter that override, so the recursion a `Bool`-returning contract would force
+    /// has no reason to exist here.
+    ///
+    /// **It is a rule, not a proof** (phase 3b review, finding 8 — this paragraph claimed the cases
+    /// were "recursion-proof"). Nothing in the type system stops a `.hostOwnsTheRole` conformer from
+    /// calling `becomeFirstResponder()`; what the enum removes is the NEED to, and what enforces it
+    /// is `ResponderHandOffTests.test_theShippingBackendNeverEntersTheResponderChain` plus R17's pin
+    /// on the shipping body. Stated precisely because the next author to write a `.hostOwnsTheRole`
+    /// conformer reads this, not the phase report.
+    case hostOwnsTheRole
+}
+
 // MARK: - Transaction phase
 
 @available(iOS 13.0, *)

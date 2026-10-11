@@ -11,6 +11,7 @@ import UIKit
 import Display
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
+import ChatTextInputPanelNode
 
 extension ChatControllerImpl {    
     var keyShortcutsInternal: [KeyShortcut] {
@@ -25,9 +26,15 @@ extension ChatControllerImpl {
         
         var inputShortcuts: [KeyShortcut] = []
         if self.chatDisplayNode.isInputViewFocused {
+            // The format shortcuts ask the panel first: on the native rich-text engine they run the
+            // editor's own command (`performNativeFormatShortcut`), which keeps the document's blocks
+            // and records one undo step. The input-state path below is the legacy backend's, unchanged.
             inputShortcuts = [
                 KeyShortcut(input: "B", modifiers: [.command], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.bold) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold, value: nil), inputMode)
                         }
@@ -35,6 +42,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "I", modifiers: [.command], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.italic) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic, value: nil), inputMode)
                         }
@@ -42,6 +52,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "M", modifiers: [.shift, .command], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.monospace) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace, value: nil), inputMode)
                         }
@@ -49,6 +62,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "U", modifiers: [.command], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.underline) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.underline, value: nil), inputMode)
                         }
@@ -56,6 +72,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "X", modifiers: [.command, .shift], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.strikethrough) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.strikethrough, value: nil), inputMode)
                         }
@@ -63,6 +82,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "P", modifiers: [.command, .shift], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.spoiler) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.spoiler, value: nil), inputMode)
                         }
@@ -75,6 +97,9 @@ extension ChatControllerImpl {
                 }),
                 KeyShortcut(input: "N", modifiers: [.shift, .command], action: { [weak self] in
                     if let strongSelf = self {
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.clearFormatting) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputClearFormattingAttributes(current), inputMode)
                         }

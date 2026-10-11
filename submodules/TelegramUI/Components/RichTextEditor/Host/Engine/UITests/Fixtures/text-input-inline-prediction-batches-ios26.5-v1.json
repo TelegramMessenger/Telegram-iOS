@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "runtime": {"osVersion": "26.5", "osBuild": "23F73"},
+  "udid": "FA6F7462-AA97-42FE-9E57-8DA0593CE756",
+  "subsystem": "inline-prediction",
+  "rows": [
+    "interior-accept",
+    "interior-dismiss-then-type",
+    "interior-accept-then-delete",
+    "before-boundary-accept",
+    "before-boundary-dismiss-then-type",
+    "before-boundary-accept-then-delete",
+    "after-boundary-accept",
+    "after-boundary-dismiss-then-type",
+    "after-boundary-accept-then-delete"
+  ],
+  "groups": [
+    {"id": "interior", "language": "en-US", "rows": ["interior-accept", "interior-dismiss-then-type", "interior-accept-then-delete"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "before-boundary", "language": "en-US", "rows": ["before-boundary-accept", "before-boundary-dismiss-then-type", "before-boundary-accept-then-delete"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"},
+    {"id": "after-boundary", "language": "en-US", "rows": ["after-boundary-accept", "after-boundary-dismiss-then-type", "after-boundary-accept-then-delete"], "stateSensitive": true, "resetPolicy": "erase-reset-learning-provision"}
+  ]
+}

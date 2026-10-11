@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "runtime": {
+    "platform": "iOS",
+    "version": "26.5",
+    "build": "23F73"
+  },
+  "selector": "_visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:",
+  "owner": "IDBlockTextView(PrivateCallbacks)",
+  "decision": "safeFallback",
+  "algorithmAuthority": "IDRichTextLayoutController",
+  "hopper": {
+    "textViewForwarder": "0x1616060",
+    "selectorStub": "0x21b30e0",
+    "selectionFallback": "0x1576b20",
+    "guardedSend": "0x1576bcc",
+    "displayInteractionInitializer": "0xc69c6c",
+    "activeSelection": "0xc6b750",
+    "selectionInitializer": "0x1574a24",
+    "selectionDocument": "0x1577adc"
+  },
+  "artifacts": {
+    "retainedUnits": ".block-visual-selection-task4-authority-retained-full.xcresult",
+    "withdrawnUnits": ".block-visual-selection-task4-authority-withdrawn-full.xcresult",
+    "retainedUI": ".block-visual-selection-task5-retained-ui.xcresult",
+    "withdrawnUI": ".block-visual-selection-task5-withdrawn-ui.xcresult"
+  }
+}

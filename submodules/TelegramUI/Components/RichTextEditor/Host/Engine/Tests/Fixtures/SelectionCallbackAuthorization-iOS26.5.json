@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "runtime": {
+    "platform": "iOS Simulator",
+    "device": "iPhone 17 Pro K3",
+    "architecture": "arm64",
+    "osVersion": "26.5",
+    "osBuild": "23F73"
+  },
+  "callbacks": [
+    {
+      "selector": "selectionContainerView",
+      "definition": "ID_WITHDRAW_SELECTION_CONTAINER_VIEW=1",
+      "methodAbsent": true,
+      "authorization": "requiredNativeChrome",
+      "hopperProcedures": [
+        "0x156cf7c -[UITextInteractionAssistant selectionContainerView]",
+        "0x1615f44 -[UITextView selectionContainerView]",
+        "0xa4a228 -[_UITextFloatingCursorSession _selectionContainerView]"
+      ],
+      "artifacts": [
+        ".selection-container-reduction-task5-matrix2/selectionContainerView/result.xcresult",
+        ".selection-container-reduction-task5-confirm-selectionContainerView-floating1.xcresult"
+      ],
+      "reason": "True withdrawal reproduced a floating-cursor container-identity failure twice: containerStable became false, containerToken was nil, and assistant/display session ownership was absent before motion. Touch selection, highlight, handles, loupe, scrolling, and the method-surface contract still passed, but the native floating-container dependency requires retaining this callback."
+    },
+    {
+      "selector": "_selectionContainerViewAboveText",
+      "definition": "ID_WITHDRAW_SELECTION_CONTAINER_VIEW_ABOVE_TEXT=1",
+      "methodAbsent": true,
+      "authorization": "safeFallback",
+      "hopperProcedures": [
+        "0x156cffc -[UITextInteractionAssistant selectionContainerViewAboveText]",
+        "0x1615ff0 -[UITextView _selectionContainerViewAboveText]"
+      ],
+      "artifacts": [
+        ".selection-container-reduction-task5-matrix2/_selectionContainerViewAboveText/result.xcresult",
+        ".selection-container-reduction-task5-highlight-safe1/_selectionContainerViewAboveText/result.xcresult"
+      ],
+      "reason": "The true-withdrawal build passed the complete method-surface, touch-chrome, and stock-differential floating-cursor batch with stable container identity and zero failures or skips. UIKit's host fallback preserved the observed native behavior."
+    },
+    {
+      "selector": "_existingSelectionContainerView",
+      "definition": "ID_WITHDRAW_EXISTING_SELECTION_CONTAINER_VIEW=1",
+      "methodAbsent": true,
+      "authorization": "safeFallback",
+      "hopperProcedures": [
+        "0x1615ed8 -[UITextView _existingSelectionContainerView]"
+      ],
+      "artifacts": [
+        ".selection-container-reduction-task5-matrix2/_existingSelectionContainerView/result.xcresult",
+        ".selection-container-reduction-task5-highlight-safe1/_existingSelectionContainerView/result.xcresult"
+      ],
+      "reason": "The true-withdrawal build passed the complete method-surface, touch-chrome, and stock-differential floating-cursor batch with stable container identity and zero failures or skips. No direct message or visible-behavior dependency was observed."
+    },
+    {
+      "selector": "_placeSelectionContainerView",
+      "definition": "ID_WITHDRAW_PLACE_SELECTION_CONTAINER_VIEW=1",
+      "methodAbsent": true,
+      "authorization": "safeFallback",
+      "hopperProcedures": [
+        "0x1608d84 -[UITextView _placeSelectionContainerView]"
+      ],
+      "artifacts": [
+        ".selection-container-reduction-task5-matrix2/_placeSelectionContainerView/result.xcresult",
+        ".selection-container-reduction-task5-highlight-safe1/_placeSelectionContainerView/result.xcresult"
+      ],
+      "reason": "The true-withdrawal build passed the complete method-surface, touch-chrome, and stock-differential floating-cursor batch with stable container placement and zero failures or skips. Project-owned backend placement remained sufficient."
+    },
+    {
+      "selector": "_updateInteractionGeometry",
+      "definition": "ID_WITHDRAW_UPDATE_INTERACTION_GEOMETRY=1",
+      "methodAbsent": true,
+      "authorization": "safeFallback",
+      "hopperProcedures": [
+        "0x1610f04 -[UITextView _updateInteractionGeometry]",
+        "0x156cb9c -[UITextInteractionAssistant updateSelectionForTextAnimation]"
+      ],
+      "artifacts": [
+        ".selection-container-reduction-task5-matrix2/_updateInteractionGeometry/result.xcresult",
+        ".selection-container-reduction-task5-highlight-safe1/_updateInteractionGeometry/result.xcresult"
+      ],
+      "reason": "The true-withdrawal build passed the complete method-surface, touch-chrome, and stock-differential floating-cursor batch with stable selection geometry and zero failures or skips. Existing project-owned presentation updates preserved the observed behavior."
+    }
+  ]
+}

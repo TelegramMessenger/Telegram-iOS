@@ -355,6 +355,8 @@ final class ReferenceMutationBackend: RichTextInputBackend {
     func hostWillResignFirstResponder() { inner.hostWillResignFirstResponder() }
     func hostDidResignFirstResponder() { inner.hostDidResignFirstResponder() }
     func hostDidFailToResignFirstResponder() { inner.hostDidFailToResignFirstResponder() }
+    func acquireFirstResponder() -> RichTextInputResponderTransition { inner.acquireFirstResponder() }
+    func relinquishFirstResponder() -> RichTextInputResponderTransition { inner.relinquishFirstResponder() }
 
     func hostWillMove(toWindow window: UIWindow?) { inner.hostWillMove(toWindow: window) }
     func editPolicyDidChange() { inner.editPolicyDidChange() }
@@ -398,5 +400,9 @@ final class ReferenceMutationBackend: RichTextInputBackend {
 
     func installCheckingIfNeeded() { inner.installCheckingIfNeeded() }
     func checkOnSelectionChange() { inner.checkOnSelectionChange() }
+    /// TASK H2 — forwarded like every other member on this reference wrapper.
+    func globalRange(ofCheckingRange range: UITextRange) -> (from: Int, to: Int)? {
+        inner.globalRange(ofCheckingRange: range)
+    }
 }
 #endif

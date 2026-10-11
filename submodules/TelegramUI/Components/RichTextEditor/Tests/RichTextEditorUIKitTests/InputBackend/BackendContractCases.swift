@@ -59,6 +59,49 @@ class BackendContractCases: XCTestCase {
     /// own call below, for every test that never sets this flag.
     var nextHostIsIncompatible = false
 
+    /// Task R11 (cluster 19/15) — a THIRD legitimate override hook, alongside `makeBackend()` and
+    /// `makeHost(log:)` (see that method's own "FIX ROUND 1" note on why a second hook was already
+    /// sanctioned here).
+    ///
+    /// **Why this exists.** `RichTextInputBackend.selectedTextRange` is deliberately typed as raw
+    /// `UITextRange?` (R6: "UIKit identity is backend-owned / opaque outside the active backend"), so
+    /// each conformer mints its OWN, backend-private `UITextPosition`/`UITextRange` subclass —
+    /// `LegacyTextRange`/`LegacyTextPosition` (aliased `DocumentTextRange`/`DocumentTextPosition` in
+    /// tests, `T/Support/LegacyIdentityTestAliases.swift`) for Legacy, `TGRichTextInputDecRange`/
+    /// `TGRichTextInputDecPosition` for the ID backend. Both are `final class`es with no shared
+    /// protocol beyond `UITextPosition`/`UITextRange` themselves (by design — R6's whole point). A
+    /// test that constructs `DocumentTextRange(DocumentTextPosition(offset))` directly and hands it to
+    /// `backend.selectedTextRange = …` is therefore silently Legacy-specific: for `IDTextEditorBackend`,
+    /// `newValue?.start as? TGRichTextInputDecPosition` can never succeed (two unrelated final
+    /// classes), so the write falls to the setter's documented nil-collapse default (offset 0), NOT
+    /// because of any backend bug — a `DocumentTextRange` literally cannot carry an offset to a
+    /// different backend's setter. Likewise `backend.selectedTextRange as? DocumentTextRange` on the
+    /// GETTER'S return value (a `TGRichTextInputDecRange`) can never succeed either — confirmed by
+    /// reading `IDTextEditorBackend.mintKernelSelectedTextRange()`, which unconditionally returns a
+    /// `TGRichTextInputDecRange`, no fallback branch.
+    ///
+    /// So the two `BackendSelectionContractTests` members that construct/inspect a concrete
+    /// `DocumentTextRange` (rather than reading `backend.canonicalSelection`, which stays
+    /// backend-agnostic) route through these two hooks instead — mirroring `makeBackend()`'s own
+    /// pattern: the base implementation is the ORIGINAL, Legacy-typed expression these tests used to
+    /// spell inline (byte-identical behavior for the base `BackendSelectionContractTests`/
+    /// `ReferenceMutationBackend` case), and `IDBackendSelectionContractTests` overrides both with the
+    /// ID backend's own identity types. The assertion STRENGTH is unchanged — same endpoint-identity/
+    /// ordering checks — only the concrete UIKit type construction/inspection is now per-backend, the
+    /// same "test-infrastructure gap, not a backend contract gap" `IDBackendContractSubclasses.swift`'s
+    /// own header already anticipates for exactly this kind of finding.
+    func makeSelectedTextRange(from: Int, to: Int) -> UITextRange {
+        DocumentTextRange(DocumentTextPosition(from), DocumentTextPosition(to))
+    }
+
+    /// The read-side counterpart of `makeSelectedTextRange(from:to:)` above. `nil` means `range` is not
+    /// this backend's own native `UITextRange` type — a genuine test failure for the caller to report,
+    /// not something to swallow silently.
+    func readSelectedTextRange(_ range: UITextRange?) -> (from: Int, to: Int)? {
+        guard let r = range as? DocumentTextRange else { return nil }
+        return (r.from.offset, r.to.offset)
+    }
+
     override func setUpWithError() throws {
         try super.setUpWithError()
         let freshLog = RichTextInputEventLog()

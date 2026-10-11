@@ -56,36 +56,40 @@ func makeBox(for block: Block, mapper: AttributedStringMapper,
 /// The multi-block document surface. ONE view owns every block and the unified global selection.
 /// (Internal — only `RichTextEditorView` is public; keeps `UITextInput` witnesses internal.)
 @available(iOS 13.0, *)
-final class DocumentCanvasView: UIView {
+/// NOT `final`: `IDDocumentCanvasView` (InputBackend/InputDec) subclasses it so the InputDec
+/// backend's private UIKit callbacks can be installed onto a distinct concrete class, leaving
+/// this one free of them (spec: "the legacy class must not acquire them"). Members are marked
+/// `final` individually wherever the compiler allows, to keep the devirtualization loss small.
+class DocumentCanvasView: UIView {
     let root = BlockStack()
-    var boxes: [CanvasBlock] { get { root.boxes } set { root.boxes = newValue } }
-    var mapper: AttributedStringMapper
+    final var boxes: [CanvasBlock] { get { root.boxes } set { root.boxes = newValue } }
+    final var mapper: AttributedStringMapper
     /// The whole-document writing-direction override (the model side of `applyWritingDirectionOverride`).
     /// Mirrored into `Document.layoutDirection` by the façade getter; render-only auto-detection is separate.
-    var layoutDirectionModel: DocumentLayoutDirection = .auto
-    var imageProvider: (String) -> UIImage? = { _ in nil }
+    final var layoutDirectionModel: DocumentLayoutDirection = .auto
+    final var imageProvider: (String) -> UIImage? = { _ in nil }
     /// Returns a FRESH, non-interactive view for an emoji `id` sized to the requested square, or nil.
     /// The canvas owns/positions/removes it and keeps its `dynamicColor` synced to the current text color
     /// (template-emoji tinting); a host with only a CALayer wraps it in a conforming `UIView`.
-    var emojiViewProvider: (_ id: String, _ size: CGSize) -> (UIView & RichTextEmojiView)? = { _, _ in nil }
+    final var emojiViewProvider: (_ id: String, _ size: CGSize) -> (UIView & RichTextEmojiView)? = { _, _ in nil }
     /// Returns a FRESH checkbox view for a checklist marker (host-side `CheckNode`). `nil` when unset —
     /// the editor falls back to the Unicode glyph marker. The canvas hosts/positions/animates the view.
-    var checklistMarkerViewProvider: ((_ checked: Bool, _ size: CGSize) -> (UIView & RichTextChecklistMarkerView)?)?
+    final var checklistMarkerViewProvider: ((_ checked: Bool, _ size: CGSize) -> (UIView & RichTextChecklistMarkerView)?)?
     /// Host hook for editing a formula atom. The editor supplies current LaTeX and a replacement callback;
     /// the host owns presentation and formula rendering dependencies.
-    var formulaEditRequested: ((_ latex: String, _ completion: @escaping (String) -> Void) -> Void)?
+    final var formulaEditRequested: ((_ latex: String, _ completion: @escaping (String) -> Void) -> Void)?
     /// Asked to present the pill property sheet. `isBlockPill` distinguishes a row pill from an inline
     /// one (the host offers different properties per kind). The completion applies the edit; `nil`
     /// deletes the pill.
-    var buttonEditRequested: ((_ button: ButtonRef, _ isBlockPill: Bool, _ completion: @escaping (ButtonRef?) -> Void) -> Void)?
+    final var buttonEditRequested: ((_ button: ButtonRef, _ isBlockPill: Bool, _ completion: @escaping (ButtonRef?) -> Void) -> Void)?
     /// Asked to present a row's alignment/delete menu.
-    var buttonRowMenuRequested: ((ButtonRowMenuRequest) -> Void)?
+    final var buttonRowMenuRequested: ((ButtonRowMenuRequest) -> Void)?
     /// Hosted emoji views, keyed by `EmojiRef.instanceID` so edits/undo reuse (not recreate) them.
     /// Plain `internal` (NOT `private(set)`): the reconciler in `DocumentCanvasView+Emoji.swift` mutates it.
-    var emojiViews: [String: HostedEmoji] = [:]
+    final var emojiViews: [String: HostedEmoji] = [:]
     /// Hosted checklist checkbox views, keyed by the owning `BlockBox`'s `BlockID`. Pooled so a toggle
     /// reuses (and animates) the existing view rather than recreating it.
-    var checklistMarkerViews: [BlockID: HostedChecklistMarker] = [:]
+    final var checklistMarkerViews: [BlockID: HostedChecklistMarker] = [:]
     /// Back-most container for blockquote run fills (see `BlockquoteUnderlay`). Behind every block view.
     let blockquoteUnderlay = BlockquoteUnderlay()
     /// Back-most container for pull-quote pill fills — a second `BlockquoteUnderlay` instance with
@@ -100,17 +104,17 @@ final class DocumentCanvasView: UIView {
     /// overlay (which is brought to front each layout pass). Cell emoji live in the table content view.
     let emojiOverlay = UIView()
     /// Hide an emoji view when its canvas frame is more than this far outside the visible viewport.
-    var emojiCullMargin: CGFloat = 50
+    final var emojiCullMargin: CGFloat = 50
     /// Returns a media view for a container's items (in order), or nil. The canvas owns/positions/
     /// resizes/removes it. Mirrors `emojiViewProvider` but for block-level media; carries the whole item
     /// list (not just the primary item) so a multi-media container's host view can render every item.
     /// `existing` is the currently-hosted view for this block on an items-change (nil otherwise); the host
     /// may update it IN PLACE and return the SAME instance (surviving cells reused, fetch preserved) or
     /// return a fresh instance (recreate fallback). Returns nil = "not ready" (keep any existing view).
-    var mediaViewProvider: (_ items: [MediaProviderItem], _ blockID: BlockID, _ displayMode: MediaDisplayMode, _ existing: RichTextMediaItemView?) -> RichTextMediaItemView? = { _, _, _, _ in nil }
+    final var mediaViewProvider: (_ items: [MediaProviderItem], _ blockID: BlockID, _ displayMode: MediaDisplayMode, _ existing: RichTextMediaItemView?) -> RichTextMediaItemView? = { _, _, _, _ in nil }
     /// Hosted media views, keyed by the OWNING block's `BlockID` (the occurrence) so edits/undo reuse —
     /// not recreate — them, and two blocks sharing one `mediaID` get two independent views.
-    var mediaItemViews: [BlockID: HostedMediaItem] = [:]
+    final var mediaItemViews: [BlockID: HostedMediaItem] = [:]
     /// Pass-through container for media views (canvas coords). Kept below the chrome overlay; above block
     /// backing views so a full-bleed medium overlays its block. It is user-interaction-ENABLED but its
     /// `hitTest` returns a subview only when the touch lands on an interactive media control (e.g. the
@@ -118,39 +122,39 @@ final class DocumentCanvasView: UIView {
     /// `MediaPassthroughOverlayView`.
     let mediaOverlay = MediaPassthroughOverlayView()
     /// Hide a media view when its canvas frame is more than this far outside the visible viewport.
-    var mediaCullMargin: CGFloat = 50
+    final var mediaCullMargin: CGFloat = 50
     /// Pooled dust views, keyed by spoiler-run identity so a hidden run keeps its animating emitter across
     /// reconcile passes. Mutated by the reconciler in `DocumentCanvasView+Spoilers.swift`.
-    var spoilerDustViews: [SpoilerKey: HostedSpoilerDust] = [:]
+    final var spoilerDustViews: [SpoilerKey: HostedSpoilerDust] = [:]
     /// The spoiler runs found by the last `syncSpoilers` (hidden-state + canvas rects). Drives the tap
     /// hit-test. Recomputed each pass; never persisted.
-    var spoilerRuns: [SpoilerRun] = []
+    final var spoilerRuns: [SpoilerRun] = []
     /// Set by a tap on a hidden spoiler so the next reconcile plays the EXPLOSION (vs a cross-fade) for that
     /// run, from the tap point. Consumed + cleared in one pass.
-    var spoilerRevealHint: (key: SpoilerKey, canvasPoint: CGPoint)?
+    final var spoilerRevealHint: (key: SpoilerKey, canvasPoint: CGPoint)?
     /// Non-interactive container for body/caption dust views (canvas coords), above emoji, below the wash.
     /// Cell dust rides the table content view (like cell emoji).
     let spoilerOverlay = UIView()
     /// Hide a dust view when its canvas frame is more than this far outside the visible viewport.
-    var spoilerCullMargin: CGFloat = 50
+    final var spoilerCullMargin: CGFloat = 50
     /// True iff some leaf region currently carries a `.rtSpoiler` run. A cheap gate so `syncSpoilers` (which
     /// runs on every caret move) does NO work in a spoiler-free document. Recomputed only when the model
     /// changes (load / edit / undo) — never on a pure selection change.
-    var documentHasSpoilers = false
+    final var documentHasSpoilers = false
     /// Overscan band (points) realized above AND below the visible viewport, so scrolling reveals an
     /// already-drawn paragraph instead of a blank flash. NEGATIVE (the default) ⇒ auto = one viewport
     /// height each side. Tunable via the façade (`RichTextEditorView.blockViewOverscan`).
-    var blockViewOverscan: CGFloat = -1
+    final var blockViewOverscan: CGFloat = -1
     /// Persistent block-view subviews, keyed by BlockID so edits/undo reuse (not recreate) them.
-    private(set) var blockViews: [BlockID: BlockBackingView] = [:]
+    private(set) final var blockViews: [BlockID: BlockBackingView] = [:]
     /// Hosted INLINE button pills, keyed by global position (see `syncButtonPillViews`). A block row's
     /// pills are not here — they are subviews of the row's own `ButtonRowBackingView`.
-    var buttonPillViews: [Int: HostedButtonPill] = [:]
+    final var buttonPillViews: [Int: HostedButtonPill] = [:]
     /// Bounded reuse queue of free PARAGRAPH/IMAGE backing views (both plain `BlockBackingView`). A culled
     /// view is detached + dropped from `blockViews` and pushed here; a newly-realized paragraph/image pops
     /// it and rebinds. Tables (`TableBackingView`) are heavyweight + few, so they are created/destroyed,
     /// not queued. Excess beyond the cap is released.
-    private var recycleQueue: [BlockBackingView] = []
+    private final var recycleQueue: [BlockBackingView] = []
     private let recycleQueueCap = 24   // ~2–3 screenfuls of paragraphs at typical heights; excess freed views are released
     /// Topmost overlay that draws table structural chrome (outline, handles, knobs) ABOVE the block views.
     private let blockChromeOverlay = BlockChromeOverlay()
@@ -176,7 +180,7 @@ final class DocumentCanvasView: UIView {
     /// hijacked by the interactive modal/keyboard-dismiss gestures. The package can't import Display, so the
     /// host applies the flags; the handle views are hit-testable so the flags are scoped to knob interaction.
     /// Applied to BOTH handle views (passed as bare `UIView`s) when set.
-    var configureSelectionHandleView: ((UIView) -> Void)? {
+    final var configureSelectionHandleView: ((UIView) -> Void)? {
         didSet {
             configureSelectionHandleView?(startHandleView)
             configureSelectionHandleView?(endHandleView)
@@ -184,35 +188,35 @@ final class DocumentCanvasView: UIView {
     }
     /// The container + frame the caret view was last placed at, so a repeated `updateCaretView()` (e.g. on a
     /// scroll tick) that lands the caret at the SAME spot does NOT restart the blink.
-    private weak var lastCaretContainer: UIView?
-    private var lastCaretFrame: CGRect = .null
+    private weak final var lastCaretContainer: UIView?
+    private final var lastCaretFrame: CGRect = .null
 
     /// Fired by `notifyContentSizeChanged()` whenever the content height may have changed (after an
     /// edit/undo/IME/document-swap). The host (`RichTextEditorView`) sizes the canvas frame-based, not via
     /// Auto Layout, so the canvas does NOT lay itself out — it notifies through this hook and the parent
     /// drives layout explicitly (`performLayout` → `layoutContent`).
-    var onContentSizeChange: (() -> Void)?
+    final var onContentSizeChange: (() -> Void)?
     /// Fired whenever the caret moves to a spot the host may need to reveal: the OS moving the selection
     /// through the `selectedTextRange` setter (hardware arrow navigation), and every editing operation
     /// that relocates the caret (typing, delete, Enter, IME-composition commit — via `editing { }` and the
     /// marked-text branch). The host uses it to scroll the caret into view, since these can land the caret
     /// off-screen (arrowing up out of a tall image; typing the line below the keyboard).
-    var onSelectionChange: (() -> Void)?
+    final var onSelectionChange: (() -> Void)?
     /// Fired once when the canvas actually GAINS first-responder status (not on a repeat
     /// `becomeFirstResponder()` while already focused — the tap handlers call it unconditionally). The
     /// host surfaces this as `RichTextEditorView.onBecameFirstResponder`.
-    var onBecameFirstResponder: (() -> Void)?
+    final var onBecameFirstResponder: (() -> Void)?
     /// Fired once when the canvas actually RESIGNS first-responder status. Surfaced as
     /// `RichTextEditorView.onResignedFirstResponder`.
-    var onResignedFirstResponder: (() -> Void)?
+    final var onResignedFirstResponder: (() -> Void)?
     /// Pasting MEDIA (image/gif/video/sticker) is a host concern — the editor never embeds it inline.
     /// `canPasteMedia` answers whether Paste should be offered for the current pasteboard (so the menu item
     /// shows for an image-only clipboard); `onPasteMedia` performs the media paste (routing to the host's
     /// send flow) and returns whether it consumed the paste. Consulted only when there is no TEXT rep — the
     /// editor pastes text (fragment/RTF/plain) itself.
-    var canPasteMedia: (() -> Bool)?
-    var onPasteMedia: (() -> Bool)?
-    var plainTextFragmentTransformer: ((String) -> Document?)?
+    final var canPasteMedia: (() -> Bool)?
+    final var onPasteMedia: (() -> Bool)?
+    final var plainTextFragmentTransformer: ((String) -> Document?)?
 
     /// A HARDWARE-keyboard Return (plain or ⌘) routes here before the editor inserts a newline, so a host
     /// (the chat composer) can send-on-Enter / send-on-⌘-Enter. Mirrors the legacy `ChatInputTextViewImpl`'s
@@ -220,7 +224,7 @@ final class DocumentCanvasView: UIView {
     /// editors like the article composer and Demo just add a line); `false` means the host consumed the Return
     /// (e.g. sent the message) and the editor does nothing. The SOFTWARE keyboard's Return never triggers a
     /// keyCommand, so it always inserts a newline (there's a separate send button) — matching the legacy input.
-    var onHardwareReturn: ((UIKeyModifierFlags) -> Bool)?
+    final var onHardwareReturn: ((UIKeyModifierFlags) -> Bool)?
 
     /// Interior content margins — interactable padding around the document, ADDED to the built-in
     /// `pageMargin`. Unlike the host's scroll insets (covered by chrome/keyboard, content scrolls under),
@@ -230,56 +234,56 @@ final class DocumentCanvasView: UIView {
     /// (a layout-affecting input, passed every update); default `.zero`. A plain stored value: the `update`
     /// that sets it re-runs `performLayout`, which lays the canvas out EXPLICITLY (`layoutContent()`), so the
     /// setter neither schedules layout itself nor fires `onContentSizeChange`/`onChange`.
-    var contentMargins: UIEdgeInsets = .zero
+    final var contentMargins: UIEdgeInsets = .zero
 
     /// The built-in horizontal page margin applied to paragraph/table text (in addition to `contentMargins`).
     /// Defaults to the document metric (`CanvasMetrics.pageMargin`, 16pt); a compact host (e.g. the chat
     /// composer) can set it to 0 so the host controls all horizontal insets via the frame + `contentMargins`.
     /// Media bleed is governed separately by `mediaBlockStyle` / `applyMediaBlockStyle`.
-    var pageMargin: CGFloat = CanvasMetrics.pageMargin
+    final var pageMargin: CGFloat = CanvasMetrics.pageMargin
 
     /// The base inter-block vertical inset for the document root (each side). Defaults to the document
     /// metric (`BlockBox.defaultVerticalInset`, 8pt); a compact host (the chat composer) sets it to 0 so a
     /// single paragraph hugs its text height instead of carrying the inter-paragraph gap. Applied to the
     /// root stack in `layoutContent`; nested (table-cell) stacks keep the document default.
-    var blockVerticalInset: CGFloat = BlockBox.defaultVerticalInset
+    final var blockVerticalInset: CGFloat = BlockBox.defaultVerticalInset
 
     /// Per-host media geometry. Applied via `applyMediaBlockStyle(_:)`; read at `MediaBlockBox` creation
     /// in `setBlocks` / `insertMedia`. Defaults to the document edge-to-edge look.
-    var mediaBlockStyle: MediaBlockStyle = .default
+    final var mediaBlockStyle: MediaBlockStyle = .default
 
     /// Per-host quote geometry. Applied via `applyQuoteStyle(_:)` (rebuilds the mapper stylesheet + pushes
     /// render values to the underlay).
-    var quoteStyle: QuoteStyle = .default
+    final var quoteStyle: QuoteStyle = .default
 
     /// Per-host pull-quote geometry. Applied via `applyPullQuoteStyle(_:)` (pushes corner radius + fill alpha
     /// to the underlay). Read by `pullQuotePillRects()` / `pullQuoteMarkRects()` for the pill + mark geometry.
-    var pullQuoteStyle: PullQuoteStyle = .default
+    final var pullQuoteStyle: PullQuoteStyle = .default
 
     /// Per-host code-block geometry. Applied via `applyCodeStyle(_:)`, which resolves its optionals
     /// against the shared render metrics (`StyleSheet.metrics.code`) — so an unset host renders what
     /// the InstantPage V2 renderer will.
-    var codeStyle: CodeStyle = .default
+    final var codeStyle: CodeStyle = .default
 
     /// Host-injected collapse/expand icons (nil ⇒ no affordance drawn). The `collapse` image goes to
     /// `BlockQuoteBox`; the `expand` image likewise.
-    var quoteCollapseIcons: RichTextEditorQuoteCollapseIcons?
+    final var quoteCollapseIcons: RichTextEditorQuoteCollapseIcons?
 
     /// Host-injected fold chevron for detail blocks (the V2 `ExpandingItemVerticalRegularArrow`). Stamped onto
     /// each top-level `DetailsBox` during layout; `nil` ⇒ a drawn-arrow fallback.
-    var detailsChevronImage: UIImage?
+    final var detailsChevronImage: UIImage?
 
     /// Placeholder strings drawn in empty paragraphs. Stamped onto each top-level box during layout.
     /// Defaults to the editor's built-in hints; a compact host (chat composer) sets them to "" to suppress
     /// the editor's placeholder (it draws its own). Applied on the next layout pass.
-    var placeholders: RichTextEditorPlaceholders = .default
+    final var placeholders: RichTextEditorPlaceholders = .default
 
     /// Whether a tap in the empty area below the document's last block appends a new empty body paragraph
     /// after it (`insertEmptyBodyParagraph`). Defaults to `true` (the full-page document editor: lets you
     /// always start a normal paragraph below the final block, whatever its type). A compact host (the chat
     /// composer) sets it to `false` — there is no "empty area below the content" to grow into, so a tap there
     /// just places the caret in the existing trailing paragraph.
-    var tapBelowAddsTrailingParagraph = true
+    final var tapBelowAddsTrailingParagraph = true
 
     // Selection as global UTF-16 positions; `anchor` fixed, `head` moving.
     //
@@ -368,11 +372,11 @@ final class DocumentCanvasView: UIView {
     /// it ever comes back dirty, the fix is NOT a cached copy of either endpoint on the canvas (that
     /// second store is the thing Phase 5 exists to remove) — it is a batched read at the top of the
     /// affected function.
-    var anchor: Int { inputBackend.canonicalSelectionAnchorOffset }
+    final var anchor: Int { inputBackend.canonicalSelectionAnchorOffset }
 
     /// The moving endpoint. See `anchor` immediately above for the whole rule — deliberately not
     /// restated here.
-    var head: Int { inputBackend.canonicalSelectionHeadOffset }
+    final var head: Int { inputBackend.canonicalSelectionHeadOffset }
 
     // Floating cursor (spacebar-trackpad) gesture state — see DocumentCanvasView+FloatingCursor.swift.
     //
@@ -408,18 +412,18 @@ final class DocumentCanvasView: UIView {
     /// with these projections (a stored `var` satisfies the protocol's `{ get }` directly), so the
     /// per-store name scan cannot cover them. The same test instead holds the CONCRETE backend type to
     /// one mention outside `S/InputBackend/` — see the `anchor` doc above.
-    var floatingCursorActive: Bool { inputBackend.floatingCursorActive }
+    final var floatingCursorActive: Bool { inputBackend.floatingCursorActive }
 
     /// The last raw floating point (canvas coords). See `floatingCursorActive` immediately above for
     /// the whole rule — deliberately not restated here.
-    var floatingCursorPoint: CGPoint { inputBackend.floatingCursorPoint }
+    final var floatingCursorPoint: CGPoint { inputBackend.floatingCursorPoint }
 
     /// **THE ONE THAT DOES NOT MOVE, AND MUST NOT.** A `CADisplayLink` RETAINS ITS TARGET, and
     /// `willMove(toWindow:)` is its only teardown — the Task-6 retain cycle
     /// `WindowDetachCharacterizationTests` exists to guard. A link owned by the backend would outlive
     /// the view it scrolls. The backend owns the STATE; this canvas owns the link, and starts/stops it
     /// from the same two bodies it always did.
-    var floatingScrollLink: CADisplayLink?
+    final var floatingScrollLink: CADisplayLink?
 
     /// The per-tick auto-scroll step. A read-only projection like the two above.
     ///
@@ -427,19 +431,19 @@ final class DocumentCanvasView: UIView {
     /// is canvas storage and this is a backend door call, so the invariant would straddle the seam if
     /// the two writes were separated. They are not — both stay in that one body. Pinned by
     /// `FloatingCursorStateAuthorityTests.test_stoppingTheAutoScrollClearsTheLinkAndTheVelocityTogether`.
-    var floatingScrollVelocity: CGFloat { inputBackend.floatingScrollVelocity }
+    final var floatingScrollVelocity: CGFloat { inputBackend.floatingScrollVelocity }
 
     /// Last non-zero width laid out; used to rebuild boxes during undo (extensions can't add
     /// stored properties, so it lives here).
-    var lastLayoutWidth: CGFloat = 0
-    var effectiveWidth: CGFloat { lastLayoutWidth > 0 ? lastLayoutWidth : (bounds.width > 0 ? bounds.width : 320) }
+    final var lastLayoutWidth: CGFloat = 0
+    final var effectiveWidth: CGFloat { lastLayoutWidth > 0 ? lastLayoutWidth : (bounds.width > 0 ? bounds.width : 320) }
 
-    func clampGlobal(_ n: Int) -> Int { min(max(n, 0), documentSize) }
+    final func clampGlobal(_ n: Int) -> Int { min(max(n, 0), documentSize) }
 
     /// Resolves a global position to the box that owns it, snapping structural-boundary and
     /// end-of-document positions to the nearest in-text position. Returns the box, the local
     /// UTF-16 offset, and the box's index.
-    func resolveBox(at pos: Int) -> (box: CanvasBlock, local: Int, index: Int)? {
+    final func resolveBox(at pos: Int) -> (box: CanvasBlock, local: Int, index: Int)? {
         if let (b, l) = box(containingGlobal: pos), let i = boxIndex(of: b) { return (b, l, i) }
         for (i, b) in boxes.enumerated() {
             if pos < b.textStart { return (b, 0, i) }
@@ -448,7 +452,7 @@ final class DocumentCanvasView: UIView {
         if let last = boxes.last { return (last, last.textLength, boxes.count - 1) }
         return nil
     }
-    private(set) var documentSize = 0
+    private(set) final var documentSize = 0
 
     /// Monotonic count of document CONTENT mutations. Observation-only until the input backend reads
     /// it (Phase 2): a counter with no readers cannot change behavior. Bumped at exactly five SITES —
@@ -463,21 +467,21 @@ final class DocumentCanvasView: UIView {
     /// the contract is "strictly increasing per content mutation", never "exactly one per mutation".
     /// `DocumentRevisionTests` pins both counts. Do not add an `editing`-depth flag to suppress the
     /// inner bump — a second piece of transaction state on the canvas is what Phase 5 exists to remove.
-    private(set) var documentRevision: UInt64 = 0
+    private(set) final var documentRevision: UInt64 = 0
 
     /// Monotonic count of changes that can move geometry, including changes that are not document
     /// mutations (layout passes, viewport scroll, table horizontal scroll). Over-counting is allowed:
     /// the counter is only ever compared for equality.
-    private(set) var layoutGeneration: UInt64 = 0
+    private(set) final var layoutGeneration: UInt64 = 0
 
     /// Records a document content mutation. Content changes geometry, so this bumps both counters.
-    func bumpDocumentRevision() {
+    final func bumpDocumentRevision() {
         documentRevision &+= 1
         layoutGeneration &+= 1
     }
 
     /// Records a geometry-affecting change that is NOT a document mutation.
-    func bumpLayoutGeneration() {
+    final func bumpLayoutGeneration() {
         layoutGeneration &+= 1
     }
 
@@ -495,7 +499,7 @@ final class DocumentCanvasView: UIView {
     /// so a bracket there would fire a counterfeit EXTERNAL change — the mirror of what the spec
     /// forbids. Pinned by `ExternalSynchronizationTests`' four negative controls, three of which
     /// reach `setBlocks` (a plain-keystroke control alone cannot: it never gets there).
-    func synchronizingExternalChange(reason: RichTextInputExternalChangeReason,
+    final func synchronizingExternalChange(reason: RichTextInputExternalChangeReason,
                                      markedTextPolicy: RichTextMarkedTextPolicy,
                                      changedRangeBefore: NSRange? = nil,
                                      changedRangeAfter: NSRange? = nil,
@@ -742,13 +746,13 @@ final class DocumentCanvasView: UIView {
     /// backend that grows a real affinity model must revisit this line before trusting them.
     ///
     /// **Do not "simplify" this to `setSelection`.** The correct-looking one-liner is measurement 1.
-    func setSelectionForTesting(anchor newAnchor: Int, head newHead: Int) {
+    final func setSelectionForTesting(anchor newAnchor: Int, head newHead: Int) {
         inputBackend.setCanonicalAnchor(newAnchor)
         inputBackend.setCanonicalHead(newHead)
     }
 
-    var selFrom: Int { min(anchor, head) }
-    var selTo: Int { max(anchor, head) }
+    final var selFrom: Int { min(anchor, head) }
+    final var selTo: Int { max(anchor, head) }
 
     // UITextInput plumbing + undo.
     // TASK 26 DELETED `var textInputDelegate: UITextInputDelegate?` from here, and TASK 43 DELETED
@@ -763,30 +767,30 @@ final class DocumentCanvasView: UIView {
     /// iOS 16+ system edit-menu interaction. Untyped storage because a stored property can't be
     /// `@available`-gated narrower than its (now iOS-13) enclosing type, while `UIEditMenuInteraction` is
     /// iOS 16+; below 16 the canvas falls back to `UIMenuController` (see DocumentCanvasView+EditMenu).
-    private var editMenuInteractionStorage: AnyObject?
+    private final var editMenuInteractionStorage: AnyObject?
     @available(iOS 16.0, *)
-    var editMenuInteraction: UIEditMenuInteraction? {
+    final var editMenuInteraction: UIEditMenuInteraction? {
         get { editMenuInteractionStorage as? UIEditMenuInteraction }
         set { editMenuInteractionStorage = newValue }
     }
     /// Host-provided transform of the edit-menu elements. Consulted by the iOS-16 `menuFor:` delegate only,
     /// and only for a non-collapsed selection. nil ⇒ the editor's default menu. (iOS 13–15 keeps its built-in
     /// items — see DocumentCanvasView+EditMenu; UIMenuItem cannot carry a closure.)
-    var hostContextMenuItemsProvider: ((_ defaultElements: [UIMenuElement]) -> [UIMenuElement])?
+    final var hostContextMenuItemsProvider: ((_ defaultElements: [UIMenuElement]) -> [UIMenuElement])?
     var editMenuStrings: RichTextEditorMenuStrings = .default
     /// Host hook for the table row/column structural menu. Fired from the `.menu` handle-tap case with a
     /// framework-agnostic description; the host presents its own ContextController. nil ⇒ no menu shown.
-    var onRequestTableStructuralMenu: ((TableStructuralMenuRequest) -> Void)?
+    final var onRequestTableStructuralMenu: ((TableStructuralMenuRequest) -> Void)?
     /// Host hook for a media control (the "more" button; the "+" later). Fired from a bound media view with
     /// an account-free `MediaControlRequest` (opaque `mediaID` + occurrence-bound operation closures); the
     /// host resolves the concrete media and presents its own menu. nil ⇒ no menu shown.
-    var onRequestMediaControl: ((MediaControlRequest) -> Void)?
+    final var onRequestMediaControl: ((MediaControlRequest) -> Void)?
     /// Whether the edit menu is currently presented (tracked via UIEditMenuInteractionDelegate), so a tap
     /// on the caret/selection can TOGGLE the menu instead of re-presenting it (the close-then-reopen flicker).
-    var editMenuVisible = false
+    final var editMenuVisible = false
     /// Test observability: counts `dismissEditMenu()` calls (a presented `UIEditMenuInteraction` can't be
     /// driven in a unit test, so the auto-dismiss-on-change behavior is asserted via this counter).
-    var dismissEditMenuCountForTesting = 0
+    final var dismissEditMenuCountForTesting = 0
     /// TASK 30: the presentation counterpart, added for the same reason and used the same way. Both of
     /// `presentEditMenu()`'s real effects are unreachable from a unit test (`isFirstResponder` is false
     /// for an unhosted canvas, and `editMenuInteraction` is nil until it is installed), so WITHOUT this
@@ -799,32 +803,32 @@ final class DocumentCanvasView: UIView {
     /// seven fields each carry a proven-live negative control in `RouterHarnessTests`: an eighth field
     /// would need its own control, and it would earn nothing — a router that kept a copy of a select
     /// body already moves `anchor`/`head`, which that snapshot does watch.
-    var presentEditMenuCountForTesting = 0
+    final var presentEditMenuCountForTesting = 0
     /// Reference-time of the last edit-menu dismissal. The system auto-dismisses the menu on a tap-down,
     /// BEFORE our single-tap handler runs (on tap-up), so `editMenuVisible` is already false by then; this
     /// lets the handler tell "this tap just dismissed the menu" from "no menu was up".
-    var lastMenuDismissTime: TimeInterval = 0
+    final var lastMenuDismissTime: TimeInterval = 0
     /// Manual multi-tap counting (see `handleTap`). The single-tap recognizer is no longer gated on a
     /// double-tap recognizer FAILING — that `require(toFail:)` made every caret placement wait out the
     /// ~0.35s multi-tap window. One 1-tap recognizer now fires immediately and these track the rapid-tap
     /// run that escalates caret → word → paragraph.
-    var lastTapTime: TimeInterval = 0
-    var lastTapLocation: CGPoint = .zero
-    var tapCount = 0
+    final var lastTapTime: TimeInterval = 0
+    final var lastTapLocation: CGPoint = .zero
+    final var tapCount = 0
     /// Set on a genuine not-focused→focused transition (`becomeFirstResponder`), consumed by the next
     /// `performSingleTap`. A FOCUSING tap must only place the caret, never open the menu. We can't detect it
     /// from `isFirstResponder` at touch-up: the chat composer focuses the editor on touch-DOWN (the panel's
     /// `ensureFocusedOnTap`), so by the time the tap handler runs `isFirstResponder` is already true. This flag
     /// captures the transition regardless of who triggered it (touch-down focus or the handler's own
     /// `ensureFirstResponder`).
-    var didJustBecomeFirstResponder = false
+    final var didJustBecomeFirstResponder = false
     /// Active magnifier loupe during a long-press caret drag (iOS 17+). Begun on `.began`, moved on
     /// `.changed`, invalidated + niled on `.ended`/`.cancelled`/`.failed`. The storage is untyped because a
     /// stored property can't be `@available`-gated narrower than its enclosing (iOS-16) type, while
     /// `UITextLoupeSession` is iOS 17+; the typed accessor below is the gated view onto it.
-    private var loupeSessionStorage: AnyObject?
+    private final var loupeSessionStorage: AnyObject?
     @available(iOS 17.0, *)
-    var loupeSession: UITextLoupeSession? {
+    final var loupeSession: UITextLoupeSession? {
         get { loupeSessionStorage as? UITextLoupeSession }
         set { loupeSessionStorage = newValue }
     }
@@ -832,16 +836,16 @@ final class DocumentCanvasView: UIView {
     /// its system `cursorView` for the loupe's `fromSelectionWidgetView`. Kept DEACTIVATED except during a loupe
     /// drag. Untyped storage for the same availability reason as `loupeSessionStorage`. INSTRUMENTED — evaluate
     /// the leaked-chrome logs before deciding whether this can stay.
-    private var selectionDisplayInteractionStorage: AnyObject?
+    private final var selectionDisplayInteractionStorage: AnyObject?
     @available(iOS 17.0, *)
-    var selectionDisplayInteraction: UITextSelectionDisplayInteraction? {
+    final var selectionDisplayInteraction: UITextSelectionDisplayInteraction? {
         get { selectionDisplayInteractionStorage as? UITextSelectionDisplayInteraction }
         set { selectionDisplayInteractionStorage = newValue }
     }
     /// SPIKE: a stable container the borrowed interaction hosts its selection chrome in (via the delegate). It is
     /// NOT tracked in `blockViews`, so the block-view reload loop never removes it, and it is created lazily on the
     /// first loupe drag. All the interaction's chrome (cursor / lollipops / accessory) lands here so we can hide it.
-    lazy var selectionChromeContainer: UIView = {
+    lazy final var selectionChromeContainer: UIView = {
         let v = UIView()
         v.isUserInteractionEnabled = false
         v.clipsToBounds = false
@@ -853,40 +857,40 @@ final class DocumentCanvasView: UIView {
     /// blinking caret is invisible for the part of each cycle its opacity dips toward 0, which made the loupe
     /// appear to pop in "from nothing" with no visible cursor (device-log-verified). Set BEFORE `begin(...)`
     /// (so the caret is already solid when the loupe captures it) and cleared on drag end.
-    var loupeDragActive = false
+    final var loupeDragActive = false
     /// The current finger x (canvas/self space) during a loupe drag, set by the long-press handler each frame.
     /// `updateCaretView`'s loupe branch reads it to hide the gray "shadow" (`caretView`) while the accent glider
     /// at the finger sits within `loupeShadowMinSeparation` of the snapped caret. Owned here (not in
     /// `positionLoupeShadow`) so a re-run of `updateCaretView` — the loupe magnifier forces layout passes —
     /// re-applies the rule instead of `freezeSolid` leaving the shadow visible. `nil` when not dragging.
-    var loupeFingerX: CGFloat?
+    final var loupeFingerX: CGFloat?
     /// True when the current long-press `.began` was consumed as the follow-up tap of a double-/triple-tap
     /// (see `handleLoupeBegan`) rather than starting a loupe cursor-drag. While set, the long-press `.changed`
     /// / `.ended` handlers no-op (no `setCaret`, no loupe teardown) so the word/paragraph selection they made
     /// survives the rest of the gesture. Reset when the gesture ends.
-    var loupeConsumedAsMultiTap = false
+    final var loupeConsumedAsMultiTap = false
     /// Whether the edit menu was already showing when the current loupe long-press began, and the caret's global
     /// position at that moment — captured in `.began` so `.ended` can tell a STATIONARY press on an open menu
     /// (a tap-like toggle-off — suppress the re-present, else the menu flickers disappear-then-reappear) from a
     /// real cursor drag (present at the new position). A quick tap near the caret is caught as a loupe (the
     /// near-cursor press delay is 0.05s), so the loupe must match the tap path's menu-toggle semantics.
-    var loupeMenuWasVisibleAtBegan = false
-    var loupeHeadAtBegan = 0
+    final var loupeMenuWasVisibleAtBegan = false
+    final var loupeHeadAtBegan = 0
     /// The steady caret's normal accent, saved while a loupe drag recolors it to the desaturated "shadow" gray
     /// (the snapped landing caret is the gray shadow; the gliding `transientCaretView` is the accent). Restored
     /// on drag end.
-    var loupeSavedCaretAccent: UIColor?
-    var draggingEndpoint: SelectionEndpoint?
+    final var loupeSavedCaretAccent: UIColor?
+    final var draggingEndpoint: SelectionEndpoint?
     // The (caret-center − initial-touch) offset captured when a selection-handle drag begins, so the dragged
     // endpoint keeps its starting offset from the finger instead of snapping to the line under the touch (the
     // knob is drawn offset from the text line). Applied at every drag map via `selectionDragPosition(forTouch:)`.
-    var selectionDragGrabOffset: CGSize = .zero
-    var draggingTableKnob: TableRangeEnd?
+    final var selectionDragGrabOffset: CGSize = .zero
+    final var draggingTableKnob: TableRangeEnd?
     // A `.cells` corner-knob drag (Phase 2c-T4) — set in `.began` when the touch hits a corner knob, either a
     // committed `.cells` selection's or the focused-cell "fake" chrome's (no committed selection yet). The
     // FIRST `extendCellSelection` call promotes the fake chrome to a real committed `.cells` selection.
-    var draggingTableCornerKnob: TableCellCorner?
-    var selectionHandlePan: UIPanGestureRecognizer?
+    final var draggingTableCornerKnob: TableCellCorner?
+    final var selectionHandlePan: UIPanGestureRecognizer?
     /// The 1-tap caret/selection recognizer `installSelectionInteractions()` adds. **TASK 32 added this
     /// storage**, and it is not decoration: `legacyRemoveSelectionInteractions()` must remove exactly the
     /// three recognizers install added, BY IDENTITY, and this was the only one of the three not held.
@@ -896,10 +900,10 @@ final class DocumentCanvasView: UIView {
     /// canvas reports SIX and a focused one EIGHT. Removing "all of them" would tear out UIKit's.)
     /// Storing the reference changes nothing at runtime: the view already retains it through
     /// `gestureRecognizers`.
-    var selectionTap: UITapGestureRecognizer?
+    final var selectionTap: UITapGestureRecognizer?
     // The loupe / move-cursor long-press. Held so `gestureRecognizerShouldBegin` can fail it on a touch that
     // lands on an active selection handle (letting the handle pan grab the knob instead) — see that method.
-    var loupeLongPress: LocationAdaptiveLongPressGestureRecognizer?
+    final var loupeLongPress: LocationAdaptiveLongPressGestureRecognizer?
     // True while an interactive selection-handle drag is in flight. While set, the per-touch-move selection
     // setters (`setSelectionHead`/`setSelectionAnchor`) SKIP the `inputDelegate` selection bracket; one
     // bracket fires when the drag ends (`endCoalescedSelectionDrag`). Driving the keyboard's autocorrect/
@@ -925,22 +929,22 @@ final class DocumentCanvasView: UIView {
     // Auto-scroll state while dragging a text-selection handle near an edge: vertically against the host
     // document scroll view, and/or horizontally within a scrollable table the head is in. One display link
     // drives both axes.
-    private(set) var dragAutoScrollLink: CADisplayLink?
-    private(set) var dragAutoScrollTable: TableBlockBox?
-    private(set) var dragAutoScrollVelocityX: CGFloat = 0   // table horizontal, points/tick, signed
-    private(set) var dragAutoScrollVelocityY: CGFloat = 0   // document vertical, points/tick, signed
-    private(set) var dragAutoScrollPoint: CGPoint = .zero   // last touch (canvas coords), for re-extending
+    private(set) final var dragAutoScrollLink: CADisplayLink?
+    private(set) final var dragAutoScrollTable: TableBlockBox?
+    private(set) final var dragAutoScrollVelocityX: CGFloat = 0   // table horizontal, points/tick, signed
+    private(set) final var dragAutoScrollVelocityY: CGFloat = 0   // document vertical, points/tick, signed
+    private(set) final var dragAutoScrollPoint: CGPoint = .zero   // last touch (canvas coords), for re-extending
     /// Transient table row/column structural selection (separate from the text selection). The `table` id
     /// guards against a stale selection after the active table is rebuilt. nil = none. Mutually exclusive
     /// with `imageSelection`.
-    var tableSelection: (table: BlockID, kind: TableStructuralSelection)?
+    final var tableSelection: (table: BlockID, kind: TableStructuralSelection)?
     /// Transient atom-selection of a top-level image (separate from the text selection). The BlockID
     /// guards a stale selection after a relayout/undo. nil = none. Mutually exclusive with `tableSelection`.
-    var imageSelection: BlockID?
+    final var imageSelection: BlockID?
     /// The image whose `imageSelection` was just cleared by the `selectedTextRange` setter — iOS overrides a
     /// tap-selected media's selection (clearing `imageSelection`) right before its Backspace. `deleteBackward`
     /// consumes this to replace that media; any non-delete edit clears it. nil = none.
-    var imageObjectDeletePending: BlockID?
+    final var imageObjectDeletePending: BlockID?
     /// Marked (composing/provisional) text as global positions over the same axis as `(anchor, head)`.
     /// nil = no active composition. The provisional characters live in the leaf region's storage like
     /// any committed text; this just tracks which range is provisional (for the underline + commit).
@@ -972,7 +976,7 @@ final class DocumentCanvasView: UIView {
     /// Reaching `markedRangeStorage` through a concrete downcast is not a third door: R7b
     /// (`test_theWriteDoorsIntoBackendOwnedInputStateAreEnumerated`) forbids naming it outside
     /// `S/InputBackend/` at all.
-    var markedRange: (from: Int, to: Int)? {
+    final var markedRange: (from: Int, to: Int)? {
         inputBackend.markedRange.map { (from: $0.location, to: $0.location + $0.length) }
     }
     /// True when the active marked text is a system INLINE PREDICTION (ghost text: `setMarkedText` with
@@ -982,7 +986,7 @@ final class DocumentCanvasView: UIView {
     ///
     /// TASK 41: a READ-ONLY projection, like `markedRange` above. The backend's accessor ANDs the flag
     /// with "a range exists", so this can never read `true` while nothing is composing.
-    var markedTextIsPrediction: Bool { inputBackend.isComposingPrediction }
+    final var markedTextIsPrediction: Bool { inputBackend.isComposingPrediction }
     /// The layout currently carrying the grey prediction-ghost rendering colour (display-only), so it
     /// can be cleared when the prediction moves or ends. Weak: the layout is owned by its box.
     ///
@@ -993,9 +997,9 @@ final class DocumentCanvasView: UIView {
     /// so the ghost styling stays canvas-side PRESENTATION state, written by `refreshPredictionStyling()`
     /// which every composition-lifecycle body already calls after changing the marked range.
     /// `MarkedStateAuthorityTests.test_ghostStyledLayoutStaysOnTheCanvas` asserts it by name.
-    weak var ghostStyledLayout: BlockLayoutEngine?
+    weak final var ghostStyledLayout: BlockLayoutEngine?
     /// Injectable pasteboard (defaults to the system pasteboard; tests inject a fake — see TextPasteboard).
-    var pasteboard: TextPasteboard = UIPasteboard.general
+    final var pasteboard: TextPasteboard = UIPasteboard.general
     // MARK: Spell checking (see DocumentCanvasView+SpellCheck, +NativeTextCheckingClient)
     /// Native-checking underline style per flagged range.
     enum SpellStyle: Equatable { case spelling, grammar, correction }
@@ -1005,27 +1009,27 @@ final class DocumentCanvasView: UIView {
     /// Accepted limitation: this is a side table edits do NOT shift, so a flagged word positioned after a
     /// mid-region edit renders at a stale offset until the caret next re-traverses it (self-healing). The old
     /// debounced full-region rescan used to mask this by rebuilding every flag on each pass.
-    var spellResults: [BlockID: (contentHash: Int, ranges: [(range: NSRange, style: SpellStyle)])] = [:]
+    final var spellResults: [BlockID: (contentHash: Int, ranges: [(range: NSRange, style: SpellStyle)])] = [:]
     /// Delivered `.correction` candidate replacements ("alternatives"), region-local — mirrors `spellResults`.
     /// Stashed from `nativeReplace` via KVC on the delivered `NSTextAlternatives` (see
     /// `+NativeTextCheckingClient.stashSpellingAlternatives`); best-effort (corrections were not observed firing
     /// in the test host). `.spelling`/`.grammar` flags never populate this — those go through the public
     /// `UITextChecker` guesses lookup instead (`+SpellCheck.nativeSpellingGuesses`).
-    var spellingAlternatives: [BlockID: [(range: NSRange, candidates: [String], primary: String?)]] = [:]
+    final var spellingAlternatives: [BlockID: [(range: NSRange, candidates: [String], primary: String?)]] = [:]
     /// The native checking driver (nil ⇒ private class unavailable ⇒ checking off; no fallback).
-    var nativeChecker: NativeTextChecker?
+    final var nativeChecker: NativeTextChecker?
     /// Global caret position at the last selection-driven native check. nil until the first post-focus
     /// selection settles: native does NOT scan on focus — only words the caret traverses are checked.
-    var lastCheckedCaret: Int?
+    final var lastCheckedCaret: Int?
     /// Set only for the duration of a driven `checkSpellingForWord`/`checkGrammarForSentence` call. The
     /// controller calls back `removeAnnotation:forRange:` SYNCHRONOUSLY within that call whenever the
     /// checked word/sentence turns out clean (verified live) — without knowing which check triggered it,
     /// `nativeRemoveAnnotation` can't tell a stale `.spelling` flag from an unrelated `.grammar` flag that
     /// merely overlaps the checked word, and would wipe both (the same style-isolation bug `.spelling`
     /// clears in `nativeCheckOnSelectionChange` have). Bracketed by `driveNativeCheck(style:_:)`.
-    var inFlightCheckStyle: SpellStyle?
+    final var inFlightCheckStyle: SpellStyle?
     /// Host toggle (façade `isSpellCheckingEnabled`). When false: no checking, no underlines, no tap override.
-    var isSpellCheckingEnabled = true {
+    final var isSpellCheckingEnabled = true {
         didSet {
             guard oldValue != isSpellCheckingEnabled else { return }
             // TASK 34: the ENABLE branch routes through the backend (`installCheckingIfNeeded()`,
@@ -1051,7 +1055,7 @@ final class DocumentCanvasView: UIView {
     /// citations this sentence used to carry are gone rather than repaired, on the register item that
     /// line citations in this tree rot silently.
     /// Changing it notifies the backend, which re-reads the policy at operation time.
-    var editPolicy: RichTextInputEditPolicy = .legacyUnrestricted {
+    final var editPolicy: RichTextInputEditPolicy = .legacyUnrestricted {
         didSet {
             guard editPolicy != oldValue else { return }
             // NOT `inputBackend?.editPolicyDidChange()` — `inputBackend` is a non-optional
@@ -1067,8 +1071,8 @@ final class DocumentCanvasView: UIView {
     /// `revertTo` is the pre-correction original word — non-nil only for a `.correction` flag with a stashed
     /// `spellingAlternatives` entry (best-effort; see that field's doc) — and drives the "Revert to …" menu
     /// action added in N5.
-    var pendingSpellingMenu: (range: NSRange, guesses: [String], revertTo: String?)?
-    var undoManagerOverride: UndoManager?
+    final var pendingSpellingMenu: (range: NSRange, guesses: [String], revertTo: String?)?
+    final var undoManagerOverride: UndoManager?
     /// The editor's OWN undo manager, used in production. We deliberately do NOT fall back to the
     /// responder-chain `UIResponder.undoManager`: that manager is shared app-wide, so OTHER responders'
     /// (and the system text-input subsystem's) selection/typing undo registrations would surface in the
@@ -1076,7 +1080,7 @@ final class DocumentCanvasView: UIView {
     /// tap before any content edit" bug. A private per-canvas manager keeps the buffer pristine: only the
     /// editor's own content edits (every `registerUndo`) count. Tests inject their own via `undoManagerOverride`.
     private let ownUndoManager = UndoManager()
-    var effectiveUndoManager: UndoManager? { undoManagerOverride ?? ownUndoManager }
+    final var effectiveUndoManager: UndoManager? { undoManagerOverride ?? ownUndoManager }
 
     /// Expose the editor's OWN (dedicated, private) undo manager to the responder chain so the SYSTEM undo
     /// affordances act on our edits: hardware ⌘Z / ⌘⇧Z, shake-to-undo, and the Edit-menu Undo/Redo items.
@@ -1103,7 +1107,7 @@ final class DocumentCanvasView: UIView {
     /// alternative, falling back to the app-wide shared manager, is precisely the buffer pollution the
     /// paragraph above says this override exists to prevent, and `nil` does NOT cause it: an override
     /// returning nil does not re-consult `super`).
-    override var undoManager: UndoManager? { inputBackend.undoManager }
+    override final var undoManager: UndoManager? { inputBackend.undoManager }
 
     /// Coalescing kind for an edit: consecutive `.typing` (or consecutive `.deleting`) edits that
     /// are contiguous collapse into ONE undo step; `.none` always starts/breaks a step (structural,
@@ -1111,22 +1115,22 @@ final class DocumentCanvasView: UIView {
     enum UndoCoalescing { case typing, deleting, none }
     /// The currently-open coalescing run. `caret` is where the NEXT contiguous keystroke must land
     /// for it to join this run. `nil` = no open run (the next edit registers a fresh undo step).
-    var openUndoRun: (kind: UndoCoalescing, caret: Int)?
+    final var openUndoRun: (kind: UndoCoalescing, caret: Int)?
     /// Number of NEW undo steps `editing` has started (a coalesced keystroke registers nothing, so it
     /// does not increment). A test seam that measures coalescing directly, independent of NSUndoManager
     /// grouping — mirrors the module's other internal test hooks.
-    var undoRegistrationCount = 0
+    final var undoRegistrationCount = 0
     /// Closes any open coalescing run so the next edit registers a fresh undo step. Called on every
     /// run-breaking boundary that isn't already caught by the contiguity check (undo/redo restore,
     /// IME commit, document swap, resign-first-responder).
-    func breakUndoCoalescing() { openUndoRun = nil }
+    final func breakUndoCoalescing() { openUndoRun = nil }
 
     /// When set, an `editing { }` block skips its trailing HOST notifications (`notifyContentSizeChanged`
     /// and `onSelectionChange`) so the host does not re-lay-out / redraw for that edit. Used by the
     /// markdown two-step paste to keep the intermediate raw-text state (step 1) off-screen — only step 2's
     /// rich result triggers a host layout, so the paste shows no flash of the raw markdown. The canvas has
     /// no `draw(_:)` and is parent-driven, so suppressing the host layout keeps the block views unchanged.
-    var suppressHostChangeNotification = false
+    final var suppressHostChangeNotification = false
 
     /// Last known value of `caretIsInCodeRegion`, so a crossing can be detected and the keyboard told to
     /// re-read its cached traits. See `refreshCodeInputTraitsIfNeeded`.
@@ -1149,7 +1153,7 @@ final class DocumentCanvasView: UIView {
     var codeHighlightRepaintCount: Int = 0
 
     /// Token for the input-language-change observer (see init); removed in deinit.
-    private var inputModeObserver: NSObjectProtocol?
+    private final var inputModeObserver: NSObjectProtocol?
 
     /// The attached input backend. One backend for the whole canvas lifetime; there is no live
     /// switching. Injectable so tests can install a recording spy.
@@ -1157,19 +1161,19 @@ final class DocumentCanvasView: UIView {
     /// DEVIATION D30: the spec's authority table puts backend selection in "an external factory
     /// before attachment". Stage 1 has exactly one backend, so this defaulted `init` parameter IS
     /// the interim selection point; stage 2's `RichTextInputCanvasFactory` replaces the default.
-    private(set) var inputBackend: any RichTextInputBackend
+    private(set) final var inputBackend: any RichTextInputBackend
 
     /// The six Telegram clients the backend reaches through `RichTextInputHost`/`LegacyRichTextInputHost`.
     /// Implicitly-unwrapped: Swift requires stored properties to be initialized before `super.init`,
     /// but every client captures `self` (`canvas: self`), so they cannot be built before then. Each is
     /// assigned in `init` IMMEDIATELY after `super.init(frame:)` and is never nil afterwards — the six
     /// `LegacyRichTextInputHost` vending properties below force-unwrap them.
-    private var documentInputClient: TelegramDocumentInputClient!
-    private var geometryInputClient: TelegramGeometryInputClient!
-    private var annotationInputClient: TelegramAnnotationInputClient!
-    private var presentationInputClient: TelegramPresentationInputClient!
-    private var lifecycleInputClient: TelegramLifecycleInputClient!
-    private var commandInputClient: TelegramCommandInputClient!
+    private final var documentInputClient: TelegramDocumentInputClient!
+    private final var geometryInputClient: TelegramGeometryInputClient!
+    private final var annotationInputClient: TelegramAnnotationInputClient!
+    private final var presentationInputClient: TelegramPresentationInputClient!
+    private final var lifecycleInputClient: TelegramLifecycleInputClient!
+    private final var commandInputClient: TelegramCommandInputClient!
 
     deinit {
         // `deinit` is always `nonisolated` (a hard Swift rule — no type, including a `@MainActor`
@@ -1265,18 +1269,18 @@ final class DocumentCanvasView: UIView {
     // so `UIResponder`'s own documented `true` applied, and an override returning `true` reproduces it
     // exactly. Adding it is what lets the backend own BOTH halves of the responder gate rather than
     // one, which is the shape `RichTextInputResponderBackend` declares.
-    override var canBecomeFirstResponder: Bool { inputBackend.canBecomeFirstResponder }
-    override var canResignFirstResponder: Bool { inputBackend.canResignFirstResponder }
+    override final var canBecomeFirstResponder: Bool { inputBackend.canBecomeFirstResponder }
+    override final var canResignFirstResponder: Bool { inputBackend.canResignFirstResponder }
 
     /// When non-nil, replaces the system keyboard while the canvas stays first responder (a consumer
     /// sets e.g. an `EmptyInputView` to hide the keyboard while showing a separate emoji panel, so the
     /// caret keeps rendering). `nil` ⇒ system keyboard.
-    var customInputView: UIView?
-    override var inputView: UIView? { return self.customInputView }
+    final var customInputView: UIView?
+    override final var inputView: UIView? { return self.customInputView }
 
     /// Test seam: when set, replaces the live `textInputMode?.primaryLanguage` lookup.
     /// Avoids subclassing the `final class DocumentCanvasView` just for tests.
-    var keyboardLanguageProviderForTesting: (() -> String?)?
+    final var keyboardLanguageProviderForTesting: (() -> String?)?
 
     /// Keyboard input-language pre-selection (mirrors the legacy `ChatInputTextView`). The chat composer
     /// seeds `initialPrimaryLanguage` from the draft's saved keyboard language. On the FIRST `textInputMode`
@@ -1289,10 +1293,10 @@ final class DocumentCanvasView: UIView {
     /// `textInputMode`, so correctness depends on UIKit querying first — which it does, because
     /// `becomeFirstResponder` brings up the keyboard (querying `textInputMode`) before any keystroke or host
     /// read. This matches the legacy node exactly; do NOT add a separate non-side-effecting read path.
-    var initialPrimaryLanguage: String?
-    private var didInitializePrimaryInputLanguage = false
+    final var initialPrimaryLanguage: String?
+    private final var didInitializePrimaryInputLanguage = false
 
-    override var textInputMode: UITextInputMode? {
+    override final var textInputMode: UITextInputMode? {
         if !self.didInitializePrimaryInputLanguage {
             self.didInitializePrimaryInputLanguage = true
             if let initialPrimaryLanguage = self.initialPrimaryLanguage {
@@ -1310,7 +1314,7 @@ final class DocumentCanvasView: UIView {
     /// (The legacy `ChatInputTextNode.resetInitialPrimaryLanguage()` body is empty; this implements the
     /// documented intent. For the rich node this path is currently unreachable — its only caller is gated on
     /// `isCurrentlyEmoji()`, which the node reports `false`.)
-    func resetInitialPrimaryLanguage() {
+    final func resetInitialPrimaryLanguage() {
         self.didInitializePrimaryInputLanguage = false
         self.reloadInputViews()
     }
@@ -1328,7 +1332,7 @@ final class DocumentCanvasView: UIView {
     // points ARE the behaviour (see each hook's own note).
 
     @discardableResult
-    override func becomeFirstResponder() -> Bool {
+    override final func becomeFirstResponder() -> Bool {
         inputBackend.hostWillBecomeFirstResponder()
         let became = super.becomeFirstResponder()
         if became { inputBackend.hostDidBecomeFirstResponder() }
@@ -1339,7 +1343,7 @@ final class DocumentCanvasView: UIView {
     /// TASK 31 (D24 clause (a)) — `becomeFirstResponder()`'s FIRST post-`super` segment, verbatim:
     /// show the own-drawn caret/handles once focused. It ran under `if became` before; the backend now
     /// runs it on the success path only, which is the same condition.
-    func legacyDidBecomeFirstResponder() {
+    final func legacyDidBecomeFirstResponder() {
         refreshEmptyBoxWritingDirections(); updateCaretView(); updateSelectionHandleViews()
     }
 
@@ -1357,7 +1361,7 @@ final class DocumentCanvasView: UIView {
     /// (`+Interaction.swift`) classify every such tap as FOCUSING — and the edit menu would stop
     /// toggling. Pinned by
     /// `ResponderRouterTests.test_aRepeatBecomeFirstResponderDoesNotSetTheFocusingTapFlag`.
-    func legacyMarkDidJustBecomeFirstResponder() {
+    final func legacyMarkDidJustBecomeFirstResponder() {
         didJustBecomeFirstResponder = true
     }
 
@@ -1371,12 +1375,12 @@ final class DocumentCanvasView: UIView {
     /// zero-behaviour-change phase that is enough to preserve the order rather than argue it inert.
     /// Pinned by
     /// `ResponderRouterTests.test_becomeFirstResponder_runsTheNativeCheckingInstallAfterTheHostCallback`.
-    func legacyFinishBecomingFirstResponder() {
+    final func legacyFinishBecomingFirstResponder() {
         inputBackend.installCheckingIfNeeded(); nativeChecker?.preheat(); lastCheckedCaret = head
     }
 
     @discardableResult
-    override func resignFirstResponder() -> Bool {
+    override final func resignFirstResponder() -> Bool {
         inputBackend.hostWillResignFirstResponder()
         let resigned = super.resignFirstResponder()
         if resigned { inputBackend.hostDidResignFirstResponder() }
@@ -1388,7 +1392,7 @@ final class DocumentCanvasView: UIView {
     /// become side**: it ran before the `wasFirstResponder` capture and before `super`, so it is not
     /// gated on the resign succeeding. `ResponderRouterTests
     /// .test_resignFirstResponder_whenNeverFocused_stillRunsThePreResignTeardown` pins that half.
-    func legacyWillResignFirstResponder() {
+    final func legacyWillResignFirstResponder() {
         finalizeMarkedText()
         breakUndoCoalescing()   // losing focus ends any open typing/deleting run (matches native)
         cancelFloatingCursor()  // tear down any in-flight floating-cursor gesture (display link retains self)
@@ -1398,12 +1402,12 @@ final class DocumentCanvasView: UIView {
     /// the become side is the interesting part**: here the flag write was NOT transition-gated (only
     /// `onResignedFirstResponder?()` was), so both statements belong in one un-gated hook. Hiding the
     /// caret/handles and dropping a stale focusing-tap flag both happen on any successful resign.
-    func legacyDidResignFirstResponder() {
+    final func legacyDidResignFirstResponder() {
         updateCaretView(); updateSelectionHandleViews()   // hide caret + handles (no longer FR)
         didJustBecomeFirstResponder = false               // don't carry a stale focusing-tap flag across a defocus
     }
 
-    override var keyCommands: [UIKeyCommand]? {
+    override final var keyCommands: [UIKeyCommand]? {
         [UIKeyCommand(input: "\t", modifierFlags: [], action: #selector(handleTabKey)),
          UIKeyCommand(input: "\t", modifierFlags: .shift, action: #selector(handleShiftTabKey)),
          // HARDWARE Return (plain + ⌘) routes to the host's return handler (send-on-Enter / ⌘-Enter) before
@@ -1425,28 +1429,28 @@ final class DocumentCanvasView: UIView {
          UIKeyCommand(input: "X", modifierFlags: [.command, .shift], action: #selector(keyToggleStrikethrough)),
          UIKeyCommand(input: "M", modifierFlags: [.command, .shift], action: #selector(keyToggleMonospace))]
     }
-    @objc private func handleTabKey() {
+    @objc private final func handleTabKey() {
         // Inside a table cell → cell nav; otherwise a quote-aware Tab (body → author end, author → out).
         if isInsideTable(head) { moveToCell(forward: true); return }
         handleQuoteTabForward()
     }
-    @objc private func handleShiftTabKey() { moveToCell(forward: false) }
-    @objc private func handleReturnKey(_ command: UIKeyCommand) { performHardwareReturn(command.modifierFlags) }
+    @objc private final func handleShiftTabKey() { moveToCell(forward: false) }
+    @objc private final func handleReturnKey(_ command: UIKeyCommand) { performHardwareReturn(command.modifierFlags) }
     /// Ask the host first (send-on-Enter etc.). true (or no host) → insert a newline like a normal Return;
     /// false → the host consumed it (sent the message), so the editor does nothing.
-    func performHardwareReturn(_ modifierFlags: UIKeyModifierFlags) {
+    final func performHardwareReturn(_ modifierFlags: UIKeyModifierFlags) {
         if onHardwareReturn?(modifierFlags) ?? true { insertText("\n") }
     }
-    @objc private func keyToggleBold() { toggleBold() }
-    @objc private func keyToggleItalic() { toggleItalic() }
-    @objc private func keyToggleUnderline() { toggleUnderline() }
-    @objc private func keyToggleStrikethrough() { toggleStrikethrough() }
-    @objc private func keyToggleMonospace() { toggleInlineCode() }
+    @objc private final func keyToggleBold() { toggleBold() }
+    @objc private final func keyToggleItalic() { toggleItalic() }
+    @objc private final func keyToggleUnderline() { toggleUnderline() }
+    @objc private final func keyToggleStrikethrough() { toggleStrikethrough() }
+    @objc private final func keyToggleMonospace() { toggleInlineCode() }
 
     /// Applies a theme: updates the mapper (text/link colors used on the next reload) and pushes the accent
     /// color to the persistent caret/selection/blockquote views. The caller reloads content afterward so the
     /// boxes rebuild with the themed mapper.
-    func applyTheme(_ theme: RichTextEditorTheme) {
+    final func applyTheme(_ theme: RichTextEditorTheme) {
         self.mapper.theme = theme
         self.caretView.accentColor = theme.accent
         self.transientCaretView.accentColor = theme.accent
@@ -1460,7 +1464,7 @@ final class DocumentCanvasView: UIView {
     /// Applies quote geometry: rebuilds the mapper's stylesheet with the indent/trailing/spacing fields
     /// (preserving theme/emojiScale/writing-direction — the stylesheet is immutable) and pushes the
     /// render-only bar/radius/fill values to the underlay. The caller reloads afterward (mirrors applyTheme).
-    func applyQuoteStyle(_ q: QuoteStyle) {
+    final func applyQuoteStyle(_ q: QuoteStyle) {
         self.quoteStyle = q
         var s = self.mapper.styleSheet
         s.quoteIndent = q.leadingInset
@@ -1481,7 +1485,7 @@ final class DocumentCanvasView: UIView {
 
     /// Applies code-block geometry: stores the style and resolves its optionals into the stylesheet
     /// against the shared render metrics. The caller reloads so the new insets take effect.
-    func applyCodeStyle(_ c: CodeStyle) {
+    final func applyCodeStyle(_ c: CodeStyle) {
         self.codeStyle = c
         var s = self.mapper.styleSheet
         s.codeVerticalInset = c.verticalInset ?? s.metrics.code.verticalInset
@@ -1498,7 +1502,7 @@ final class DocumentCanvasView: UIView {
     /// Applies pull-quote geometry: stores the style, pushes corner radius + fill alpha to the barless pill
     /// underlay, and stores the value so the next box build picks up the new padding. The caller reloads
     /// afterward (mirrors applyQuoteStyle — no mapper rebuild needed; geometry is read at box-build time).
-    func applyPullQuoteStyle(_ s: PullQuoteStyle) {
+    final func applyPullQuoteStyle(_ s: PullQuoteStyle) {
         self.pullQuoteStyle = s
         self.pullQuoteUnderlay.cornerRadius = s.cornerRadius
         self.pullQuoteUnderlay.fillAlpha = s.fillAlpha
@@ -1506,13 +1510,13 @@ final class DocumentCanvasView: UIView {
 
     /// Applies host media geometry: stores it so the next box build (`setBlocks` / `insertMedia`) uses the
     /// new bleed. Pure geometry — no mapper rebuild (unlike `applyQuoteStyle`). The caller reloads afterward.
-    func applyMediaBlockStyle(_ m: MediaBlockStyle) {
+    final func applyMediaBlockStyle(_ m: MediaBlockStyle) {
         self.mediaBlockStyle = m
     }
 
     /// Applies host-injected collapse/expand icons: stores them (read at `BlockQuoteBox` creation).
     /// The caller reloads afterward.
-    func applyQuoteCollapseIcons(_ icons: RichTextEditorQuoteCollapseIcons?) {
+    final func applyQuoteCollapseIcons(_ icons: RichTextEditorQuoteCollapseIcons?) {
         self.quoteCollapseIcons = icons
     }
 
@@ -1520,7 +1524,7 @@ final class DocumentCanvasView: UIView {
     /// the other stylesheet fields + theme/emojiScale/writing-direction — the stylesheet is immutable).
     /// The caller reloads afterward (mirrors `applyQuoteStyle`). A host passes the metrics its
     /// counterpart InstantPage V2 surface will use, so the editor is WYSIWYG against it.
-    func applyRenderMetrics(_ m: RichTextRenderMetrics) {
+    final func applyRenderMetrics(_ m: RichTextRenderMetrics) {
         var s = self.mapper.styleSheet
         s.metrics = m
         // `metrics.code` is the FALLBACK for an unset `CodeStyle` field, so the resolved values have
@@ -1537,7 +1541,7 @@ final class DocumentCanvasView: UIView {
 
     /// Builds a box per block (paragraph, image, or table). Tables become `TableBlockBox`es whose
     /// cells the canvas reaches via `leafRegions()`.
-    func setBlocks(_ blocks: [Block], width: CGFloat) {
+    final func setBlocks(_ blocks: [Block], width: CGFloat) {
         spellResults = [:]   // stale per-block results (keyed by BlockID) must not linger across a document swap
         spellingAlternatives = [:]   // same staleness risk (keyed by BlockID) as spellResults above
         if width > 0 { lastLayoutWidth = width }
@@ -1600,7 +1604,7 @@ final class DocumentCanvasView: UIView {
     /// A full-document replacement that NOTIFIES the input system (so the keyboard's shadow document
     /// stays in sync — an unbracketed reload is a top cause of stale/misplaced predictions). Use this
     /// from the public `document` setter; `setBlocks` alone is for internal layout-only rebuilds.
-    func reload(_ blocks: [Block], width: CGFloat) {
+    final func reload(_ blocks: [Block], width: CGFloat) {
         finalizeMarkedText()
         inputBackend.notifyingContentAndSelectionChange {   // TASK 26: the backend is the only emitter
             // TASK 39b: the synchronization sits INSIDE the notify bracket, after the content is in
@@ -1617,24 +1621,24 @@ final class DocumentCanvasView: UIView {
         refreshEmptyBoxWritingDirections()
     }
 
-    func currentBlocks() -> [Block] { boxes.map { $0.currentBlock() } }
+    final func currentBlocks() -> [Block] { boxes.map { $0.currentBlock() } }
 
     // MARK: - Viewport helpers
 
     /// The visible canvas rect: the host scroll view's window onto the content, or `bounds` when there
     /// is no scroll-view host (most unit tests / a non-scroll embed) — in which case the band covers the
     /// whole document and every box realizes (behavioral invariance).
-    func viewportRect() -> CGRect {
+    final func viewportRect() -> CGRect {
         if let sv = superview as? UIScrollView { return CGRect(origin: sv.contentOffset, size: sv.bounds.size) }
         return bounds
     }
 
     /// The visible rect grown by the overscan band (one viewport height each side by default).
-    func viewportBand() -> CGRect { overscanRect(for: viewportRect()) }
+    final func viewportBand() -> CGRect { overscanRect(for: viewportRect()) }
 
     /// The blockquote run fills that intersect `band` (off-screen runs are dropped so they allocate no
     /// underlay image view). The no-scroll-host fallback band covers the whole document ⇒ all runs kept.
-    func visibleBlockquoteFills(band: CGRect) -> [CGRect] {
+    final func visibleBlockquoteFills(band: CGRect) -> [CGRect] {
         // Quote fills only (including nested), from the recursive blockQuoteFillRects(). Code bands
         // are painted by `CodeBlockBox` itself, so they are deliberately not fed here.
         let all = blockQuoteFillRects()
@@ -1643,12 +1647,12 @@ final class DocumentCanvasView: UIView {
 
     /// Reconciles the back-most blockquote underlay to only the on-screen quote runs, and the barless
     /// pull-quote underlay to the content-hugging pill rects for all pull-quote boxes.
-    func syncBlockquoteUnderlay() {
+    final func syncBlockquoteUnderlay() {
         blockquoteUnderlay.sync(runFills: visibleBlockquoteFills(band: viewportBand()))
         pullQuoteUnderlay.sync(runFills: pullQuotePillRects())
     }
 
-    private func overscanRect(for visible: CGRect) -> CGRect {
+    private final func overscanRect(for visible: CGRect) -> CGRect {
         let overscan = blockViewOverscan >= 0 ? blockViewOverscan : visible.height
         return visible.insetBy(dx: 0, dy: -overscan)
     }
@@ -1658,7 +1662,7 @@ final class DocumentCanvasView: UIView {
     /// searches the y-monotonic box frames (`BlockStack.layout` stacks them top-to-bottom, so `frame.minY`
     /// strictly increases), then widens outward while a neighbor's `blockViewFrame` (which may spill past
     /// `frame`, e.g. a full-bleed image) still intersects. Cost: O(log N + window).
-    func blockWindow(forBand band: CGRect) -> [Int] {
+    final func blockWindow(forBand band: CGRect) -> [Int] {
         let n = boxes.count
         guard n > 0 else { return [] }
         // first index whose frame is NOT entirely above the band (frame.maxY >= band.minY)
@@ -1686,7 +1690,7 @@ final class DocumentCanvasView: UIView {
     /// Returns `true` when a fresh `TableBackingView` was created this call (used by `viewportDidChange`
     /// to decide whether to re-host cell emoji into the new content view).
     @discardableResult
-    func reconcileBlockViews(visibleRect: CGRect) -> Bool {
+    final func reconcileBlockViews(visibleRect: CGRect) -> Bool {
         var createdFreshTable = false
         let band = overscanRect(for: visibleRect)
         var wantedIDs = Set<BlockID>()
@@ -1754,12 +1758,12 @@ final class DocumentCanvasView: UIView {
     }
 
     /// `syncBlockViews()` keeps its old call sites (`layoutSubviews`) but is now viewport-aware.
-    func syncBlockViews() { reconcileBlockViews(visibleRect: viewportRect()) }
+    final func syncBlockViews() { reconcileBlockViews(visibleRect: viewportRect()) }
 
     /// TASK 32 (Family 9) — a one-line router. The body moved to `legacyViewportDidChange()` below;
     /// `RichTextEditorView.scrollViewDidScroll` still calls THIS member, so the host-facing entry point
     /// is unchanged and the backend is what decides what a viewport change means.
-    func viewportDidChange() {
+    final func viewportDidChange() {
         inputBackend.viewportDidChange()
     }
 
@@ -1768,7 +1772,7 @@ final class DocumentCanvasView: UIView {
     /// Called when only the VIEWPORT moved (the host scrolled) — frames are unchanged, so no relayout:
     /// re-realize block views + emoji against the moved viewport, re-cull the blockquote underlay, and
     /// re-home the caret/handles (a caret hosted in a table that was just realized must re-attach).
-    func legacyViewportDidChange() {
+    final func legacyViewportDidChange() {
         bumpLayoutGeneration()
         let realizedFreshTable = reconcileBlockViews(visibleRect: viewportRect())
         syncBlockquoteUnderlay()
@@ -1779,14 +1783,14 @@ final class DocumentCanvasView: UIView {
         scrollCaretIntoViewIfNeeded()
     }
 
-    private func dequeueRecycledView() -> BlockBackingView {
+    private final func dequeueRecycledView() -> BlockBackingView {
         if let v = recycleQueue.popLast() { return v }
         let v = BlockBackingView(); v.canvas = self; return v
     }
 
     /// Binds (or re-binds) a realized view to its box: frame, table H-scroll sync, and the repaint gate.
     /// `fresh` = the view was just created/recycled (its bitmap is stale ⇒ force a repaint).
-    private func bindRealizedView(_ view: BlockBackingView, to box: CanvasBlock, fresh: Bool) {
+    private final func bindRealizedView(_ view: BlockBackingView, to box: CanvasBlock, fresh: Bool) {
         // A structural edit (split/merge) keeps a surviving block's BlockID but swaps its BlockBox for a
         // brand-new instance whose fresh BlockLayout resets `renderVersion` to 0. `renderSignature` encodes
         // that per-instance counter, so it is MEANINGLESS to compare across a box-instance replacement —
@@ -1811,15 +1815,15 @@ final class DocumentCanvasView: UIView {
         }
     }
 
-    var realizedBlockViewCountForTesting: Int { blockViews.count }
-    func isBlockViewRealizedForTesting(_ id: BlockID) -> Bool { blockViews[id] != nil }
-    func blockViewForTesting(_ id: BlockID) -> UIView? { blockViews[id] }
-    func checklistMarkerViewForTesting(_ id: BlockID) -> UIView? { checklistMarkerViews[id]?.view }
-    var recycleQueueDepthForTesting: Int { recycleQueue.count }
+    final var realizedBlockViewCountForTesting: Int { blockViews.count }
+    final func isBlockViewRealizedForTesting(_ id: BlockID) -> Bool { blockViews[id] != nil }
+    final func blockViewForTesting(_ id: BlockID) -> UIView? { blockViews[id] }
+    final func checklistMarkerViewForTesting(_ id: BlockID) -> UIView? { checklistMarkerViews[id]?.view }
+    final var recycleQueueDepthForTesting: Int { recycleQueue.count }
 
     /// Called by a `TableBackingView` whenever its inner scroll view moves: keep the box's `contentOffsetX`
     /// in lock-step (canvas-space queries fold it in, Task 3) and repaint the offset-dependent chrome/caret.
-    func tableDidScroll(_ view: TableBackingView) {
+    final func tableDidScroll(_ view: TableBackingView) {
         bumpLayoutGeneration()
         guard let t = view.box as? TableBlockBox else { return }
         t.contentOffsetX = max(0, view.scroll.contentOffset.x)
@@ -1827,18 +1831,18 @@ final class DocumentCanvasView: UIView {
         blockChromeOverlay.setNeedsDisplay()
     }
 
-    func setParagraphs(_ paragraphs: [ParagraphBlock], width: CGFloat) {
+    final func setParagraphs(_ paragraphs: [ParagraphBlock], width: CGFloat) {
         setBlocks(paragraphs.map { .paragraph($0) }, width: width)
     }
 
-    func currentParagraphs() -> [ParagraphBlock] {
+    final func currentParagraphs() -> [ParagraphBlock] {
         boxes.compactMap { ($0 as? BlockBox)?.currentParagraph() }
     }
 
     /// Assigns each box its `nodeStart` (= prior tokens + 1) and accumulates `documentSize` from each
     /// box's `nodeSize` (paragraph: textLength+2; image: textLength+5). Matches `RichTextEditorCore`
     /// row-major token addressing.
-    func recomputeSpans() {
+    final func recomputeSpans() {
         documentSize = root.recompute(baseOffset: 0)
         for case let t as TableBlockBox in boxes { t.recompute() }
         for case let bq as BlockQuoteBox in boxes { bq.recompute() }
@@ -1847,7 +1851,7 @@ final class DocumentCanvasView: UIView {
 
     /// The box whose text contains `pos` (inclusive of the trailing caret slot), or nil at a
     /// structural boundary between blocks.
-    func box(containingGlobal pos: Int) -> (box: CanvasBlock, local: Int)? {
+    final func box(containingGlobal pos: Int) -> (box: CanvasBlock, local: Int)? {
         for box in boxes where pos >= box.textStart && pos <= box.textStart + box.textLength {
             return (box, pos - box.textStart)
         }
@@ -1856,7 +1860,7 @@ final class DocumentCanvasView: UIView {
 
     /// All editable leaf regions in document order (recurses into tables). v1: rebuilt per call; cache
     /// if profiling shows it matters.
-    func allLeafRegions() -> [LeafTextRegion] { root.leafRegions() }
+    final func allLeafRegions() -> [LeafTextRegion] { root.leafRegions() }
 
     /// Leaf regions whose owning box intersects `rect`, in canonical document order, plus the regions
     /// containing each `alwaysInclude` global offset (which may be far offscreen — they are the
@@ -1870,7 +1874,7 @@ final class DocumentCanvasView: UIView {
     /// `alwaysInclude` entries must already be resolved to a real leaf region's own `globalStart`
     /// (see `leafRegionEndpoint(_:preferring:)`) — this only does exact containment, no gap fallback.
     /// (`legacySelectionSegments` is the sole caller and always pre-resolves; see its comment.)
-    func leafRegions(intersecting rect: CGRect, alwaysInclude: [Int]) -> [LeafTextRegion] {
+    final func leafRegions(intersecting rect: CGRect, alwaysInclude: [Int]) -> [LeafTextRegion] {
         // blockWindow(forBand:) binary-searches the y-monotonic box frames and widens on blockViewFrame;
         // reuse it rather than re-deriving the window. It returns TOP-LEVEL indices, and
         // CanvasBlock.leafRegions() recurses into tables / details / expanded quotes for us.
@@ -1912,7 +1916,7 @@ final class DocumentCanvasView: UIView {
     /// `documentSize`, verified — the first leaf region's `globalStart` is `1`, and the last region's
     /// `globalStart + length` is one less than `documentSize`), but it is NOT the general rule for an
     /// interior gap, which is why this takes a direction rather than always preferring one side.
-    private func leafRegionEndpoint(_ pos: Int, preferring direction: LeafRegionGapDirection) -> LeafTextRegion? {
+    private final func leafRegionEndpoint(_ pos: Int, preferring direction: LeafRegionGapDirection) -> LeafTextRegion? {
         if let (r, _) = leafRegion(containingGlobal: pos) { return r }
         let all = allLeafRegions()
         switch direction {
@@ -1936,7 +1940,7 @@ final class DocumentCanvasView: UIView {
     /// newline-separated as attributed text). This is new code with no production consumer yet, so
     /// bringing it into agreement with the documented, already-shipped `legacyPlainText` invariant is not
     /// a behavior change to any existing surface.
-    func legacyAttributedText(globalFrom: Int, globalTo: Int) -> NSAttributedString? {
+    final func legacyAttributedText(globalFrom: Int, globalTo: Int) -> NSAttributedString? {
         guard globalFrom >= 0, globalTo >= globalFrom, globalTo <= documentSize else { return nil }
         let out = NSMutableAttributedString()
         forEachLeafRegionInRange(globalFrom, globalTo) { region, needsSeparator in
@@ -1950,7 +1954,7 @@ final class DocumentCanvasView: UIView {
     }
 
     /// The leaf region containing `pos` (inclusive of the trailing caret slot), with the local offset.
-    func leafRegion(containingGlobal pos: Int) -> (region: LeafTextRegion, local: Int)? {
+    final func leafRegion(containingGlobal pos: Int) -> (region: LeafTextRegion, local: Int)? {
         for r in allLeafRegions() where pos >= r.globalStart && pos <= r.globalStart + r.length {
             return (r, pos - r.globalStart)
         }
@@ -1960,7 +1964,7 @@ final class DocumentCanvasView: UIView {
     /// Deviation D7: ".line" means "the whole enclosing leaf region" everywhere in this editor
     /// (DocumentTokenizer.swift:33,73,165), and BlockLayoutEngine exposes no line fragments. A true
     /// visual-line API would be an improvement, which the seam's non-goals forbid.
-    func legacyLineRegion(containingGlobal pos: Int)
+    final func legacyLineRegion(containingGlobal pos: Int)
         -> (range: NSRange, lineID: RichTextInputLineID)? {
         // LeafTextRegion carries neither `blockID` nor `regionIndex` (S/Canvas/LeafTextRegion.swift:10-24
         // stores layout/globalStart/length/ref/canvasOrigin only), so both halves of the ID are DERIVED:
@@ -1981,7 +1985,7 @@ final class DocumentCanvasView: UIView {
     }
 
     /// The single `BlockID` payload of any `TextNodeRef` case.
-    func blockID(ofRef ref: TextNodeRef) -> BlockID {
+    final func blockID(ofRef ref: TextNodeRef) -> BlockID {
         switch ref {
         case .paragraph(let id), .caption(let id), .code(let id),
              .pullQuote(let id), .quoteAuthor(let id), .detailsTitle(let id),
@@ -1989,22 +1993,22 @@ final class DocumentCanvasView: UIView {
         }
     }
 
-    func boxIndex(of box: CanvasBlock) -> Int? { boxes.firstIndex { $0 === box } }
+    final func boxIndex(of box: CanvasBlock) -> Int? { boxes.firstIndex { $0 === box } }
 
     /// Public-within-module accessor for the façade.
-    var documentSizeValue: Int { documentSize }
+    final var documentSizeValue: Int { documentSize }
 
     /// The left/right padding from the canvas edge to the text: the built-in `pageMargin` plus the
     /// configurable `contentMargins` on that side. The text content width is the canvas width minus both.
-    var contentLeftPad: CGFloat { self.pageMargin + contentMargins.left }
-    var contentRightPad: CGFloat { self.pageMargin + contentMargins.right }
-    func contentWidth(forWidth width: CGFloat) -> CGFloat { max(width - contentLeftPad - contentRightPad, 1) }
+    final var contentLeftPad: CGFloat { self.pageMargin + contentMargins.left }
+    final var contentRightPad: CGFloat { self.pageMargin + contentMargins.right }
+    final func contentWidth(forWidth width: CGFloat) -> CGFloat { max(width - contentLeftPad - contentRightPad, 1) }
 
     /// Re-flows boxes to a new width if it changed, so the caller can read an accurate
     /// `intrinsicContentSize` BEFORE it sizes the canvas frame. Called from the façade's `performLayout`,
     /// which lays the canvas out explicitly (`layoutContent()`) right after — so this does not schedule
     /// layout itself.
-    func setParagraphsWidthIfNeeded(_ width: CGFloat) {
+    final func setParagraphsWidthIfNeeded(_ width: CGFloat) {
         let content = contentWidth(forWidth: width)
         guard let first = boxes.first, abs(first.frame.width - content) > 0.5 || first.frame.width == 0 else { return }
         // TASK 39b: the bracket goes AFTER the guard, deliberately. A `return` inside a closure exits
@@ -2032,7 +2036,7 @@ final class DocumentCanvasView: UIView {
         }
     }
 
-    override func layoutSubviews() {
+    override final func layoutSubviews() {
         super.layoutSubviews()
         // Skip a zero-width UIKit layout pass before the canvas is framed: laying out at width 0 builds the
         // media/overlay views at a 0×0 rect (and binds their fetch), redone the instant the real frame lands.
@@ -2048,7 +2052,7 @@ final class DocumentCanvasView: UIView {
     /// `needsLayout` flag — the editor's convention is that the parent drives layout explicitly and a view
     /// never `setNeedsLayout()`s itself; it only notifies the parent (`onContentSizeChange`). Also invoked
     /// by `layoutSubviews` for any UIKit-driven pass. Idempotent.
-    func layoutContent() {
+    final func layoutContent() {
         bumpLayoutGeneration()
         if bounds.width > 0 { lastLayoutWidth = bounds.width }
         // The document's top-level sequence lays out on InstantPage V2's rhythm, so the editor's block
@@ -2118,7 +2122,7 @@ final class DocumentCanvasView: UIView {
     // `RouterWitnessBodyTests`' `enabledWitnesses` — `ResponderRouterTests` covers both the nil and
     // the non-nil argument, so a router that hard-coded `nil`, or that kept the branch on this side,
     // reads differently from a correct one.
-    override func willMove(toWindow newWindow: UIWindow?) {
+    override final func willMove(toWindow newWindow: UIWindow?) {
         super.willMove(toWindow: newWindow)
         inputBackend.hostWillMove(toWindow: newWindow)
     }
@@ -2126,7 +2130,7 @@ final class DocumentCanvasView: UIView {
     /// TASK 31 (D24 clause (a)) — `willMove(toWindow:)`'s body, verbatim.
     /// `WindowDetachCharacterizationTests` calls this "the ONLY teardown for the two CADisplayLinks",
     /// so the branch stays exactly where it was: on the canvas, keyed on a nil window.
-    func legacyWillMove(toWindow newWindow: UIWindow?) {
+    final func legacyWillMove(toWindow newWindow: UIWindow?) {
         if newWindow == nil {
             stopDragAutoScroll()     // don't let a CADisplayLink retain a torn-down view
             cancelFloatingCursor()   // same: tear down the floating-cursor display link on window removal
@@ -2137,7 +2141,7 @@ final class DocumentCanvasView: UIView {
     /// EVERY height path states it rather than inheriting what the last one left, because any of them can
     /// run first: `layoutContent`, `intrinsicContentSize` (read by `performLayout` BEFORE the layout
     /// pass), and `measuredContentHeight` (a host measuring an unframed editor).
-    func applyRootSpacingConfig() {
+    final func applyRootSpacingConfig() {
         root.spacingModel = .instantPageV2
         root.sequenceKind = .topLevel
         root.metrics = mapper.styleSheet.metrics
@@ -2150,7 +2154,7 @@ final class DocumentCanvasView: UIView {
     /// bare gap, accumulating — and the trailing blocks fell outside the scrollable range: unreachable,
     /// overlapping the host's bottom inset band. A paragraphs-only document is unaffected (no bare gaps),
     /// which is why this stayed hidden.
-    override var intrinsicContentSize: CGSize {
+    override final var intrinsicContentSize: CGSize {
         applyRootSpacingConfig()
         return CGSize(width: UIView.noIntrinsicMetric,
                       height: contentMargins.top + root.currentHeight + contentMargins.bottom)
@@ -2168,7 +2172,7 @@ final class DocumentCanvasView: UIView {
     /// editor (the live composer field is on-screen; the `measuredContentHeight` static probe sets a non-zero
     /// `probe.frame` before seeding). The robust fix (deferred) is to make the measure framing-independent —
     /// compute the facing insets here (mirroring `layout`) instead of reading the stored, layout-set values.
-    func measuredContentHeight(forWidth width: CGFloat, contentMargins explicitMargins: UIEdgeInsets? = nil) -> CGFloat {
+    final func measuredContentHeight(forWidth width: CGFloat, contentMargins explicitMargins: UIEdgeInsets? = nil) -> CGFloat {
         // The measure must be PURE: a host sizing its field by this value (the chat composer) may call it
         // BEFORE the matching `update(...)` has pushed the real `contentMargins` onto the live canvas (a draft
         // applied before the editor is sized). Reading live `self.contentMargins` then yields a too-small height
@@ -2187,7 +2191,7 @@ final class DocumentCanvasView: UIView {
     /// layout. The editor convention: a view never `setNeedsLayout()`s itself for a content change — it
     /// notifies its parent, which drives layout explicitly. `intrinsicContentSize` is a pure computed
     /// property, so there is nothing to invalidate; this only fires the callback.
-    func notifyContentSizeChanged() {
+    final func notifyContentSizeChanged() {
         if suppressHostChangeNotification { return }   // step 1 of a two-step paste stays off-screen (no flash)
         onContentSizeChange?()
     }
@@ -2196,7 +2200,7 @@ final class DocumentCanvasView: UIView {
     /// the selection overlays and the chrome overlay — and to TABLE views only (their cell wash is
     /// selection-dependent). Paragraph/image views are NOT cascaded: their pixels don't depend on the
     /// selection, so they repaint only via the signature gate in `syncBlockViews`.
-    override func setNeedsDisplay() {
+    override final func setNeedsDisplay() {
         super.setNeedsDisplay()
         for v in blockViews.values where v is TableBackingView { v.setNeedsDisplay() }
         selectionHighlight.setNeedsDisplay()
@@ -2213,7 +2217,7 @@ final class DocumentCanvasView: UIView {
     /// washes, in canvas coordinates. Called by the `selectionHighlight` overlay so it renders ON TOP of
     /// the text and the emoji subviews. Table-cell regions are excluded (their highlight rides each table's
     /// own content-view overlay so it tracks horizontal overscroll).
-    func drawNonTableSelectionHighlight(in ctx: CGContext) {
+    final func drawNonTableSelectionHighlight(in ctx: CGContext) {
         self.mapper.theme.accent.withAlphaComponent(0.30).setFill()
         if selFrom != selTo {
             for r in selectionHighlightRects(globalFrom: selFrom, globalTo: selTo,
@@ -2230,7 +2234,7 @@ final class DocumentCanvasView: UIView {
 
     /// True if `region` belongs to a table (its global start falls in a `TableBlockBox`'s node span). Such
     /// regions' highlight is drawn by the table's content-view overlay, not the canvas overlay.
-    func isRegionInTable(_ region: LeafTextRegion) -> Bool {
+    final func isRegionInTable(_ region: LeafTextRegion) -> Bool {
         boxes.contains { ($0 is TableBlockBox)
             && region.globalStart >= $0.nodeStart
             && region.globalStart < $0.nodeStart + $0.nodeSize }
@@ -2247,7 +2251,7 @@ final class DocumentCanvasView: UIView {
     /// (Task 25 re-review). Routing goes only through `legacySelectionSegments`; if this helper ever
     /// called it, those comparisons would silently re-tautologise — which is exactly how the Critical
     /// that Task 25 shipped went undetected the first time.
-    func selectionRects(globalFrom: Int, globalTo: Int,
+    final func selectionRects(globalFrom: Int, globalTo: Int,
                         regionFilter: (LeafTextRegion) -> Bool = { _ in true }) -> [CGRect] {
         var rects: [CGRect] = []
         for r in allLeafRegions() where regionFilter(r) {
@@ -2265,7 +2269,7 @@ final class DocumentCanvasView: UIView {
     /// `visibleRect` plus the endpoint regions, and (b) carrying each segment's global range and its
     /// endpoint flags. `visibleRect: nil` means "the whole document" and MUST reproduce
     /// `selectionRects` exactly — `test_segmentsMatchTheWitnessRectsForASmallSelection` pins that.
-    func legacySelectionSegments(globalFrom: Int, globalTo: Int, visibleRect: CGRect?,
+    final func legacySelectionSegments(globalFrom: Int, globalTo: Int, visibleRect: CGRect?,
                                  includeStartEndpoint: Bool, includeEndEndpoint: Bool)
         -> [(range: NSRange, rect: CGRect, containsStart: Bool, containsEnd: Bool)] {
         // The endpoint OWNER — the region `containsStart`/`containsEnd` names, and the region forced
@@ -2330,7 +2334,7 @@ final class DocumentCanvasView: UIView {
     /// glyph-hugging `selectionRects`): a line covered in full fills to the text container's trailing edge,
     /// and an empty line spanned by the selection gets a full-width rect. Used only by the highlight draw
     /// path — the OS witness / edit-menu / spoiler / marked-text geometry keep the glyph-hugging rects.
-    func selectionHighlightRects(globalFrom: Int, globalTo: Int,
+    final func selectionHighlightRects(globalFrom: Int, globalTo: Int,
                                  regionFilter: (LeafTextRegion) -> Bool = { _ in true }) -> [CGRect] {
         var rects: [CGRect] = []
         for r in allLeafRegions() where regionFilter(r) {
@@ -2358,11 +2362,11 @@ final class DocumentCanvasView: UIView {
     }
 
     /// Maps a point in canvas coordinates to the closest global text position.
-    func closestGlobalPosition(to point: CGPoint) -> Int { root.closestPosition(toCanvasPoint: point) }
+    final func closestGlobalPosition(to point: CGPoint) -> Int { root.closestPosition(toCanvasPoint: point) }
 
     /// The `TableBlockBox` whose node span (incl. structural token slots) contains `pos`, if any — used to
     /// fold in horizontal scroll. Wider than `tableBox(containing:)` in Navigation (which matches cell text only).
-    func tableBox(containingGlobal pos: Int) -> TableBlockBox? {
+    final func tableBox(containingGlobal pos: Int) -> TableBlockBox? {
         // Recurses into details / (expanded) block-quote bodies so a nested table is found; does NOT descend
         // into table cells (a nested table's own cells are found by that table).
         func find(_ stack: [CanvasBlock]) -> TableBlockBox? {
@@ -2379,19 +2383,19 @@ final class DocumentCanvasView: UIView {
 
     /// The horizontal scroll offset of the table containing `pos` (0 if none) — subtract it to turn an
     /// unscrolled-canvas rect into a VISIBLE canvas rect.
-    func tableContentOffsetX(forGlobal pos: Int) -> CGFloat { tableBox(containingGlobal: pos)?.contentOffsetX ?? 0 }
+    final func tableContentOffsetX(forGlobal pos: Int) -> CGFloat { tableBox(containingGlobal: pos)?.contentOffsetX ?? 0 }
 
     /// True if `pos` is the gap before a media atom box's `nodeStart` — a renderable caret slot.
     /// Recurses into details / expanded block-quote bodies (via `allBoxesRecursive`) so a NESTED media
     /// atom's gap is a gap position too.
-    func isGapPosition(_ pos: Int) -> Bool {
+    final func isGapPosition(_ pos: Int) -> Bool {
         allBoxesRecursive().contains { $0 is MediaBlockBox && $0.nodeStart == pos }
     }
 
     /// The media box whose gap-before-atom is at `pos`, if any. Recurses into details / expanded block-quote
     /// bodies — every image action (tap-select, edit-menu geometry, delete, spoiler) routes through this, so a
     /// media block nested in a container must resolve here just like a top-level one.
-    func mediaBox(atGap pos: Int) -> MediaBlockBox? {
+    final func mediaBox(atGap pos: Int) -> MediaBlockBox? {
         allBoxesRecursive().first { ($0 as? MediaBlockBox)?.nodeStart == pos } as? MediaBlockBox
     }
 
@@ -2399,13 +2403,13 @@ final class DocumentCanvasView: UIView {
     /// caption-less atom holding no editable text, so a caret can focus its gap but typing there must open a
     /// body paragraph before it — mirroring `mediaBox(atGap:)`. Recurses (a collapsed quote can nest in a
     /// details body); `allBoxesRecursive` lists a collapsed quote as a leaf atom (it walks no children).
-    func collapsedBlockQuoteBox(atGap pos: Int) -> BlockQuoteBox? {
+    final func collapsedBlockQuoteBox(atGap pos: Int) -> BlockQuoteBox? {
         allBoxesRecursive().first { ($0 as? BlockQuoteBox).map { $0.collapsed && $0.nodeStart == pos } ?? false } as? BlockQuoteBox
     }
 
     /// If the caret (`head`) is inside a horizontally-scrollable table, scroll its cell into view.
     /// Non-animated (fires during typing/nav); the scroll callback syncs `contentOffsetX` + repaints.
-    func scrollCaretIntoViewIfNeeded() {
+    final func scrollCaretIntoViewIfNeeded() {
         // Note: an image-gap caret inside a cell isn't found by cellLocation (no UI path inserts one today),
         // so this simply no-ops for that case.
         guard let t = tableBox(containingGlobal: head),
@@ -2424,7 +2428,7 @@ final class DocumentCanvasView: UIView {
     /// past the visible text), and/or **horizontally** within a scrollable table when the dragged head is in
     /// that table and the touch nears its left/right edge. A single `CADisplayLink` applies both nudges per
     /// tick and re-extends the head against the updated geometry. (`point` is in canvas / content coords.)
-    func updateDragAutoScroll(point: CGPoint, headInTable: Bool) {
+    final func updateDragAutoScroll(point: CGPoint, headInTable: Bool) {
         dragAutoScrollPoint = point
 
         // Vertical: scroll the host document when the touch is in the viewport's top/bottom band. Reuses the
@@ -2457,13 +2461,13 @@ final class DocumentCanvasView: UIView {
         }
     }
 
-    func stopDragAutoScroll() {
+    final func stopDragAutoScroll() {
         dragAutoScrollLink?.invalidate(); dragAutoScrollLink = nil
         dragAutoScrollTable = nil; dragAutoScrollVelocityX = 0; dragAutoScrollVelocityY = 0
         dragAutoScrollPoint = .zero
     }
 
-    @objc func dragAutoScrollTick() {
+    @objc final func dragAutoScrollTick() {
         var moved = false
         // Vertical document scroll: advance the host offset and keep the touch point under the finger as the
         // content scrolls (so the head re-extends to follow), exactly like the floating-cursor auto-scroll.
@@ -2497,7 +2501,7 @@ final class DocumentCanvasView: UIView {
     }
 
     /// Sets a collapsed caret (clears the drag anchor).
-    func setCaret(global pos: Int) {
+    final func setCaret(global pos: Int) {
         setCaret(global: pos, reportSelectionChange: true)
     }
 
@@ -2509,7 +2513,7 @@ final class DocumentCanvasView: UIView {
     /// obeys `inputBackend.suppressesSelectionNotifications` (like `setSelectionHead`): during a coalesced caret drag it is
     /// skipped per frame — otherwise the keyboard's autocorrect/candidate bar recomputes and visibly JUMPS on
     /// every move — and `endCoalescedSelectionDrag` fires exactly one bracket for the final caret at the end.
-    func setCaret(global pos: Int, reportSelectionChange: Bool) {
+    final func setCaret(global pos: Int, reportSelectionChange: Bool) {
         var target = pos
         if let g = finalizeMarkedText() {            // a dismissed prediction shifts later positions left
             if pos >= g.to { target = pos - (g.to - g.from) }
@@ -2591,7 +2595,7 @@ final class DocumentCanvasView: UIView {
 
     /// Moves the selection head, keeping the anchor (drag-to-select). During an interactive handle drag the
     /// input-delegate bracket is coalesced to the gesture's end (see `beginCoalescedSelectionDrag()`).
-    func setSelectionHead(global pos: Int, scrollIntoView: Bool = true) {
+    final func setSelectionHead(global pos: Int, scrollIntoView: Bool = true) {
         finalizeMarkedText()
         clearStructuralSelections()
         dismissEditMenuForSelectionOrTextChange()
@@ -2616,7 +2620,7 @@ final class DocumentCanvasView: UIView {
 
     /// Moves the selection anchor (keeps the head), bracketing the input-delegate change like setSelectionHead
     /// (also coalesced during an interactive handle drag).
-    func setSelectionAnchor(global pos: Int) {
+    final func setSelectionAnchor(global pos: Int) {
         finalizeMarkedText()
         clearStructuralSelections()
         dismissEditMenuForSelectionOrTextChange()
@@ -2630,12 +2634,12 @@ final class DocumentCanvasView: UIView {
     /// Begins coalescing input-delegate selection notifications for an interactive selection-handle drag.
     /// While active, `setSelectionHead`/`setSelectionAnchor` update the selection + visuals every frame but
     /// skip the `inputDelegate` bracket; `endCoalescedSelectionDrag` fires exactly one bracket at the end.
-    func beginCoalescedSelectionDrag() { inputBackend.suppressesSelectionNotifications = true }
+    final func beginCoalescedSelectionDrag() { inputBackend.suppressesSelectionNotifications = true }
 
     /// Ends a coalesced drag. If notifications were being coalesced, fire ONE input-delegate bracket so the OS
     /// re-syncs (and recomputes autocorrect/candidates) against the final selection — the `selectedTextRange`
     /// getter was live throughout, but the keyboard only refreshes on a bracket. No-op when no drag coalesced.
-    func endCoalescedSelectionDrag() {
+    final func endCoalescedSelectionDrag() {
         guard inputBackend.suppressesSelectionNotifications else { return }
         // TASK 43 — the CLEAR, not just a flag reset: `suppressesSelectionNotifications`' `didSet`
         // flushes the publish `setSelection` deferred during the drag. It must stay ahead of the two
@@ -2652,7 +2656,7 @@ final class DocumentCanvasView: UIView {
     /// presentation client's `interactionContainerView` must have a container identity that is STABLE
     /// for the whole backend lifetime (spec requirement, `RichTextInputPresentationClient.swift`).
     /// Called once from `TelegramPresentationInputClient.init`.
-    func prepareInteractionContainer() {
+    final func prepareInteractionContainer() {
         _ = selectionChromeContainer
     }
 
@@ -2669,7 +2673,7 @@ final class DocumentCanvasView: UIView {
     /// session, the per-drag `UITextSelectionDisplayInteraction`, the drag auto-scroll display link, and the
     /// coalescing flag — this method is NOT called from `resignFirstResponder`, and must never be wired
     /// there. Fixing those leaks is an explicit non-goal of this extraction.
-    func legacyTearDownPresentation() {
+    final func legacyTearDownPresentation() {
         hideCaretView()
         hideHandle(startHandleView)
         hideHandle(endHandleView)
@@ -2686,12 +2690,12 @@ final class DocumentCanvasView: UIView {
     /// effect. Positioning (and show/hide) stays `updateSelectionHandleViews()`'s job, reached through
     /// `apply`/`refreshSelectionUI()` — this is deliberately the narrower "repaint in place" signal a pure
     /// invalidation needs, not a reposition.
-    func setNeedsHandleDisplay() {
+    final func setNeedsHandleDisplay() {
         startHandleView.setNeedsDisplay()
         endHandleView.setNeedsDisplay()
     }
 
-    func refreshSelectionUI() {
+    final func refreshSelectionUI() {
         // The canvas owns every selection visual (caret, wash, handles); there is no
         // `UITextSelectionDisplayInteraction` to notify (see `installSelectionInteractions`).
         updateCaretView()
@@ -2728,7 +2732,7 @@ final class DocumentCanvasView: UIView {
     /// in the table's scrolling content view for a cell endpoint, else the canvas — ON TOP of the wash and
     /// riding the right scroll. Hidden for a collapsed / structural / non-renderable selection. Mirrors
     /// `updateCaretView`; idempotent, so it's safe from `refreshSelectionUI` and `layoutSubviews`.
-    func updateSelectionHandleViews() {
+    final func updateSelectionHandleViews() {
         guard isFirstResponder, selFrom != selTo, tableSelection == nil, imageSelection == nil else {
             hideHandle(startHandleView); hideHandle(endHandleView); return
         }
@@ -2736,7 +2740,7 @@ final class DocumentCanvasView: UIView {
         positionHandle(endHandleView, atGlobal: selTo)
     }
 
-    private func positionHandle(_ handle: SelectionHandleView, atGlobal pos: Int) {
+    private final func positionHandle(_ handle: SelectionHandleView, atGlobal pos: Int) {
         guard let region = leafRegion(containingGlobal: pos) else { return hideHandle(handle) }
         let unscrolled = region.region.caretRect(atLocal: region.local)
             .offsetBy(dx: region.region.canvasOrigin.x + region.region.emptyLineLeadingIndent,
@@ -2759,7 +2763,7 @@ final class DocumentCanvasView: UIView {
         handle.isHidden = false
     }
 
-    private func hideHandle(_ handle: SelectionHandleView) {
+    private final func hideHandle(_ handle: SelectionHandleView) {
         handle.isHidden = true
         if handle.superview !== self { addSubview(handle) }   // never leave it parked in a torn-down table
     }
@@ -2772,7 +2776,7 @@ final class DocumentCanvasView: UIView {
     /// no structural table selection, and `head` is renderable. When the caret is inside a horizontally-
     /// scrollable table CELL it's hosted in that table's scrolling content view (so it rides the scroll);
     /// otherwise (paragraph / image-gap) it's a subview of the canvas.
-    func updateCaretView() {
+    final func updateCaretView() {
         // During a floating-cursor (spacebar-trackpad) gesture the steady caret becomes the DIMMED
         // "landing" indicator at the SNAPPED position (where the caret lands on release); the bright
         // gliding shadow (transientCaretView) is positioned separately by the floating handlers.
@@ -2830,7 +2834,7 @@ final class DocumentCanvasView: UIView {
     /// `TableBackingView` (frame in its content-local space); otherwise the canvas (frame in canvas
     /// space). Extracted from `updateCaretView` so the steady caret and the floating transient caret host
     /// identically — including riding a table's horizontal scroll.
-    func caretHostPlacement(forGlobal pos: Int) -> (container: UIView, frame: CGRect)? {
+    final func caretHostPlacement(forGlobal pos: Int) -> (container: UIView, frame: CGRect)? {
         let leaf = leafRegion(containingGlobal: pos)
         if let region = leaf,
            let table = tableBox(containingGlobal: pos),
@@ -2857,7 +2861,7 @@ final class DocumentCanvasView: UIView {
 
     /// Hosts an arbitrary overlay view at a placement (reparenting into a table's content view when
     /// needed), matching how the steady caret is hosted.
-    func hostOverlay(_ v: UIView, at placement: (container: UIView, frame: CGRect)) {
+    final func hostOverlay(_ v: UIView, at placement: (container: UIView, frame: CGRect)) {
         if let tv = placement.container as? TableBackingView {
             tv.hostCaret(v, at: placement.frame)
         } else {
@@ -2868,11 +2872,11 @@ final class DocumentCanvasView: UIView {
     }
 
     /// A 2pt-wide caret bar from a TextKit caret rect (keeps the OS-caret look used by `caretRect`).
-    private func caretBar(from rect: CGRect) -> CGRect {
+    private final func caretBar(from rect: CGRect) -> CGRect {
         CGRect(x: rect.minX, y: rect.minY, width: 2, height: rect.height)
     }
 
-    private func hideCaretView() {
+    private final func hideCaretView() {
         caretView.stopBlink()
         if caretView.superview !== self { addSubview(caretView) }   // never leave it parked in a table's content view
         lastCaretContainer = nil
@@ -2880,7 +2884,7 @@ final class DocumentCanvasView: UIView {
     }
 
     /// Demo helper: set a selection spanning the middle of two blocks by index.
-    func selectAcrossBlocks(firstIndex: Int, secondIndex: Int) {
+    final func selectAcrossBlocks(firstIndex: Int, secondIndex: Int) {
         guard boxes.indices.contains(firstIndex), boxes.indices.contains(secondIndex) else { return }
         // TASK 39: `applyCaretOutcome` (`+Editing.swift`), and `.range` — this is a genuine two-endpoint
         // selection, not a caret. A publishing `setSelection` here would be the FIRST report on this
@@ -2901,7 +2905,7 @@ final class DocumentCanvasView: UIView {
     }
 
     /// Demo helper: set a selection spanning mid-way through two leaf regions by document-order index.
-    func selectAcrossLeafRegions(firstLeaf: Int, secondLeaf: Int) {
+    final func selectAcrossLeafRegions(firstLeaf: Int, secondLeaf: Int) {
         let regions = allLeafRegions()
         guard regions.indices.contains(firstLeaf), regions.indices.contains(secondLeaf) else { return }
         let r1 = regions[firstLeaf], r2 = regions[secondLeaf]

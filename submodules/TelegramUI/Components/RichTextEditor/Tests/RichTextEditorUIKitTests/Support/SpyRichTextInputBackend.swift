@@ -474,6 +474,17 @@ final class SpyRichTextInputBackend: RichTextInputBackend {
     func hostDidResignFirstResponder() { note("hostDidResignFirstResponder()") }
     func hostDidFailToResignFirstResponder() { note("hostDidFailToResignFirstResponder()") }
 
+    /// PHASE 3b — the responder hand-off. Stubbed `.hostOwnsTheRole` by default, which is what the
+    /// legacy-shaped hosts these suites drive expect; `stubbedResponderTransition` lets a test make
+    /// the spy behave like a backend that takes the role itself.
+    var stubbedResponderTransition: RichTextInputResponderTransition = .hostOwnsTheRole
+    func acquireFirstResponder() -> RichTextInputResponderTransition {
+        note("acquireFirstResponder()"); return stubbedResponderTransition
+    }
+    func relinquishFirstResponder() -> RichTextInputResponderTransition {
+        note("relinquishFirstResponder()"); return stubbedResponderTransition
+    }
+
     func hostWillMove(toWindow window: UIWindow?) {
         note("hostWillMove(toWindow:)", window == nil ? "nil" : "non-nil")
     }
@@ -538,5 +549,12 @@ final class SpyRichTextInputBackend: RichTextInputBackend {
 
     func installCheckingIfNeeded() { note("installCheckingIfNeeded()") }
     func checkOnSelectionChange() { note("checkOnSelectionChange()") }
+    /// TASK H2. The spy mints the legacy identity shape everywhere else in this file, so it
+    /// resolves the same one; `note` is deliberately NOT called — this member is a pure query the
+    /// checking client makes several times per delivery, and logging it would rewrite every
+    /// existing call-log expectation in the suites that use this spy.
+    func globalRange(ofCheckingRange range: UITextRange) -> (from: Int, to: Int)? {
+        LegacyTextIdentity.globalRange(of: range)
+    }
 }
 #endif

@@ -1,0 +1,392 @@
+{
+  "schema": 1,
+  "runtime": {
+    "osVersion": "26.5",
+    "osBuild": "23F73"
+  },
+  "capabilities": {
+    "interaction": {
+      "mandatory": false,
+      "dependencies": [
+
+      ],
+      "fallback": "Skip the diagnostic or stock-oracle probe.",
+      "members": [
+        {
+          "identifier": "testOnly.delegateManagerClassLookup",
+          "class": "UIKBInputDelegateManager",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|UIKBInputDelegateManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip keyboard-session diagnostics.",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "testOnly.keyboardStateClassLookup",
+          "class": "_UIKeyboardStateManager",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_UIKeyboardStateManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip keyboard-session diagnostics.",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "testOnly.keyboardClassLookup",
+          "class": "UIKeyboardImpl",
+          "kind": "classMethod",
+          "name": "class",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|UIKeyboardImpl",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip keyboard-session diagnostics.",
+          "teardown": "Class lookup retains no instance state."
+        },
+        {
+          "identifier": "testOnly.stockOracleClassSynthesis",
+          "class": "NSObject",
+          "kind": "classMethod",
+          "name": "alloc",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|objc_allocateClassPair",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip stock-oracle subclass instrumentation.",
+          "teardown": "The synthesized class is process-lifetime test infrastructure."
+        },
+        {
+          "identifier": "testOnly.stockOracleSwizzle",
+          "class": "NSObject",
+          "kind": "instanceMethod",
+          "name": "description",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|method_setImplementation",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip cursor trace instrumentation.",
+          "teardown": "Restore or retain the process-lifetime test implementation intentionally."
+        },
+        {
+          "identifier": "testOnly.internalLayoutController",
+          "class": "UITextView",
+          "kind": "instanceMethod",
+          "name": "_internalTextLayoutController",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_internalTextLayoutController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip stock-oracle internal-layout diagnostics.",
+          "teardown": "Do not retain the observed stock controller."
+        },
+        {
+          "identifier": "testOnly.customRenderController",
+          "class": "NSObject",
+          "kind": "instanceMethod",
+          "name": "customRenderController",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|customRenderController",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip renderer diagnostics.",
+          "teardown": "Do not retain the observed renderer."
+        },
+        {
+          "identifier": "testOnly.selectionViewManager",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "_selectionViewManager",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|_selectionViewManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip native selection-container diagnostics.",
+          "teardown": "Do not retain the observed manager."
+        },
+        {
+          "identifier": "testOnly.selectionContainer",
+          "class": "UITextInteractionAssistant",
+          "kind": "instanceMethod",
+          "name": "selectionContainerView",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|selectionContainerView",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip native selection-container diagnostics.",
+          "teardown": "Do not retain the observed view."
+        },
+        {
+          "identifier": "testOnly.keyboardSingleton",
+          "class": "UIKeyboardImpl",
+          "kind": "classMethod",
+          "name": "activeInstance",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|activeInstance",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip keyboard-session diagnostics.",
+          "teardown": "Do not retain the keyboard singleton."
+        },
+        {
+          "identifier": "testOnly.keyboardStateManager",
+          "class": "UIKeyboardImpl",
+          "kind": "instanceMethod",
+          "name": "keyboardStateManager",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|keyboardStateManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip keyboard-session diagnostics.",
+          "teardown": "Do not retain the observed manager."
+        },
+        {
+          "identifier": "testOnly.inputDelegateManager",
+          "class": "_UIKeyboardStateManager",
+          "kind": "instanceMethod",
+          "name": "inputDelegateManager",
+          "returnType": "@",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|inputDelegateManager",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip keyboard-session diagnostics.",
+          "teardown": "Do not retain the observed manager."
+        },
+        {
+          "identifier": "testOnly.dynamicIvarInspection",
+          "class": "NSObject",
+          "kind": "ivar",
+          "name": "isa",
+          "returnType": "#",
+          "argumentTypes": [
+
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|object_getIvar",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip the diagnostic.",
+          "teardown": "Never retain values obtained from test-only ivar inspection."
+        },
+        {
+          "identifier": "testOnly.cursorTrace",
+          "class": "_UITextKit2LayoutController",
+          "kind": "instanceMethod",
+          "name": "cursorPositionAtPoint:inContainer:",
+          "returnType": "@",
+          "argumentTypes": [
+            "{CGPoint=dd}",
+            "@"
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit+RichTextLayout.m|method_setImplementation",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#test-only-observation-boundary",
+          "fallback": "Skip cursor trace instrumentation.",
+          "teardown": "The process-lifetime test swizzle is installed once."
+        },
+        {
+          "identifier": "testOnly.autoscrollTarget",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "target",
+          "returnType": "@",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|target",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip the UIKit autoscroll oracle.",
+          "teardown": "Do not retain the observed weak target."
+        },
+        {
+          "identifier": "testOnly.autoscrollContainer",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "scrollContainer",
+          "returnType": "@",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|scrollContainer",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip the UIKit autoscroll oracle.",
+          "teardown": "Invalidate before checking container release."
+        },
+        {
+          "identifier": "testOnly.autoscrollPoint",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "point",
+          "returnType": "{CGPoint=dd}",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|point",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip point-coalescing comparison.",
+          "teardown": "Value observation retains no state."
+        },
+        {
+          "identifier": "testOnly.autoscrollDirections",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "directions",
+          "returnType": "i",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|directions",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip direction-state comparison.",
+          "teardown": "Value observation retains no state."
+        },
+        {
+          "identifier": "testOnly.autoscrollRepeatInterval",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "repeatInterval",
+          "returnType": "d",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|repeatInterval",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip cadence-state comparison.",
+          "teardown": "Value observation retains no state."
+        },
+        {
+          "identifier": "testOnly.autoscrollCount",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "count",
+          "returnType": "Q",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|count",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip tick-order comparison.",
+          "teardown": "Value observation retains no state."
+        },
+        {
+          "identifier": "testOnly.autoscrollActive",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "active",
+          "returnType": "B",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|active",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip active-state comparison.",
+          "teardown": "Value observation retains no state."
+        },
+        {
+          "identifier": "testOnly.autoscrollDisabled",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "disabled",
+          "returnType": "B",
+          "argumentTypes": [],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|disabled",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip disabled-state comparison.",
+          "teardown": "Value observation retains no state."
+        },
+        {
+          "identifier": "testOnly.autoscrollSetDisabled",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "setDisabled:",
+          "returnType": "v",
+          "argumentTypes": [
+            "B"
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|setDisabled:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Skip disabled-start comparison.",
+          "teardown": "Invalidate the oracle after the assertion."
+        },
+        {
+          "identifier": "testOnly.autoscrollTimerFired",
+          "class": "UIAutoscroll",
+          "kind": "instanceMethod",
+          "name": "timerFired:",
+          "returnType": "v",
+          "argumentTypes": [
+            "@"
+          ],
+          "required": false,
+          "direction": "testOnly",
+          "source": "PrivateUIKit/IDPrivateUIKit.m|timerFired:",
+          "evidence": "docs/hopper/UIKitCore-iOS26.5.md#floating-cursor-and-selection-edge-autoscroll",
+          "fallback": "Use real timer cadence only.",
+          "teardown": "Invalidate immediately after deterministic firing."
+        }
+      ]
+    }
+  },
+  "referenceOnly": {
+  },
+  "forbidden": [
+
+  ]
+}

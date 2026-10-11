@@ -11,14 +11,14 @@ import RichTextEditorCore
 /// attributed label, both of which this module can draw itself. It follows the same `NSTextAttachment` +
 /// `attachmentBounds` shape, so both layout engines (TextKit 1 and 2) place it with no extra work.
 @available(iOS 13.0, *)
-final class ButtonTextAttachment: NSTextAttachment {
-    let button: ButtonRef
+public final class ButtonTextAttachment: NSTextAttachment, RichTextInlineAttachment {
+    public let button: ButtonRef
     /// The label, already laid out with the pill's own typography (semibold, fixed size).
     let labelString: NSAttributedString
     /// Full pill size — the label's ink box inflated by the padding below.
-    let size: CGSize
-    let ascent: CGFloat
-    let descent: CGFloat
+    public let size: CGSize
+    public let ascent: CGFloat
+    public let descent: CGFloat
     /// The per-side horizontal padding `size` was inflated by. LOAD-BEARING: the label's ink width is
     /// recovered as `size.width - 2 * horizontalPadding`, so reading a global here instead of the value
     /// that actually built `size` would silently mis-centre the label.
@@ -29,7 +29,7 @@ final class ButtonTextAttachment: NSTextAttachment {
     let isTruncated: Bool
     /// Resolved at construction from the theme + the button's colour role, and kept so a row box can
     /// re-render the same pill at its stretched column width without re-deriving them.
-    let colors: (fill: UIColor, label: UIColor)
+    public let colors: (fill: UIColor, label: UIColor)
     /// The type icon, or nil when the action has none. Resolved here, alongside the width held for it,
     /// so what is drawn and what was measured cannot disagree. The ink itself is produced at draw time,
     /// where the tint is known — see `RichTextButtonIcon`.
@@ -40,7 +40,7 @@ final class ButtonTextAttachment: NSTextAttachment {
     let iconReserve: CGFloat
     /// Which placement `icon` is drawn at. Fixed at construction: a pill is built by exactly one kind
     /// of owner and never changes kind.
-    let isBlockPill: Bool
+    public let isBlockPill: Bool
 
     init(button: ButtonRef, labelString: NSAttributedString, size: CGSize, ascent: CGFloat,
          descent: CGFloat, horizontalPadding: CGFloat, isTruncated: Bool = false,
@@ -67,22 +67,40 @@ final class ButtonTextAttachment: NSTextAttachment {
         self.image = ButtonTextAttachment.spacerImage
     }
 
-    required init?(coder: NSCoder) {
+    public required init?(coder: NSCoder) {
         fatalError("init(coder:) not used")
     }
+
+    /// Whether `other` is a rendering of the SAME atom with the same geometry — what a document set
+    /// asks when it decides whether an engine block changed. Deliberately NOT `isEqual`: two adjacent
+    /// atoms with equal attachments would coalesce into one attribute run, and every consumer that
+    /// walks attachments expects one object per character. A fresh render of an unchanged model mints
+    /// new attachment objects, so `NSAttributedString` equality alone called every block holding one
+    /// changed (composer harness p15, `HarnessAtomParagraphReplayIdentityTests`).
+    public func drawsTheSameAs(_ other: NSTextAttachment) -> Bool {
+        guard let other = other as? ButtonTextAttachment else { return false }
+        return button == other.button && labelString.isEqual(to: other.labelString) && size == other.size
+            && ascent == other.ascent && descent == other.descent && horizontalPadding == other.horizontalPadding
+            && isTruncated == other.isTruncated && colors.fill.isEqual(other.colors.fill)
+            && colors.label.isEqual(other.colors.label) && (icon == nil) == (other.icon == nil)
+            && iconReserve == other.iconReserve && isBlockPill == other.isBlockPill
+    }
+
+    /// `RichTextInlineAttachment`: font-independent — a pill is measured with its own typography.
+    public func reservedBox(forFont font: UIFont) -> CGRect { box() }
 
     private func box() -> CGRect {
         return CGRect(x: 0.0, y: -descent, width: max(1.0, size.width), height: max(1.0, size.height))
     }
 
     @available(iOS 15.0, *)
-    override func attachmentBounds(for attributes: [NSAttributedString.Key: Any], location: NSTextLocation,
+    public override func attachmentBounds(for attributes: [NSAttributedString.Key: Any], location: NSTextLocation,
                                    textContainer: NSTextContainer?, proposedLineFragment: CGRect,
                                    position: CGPoint) -> CGRect {
         return box()
     }
 
-    override func attachmentBounds(for textContainer: NSTextContainer?, proposedLineFragment lineFrag: CGRect,
+    public override func attachmentBounds(for textContainer: NSTextContainer?, proposedLineFragment lineFrag: CGRect,
                                    glyphPosition position: CGPoint, characterIndex charIndex: Int) -> CGRect {
         return box()
     }

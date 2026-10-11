@@ -383,6 +383,56 @@ extension LegacyRichTextInputBackend {
         wasFirstResponderAtWillResign = false
     }
 
+    // MARK: - The responder hand-off (PHASE 3b) — Legacy's editing surface IS the host
+
+    /// **`.hostOwnsTheRole`, and this member does NOTHING ELSE — the emptiness is the whole answer,
+    /// not an unfinished implementation.**
+    ///
+    /// The contract member exists because the InputDec adapter's editing surface is a separate view
+    /// inside the host, and phase 3 measured that UIKit raises no keyboard and binds no
+    /// `inputDelegate` unless that view holds the first-responder role. Legacy has no such split:
+    /// `DocumentCanvasView` draws the text, owns the caret, and is the responder. So the honest
+    /// answer to "did you take the role" is "the role is the host's; I did not touch it".
+    ///
+    /// **THE PROHIBITION IN THE CONTRACT IS LOAD-BEARING HERE, and the obvious implementation
+    /// violates it.** The tempting body is `host.hostInputView.becomeFirstResponder()` — "take the
+    /// role on the host". It is also a stack overflow the day a host adopts the member the way the
+    /// contract shows: `DocumentCanvasView.becomeFirstResponder()` would call
+    /// `acquireFirstResponder()`, which would call `DocumentCanvasView.becomeFirstResponder()`. The
+    /// case exists so the host keeps its own `super` call, and the honest answer to "did you take the
+    /// role" needs no responder-chain call at all — so a correct conformer has no REASON to recurse.
+    ///
+    /// **That is weaker than "impossible", and the difference matters to whoever writes the third
+    /// `.hostOwnsTheRole` conformer** (phase 3b review, finding 8 — this paragraph said "impossible"
+    /// and the type system says no such thing). Nothing stops a conformer from calling
+    /// `becomeFirstResponder()` here; what enforces it is a runtime test,
+    /// `ResponderHandOffTests.test_theShippingBackendNeverEntersTheResponderChain`, which drives both
+    /// members in both focus states and requires the responder chain to be identical before and
+    /// after, plus R17, which pins this body as the literal it is.
+    ///
+    /// **ZERO BEHAVIOUR CHANGE, provably**: nothing in `Sources/` calls this — `DocumentCanvasView`'s
+    /// responder overrides are untouched by phase 3b — and the body reads nothing, writes nothing
+    /// and returns a constant, so there is no state for it to disturb even if something did.
+    ///
+    /// **No `isAttached` prelude**, matching the three Bool getters at the top of this file rather
+    /// than the six lifecycle hooks: the answer is `.hostOwnsTheRole` in every state, because it is a
+    /// fact about which VIEW this backend edits, not about whether it is currently attached to one.
+    /// A detached Legacy backend still does not have an editing surface of its own to hand the role
+    /// to. (The InputDec conformer reports when detached, correctly: it has an engine to forward to,
+    /// and when there is none there is nothing to answer for.)
+    ///
+    /// **The four-axis divergence audit, per axis.** 1. *Clamp vs reject* — N/A, no arguments.
+    /// 2. *nil / wrong-type input* — no input; no detached divergence, per the paragraph above.
+    /// 3. *Which store is read* — none. 4. *Which object owns the consulted flag* — nothing is
+    /// consulted.
+    func acquireFirstResponder() -> RichTextInputResponderTransition { .hostOwnsTheRole }
+
+    /// The exact mirror of `acquireFirstResponder()`, and it must stay the mirror: the contract
+    /// requires a conformer to answer the SAME case in both directions, because "who owns the role"
+    /// is a property of the backend and not of the direction of travel. A backend that claimed the
+    /// role on acquire and disclaimed it on relinquish would strand it wherever it last landed.
+    func relinquishFirstResponder() -> RichTextInputResponderTransition { .hostOwnsTheRole }
+
     // MARK: - Window movement
 
     /// Was the `newWindow == nil` half of `DocumentCanvasView.willMove(toWindow:)` —
@@ -506,9 +556,15 @@ extension LegacyRichTextInputBackend {
     /// dismiss this would duplicate. It is nevertheless ZERO-BEHAVIOR-CHANGE in production TODAY, for
     /// two INDEPENDENT reasons, both required:
     /// 1. **Nothing production-side ever sets `canvas.editPolicy`.** A grep across `submodules/` and
-    ///    `Telegram/` finds `editPolicy =` at exactly two sites, both tests
-    ///    (`TelegramLifecycleInputClientTests.swift`, `TelegramDocumentInputClientMutationTests.swift`)
-    ///    — three, as of Task 31, whose `ResponderRouterTests` adds one more, likewise a test.
+    ///    `Telegram/` finds `editPolicy =` at **FOUR** sites, every one of them a test:
+    ///    `TelegramLifecycleInputClientTests.swift:54`,
+    ///    `TelegramDocumentInputClientMutationTests.swift:136`, and `ResponderRouterTests.swift:259`
+    ///    and `:264` — Task 31 added TWO, not one. (Re-derived at phase 3b, which needed this exact
+    ///    number to decide whether the engine's live `canBecomeFirstResponder` gate was evidence for
+    ///    changing Legacy's constant `true`; it is not, precisely because this is 4-and-all-tests.
+    ///    The comment read "exactly two … three, as of Task 31" until then. There is also no setter
+    ///    method, no canvas init parameter and no façade forwarder — the whole surface is this one
+    ///    `var` and its `.legacyUnrestricted` default.)
     ///    So the `didSet`'s inequality guard never fires in production, and `editPolicyDidChange()` is
     ///    never called at all.
     /// 2. **Even if it were called, the guard below exits immediately** — production's policy is

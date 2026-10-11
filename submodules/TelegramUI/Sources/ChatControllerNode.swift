@@ -5133,10 +5133,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             // Rich-message routing: new messages only (editMessage == nil), structural content the entity
             // set can't express (heading/list/table/media), and non-empty. Entity-expressible content
             // (text/quote/code/collapsed-quote/mention/date/custom-emoji-in-body) keeps the text+entities path.
-            let sendAsRichMessage = !sendWithoutFormatting
-                && effectivePresentationInterfaceState.interfaceState.editMessage == nil
-                && !composeContent.isEntityExpressible()
-                && !composeContent.isEmpty
+            // `chatComposerSendRoute` (TextFormat), shared with the composer harness's send-path oracle.
+            let sendAsRichMessage = chatComposerSendRoute(
+                content: composeContent,
+                isNewMessage: effectivePresentationInterfaceState.interfaceState.editMessage == nil,
+                sendWithoutFormatting: sendWithoutFormatting) == .rich
             
             var inlineStickers: [MediaId: Media] = [:]
             var firstLockedPremiumEmoji: TelegramMediaFile?
@@ -5248,7 +5249,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText), effectiveInputText.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) == nil {
                 messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), threadId: self.chatLocation.threadId, replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
             } else {
-                let inputText = convertMarkdownToAttributes(effectiveInputText)
                 
                 var mediaReference: AnyMediaReference?
                 var webpage: TelegramMediaWebpage?
@@ -5301,15 +5301,16 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     messages.append(.message(text: "", attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: self.chatLocation.threadId, replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
                 } else {
                 do {
-                    for text in breakChatInputText(trimChatInputText(inputText)) {
-                        if text.length != 0 {
+                    var isBusinessLinkSetup = false
+                    if case let .customChatContents(customChatContents) = self.chatPresentationInterfaceState.subject, case .businessLinkSetup = customChatContents.kind {
+                        isBusinessLinkSetup = true
+                    }
+                    // Markdown conversion, trim, the 4096 split and each piece's entities:
+                    // `chatComposerTextMessages` (TextFormat), shared with the composer harness's send-path oracle.
+                    let textMessages = chatComposerTextMessages(effectiveInputText: effectiveInputText, businessLinkSetup: isBusinessLinkSetup)
+                    for (text, entities) in textMessages.pieces {
+                        do {
                             var attributes: [MessageAttribute] = []
-                            let entities: [MessageTextEntity]
-                            if case let .customChatContents(customChatContents) = self.chatPresentationInterfaceState.subject, case .businessLinkSetup = customChatContents.kind {
-                                entities = generateChatInputTextEntities(text, generateLinks: false)
-                            } else {
-                                entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text, maxAnimatedEmojisInText: 0))
-                            }
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }

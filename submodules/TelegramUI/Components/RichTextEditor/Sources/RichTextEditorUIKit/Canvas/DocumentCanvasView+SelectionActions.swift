@@ -85,13 +85,17 @@ extension DocumentCanvasView {
 
     /// Select the word enclosing `pos` (Select menu item / double tap). No-op at a structural gap.
     func selectWord(at pos: Int) {
-        guard let t = tokenizer as? DocumentTokenizer, let r = t.wordRange(at: pos) else { return }
+        // TASK F4: `DocumentBoundaryTokenizer`, not the concrete `DocumentTokenizer` — under
+        // `.inputDec` the canvas's tokenizer is an `IDDocumentTokenizer` and the concrete cast went nil,
+        // silently disabling double-tap word select.
+        guard let t = tokenizer as? DocumentBoundaryTokenizer, let r = t.wordRange(at: pos) else { return }
         applySelection(from: r.from, to: r.to)
     }
 
     /// Select the paragraph/region enclosing `pos` (triple tap). No-op at a structural gap.
     func selectParagraph(at pos: Int) {
-        guard let t = tokenizer as? DocumentTokenizer, let r = t.paragraphRange(at: pos) else { return }
+        // TASK F4: see `selectWordAt`'s note — same concrete-cast defect, same fix.
+        guard let t = tokenizer as? DocumentBoundaryTokenizer, let r = t.paragraphRange(at: pos) else { return }
         applySelection(from: r.from, to: r.to)
     }
 

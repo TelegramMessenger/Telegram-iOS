@@ -8,7 +8,7 @@ import UIKit
 /// `InstantPageBuilder.buildInstantPage`. Adding a block type to the editor means adding its case
 /// here; the pairwise-table test in `//submodules/InstantPageUI:InstantPageUITests` is what catches
 /// the omission.
-enum RichTextBlockSpacingKind: Equatable {
+public enum RichTextBlockSpacingKind: Equatable {
     case paragraph
     case heading
     /// A whole RUN of adjacent list items, which the renderer sees as one `.list` block.
@@ -29,7 +29,7 @@ enum RichTextBlockSpacingKind: Equatable {
 /// Which kind of sequence the two blocks sit in. `.cell` is currently unread, mirroring the
 /// renderer's own unread `.cell`; keep it rather than deleting it as dead, and do not read its
 /// absence from the body as a bug.
-enum RichTextBlockSequenceKind {
+public enum RichTextBlockSequenceKind {
     case topLevel
     case cell
     case list
@@ -75,7 +75,7 @@ private func isRawMedia(_ kind: RichTextBlockSpacingKind) -> Bool {
 /// A transcription of `InstantPageLayoutSpacings.spacingBetweenBlocks`. **The rule ORDER is
 /// load-bearing** — several arms would otherwise both match — so this reads in the same order as the
 /// renderer's function rather than being reorganised into something tidier.
-func richTextSpacingBetweenBlocks(
+public func richTextSpacingBetweenBlocks(
     upper: RichTextBlockSpacingKind?,
     lower: RichTextBlockSpacingKind?,
     kind: RichTextBlockSequenceKind,

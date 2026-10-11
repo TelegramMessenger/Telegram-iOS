@@ -166,6 +166,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case forceClearGlass(Bool)
     case debugRipple(Bool)
     case debugRichText(Bool)
+    case inputDecTextBackend(Bool)
+    case inputDecEngineEditor(Bool)
     case coreListChatBackend(Bool)
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
@@ -213,7 +215,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .debugRichText, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .debugRichText, .inputDecTextBackend, .inputDecEngineEditor, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -322,44 +324,46 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 45
         case .debugRichText:
             return 46
-        case .browserExperiment:
+        case .inputDecTextBackend:
             return 47
-        case .allForumsHaveTabs:
+        case .browserExperiment:
             return 48
-        case .enableReactionOverrides:
+        case .allForumsHaveTabs:
             return 49
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 50
-        case .logTranslationRecognition:
-            return 64
-        case .resetTranslationStates:
-            return 65
-        case .compressedEmojiCache:
+        case .restorePurchases:
             return 51
-        case .storiesJpegExperiment:
+        case .logTranslationRecognition:
+            return 65
+        case .resetTranslationStates:
+            return 66
+        case .compressedEmojiCache:
             return 52
-        case .disableReloginTokens:
+        case .storiesJpegExperiment:
             return 53
-        case .checkSerializedData:
+        case .disableReloginTokens:
             return 54
-        case .enableQuickReactionSwitch:
+        case .checkSerializedData:
             return 55
-        case .liveStreamV2:
+        case .enableQuickReactionSwitch:
             return 56
-        case .experimentalCallMute:
+        case .liveStreamV2:
             return 57
-        case .groupCallReferenceEngine:
+        case .experimentalCallMute:
             return 58
-        case .playerV2:
+        case .groupCallReferenceEngine:
             return 59
-        case .devRequests:
+        case .playerV2:
             return 60
-        case .pwa:
+        case .devRequests:
             return 61
-        case .enableLocalTranslation:
+        case .pwa:
             return 62
-        case .enableUpdates:
+        case .enableLocalTranslation:
             return 63
+        case .enableUpdates:
+            return 64
         case .disableVideoAspectScaling:
             return 101
         case .enableNetworkFramework:
@@ -372,12 +376,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 105
         case .hostInfo:
             return 106
-        case .versionInfo:
+        case .inputDecEngineEditor:
+            // Immediately before `versionInfo`. ItemList asserts entries are STRICTLY INCREASING by
+            // stableId (ItemListControllerNode.swift), so an id must match the position the entry is
+            // appended at — a high id appended mid-list traps at runtime, in a Swift assertion inside
+            // the list's own state closure rather than anywhere near here.
             return 107
-        case .collectCpuProfile:
+        case .versionInfo:
             return 108
-        case .sendProfileLogs:
+        case .collectCpuProfile:
             return 109
+        case .sendProfileLogs:
+            return 110
         }
     }
     
@@ -1415,6 +1425,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .inputDecEngineEditor(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Text Field v2: InputDec ENGINE editor", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.useInputDecEngine = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .inputDecTextBackend(value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Text Field v2: InputDec backend", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.inputDecTextBackend = value
+                        return EnginePreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .coreListChatBackend(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Chat: CoreList backend (PoC)", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1871,6 +1901,13 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
         entries.append(.debugRipple(experimentalSettings.debugRipple))
         entries.append(.debugRichText(experimentalSettings.forceNewTextInput))
         #if DEBUG
+        entries.append(.inputDecTextBackend(experimentalSettings.inputDecTextBackend))
+        #else
+        if sharedContext.applicationBindings.appBuildType == .internal {
+            entries.append(.inputDecTextBackend(experimentalSettings.inputDecTextBackend))
+        }
+        #endif
+        #if DEBUG
         entries.append(.browserExperiment(experimentalSettings.browserExperiment))
         #else
         if sharedContext.applicationBindings.appBuildType == .internal {
@@ -1931,6 +1968,13 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
     }
+    #if DEBUG
+    entries.append(.inputDecEngineEditor(experimentalSettings.useInputDecEngine))
+    #else
+    if sharedContext.applicationBindings.appBuildType == .internal {
+        entries.append(.inputDecEngineEditor(experimentalSettings.useInputDecEngine))
+    }
+    #endif
     entries.append(.versionInfo(presentationData.theme))
     
     entries.append(.collectCpuProfile)

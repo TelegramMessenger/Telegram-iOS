@@ -49,6 +49,9 @@ submodules/MtProtoKit/TON/macOS/lib/fift/Lisp.fif
 submodules/MtProtoKit/TON/macOS/lib/fift/Lists.fif
 submodules/MtProtoKit/TON/macOS/lib/fift/Stack.fif
 submodules/MtProtoKit/TON/macOS/lib/fift/TonUtil.fif
+# bazel's per-workspace convenience symlinks, incl. `bazel-<worktree-dir>` (machine-specific:
+# it points into the output base, which moved wholesale with the Bazel 9.2.0 migration).
+/bazel-*
 bazel-bin
 bazel-bin/*
 bazel-genfiles

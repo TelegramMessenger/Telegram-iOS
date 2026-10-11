@@ -29,6 +29,11 @@ public struct StyleSheet {
     /// before the fill's trailing edge (the fill still spans the full content width). Default 0.
     /// Consumed by `BlockBox` (Task 2). Per-host via `QuoteStyle.trailingInset`.
     public var quoteTrailingInset: CGFloat = 0
+    /// How many block-quote levels indent their content AT THE CURRENT WIDTH — the engine editor sets it
+    /// from its text column (`RichTextEngineEditorView.syncIndentedQuoteLevelLimit`), so that the levels
+    /// that indent always leave a usable column; deeper quotes add no indent. `Int.max` (default) means
+    /// no width is known and only the engine's fixed cap applies. Not read by the legacy canvas.
+    public var indentedQuoteLevelLimit: Int = Int.max
     /// Paragraph spacing above each quote paragraph (points). Default 8. Per-host via `QuoteStyle.spacingBefore`.
     public var quoteSpacingBefore: CGFloat = 8
     /// Paragraph spacing below each quote paragraph (points). Default 8. Per-host via `QuoteStyle.spacingAfter`.

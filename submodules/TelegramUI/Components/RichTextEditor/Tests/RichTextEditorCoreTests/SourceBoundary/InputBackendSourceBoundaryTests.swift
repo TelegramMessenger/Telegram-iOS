@@ -23,6 +23,57 @@ import XCTest
 /// nothing. Both halves of the schedule are now spent; neither R6 nor R7 has a baseline left.
 final class InputBackendSourceBoundaryTests: XCTestCase {
 
+    // ------------------------------------------------------------------------------------
+    // InputDec exemption (docs/superpowers/plans/2026-08-16-inputdec-backend-introduction.md,
+    // Task A4). Relaxed ONCE, in one commit, and never widened afterward.
+    //
+    // Exempt from: R8's `^ID[A-Z]` basename rule, R1's `\bID[A-Z]\w+` name rule, and R2's
+    // Telegram-implementation-type list. NOT exempt from R1's banned-machinery list
+    // (NSSelectorFromString / objc_msgSend / class_addMethod / …) or from R1b — those stay
+    // absolute for every file in the package, which is what actually keeps private API inside
+    // the Objective-C module.
+    //
+    // The set is a fixed list of TWO entries, not a pattern. A third entry is a review event.
+    // ------------------------------------------------------------------------------------
+    // F13 (PH2 review) — THE FIRST ENTRY IS A PREFIX TEST, AND ITS COVERAGE GREW WITHOUT THE LIST
+    // CHANGING. `isInputDecExempt` below is `path.contains`, so `/InputBackend/InputDec/` exempts
+    // every subtree under it. Since PH2 that is TWO adapters, not one: the original reconstruction
+    // (`IDTextEditorBackend`, scheduled for deletion) and `InputDec/Upstream/`, the phase-2 adapter
+    // over the REAL ported engine. Nesting the new one there was deliberate — it reuses this entry
+    // rather than adding a third, so `test_theInputDecExemptionIsExactlyTwoLiteralPaths` still holds
+    // and no guard was widened — but "the adapter directory" now means two of them, and a reader
+    // checking whether a third entry was smuggled in should know the growth happened HERE instead.
+    private static let inputDecExemptPaths = [
+        "/InputBackend/InputDec/",                     // the adapter directory: BOTH adapters (see above)
+        "/InputBackend/RichTextInputCanvasFactory.swift", // names both backends by construction
+    ]
+
+    private func isInputDecExempt(_ url: URL) -> Bool {
+        Self.inputDecExemptPaths.contains { url.path.contains($0) }
+    }
+
+    /// The exemption must never grow, and must never become a pattern.
+    func test_theInputDecExemptionIsExactlyTwoLiteralPaths() {
+        XCTAssertEqual(Self.inputDecExemptPaths.count, 2,
+                       "widening the InputDec exemption is a review event")
+        for path in Self.inputDecExemptPaths {
+            XCTAssertTrue(path.hasPrefix("/InputBackend/"), "exemptions are scoped to InputBackend")
+            XCTAssertNil(path.range(of: #"[*?\[]"#, options: .regularExpression),
+                         "the exemption is a fixed list, never a glob: \(path)")
+        }
+    }
+
+    /// Non-vacuity. Added in Task B3, when BOTH exempt paths first have a file — before that,
+    /// nothing is exempt and there is nothing to be vacuous about.
+    func test_everyInputDecExemptPathMatchesALiveFile() throws {
+        RepoLayout.assertResolved()
+        let all = RepoLayout.swiftFiles(under: RepoLayout.inputBackend)
+        for path in Self.inputDecExemptPaths {
+            XCTAssertTrue(all.contains { $0.path.contains(path) },
+                          "exempt path matches nothing — it is vacuous or misspelled: \(path)")
+        }
+    }
+
     private func inputBackendSources() -> [URL] {
         RepoLayout.assertResolved()
         return RepoLayout.swiftFiles(under: RepoLayout.inputBackend)
@@ -44,8 +95,10 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
             for name in banned {
                 XCTAssertFalse(text.contains(name), "\(url.lastPathComponent) references \(name)")
             }
-            XCTAssertNil(text.range(of: #"\bID[A-Z]\w+"#, options: .regularExpression),
-                         "\(url.lastPathComponent) references an InputDec-style ID-prefixed name")
+            if !isInputDecExempt(url) {
+                XCTAssertNil(text.range(of: #"\bID[A-Z]\w+"#, options: .regularExpression),
+                             "\(url.lastPathComponent) references an InputDec-style ID-prefixed name")
+            }
         }
     }
 
@@ -65,7 +118,8 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
                       "NSTextStorage", "NSLayoutManager", "NSTextContainer", "NSTextLayoutManager",
                       "LegacyTextPosition", "LegacyTextRange", "LegacySelectionRect"]
         for url in inputBackendSources() where !url.path.contains("/Clients/")
-            && !url.lastPathComponent.hasPrefix("Legacy") {
+            && !url.lastPathComponent.hasPrefix("Legacy")
+            && !isInputDecExempt(url) {
             let text = SwiftSourceScan.stripCommentsAndStringLiterals(try! String(contentsOf: url))
             for name in banned {
                 XCTAssertFalse(text.contains(name),
@@ -134,9 +188,15 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
     /// Tests/RichTextEditorUIKitTests/Differential/ObjC/ as a test-only SwiftPM target. Those
     /// are test-support sources: they never link into the app, never enter the Bazel build
     /// (which has no test target for this package), and contain no private selector, no
-    /// runtime lookup and no kernel code. The spec's gate forbids InputDec **production**
-    /// code, which remains stage 2's Task A4. Do not widen this rule to Tests/ — doing so
+    /// runtime lookup and no kernel code. Do not widen this rule to Tests/ — doing so
     /// would fail the gate on the very instrument that proves the port.
+    ///
+    /// **TASK A4 RELAXED THE BASENAME HALF, ONCE, for the two `inputDecExemptPaths` above.**
+    /// The `^ID[A-Z]` rejection no longer applies inside `InputBackend/InputDec/**` or to
+    /// `InputBackend/RichTextInputCanvasFactory.swift`. **The non-Swift-source assertion above
+    /// it stays ABSOLUTE for every path** — the vendored Objective-C lives in its own target
+    /// (`Sources/RichTextInputDecObjC/`), outside this rule's scan root, precisely because
+    /// `BUILD`'s `**/*.swift` glob would silently drop an `.m` placed here.
     func test_noInputDecSourcesAndNoObjectiveCUnderTheSwiftTarget() {
         RepoLayout.assertResolved()
         guard let e = FileManager.default.enumerator(at: RepoLayout.uiKitSources,
@@ -146,9 +206,10 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
         for case let url as URL in e {
             XCTAssertFalse(["m", "mm", "h", "c"].contains(url.pathExtension),
                            "non-Swift source under the Swift target: \(url.lastPathComponent)")
+            guard !isInputDecExempt(url) else { continue }
             XCTAssertNil(url.deletingPathExtension().lastPathComponent
                 .range(of: #"^ID[A-Z]"#, options: .regularExpression),
-                "InputDec-style source present before the Phase 6 gate: \(url.lastPathComponent)")
+                "InputDec-style source outside the exempt paths: \(url.lastPathComponent)")
         }
     }
 
@@ -181,7 +242,7 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
     ///
     /// **TWO ASSERTIONS, on the codebase's existing two-rule shape** (a precise named rule for the
     /// actionable message, a blunt mention cap for completeness — see
-    /// `test_theTokenizerHasExactlyOneConstructionSite`, which uses it for the same reason):
+    /// `test_theTokenizerHasExactlyTwoConstructionSites`, which uses it for the same reason):
     ///
     ///  1. **CONSTRUCTIONS AND DOWNCASTS.** `LegacyTextRange(…)` and `x as? LegacyTextPosition` are
     ///     the two operations that CONSTITUTE ownership of a UIKit identity object — minting one and
@@ -763,7 +824,20 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(setSelectionCalls, ["LegacyRichTextInputBackend.swift": 1],
+        // TASK C6 ADDED TWO MORE CALL SITES, both `IDTextEditorBackend`'s own — decisions, recorded
+        // here per this rule's own instruction. `IDTextEditorBackend.swift:1` is the
+        // `selectedTextRange` setter's forward onto `setSelection(_:reason:)` (the same shape
+        // Legacy's own setter uses, `.keyboard` reason, a UIKit-driven write). Its
+        // `IDTextEditorBackendClientBridge.swift:1` is `setCanonicalSelectionAnchor(_:head:reason:)`
+        // — the one Family-3 bridge method that changes state rather than merely relaying a
+        // notification. TASK F3: its only caller, C6's `_deleteBackwardAndNotify:` canvas thunk, is
+        // GONE (that selector asks the responder to perform a delete; it does not report one), so
+        // the method has no production caller today and this count now pins a door that is shut.
+        // The count is unchanged because this rule scans SOURCE for `setSelection(` call sites, and
+        // the call site is still written here — see the method's own doc comment.
+        XCTAssertEqual(setSelectionCalls, ["LegacyRichTextInputBackend.swift": 1,
+                                          "IDTextEditorBackend.swift": 1,
+                                          "IDTextEditorBackendClientBridge.swift": 1],
                        "DOOR 1 moved: \(setSelectionCalls.sorted(by: { $0.key < $1.key })). "
                        + "`setSelection(_:reason:)` is the package's ONLY publication path for a "
                        + "selection; a second call site is a decision about host-visible behaviour, "
@@ -941,7 +1015,31 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
     ///
     /// NON-VACUITY: both expectations are exact NON-ZERO dictionaries, so a broken walk or a
     /// `try?`-nil regex reports `[:]` and reddens rather than passing.
-    func test_theTokenizerHasExactlyOneConstructionSite() {
+    ///
+    /// **Task R12 (cluster 12) WIDENED THIS FROM ONE SITE TO TWO, and renamed it — the same shape as
+    /// TASK C6's R16 widening (`test_theDelegateSendDetectionActuallyDetects_R16`'s own header) —
+    /// because a SECOND backend now legitimately needs its OWN, independently-lifetimed tokenizer
+    /// cache.** `IDTextEditorBackend.swift`'s `tokenizer` witness (`InputDec/`) was a permanent
+    /// no-op stub through R11 — Family 1's own follow-on work, deliberately deferred by C4/C7/C8/C9
+    /// (see those tasks' own DIVERGENCES.md entries) — until R12 found `IDBackendFamily9Tests
+    /// .test_selectWordRoutesThroughTheInteractionCapability` failing because the vendored kernel's
+    /// OWN `selectWord()` calls back through this exact witness to resolve word boundaries. R12
+    /// implements it by REUSING `DocumentTokenizer`'s canvas-level boundary logic (not duplicating
+    /// it), through a thin adapter, `IDDocumentTokenizer`
+    /// (`InputDec/IDTextEditorBackend+Tokenizer.swift`) — NOT a parallel reimplementation: the
+    /// adapter constructs one internal `DocumentTokenizer` (canvas-level, not Legacy-specific;
+    /// `IDDocumentCanvasView` is a subclass of `DocumentCanvasView` with zero overrides, so its word/
+    /// paragraph-boundary math is identical) and converts each call's position(s) to/from THIS
+    /// backend's own `TGRichTextInputDecPosition`/`TGRichTextInputDecRange` identity objects — needed
+    /// because the vendored kernel hands a tokenizer's own output straight back into this backend's
+    /// OTHER witnesses (`compare(_:to:)`, `textRange(from:to:)`, …), which reject anything that is
+    /// not that type. So `DocumentTokenizer` itself now legitimately has TWO independent construction
+    /// sites — one inside EACH backend's own construction path (Legacy's own `attach(to:)`; the ID
+    /// backend's own `IDDocumentTokenizer.init`, called from ITS `attach(to:)`) — each governing its
+    /// own cache's lifetime. This is NOT the Task-24 Major-1 hazard the original "exactly one" bound
+    /// existed to catch (a SINGLE backend's cache rebuilt out of step with its own clear); it is two
+    /// SEPARATE backends each following that same one-site-per-lifetime discipline independently.
+    func test_theTokenizerHasExactlyTwoConstructionSites() {
         RepoLayout.assertResolved()
 
         var construction: [String: Int] = [:]
@@ -962,51 +1060,82 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
             if m > 0 { mentions[url.lastPathComponent] = m }
         }
 
-        XCTAssertEqual(construction, ["LegacyRichTextInputBackend+Attachment.swift": 1],
+        XCTAssertEqual(construction,
+                       ["LegacyRichTextInputBackend+Attachment.swift": 1,
+                        "IDTextEditorBackend+Tokenizer.swift": 1],
                        "THE TOKENIZER IS MINTED SOMEWHERE ELSE: "
                        + "\(construction.sorted(by: { $0.key < $1.key })). `DocumentTokenizer` holds "
-                       + "its canvas `unowned` and the backend clears `tokenizerStorage` on detach, so "
-                       + "a second construction site is a second lifetime — the exact shape of Task "
-                       + "24's Major 1 (a cached tokenizer outliving the canvas it was bound to). The "
-                       + "one allowed site is `attach(to:)`, where `legacyHost` is non-nil by "
-                       + "construction. If you need one elsewhere, say why here. NOTE: this scan sees "
-                       + "`Name(` and `Name.init(` only — if you are hunting a construction it did "
-                       + "not catch, the mention allowance below is the rule that will have caught it.")
+                       + "its canvas `unowned` and each backend clears its own `tokenizerStorage` on "
+                       + "detach, so a THIRD construction site (or a second one inside either existing "
+                       + "file) is a second lifetime for the SAME backend's cache — the exact shape of "
+                       + "Task 24's Major 1 (a cached tokenizer outliving the canvas it was bound to). "
+                       + "The two allowed sites are Legacy's own `attach(to:)`, where the canvas is "
+                       + "non-nil by construction (`legacyHost.legacyCanvas`), and `IDDocumentTokenizer"
+                       + ".init` (`IDTextEditorBackend+Tokenizer.swift`), the ID backend's own adapter, "
+                       + "constructed exactly once per `IDTextEditorBackend.attach(to:)` call. If you "
+                       + "need a THIRD, say why here. NOTE: this scan sees `Name(` and `Name.init(` "
+                       + "only — if you are hunting a construction it did not catch, the mention "
+                       + "allowance below is the rule that will have caught it.")
 
         // **THE NET.** Every spelling that evades `constructionSiteCount` still NAMES the type
         // somewhere: `[x].map(DocumentTokenizer.init)` mentions it with no paren, a
         // `typealias T = DocumentTokenizer` mentions it at the alias, and
         // `let m: DocumentTokenizer.Type = DocumentTokenizer.self` mentions it twice at the binding.
-        // So an EXACT mention allowance is what makes "exactly one construction site" a true
+        // So an EXACT mention allowance is what makes "exactly two construction sites" a true
         // statement rather than a statement about one regex.
         //
-        // UNITS: MENTIONS, one per occurrence, reads/casts/declarations alike. The five today:
+        // UNITS: MENTIONS, one per occurrence, reads/casts/declarations alike. The eight today:
         //   * `LegacyDocumentTokenizer.swift` 1 — `final class DocumentTokenizer: NSObject, …`, the
         //     declaration. **TASK 44 renamed the FILE, not the type** (`S/Canvas/DocumentTokenizer.swift`
         //     → `S/InputBackend/Legacy/LegacyDocumentTokenizer.swift`): the tokenizer has been
         //     backend-owned since Task 43 and is the package's densest source of UIKit identity
         //     construction, so R6 relocates it rather than granting it an allowance. The type name is
         //     unchanged because ~20 UIKit-test mentions would otherwise be edited, which D22 forbids.
-        //   * `DocumentCanvasView+SelectionActions.swift` 2 — `tokenizer as? DocumentTokenizer` in the
-        //     word- and paragraph-select actions.
-        //   * `DocumentCanvasView+NativeTextCheckingClient.swift` 1 — the same downcast in
-        //     `spellCheckTargets`, which returns `(nil, nil)` when it fails (i.e. when detached).
-        //   * `LegacyRichTextInputBackend+Attachment.swift` 1 — THE construction.
-        // A sixth is a decision: the three non-construction mentions are all `as?` narrowing of the
-        // backend's vended tokenizer, which is safe precisely because it does NOT mint one.
+        //   * `DocumentCanvasView+SelectionActions.swift` and
+        //     `DocumentCanvasView+NativeTextCheckingClient.swift` — **GONE AS OF TASK F4, and their
+        //     removal was a BUG FIX, not tidying.** Those three mentions were
+        //     `tokenizer as? DocumentTokenizer` downcasts in the word-select, paragraph-select and
+        //     spell-check-target bodies. Under `.inputDec` the canvas's tokenizer is an
+        //     `IDDocumentTokenizer` (it must be — the kernel hands a tokenizer's output straight back
+        //     into witnesses that accept only `TGRichTextInputDecPosition`), so the CONCRETE cast went
+        //     nil and all three behaviours silently no-oped. They now narrow to the
+        //     `DocumentBoundaryTokenizer` protocol both tokenizers conform to. Note what this rule's
+        //     own comment predicted: "all three `tokenizer as? DocumentTokenizer` casts go nil and
+        //     double-tap word select, triple-tap paragraph select and spell-check word targeting
+        //     SILENTLY no-op — three user-visible regressions, no compile error"
+        //     (`LegacyDocumentTokenizer.swift`, Task 43's own note about a DIFFERENT cause). It
+        //     happened, for a different reason, and this dictionary is the record of the fix.
+        //   * `LegacyRichTextInputBackend+Attachment.swift` 1 — Legacy's construction.
+        //   * `IDTextEditorBackend+Tokenizer.swift` 2 (Task R12) — the ID backend's own adapter's
+        //     `private let inner: DocumentTokenizer` stored-property type annotation (a bare mention,
+        //     the composition-wrapper analogue of `LegacyDocumentTokenizer.swift`'s own class-name
+        //     mention above), plus its construction, inside `IDDocumentTokenizer.init`,
+        //     `self.inner = DocumentTokenizer(canvas: canvas)`. Note `IDTextEditorBackend.swift`
+        //     ITSELF contributes NEITHER dictionary: its own
+        //     `self.tokenizerStorage = IDDocumentTokenizer(canvas:currentRevision:)` names a
+        //     DIFFERENT identifier — `IDDocumentTokenizer` fails BOTH lookaround guards here (a
+        //     word character, `D`, sits immediately before "DocumentTokenizer" inside it) — so
+        //     wrapping the reused type in an adapter, rather than re-exporting it under the same
+        //     name, keeps the two backends' construction sites textually distinguishable to this
+        //     scan by construction, not by convention.
+        // A decision, now smaller than it was: after Task F4 there is exactly ONE non-construction
+        // mention left, the ID adapter's `private let inner: DocumentTokenizer` stored-property TYPE
+        // ANNOTATION — safe because holding a composed instance is not minting one. The three
+        // canvas-side `as?` narrowings that used to sit here are gone; canvas-layer code is
+        // backend-agnostic and must narrow to a PROTOCOL both tokenizers can satisfy, never to one
+        // backend's concrete type. That is now the rule this dictionary enforces by absence.
         XCTAssertEqual(mentions,
                        ["LegacyDocumentTokenizer.swift": 1,
-                        "DocumentCanvasView+SelectionActions.swift": 2,
-                        "DocumentCanvasView+NativeTextCheckingClient.swift": 1,
-                        "LegacyRichTextInputBackend+Attachment.swift": 1],
+                        "LegacyRichTextInputBackend+Attachment.swift": 1,
+                        "IDTextEditorBackend+Tokenizer.swift": 2],
                        "`DocumentTokenizer` IS NAMED SOMEWHERE NEW: "
                        + "\(mentions.sorted(by: { $0.key < $1.key })). This is the BLUNT half of the "
-                       + "one-construction-site rule and it is blunt on purpose — the assertion above "
+                       + "two-construction-site rule and it is blunt on purpose — the assertion above "
                        + "sees `Name(` and `Name.init(`, but `[x].map(DocumentTokenizer.init)`, a "
                        + "`typealias`, and a `DocumentTokenizer.Type` metatype binding are all valid "
                        + "Swift that constructs one while matching no `(` after the name. Each still "
                        + "MENTIONS the type, so this dictionary catches them. If your new mention is a "
-                       + "downcast of the backend's own tokenizer (the three existing non-construction "
+                       + "downcast of a backend's own tokenizer (the three existing non-construction "
                        + "mentions all are), add it here with that note; if it MINTS one, it is a "
                        + "second lifetime and the assertion above explains why that is the Task-24 "
                        + "Major-1 shape.")
@@ -1015,7 +1144,7 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
     /// TASK 43 FIX ROUND 1 — Rule 19 for `constructionSiteCount`, which exists only because its
     /// predecessor was evaded. A scan added to close a blind spot is exactly the kind that must be
     /// armed against synthetic sources: if its widening regex silently failed to compile (`try?` →
-    /// `nil` → 0), `test_theTokenizerHasExactlyOneConstructionSite` would report `[:]` and its
+    /// `nil` → 0), `test_theTokenizerHasExactlyTwoConstructionSites` would report `[:]` and its
     /// non-zero expectation would redden — but the DIRECTION of the widening would be untested, and
     /// the whole point is which spellings it now catches.
     ///
@@ -2170,27 +2299,40 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
     /// SIBLINGS without also having to allow every `notify…` call site in the canvas.
     ///
     /// Positive self-check: `test_theDelegateSendDetectionActuallyDetects_R16` below.
+    /// TASK C6 WIDENED THIS FROM ONE FILE TO TWO, and that is not a relaxation of R16 — it is R16
+    /// applied to a SECOND backend the rule predates. The rule's actual invariant is "each backend
+    /// funnels its own `UITextInputDelegate` sends through exactly one of its own files", not
+    /// "the whole package has exactly one sender forever" — Stage C introduces `IDTextEditorBackend`
+    /// (`Sources/RichTextEditorUIKit/InputBackend/InputDec/IDTextEditorBackend.swift`), which Task
+    /// C6 gives its OWN `emitWillChange`/`adoptAndEmitDidChange`/`relay*FromKernel` senders (hard
+    /// invariant 10, recorded in that file). Two allowed files, each independently non-vacuous:
+    /// widening this Set to a THIRD is a review event exactly like the InputDec exemption above.
+    private static let allowedDelegateSendFiles: Set<String> = [
+        "LegacyRichTextInputBackend+Notifications.swift",
+        "IDTextEditorBackend.swift",
+    ]
+
     func test_onlyTheBackendSendsInputDelegateNotifications() {
         RepoLayout.assertResolved()
-        let allowedFile = "LegacyRichTextInputBackend+Notifications.swift"
         var offenders: [String] = []
-        var sawTheAllowedFileSend = false
+        var filesSeenSending: Set<String> = []
         for url in RepoLayout.swiftFiles(under: RepoLayout.uiKitSources) {
             let text = SwiftSourceScan.stripCommentsAndStringLiterals(try! String(contentsOf: url))
             let hits = Self.delegateSendPatterns.filter { text.contains($0) }
-            if url.lastPathComponent == allowedFile {
-                sawTheAllowedFileSend = !hits.isEmpty
+            if Self.allowedDelegateSendFiles.contains(url.lastPathComponent) {
+                if !hits.isEmpty { filesSeenSending.insert(url.lastPathComponent) }
                 continue
             }
             if !hits.isEmpty {
                 offenders.append("\(url.lastPathComponent): \(hits.sorted())")
             }
         }
-        XCTAssertTrue(sawTheAllowedFileSend,
-                      "\(allowedFile) contains none of \(Self.delegateSendPatterns) — either it was " +
-                      "renamed or the emitters moved, and this rule would pass VACUOUSLY")
+        XCTAssertEqual(filesSeenSending, Self.allowedDelegateSendFiles,
+                       "every allowed file must ACTUALLY send at least one of \(Self.delegateSendPatterns) " +
+                       "— a listed file with none would make this rule pass VACUOUSLY for that file")
         XCTAssertEqual(offenders, [],
-                       "a UITextInputDelegate notification is sent outside \(allowedFile): \(offenders)")
+                       "a UITextInputDelegate notification is sent outside " +
+                       "\(Self.allowedDelegateSendFiles.sorted()): \(offenders)")
     }
 
     /// The four sends, lower-cased first letter (see R16's own note on why that matters).
@@ -2382,6 +2524,10 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
         // Task 31 — Family 8 (responder lifecycle, edit policy, traits notification). TWELVE members
         // across FIVE of the six shapes: `.literal` × 3, `.statements` × 6, `.canvasForward` × 1,
         // `.client` × 1, `.deliberatelyEmpty` × 1. Only `.switchArms` is untouched by this family.
+        // (PHASE 3b added two more `.literal` entries to this family — the responder hand-off pair —
+        // so the family's `.literal` count is 5. Stated as an amendment rather than by rewriting the
+        // line above, because that line is itself a fix-round correction of a commit message and the
+        // reader needs both halves.)
         // (FIX ROUND 1, review Min-8: the routing commit's message says "four of its six shapes",
         // which is wrong and cannot be rewritten in place — the count is stated here, next to the
         // entries a reader can recount, rather than left only in an unfixable message.)
@@ -2437,6 +2583,21 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
               signature: "func hostWillMove(toWindow window: UIWindow?)",
               shape: .statements(allowed: ["legacyCanvas?.legacyWillMove(toWindow: window)",
                                            "if window == nil { floatingCursorActive = false }"])),
+        // PHASE 3b — THE RESPONDER HAND-OFF, and this is the entry the phase itself missed (its
+        // review's Major). The phase's central claim is "Legacy's body is, and stays, a constant";
+        // R23 pins that nothing CALLS these two and `ResponderHandOffTests` pins that they do not
+        // touch the responder chain, but neither catches a body that later grows a
+        // `publishState(reason:)`, a `notifying…` bracket or a `host.lifecycleClient.*` call — which
+        // is exactly the drift THIS rule exists for, on the SHIPPING backend. `.literal` is the
+        // right case for the same reason the three Bool getters above use it: the body is the whole
+        // answer, and an `isAttached` prelude would be a decision this member does not get to make
+        // (the role's owner is a fact about which VIEW this backend edits, not about attachment).
+        .init(name: "acquireFirstResponder()",
+              signature: "func acquireFirstResponder() -> RichTextInputResponderTransition",
+              shape: .literal(".hostOwnsTheRole")),
+        .init(name: "relinquishFirstResponder()",
+              signature: "func relinquishFirstResponder() -> RichTextInputResponderTransition",
+              shape: .literal(".hostOwnsTheRole")),
         .init(name: "editPolicyDidChange()",
               signature: "func editPolicyDidChange()", shape: .client),
         .init(name: "textInputTraitsDidChange()",
@@ -3507,5 +3668,65 @@ final class InputBackendSourceBoundaryTests: XCTestCase {
             hits("/* @discardableResult func x() -> RichTextInputCaretOutcome */\nfunc example() {}\n"),
             [],
             "a BLOCK comment naming both must not trip it either")
+    }
+
+    // MARK: - R23 (PHASE 3b) — the responder hand-off has no production call site YET
+
+    /// R23 — **no file under `Sources/` CALLS `acquireFirstResponder()` or
+    /// `relinquishFirstResponder()`.** A FIXED, zero-for-now rule, and unlike R9-R12/R14-R16/R22 it is
+    /// expected to be DELETED rather than held at zero forever: the phase that puts a real host in
+    /// front of the ported engine rewrites `DocumentCanvasView`'s responder overrides to route through
+    /// the pair, and that commit removes this rule.
+    ///
+    /// # Why a rule for a member nobody calls
+    ///
+    /// Phase 3b is **the first change in the InputDec port that touches production.** Every prior phase
+    /// was provably outside the shipped binary (0 `IDBlockTextView` symbols, verified by symbol table);
+    /// adding a member to `RichTextInputBackend` means the SHIPPING `LegacyRichTextInputBackend` must
+    /// implement it. The phase's hard constraint was that Legacy's observable behaviour does not
+    /// change, and the strongest available statement of that is not "the new body looks inert" — it is
+    /// **"nothing reaches the new body at all"**. That is a property of the source, so it gets a rule
+    /// rather than a sentence in a report that goes stale the moment someone wires the canvas.
+    ///
+    /// `ResponderHandOffTests` covers the complementary half from the runtime side (the shipping
+    /// conformer answers `.hostOwnsTheRole` and provably never enters the responder chain).
+    ///
+    /// **The declaration count is the anti-vacuity half**, and it is not decoration: a rule that counts
+    /// call sites would also read zero if the members were renamed or deleted, which is exactly the
+    /// state it must not be able to confuse with success.
+    func test_theResponderHandOffHasNoProductionCallSiteYet_R23() {
+        RepoLayout.assertResolved()
+        let files = RepoLayout.swiftFiles(under: RepoLayout.uiKitSources)
+        XCTAssertFalse(files.isEmpty, "no UIKit sources found — R23 would pass VACUOUSLY")
+
+        let members = ["acquireFirstResponder()", "relinquishFirstResponder()"]
+        var declarations: [String: Int] = [:]
+        var offenders: [String] = []
+        for url in files {
+            let stripped = SwiftSourceScan.stripCommentsAndStringLiterals((try? String(contentsOf: url)) ?? "")
+            for member in members {
+                let total = stripped.components(separatedBy: member).count - 1
+                let declared = stripped.components(separatedBy: "func " + member).count - 1
+                declarations[member, default: 0] += declared
+                if total > declared {
+                    offenders.append("\(url.lastPathComponent) CALLS `\(member)` " +
+                                     "\(total - declared)× — see this rule's doc comment: phase 3b's " +
+                                     "whole claim about production is that nothing reaches the new " +
+                                     "member. If you are the phase that wires the canvas, DELETE this " +
+                                     "rule in the same commit rather than editing around it.")
+                }
+            }
+        }
+        XCTAssertEqual(offenders, [], "R23 violations: \(offenders)")
+
+        // Anti-vacuity: the protocol requirement plus the three conformers in `Sources/`
+        // (LegacyRichTextInputBackend, IDTextEditorBackend, IDUpstreamInputBackend).
+        for member in members {
+            XCTAssertEqual(declarations[member, default: 0], 4,
+                           "expected exactly 4 declarations of `\(member)` under Sources/ (the " +
+                           "protocol requirement + three conformers); found " +
+                           "\(declarations[member, default: 0]) — a rename or a deletion would " +
+                           "otherwise make R23's zero-call-site result meaningless")
+        }
     }
 }

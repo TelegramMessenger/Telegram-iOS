@@ -136,6 +136,8 @@ private final class SpyBackend: RichTextInputBackend {
     func hostWillResignFirstResponder() {}
     func hostDidResignFirstResponder() {}
     func hostDidFailToResignFirstResponder() {}
+    func acquireFirstResponder() -> RichTextInputResponderTransition { .hostOwnsTheRole }
+    func relinquishFirstResponder() -> RichTextInputResponderTransition { .hostOwnsTheRole }
     func hostWillMove(toWindow window: UIWindow?) {}
     func editPolicyDidChange() {}
     func textInputTraitsDidChange() {}
@@ -157,6 +159,8 @@ private final class SpyBackend: RichTextInputBackend {
     // RichTextInputCheckingBackend (Task 34, deviation D37)
     func installCheckingIfNeeded() {}
     func checkOnSelectionChange() {}
+    // TASK H2 — this spy has no checking of its own, which the contract sanctions answering nil for.
+    func globalRange(ofCheckingRange range: UITextRange) -> (from: Int, to: Int)? { nil }
 }
 
 // MARK: - Fakes for a `LegacyRichTextInputHost` that is NOT `DocumentCanvasView`
@@ -1342,14 +1346,14 @@ final class BackendAttachmentTests: XCTestCase {
     /// **TASK 43 FIX ROUND 1 (review Major 1) — THE SPELLING OF THAT MUTATION IS LOAD-BEARING, WHICH IS
     /// NOT A SENTENCE ANYONE EXPECTS TO WRITE.** Task 43 first wrote this note as
     /// `legacyCanvas.map(DocumentTokenizer.init(canvas:))`, and in the same commit added
-    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyOneConstructionSite` on a scan that
+    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyTwoConstructionSites` on a scan that
     /// could not see `Name.init(` — so the note pointed the next reader at the one construction form
     /// the new rule was blind to. The rule now catches both parenthesised spellings, and an exact
     /// mention allowance catches the three unparenthesised ones; the note is spelled the plain way
     /// regardless, because a doc comment recommending a mutation should recommend the ordinary form.
     ///
     /// EXPECT TWO REDS when you apply it, not one: it is a genuine SECOND construction site, so
-    /// `test_theTokenizerHasExactlyOneConstructionSite` reddens alongside this test. That is the rule
+    /// `test_theTokenizerHasExactlyTwoConstructionSites` reddens alongside this test. That is the rule
     /// working, not collateral damage — revert both together.
     func test_tokenizerIsCachedAcrossReads() {
         let canvas = DocumentCanvasView()

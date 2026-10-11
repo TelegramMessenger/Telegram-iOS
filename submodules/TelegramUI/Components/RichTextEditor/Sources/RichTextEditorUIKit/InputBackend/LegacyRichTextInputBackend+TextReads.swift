@@ -69,7 +69,7 @@ extension LegacyRichTextInputBackend {
     /// `legacyMakeTokenizer()` D24 hook is gone and `attach(to:)` writes `DocumentTokenizer(canvas:)`
     /// itself. So `tokenizer` is no longer a Family-3 D24-hook member at all; it is backend-owned end
     /// to end, with exactly one construction site (pinned by `InputBackendSourceBoundaryTests`
-    /// `.test_theTokenizerHasExactlyOneConstructionSite` — two assertions, a construction scan plus a
+    /// `.test_theTokenizerHasExactlyTwoConstructionSites` — two assertions, a construction scan plus a
     /// blunt identifier-mention allowance, because three of the five valid construction spellings put
     /// no `(` after the type name).
     var tokenizer: UITextInputTokenizer {

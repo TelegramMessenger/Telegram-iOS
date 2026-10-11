@@ -1,6 +1,27 @@
 #if canImport(UIKit)
 import Foundation
+import UIKit
 import RichTextEditorDifferentialHarness
+import RichTextEditorUIKit
+
+/// The height a caret takes in this editor's BODY text: one line box of the InstantPage-V2
+/// chat-message metrics. The caret spans the whole box because `StyleSheet` pins
+/// `minimumLineHeight == maximumLineHeight` to V2's pitch (a `lineSpacing` cannot go negative, and
+/// the reader's heading factor needs a pitch TIGHTER than the font's natural line height), so the
+/// caret's height moves whenever the line pitch does.
+///
+/// It is compared against THIS, not against stock's caret height, since 2026-09-15. The two were
+/// equal at 22pt while body spacing was factor 0.9 — a coincidence of two different fonts, not a
+/// contract — and raising body line spacing by 1pt (0.9 → 0.95, pitch 22 → 23) turned every caret
+/// checkpoint in three families into an unexplained difference. Certifying the pitch keeps what the
+/// equality was worth: a caret that vanishes, changes width, or takes a height the metrics do not
+/// predict still fails the run, and it now moves with the metrics instead of against them.
+///
+/// Every checkpoint in this corpus sits in body text. A scenario that parked the caret in a heading
+/// or a code block would need its own entry rather than a widening of this one.
+internal let differentialBodyLinePitch: CGFloat = RichTextRenderMetrics.linePitch(
+    UIFont.systemFont(ofSize: RichTextRenderMetrics.default.body.size),
+    factor: RichTextRenderMetrics.default.body.lineSpacingFactor)
 
 /// Task 9d — **the named-and-reasoned divergence table.**
 ///
@@ -94,8 +115,11 @@ enum TelegramDifferentialExpectations {
             8.67pt on line 2 (the line pitch). \
             THE COST, STATED PLAINLY: with this entry, `caretRect` certifies nothing about position \
             for this arm pair. What it still certifies is the caret's SHAPE — the predicate matches \
-            only when width and height are EQUAL, so a caret that changed size, or vanished, still \
-            fails the run. Restoring a positional comparison needs a stock arm configured with the \
+            only when the width equals stock's and the HEIGHT is exactly one body line box of the \
+            editor's own metrics (`differentialBodyLinePitch`), so a caret that changed size, or \
+            vanished, still fails the run. It was stock's height that the height was compared \
+            against until 2026-09-15; the two agreed at 22pt by coincidence, and raising body line \
+            spacing by 1pt showed it up as one. Restoring a positional comparison needs a stock arm configured with the \
             editor's metrics, which would no longer be the arm the corpus was captured against.
             """,
             matches: { difference in
@@ -104,8 +128,8 @@ enum TelegramDifferentialExpectations {
                       let telegram = difference.telegramValue as? [String: Any] else { return false }
                 func number(_ value: Any?) -> Double? { (value as? NSNumber)?.doubleValue }
                 guard let sw = number(stock["width"]), let tw = number(telegram["width"]),
-                      let sh = number(stock["height"]), let th = number(telegram["height"]) else { return false }
-                return sw == tw && sh == th
+                      let th = number(telegram["height"]) else { return false }
+                return sw == tw && th == differentialBodyLinePitch
             }),
 
         TelegramDifferentialExpectation(

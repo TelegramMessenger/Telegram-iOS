@@ -70,6 +70,7 @@ import AttachmentUI
 import AttachmentTextInputPanelNode
 import MediaPickerUI
 import ChatPresentationInterfaceState
+import ChatTextInputPanelNode
 import Pasteboard
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
@@ -2146,12 +2147,26 @@ extension ChatControllerImpl {
             }
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    let (updatedState, updatedMode) = f(state.interfaceState.effectiveInputState, state.inputMode)
-                    return state.updatedInterfaceState { interfaceState in
-                        return interfaceState.withUpdatedEffectiveInputState(updatedState)
-                        }.updatedInputMode({ _ in updatedMode })
-                })
+                // Every transform handed here is the USER's edit through the chat — autocomplete, the
+                // emoji keyboard, the date editor, Translate… — and its state comes straight back into
+                // the composer (`ChatControllerNode` → `updateInputTextState` → `setInputContent`), so
+                // it runs inside `performUndoableInputChange`: the native editor applies the push as
+                // one undo step on top of the stack instead of emptying it as it does for Send's clear
+                // or a draft sync, which do not come through here (composer harness,
+                // `HarnessChatSideEditUndoTests`). The legacy node just runs the body.
+                func apply() {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                        let (updatedState, updatedMode) = f(state.interfaceState.effectiveInputState, state.inputMode)
+                        return state.updatedInterfaceState { interfaceState in
+                            return interfaceState.withUpdatedEffectiveInputState(updatedState)
+                            }.updatedInputMode({ _ in updatedMode })
+                    })
+                }
+                if let richTextInputNode = strongSelf.chatDisplayNode.textInputPanelNode?.richTextInputNode {
+                    richTextInputNode.performUndoableInputChange(apply)
+                } else {
+                    apply()
+                }
                 
                 if !strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.isEmpty {
                     strongSelf.silentPostTooltipController?.dismiss()
@@ -4355,23 +4370,10 @@ extension ChatControllerImpl {
             if !strongSelf.chatDisplayNode.isTextInputPanelActive {
                 return
             }
-            interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
-                let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
-                
-                let range = textInputState.selectionRange
-                
-                let updatedText = NSMutableAttributedString(attributedString: text)
-                if range.lowerBound < inputText.length {
-                    if let quote = inputText.attribute(ChatTextInputAttributes.block, at: range.lowerBound, effectiveRange: nil) {
-                        updatedText.addAttribute(ChatTextInputAttributes.block, value: quote, range: NSRange(location: 0, length: updatedText.length))
-                    }
-                }
-                inputText.replaceCharacters(in: NSMakeRange(range.lowerBound, range.count), with: updatedText)
-                
-                let selectionPosition = range.lowerBound + (updatedText.string as NSString).length
-                
-                return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
-            }
+            // Shared with the composer harness (`ChatComposerUserInserts.swift`): the rich editor
+            // inserts at its own selection keeping every block; the legacy node keeps the flat
+            // transform (`chatTextInputStateInsertingText`, which this closure used to inline).
+            chatComposerInsertTextOnUsersBehalf(text, richTextInputNode: strongSelf.chatDisplayNode.textInputPanelNode?.richTextInputNode, interfaceInteraction: interfaceInteraction)
             
             strongSelf.chatDisplayNode.updateTypingActivity(true)
         }, backwardsDeleteText: { [weak self] in

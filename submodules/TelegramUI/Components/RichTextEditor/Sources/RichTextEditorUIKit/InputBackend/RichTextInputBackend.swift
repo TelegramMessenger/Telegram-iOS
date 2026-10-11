@@ -14,12 +14,14 @@ protocol RichTextInputTextBackend: AnyObject {
     /// Routed from `DocumentCanvasView.tokenizer` (`S/Canvas/DocumentCanvasView+UITextInput.swift`),
     /// which is a one-line router with no body of its own. **TASK 43: the conformer both CONSTRUCTS and
     /// OWNS its tokenizer** — the canvas's `legacyMakeTokenizer()` D24 hook is deleted, and
-    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyOneConstructionSite` caps the
-    /// package at one construction site — via TWO assertions, because one regex cannot be a complete
+    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyTwoConstructionSites` caps the
+    /// package at one construction site PER CONFORMER (two today: the legacy conformer and, since
+    /// Task R12, `IDTextEditorBackend`) — via TWO assertions, because one regex cannot be a complete
     /// net over the five spellings Swift accepts (see that test). Stability is per ATTACHMENT, not per backend lifetime: the
     /// legacy conformer builds it eagerly in `attach(to:)` and clears it on detach, so a read taken
     /// while detached is a contract violation with a no-op fallback, and a re-attach to a different
-    /// host vends a fresh instance (`BackendAttachmentTests`' three tokenizer tests).
+    /// host vends a fresh instance (`BackendAttachmentTests`' three tokenizer tests). The ID
+    /// conformer follows the identical discipline, independently, over its own attach/detach cycle.
     var tokenizer: UITextInputTokenizer { get }
 
     /// Routed from `DocumentCanvasView.selectedTextRange`
@@ -176,6 +178,15 @@ protocol RichTextInputResponderBackend: AnyObject {
     /// answering `true` reproduces it exactly.
     var canResignFirstResponder: Bool { get }
 
+    // MARK: The six host-transition notifications
+    //
+    // **These belong to the `.hostOwnsTheRole` arm of `acquireFirstResponder()` below, and ONLY to
+    // it.** They describe a transition of the HOST. A backend that answers `.performedByBackend`
+    // has told the host it must not have one, so a host that has adopted `acquireFirstResponder()`
+    // never calls these six against such a backend — and a backend that receives one anyway is
+    // being driven by a host that ignored its answer, which is a contract violation rather than an
+    // event to translate.
+
     func hostWillBecomeFirstResponder()
     func hostDidBecomeFirstResponder()
     func hostDidFailToBecomeFirstResponder()
@@ -183,6 +194,117 @@ protocol RichTextInputResponderBackend: AnyObject {
     func hostWillResignFirstResponder()
     func hostDidResignFirstResponder()
     func hostDidFailToResignFirstResponder()
+
+    // MARK: The responder hand-off (PHASE 3b of the InputDec port)
+    //
+    // ## What these two exist for
+    //
+    // Every other member of this protocol assumes the host is the first responder. Phase 3 of the
+    // InputDec port measured that assumption and found it **false for a backend whose editing
+    // surface is a separate view inside the host**: with the HOST holding the role, UIKit's own
+    // `-_requiresKeyboardWhenFirstResponder` answers `false` and the engine view's `inputDelegate`
+    // is never bound — no keyboard, no marked text, no autocorrect, no shift state — while typing
+    // driven programmatically still mutates the document, so the failure is SILENT. (That is the
+    // shape this programme already shipped once and fixed as task F2.) The full measurement, the
+    // controls, and the three alternative wirings that were built and found defective are in
+    // `InputDec/Upstream/IDUpstreamInputBackend+Responder.swift`'s header and in
+    // `IDUpstreamResponderModelTests`.
+    //
+    // The fix needs something the contract did not have: a member by which a host **hands** the role
+    // to the backend instead of taking it. These are that member.
+    //
+    // ## What a HOST does with them
+    //
+    // A host routes its own `UIResponder` overrides through them and lets the returned value decide
+    // whether it takes the role itself:
+    //
+    // ```swift
+    // override func becomeFirstResponder() -> Bool {
+    //     switch inputBackend.acquireFirstResponder() {
+    //     case .performedByBackend(let succeeded):
+    //         return succeeded                        // the backend holds the role; do NOT call super
+    //     case .hostOwnsTheRole:
+    //         inputBackend.hostWillBecomeFirstResponder()
+    //         let became = super.becomeFirstResponder()
+    //         if became { inputBackend.hostDidBecomeFirstResponder() }
+    //         else { inputBackend.hostDidFailToBecomeFirstResponder() }
+    //         return became
+    //     }
+    // }
+    // ```
+    //
+    // The `.hostOwnsTheRole` arm is `DocumentCanvasView.becomeFirstResponder()`'s body verbatim, so
+    // adopting this is behaviour-preserving for a `.hostOwnsTheRole` backend by construction.
+    //
+    // **NOTHING IN `Sources/` CALLS THESE TWO YET.** `DocumentCanvasView`'s overrides are unchanged,
+    // deliberately: phase 3b adds the contract member and both conformers' answers, and leaves the
+    // canvas rewrite to the phase that first puts a real host in front of the ported engine. Until
+    // then a `.hostOwnsTheRole` conformer's implementation is unreachable, which is what makes this
+    // a zero-behaviour-change addition to the shipping backend.
+    //
+    // ## What a CONFORMER must do — the whole contract, per case
+    //
+    //   * **A backend whose editing surface IS the host** (`LegacyRichTextInputBackend`,
+    //     `IDTextEditorBackend`) answers `.hostOwnsTheRole` and **must not touch the responder
+    //     chain at all**. Not "must not call `super`" — must not call `becomeFirstResponder()` on
+    //     anything. That prohibition is what lets a host's override route through here
+    //     unconditionally: a conformer that honours it cannot re-enter that override. **It is a rule
+    //     this contract states and a test enforces, NOT something the type system makes impossible**
+    //     (phase 3b review, finding 8) — `ResponderHandOffTests` is what actually catches a
+    //     `.hostOwnsTheRole` conformer that reaches into the responder chain, and R17 pins the
+    //     shipping body as the literal it is.
+    //   * **A backend whose editing surface is its own responder** sends
+    //     `becomeFirstResponder()` / `resignFirstResponder()` to that responder and reports UIKit's
+    //     answer as `.performedByBackend(succeeded:)`. It must report the answer honestly — a
+    //     backend that took the role and failed must be distinguishable from one that declined,
+    //     which is exactly what measured wiring W2 got wrong.
+    //   * **Detached**, both are a contract violation like every other operational member: report
+    //     by name. There is nothing to hand the role TO.
+    //
+    // `relinquishFirstResponder()` is the exact mirror; a conformer must answer the SAME case from
+    // both, because "who owns the role" is a property of the backend, not of the direction of
+    // travel. A conformer that answered `.performedByBackend` on acquire and `.hostOwnsTheRole` on
+    // relinquish would strand the role wherever it last landed.
+
+    // ## THE TRAP THIS PAIR CREATES, RECORDED BECAUSE THE NEXT PHASE WILL WALK INTO IT
+    //
+    // There is deliberately **no member here that answers "who owns the role" without acting.** The
+    // reason is in `RichTextInputResponderTransition`: a `holdsTheRoleItself` flag beside the two
+    // actions is a pair a backend can half-implement, and its disagreement would be silent.
+    //
+    // **The consequence is that under a `.performedByBackend` backend, every host-side
+    // `isFirstResponder` read silently describes the wrong object** — the host, which by then is
+    // never the responder. It is dormant today (every host in this tree is paired with a
+    // `.hostOwnsTheRole` backend, so the reads are about the right view), and it goes live the moment
+    // a host adopts this pair. The reads, so the phase that wires the canvas does not have to find
+    // them again:
+    //
+    //   * `RichTextEditorView+ComposerHost.swift`'s `isEditorFirstResponder`, and
+    //     `RichTextEditorView`'s two `canvas.isFirstResponder` gates — the composer's own "is the
+    //     editor focused" question. These want an answer about the EDITOR and are the ones a future
+    //     member would serve.
+    //   * `DocumentCanvasView`'s caret/selection-rendering gates, `+EditMenu`'s `guard
+    //     isFirstResponder`, and `+Interaction`'s two reads — canvas-drawing questions, which under
+    //     `.performedByBackend` stop being the canvas's business at all (the engine draws its own
+    //     caret), so redirecting them would be the wrong fix.
+    //   * `publishState`'s `RichTextInputPresentationSnapshot.isFirstResponder` field, in BOTH
+    //     backends.
+    //   * `hostWillBecomeFirstResponder()`/`hostWillResignFirstResponder()`'s capture pair — a
+    //     question that should stop being ASKED under this model rather than be redirected, since
+    //     those six members are exactly the ones a `.performedByBackend` backend reports on.
+    //
+    // **Deliberately NOT closed here.** The three groups above want three different answers, and
+    // which member (if any) is right cannot be chosen without the call sites in front of you. Adding
+    // one now would also add a requirement with no caller and no test that can tell a correct
+    // implementation from a plausible one — the rule `+Unwitnessed.swift`'s header states in those
+    // words, and the reason `caretRect(for:)` is still unimplemented despite being one line away.
+    // It belongs with the host-side `super` hook and with the question of splitting the six
+    // notifications into a sub-protocol a `.performedByBackend` backend does not conform to (which
+    // would make their misuse a compile error instead of a runtime report): one design conversation
+    // about the host seam, taken once, not three members added one phase at a time.
+
+    func acquireFirstResponder() -> RichTextInputResponderTransition
+    func relinquishFirstResponder() -> RichTextInputResponderTransition
 
     func hostWillMove(toWindow window: UIWindow?)
     func editPolicyDidChange()
@@ -193,6 +315,18 @@ protocol RichTextInputResponderBackend: AnyObject {
     /// (`+UITextInput.swift`) as a one-line router to this, which TASK 31 made real. **Not gated on
     /// `RichTextInputEditPolicy.allowsWritingTools`**, deliberately: the pre-seam witness consulted
     /// nothing, so a conformer that gates this is changing behaviour, not routing it.
+    ///
+    /// **PHASE 3b (review Minor 6) — THE INPUTDEC CONFORMER'S ANSWER *IS* STATE-DEPENDENT, and that
+    /// is not a violation of the clause above; it is what the clause means one layer down.** The
+    /// prohibition is on a conformer inventing a gate of its own. `IDUpstreamInputBackend` forwards
+    /// `IDBlockTextView.isEditable` — UIKit's OWN `-isEditable` witness, on the view that actually
+    /// holds the first-responder role under that backend (see `acquireFirstResponder()` below). It
+    /// is reading the editor's live editability, not consulting a policy field and deciding. The
+    /// distinction matters because the two look identical from here: the engine's `-isEditable` was
+    /// SEEDED from `RichTextInputEditPolicy.isEditable` at `attach(to:)`, so an answer of `false`
+    /// traces back to the policy — but through the editor's own state, which is the thing UIKit asks
+    /// about, rather than around it. Legacy's literal `true` is equally correct for Legacy, whose
+    /// canvas has no such flag to read. The argument in full is at the ID conformer's member.
     var isEditableForWritingTools: Bool { get }
 
     /// DEVIATION D28: `canPerformAction(_:withSender:)` and the standard edit actions are `UIResponder`
@@ -312,6 +446,39 @@ protocol RichTextInputCheckingBackend: AnyObject {
     /// Routed from `DocumentCanvasView.refreshSelectionUI()` and `endCoalescedSelectionDrag()`. Called
     /// on every selection change; a conformer decides what (if anything) that implies.
     func checkOnSelectionChange()
+
+    /// TASK H2 — the canvas-global UTF-16 endpoints carried by a `UITextRange` the PRIVATE CHECKING
+    /// CONTROLLER hands back to the canvas's client surface, or `nil` when the range was minted by
+    /// neither the canvas nor this backend.
+    ///
+    /// **Why this is on the contract, and why it is on THIS sub-protocol.** The three `@objc` client
+    /// selectors the controller messages (`annotatedSubstringForRange:`,
+    /// `replaceRange:withAnnotatedString:relativeReplacementRange:`, `removeAnnotation:forRange:` —
+    /// `DocumentCanvasView+NativeTextCheckingClient.swift`) each need the incoming range as a pair of
+    /// global offsets, and all three resolved it through `LegacyTextIdentity` unconditionally. Under
+    /// `.inputDec` the controller mints its ranges through the canvas's `UITextInput` witnesses, which
+    /// route to the kernel and answer `TGRichTextInputDecRange` — so that downcast ALWAYS failed and
+    /// every delivery was dropped in silence. Measured with a swizzle over the three selectors, typing
+    /// `"mispelled "` on both arms:
+    ///
+    /// ```
+    /// INPUTDEC  annotatedSubstring range<TGRichTextInputDecRange> legacy=nil kernel(1,11) -> nil
+    /// LEGACY    annotatedSubstring range<LegacyTextRange>         legacy(1,11) -> "mispelled "
+    /// ```
+    ///
+    /// Identity is BACKEND-OWNED (`LegacyTextPosition.swift`'s own header), so the resolution has to
+    /// be asked of the backend rather than performed by the canvas — and D37's rule applies verbatim:
+    /// anything canvas-side code reaches through `inputBackend` must be a protocol requirement, or it
+    /// is unreachable. It sits on the CHECKING sub-protocol rather than on
+    /// `RichTextInputTextBackend` because its three call sites are the checking client's, and because
+    /// it is deliberately NOT a general identity-translation facility: nothing else in the package may
+    /// use it to look inside a UIKit identity object.
+    ///
+    /// UNORDERED and verbatim — `min`/`max` is each caller's own job, matching
+    /// `LegacyTextIdentity.globalRange(of:)` and `IDTextEditorBackend.resolvedGlobalRange(of:)`, both
+    /// of which this member is implemented in terms of. A conformer with no checking of its own may
+    /// answer `nil` for everything, exactly as it no-ops the two members above.
+    func globalRange(ofCheckingRange range: UITextRange) -> (from: Int, to: Int)?
 }
 
 // MARK: - Composite backend

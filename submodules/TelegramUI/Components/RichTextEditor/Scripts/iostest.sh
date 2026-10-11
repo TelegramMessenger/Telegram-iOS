@@ -3,7 +3,8 @@
 # (e.g. RichTextEditorUIKitTests/MapperTests). Set SCHEME/DEVICE env to override.
 set -o pipefail
 SCHEME="${SCHEME:-RichTextEditor-Package}"
-DEVICE="${DEVICE:-CA0A2186-0F4A-425B-B3B1-9B61E5FF01A9}"  # controller tweak (uncommitted): iPhone 17 Pro K1 by UDID (the bare name 'iPhone 17 Pro' collides with 7 sims → ambiguous destination)
+DEVICE="${DEVICE:-03A7DA9C-1832-49B8-9858-2F54F2FB5A04}"  # iPhone 18 Pro K1 BY UDID — a bare `name=` collides across the K-sims and picks an
+# ambiguous destination. Re-created by the Xcode 27 update (2026-09-15), which removed every simulator.
 FILTER=""
 [ -n "$1" ] && FILTER="-only-testing:$1"
 # `-collect-test-diagnostics never`: on a FAILING run xcodebuild otherwise launches
@@ -27,6 +28,12 @@ FILTER=""
 # the post-restart partial run with the crash itself invisible above it — read as a clean pass. Found
 # the hard way (Task 12 fix round 1): the crash was only visible by re-running xcodebuild raw, without
 # this filter. Do not trim these alternatives as noise.
+# `EXTRA` is INHERITED from the caller, never reset: matrix.sh (Task D1) and any A/B run append
+# their own xcodebuild ARGUMENTS through it. It is deliberately NOT where the TK1 mapping lives --
+# TEST_RUNNER_RTE_FORCE_TK1 must be an exported environment variable (see the comment above line
+# 20); routing it through EXTRA would make it a trailing command-line argument, the form proven
+# empirically NOT to reach the test process. Args here, environment there.
+EXTRA="${EXTRA:-}"
 xcodebuild test -scheme "$SCHEME" -destination "platform=iOS Simulator,id=$DEVICE" \
-  -parallel-testing-enabled NO -collect-test-diagnostics never $FILTER 2>&1 \
+  -parallel-testing-enabled NO -collect-test-diagnostics never $FILTER $EXTRA 2>&1 \
   | grep --line-buffered -E "Test Case .*(passed|failed)|error:|BUILD (SUCCEEDED|FAILED)|Executed [0-9]+ test|Fatal error|Restarting after unexpected exit|[Cc]rash"

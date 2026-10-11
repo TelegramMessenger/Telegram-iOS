@@ -413,8 +413,21 @@ public func chatInputContent(from attributedText: NSAttributedString) -> ChatInp
     var cursor = 0
     for carve in carves {
         var gapEnd = carve.range.location
-        if gapEnd > cursor && full.character(at: gapEnd - 1) == 0x0A { gapEnd -= 1 }
-        if gapEnd > cursor { blocks.append(contentsOf: paragraphBlocks(in: NSRange(location: cursor, length: gapEnd - cursor))) }
+        var gapHadSeparator = false
+        if gapEnd > cursor && full.character(at: gapEnd - 1) == 0x0A {
+            gapEnd -= 1
+            gapHadSeparator = true
+        }
+        if gapEnd > cursor {
+            blocks.append(contentsOf: paragraphBlocks(in: NSRange(location: cursor, length: gapEnd - cursor)))
+        } else if gapHadSeparator {
+            // The gap is exactly one "\n": the separator BEFORE this carve, with the cursor already past
+            // the separator after the previous block (or at the start). Between those two separators is
+            // one EMPTY line — `"A\n\nB"` between two quotes or code blocks is `[A] [p ""] [B]`, which
+            // `attributedString(from:)` encodes exactly so. Emitting nothing lost that line on every edit
+            // load of a sent message (composer harness p20, `HarnessSendPathBlankLineReloadTests`).
+            blocks.append(.paragraph(ChatInputParagraph(style: .body, runs: [])))
+        }
         switch carve.kind {
         case let .code(language):
             blocks.append(.code(ChatInputCode(

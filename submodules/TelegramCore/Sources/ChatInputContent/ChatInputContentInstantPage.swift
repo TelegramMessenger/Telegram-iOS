@@ -67,7 +67,7 @@ func instantPageBlocks(from content: ChatInputContent, collectingMediaInto media
                 }
             }
         case let .code(c):
-            result.append(.preformatted(text: richText(from: c.runs), language: c.language))
+            result.append(.preformatted(text: richText(from: c.runs), language: chatInputCodeLanguageForSending(c.language)))
         case let .pullQuote(pq):
             result.append(.pullQuote(text: richText(from: pq.runs), caption: authorCaptionRichText(pq.author, italic: true)))
         case let .blockQuote(bq):
@@ -558,11 +558,20 @@ func chatInputRun(fromSinglePart rt: RichText, attributes: ChatInputInlineAttrib
     }
 }
 
+/// The LaTeX of a paragraph that is ONE formula and nothing else, which is sent as a standalone
+/// `.formula(latex:)` block. A SPOILERED formula is not standalone: the block carries no inline
+/// attribute, so the formula the user hid was sent visible and an edit reopened it unspoilered
+/// (composer harness p20, `HarnessSendPathFormulaSpoilerTests`). It goes as a paragraph holding
+/// `.textSpoiler(.formula)` instead, which round-trips — the same form a spoilered formula beside text
+/// already takes.
 private func standaloneFormulaLatex(from paragraph: ChatInputParagraph) -> String? {
     guard paragraph.style == .body, paragraph.list == nil, paragraph.runs.count == 1 else {
         return nil
     }
     guard let latex = paragraph.runs[0].attributes.formula, !latex.isEmpty else {
+        return nil
+    }
+    guard !paragraph.runs[0].attributes.spoiler else {
         return nil
     }
     return latex

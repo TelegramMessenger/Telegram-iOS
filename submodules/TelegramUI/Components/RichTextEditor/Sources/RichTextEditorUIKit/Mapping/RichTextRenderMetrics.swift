@@ -161,7 +161,7 @@ public struct RichTextRenderMetrics: Equatable {
         heading4: RichTextFontSpec(style: .serif, size: 17, lineSpacingFactor: 1.0, weight: .medium),
         heading5: RichTextFontSpec(style: .serif, size: 16, lineSpacingFactor: 1.0, weight: .medium),
         heading6: RichTextFontSpec(style: .serif, size: 15, lineSpacingFactor: 1.0, weight: .medium),
-        body: RichTextFontSpec(style: .sans, size: 17, lineSpacingFactor: 0.9),
+        body: RichTextFontSpec(style: .sans, size: 17, lineSpacingFactor: 0.95),
         caption: RichTextFontSpec(style: .sans, size: 15, lineSpacingFactor: 1.0),
         table: RichTextFontSpec(style: .sans, size: 15, lineSpacingFactor: 1.0),
         codeBlock: RichTextFontSpec(style: .monospace, size: 15, lineSpacingFactor: 1.0),

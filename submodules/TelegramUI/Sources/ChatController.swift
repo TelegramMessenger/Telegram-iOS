@@ -4771,13 +4771,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                            strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-                                var inputMode = inputMode
-                                if inputMode == .none {
-                                    inputMode = .text
-                                }
-                                return (chatTextInputAddMentionAttribute(current, peer: peer), inputMode)
-                            }
+                            // Shared with the composer harness (`ChatComposerUserInserts.swift`): the
+                            // rich editor inserts at its own selection keeping every block; the legacy
+                            // node keeps `chatTextInputAddMentionAttribute`.
+                            chatComposerInsertMention(peer, richTextInputNode: strongSelf.chatDisplayNode.textInputPanelNode?.richTextInputNode, interfaceInteraction: strongSelf.interfaceInteraction)
                         }, delay: true)
                     })))
                 }

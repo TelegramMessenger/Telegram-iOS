@@ -101,6 +101,35 @@ final class FakeInputHost: LegacyRichTextInputHost {
     /// if one does, it fails LOUDLY (a clamped-to-64 selection), not silently.
     static let seededTextLength = 64
 
+    /// TASK C2 ADDITION, used only by `IDFakeClientHarness`. The ID backend narrows its host's
+    /// `hostInputView` on `IDDocumentCanvasView` (deviation D23), never `LegacyRichTextInputHost` —
+    /// so the caller passes an ALREADY-CONSTRUCTED `IDDocumentCanvasView` (itself a `DocumentCanvasView`
+    /// subclass, satisfying `legacyCanvas`'s stored type unchanged) rather than letting this init build
+    /// its own bare canvas. `text` seeds `fakeDocumentClient.text` AND `.utf16Length` together, mirroring
+    /// the paragraphs the caller actually asked for — unlike the `init(log:)` overload's long dummy
+    /// string, which exists only for `LegacyRichTextInputBackend`'s `selectedTextRange` clamp (see the
+    /// type's own doc comment above); `IDTextEditorBackend` never reads `legacyCanvas` content, so no
+    /// such seeding is needed here.
+    init(hostInputView: DocumentCanvasView, log: RichTextInputEventLog, text: String) {
+        self.log = log
+        self.fakeDocumentClient = FakeInputDocumentClient(log: log, text: text)
+        self.fakeGeometryClient = FakeInputGeometryClient(log: log)
+        self.fakeAnnotationClient = FakeInputAnnotationClient(log: log)
+        self.fakePresentationClient = FakeInputPresentationClient(log: log)
+        self.fakeLifecycleClient = FakeInputLifecycleClient(log: log)
+        self.fakeCommandClient = FakeInputCommandClient(log: log)
+        self.legacyCanvas = hostInputView
+        self.fakeDocumentClient.utf16Length = text.utf16.count
+        // TASK C4 ADDITION: `plainTextToReturn` otherwise stays this fixture's OTHER init's
+        // hardcoded "Alpha" default, disagreeing with `.text`/`.utf16Length` (both seeded from
+        // `text` above) the moment a Family-1 test asks for a range spanning the whole document
+        // (`IDBackendFamily1Tests.test_textInRange_matchesTheDocumentClientProjection`, which
+        // compares `canvas.text(in:)` — routed through `documentPlainTextInRange:` — against
+        // `h.document.text` directly). Only this ID-specific initializer is touched; the
+        // `init(log:)` overload used by every Stage-1/legacy suite keeps its original default.
+        self.fakeDocumentClient.plainTextToReturn = text
+    }
+
     var hostInputView: UIView { legacyCanvas }
     var documentClient: any RichTextInputDocumentClient { fakeDocumentClient }
     var geometryClient: any RichTextInputGeometryClient { fakeGeometryClient }

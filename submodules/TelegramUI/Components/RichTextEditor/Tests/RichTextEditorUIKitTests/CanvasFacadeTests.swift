@@ -22,6 +22,22 @@ final class CanvasFacadeTests: XCTestCase {
                        ["Title", "Body one.", "Body two."])
     }
 
+    /// `insertInlineButton` is COMPOSED from the canvas's own verbs — type the label, select it,
+    /// `makeSelectionInlineButton`, `replaceInlineButton` — because the canvas is closed to the branch
+    /// that added the verb; this pins the composition end to end, authored button included.
+    func test_insertInlineButtonPutsAnAuthoredPillAtTheCaret() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
+        editor.document = Document(blocks: [.paragraph(ParagraphBlock(id: BlockID("a"), runs: [TextRun(text: "let  stand")]))])
+        editor.layoutIfNeeded()
+        let start = editor.canvas.boxes[0].textStart
+        editor.canvas.selectedTextRange = DocumentTextRange(DocumentTextPosition(start + 4), DocumentTextPosition(start + 4))
+        let button = ButtonRef(label: [TextRun(text: "Go")], action: .url("https://example.com"))
+        editor.insertInlineButton(button)
+        guard case let .paragraph(p) = editor.document.blocks[0] else { return XCTFail() }
+        XCTAssertEqual(p.runs.map(\.text).joined(), "let \u{FFFC} stand")
+        XCTAssertEqual(p.runs.compactMap(\.attributes.button), [button])
+    }
+
     func test_nonParagraphBlocksArePreserved() {
         let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 400))
         let table = TableBlock(id: BlockID("t"), columns: [ColumnSpec(width: 10)],

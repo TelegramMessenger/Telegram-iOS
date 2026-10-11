@@ -46,6 +46,14 @@ enum ComposerDocumentBridge {
                             // stays one U+FFFC per the editor invariant. instanceID uses the editor's own
                             // BlockID.generate() convention.
                             var emojiCA = CharacterAttributes.plain
+                            // SPOILER SURVIVES AN EMOJI RUN. `.plain` used to drop it, so inserting a
+                            // custom emoji inside a spoiler split the spoiler in two with the emoji
+                            // sitting unhidden in the gap — device trace: dust runs {0,3} and {4,4}
+                            // with the emoji at {3,1} and `hiddenBySpoiler=0`. `emoji` and `spoiler`
+                            // are independent model fields; an atom can be concealed like any other
+                            // character. The same fix was needed one layer down in
+                            // `AttributedStringMapper`, which dropped it for the same reason.
+                            if dict[ChatTextInputAttributes.spoiler] != nil { emojiCA.spoiler = true }
                             emojiCA.emoji = EmojiRef(
                                 id: String(emoji.fileId),
                                 instanceID: BlockID.generate().rawValue,

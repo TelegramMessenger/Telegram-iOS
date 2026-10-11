@@ -26,6 +26,8 @@ final class BlockLayoutTK1: BlockLayoutEngine {
     private var ghostRange: NSRange?
 
     private var measureScratch: BlockLayoutTK1?
+    /// The line cap `capLines` last applied, so a scratch layout created later inherits it.
+    private var lineCap: (lines: Int, mode: NSLineBreakMode) = (0, .byWordWrapping)
     private var memoWidth: CGFloat = .nan
     private var memoRenderVersion: Int = -1
     private var memoHeight: CGFloat = 0
@@ -34,6 +36,13 @@ final class BlockLayoutTK1: BlockLayoutEngine {
     init(attributedString: NSAttributedString, width: CGFloat) {
         textStorage = NSTextStorage(attributedString: attributedString)
         layoutManager = NSLayoutManager()
+        // The pin clamps ascent and descent; a substituted face's LEADING escapes it and lands on
+        // top of the box, so Arabic and Thai measured a point taller than the grid V2 renders on.
+        // This fixes each line's own box. The ADVANCE between lines needs a style with spare
+        // `lineSpacing` to absorb the leading, which `StyleSheet`'s pin does not leave — see the
+        // boundary section of `RichTextFontLeading`. The engine's folded-quote preview rides this
+        // layout with a re-expressed style and IS fully covered.
+        RichTextFontLeading.suppress(in: layoutManager)
         container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
         container.lineFragmentPadding = 0
         layoutManager.addTextContainer(container)
@@ -59,6 +68,16 @@ final class BlockLayoutTK1: BlockLayoutEngine {
         container.size = CGSize(width: width, height: .greatestFiniteMagnitude)
     }
 
+    func capLines(_ lines: Int, truncating mode: NSLineBreakMode) {
+        lineCap = (lines, mode)
+        container.maximumNumberOfLines = lines
+        container.lineBreakMode = mode
+        // The scratch MEASURES this same text; uncapped it reports a height the live layout cannot
+        // draw. See the seam's comment.
+        measureScratch?.capLines(lines, truncating: mode)
+        memoRenderVersion = -1
+    }
+
     /// The baseline TextKit actually produced for the first line, relative to the layout top, with NO
     /// correction applied. `BlockLayoutEngine`'s shared extension derives `baselineDelta` from it.
     /// (The TextKit-1 `NSLayoutManagerDelegate.shouldSetLineFragmentRect` baseline hook is NOT invoked
@@ -82,7 +101,11 @@ final class BlockLayoutTK1: BlockLayoutEngine {
         if memoRenderVersion == renderVersion && abs(memoWidth - width) < 0.5 { return memoHeight }
         let scratch: BlockLayoutTK1
         if let s = measureScratch { scratch = s }
-        else { scratch = BlockLayoutTK1(attributedString: attributedString, width: width); measureScratch = scratch }
+        else {
+            scratch = BlockLayoutTK1(attributedString: attributedString, width: width)
+            scratch.capLines(lineCap.lines, truncating: lineCap.mode)
+            measureScratch = scratch
+        }
         // The reuse is allocation-only: we re-feed the current string + width and reflow each call (a
         // different width per call is the norm). The live layout is never touched.
         scratch.attributedString = attributedString
@@ -264,12 +287,10 @@ final class BlockLayoutTK1: BlockLayoutEngine {
         let bounds = attachment.attachmentBounds(for: container, proposedLineFragment: lineRect,
                                                  glyphPosition: CGPoint(x: glyphRect.minX, y: baseline),
                                                  characterIndex: offset)
-        var box = CGRect(x: glyphRect.minX + bounds.minX, y: baseline - bounds.maxY,
+        let box = CGRect(x: glyphRect.minX + bounds.minX, y: baseline - bounds.maxY,
                          width: bounds.width, height: bounds.height)
-        if let boost = (attachment as? EmojiTextAttachment)?.renderBoost, boost > 0 {
-            box = box.insetBy(dx: -boost / 2, dy: -boost / 2)
-        }
-        return box
+        // Shared with TextKit 2 and with the engine editor — see `EmojiTextAttachment.visibleBox`.
+        return EmojiTextAttachment.visibleBox(box, for: attachment)
     }
 
     func closestOffset(toPoint point: CGPoint) -> Int {

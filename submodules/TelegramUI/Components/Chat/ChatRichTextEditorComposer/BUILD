@@ -22,6 +22,10 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorCore",
         "//submodules/TelegramUI/Components/RichTextEditor:RichTextEditorUIKit",
+        # The engine-backed editor, selected at runtime by the Debug Settings flag. Safe to link
+        # only because upstream 442f395 removed the engine's pre-main() +load; see that target's
+        # comment in the RichTextEditor BUILD.
+        "//submodules/TelegramUI/Components/RichTextEditor:RichTextEngineEditor",
         "//submodules/TelegramUI/Components/RichTextButtonIcons",
         "//submodules/TelegramUI/Components/Chat/ChatInputTextNode",
         "//submodules/TelegramUI/Components/PlainButtonComponent",

@@ -34,10 +34,32 @@ final class TelegramAnnotationInputClientTests: XCTestCase {
         XCTAssertEqual(viaClient?.string, "Alpha")
     }
 
-    func test_annotatedSubstringIsNilForAStaleRevision() {
+    /// TASK H2 — **this test's expectation is INVERTED, deliberately, and the inversion is the fix.**
+    ///
+    /// It used to assert `XCTAssertNil(...)` for a stale revision, pinning a hard
+    /// `guard revision == canvas.documentRevision` on every member of this client. That gate has no
+    /// counterpart upstream: `IDRichTextLayoutController.m:1369-1374` CLIPS an incoming range into
+    /// the document as it currently stands and has no staleness concept at all. It also rejected
+    /// precisely the deliveries it existed to protect — a correction annotation is by nature
+    /// delivered AFTER the replacement that bumped the revision, and the revision it is compared
+    /// against is read RAW off the incoming range, deliberately un-rebased
+    /// (`TGRichTextInputDecLayoutController.m:151-162`). Recorded as G2 row F5 / suspect 3.
+    ///
+    /// The safety the gate appeared to provide is provided by the clamps that have to be there
+    /// anyway — see this client's own header. Nothing here can write outside the current document.
+    func test_aStaleRevisionIsNoLongerRejected_itClipsIntoTheCurrentDocument() {
         let (v, c) = makeClient(["Alpha"])
         let s = v.boxes[0].textStart
-        XCTAssertNil(c.annotatedSubstring(in: NSRange(location: s, length: 1), revision: v.documentRevision &- 1))
+        XCTAssertEqual(c.annotatedSubstring(in: NSRange(location: s, length: 1),
+                                            revision: v.documentRevision &- 1)?.string, "A")
+        // The clamp, not the gate, is what keeps a stale range safe. A range past the end of the
+        // document cannot WRITE anything: `clampedSpellRegionLocal` refuses it, at any revision.
+        // (The read above answers `""` for such a range and always has — `annotatedSubstring` is
+        // `text(in:) ?? ""` — which is a pre-existing shape this task did not change.)
+        XCTAssertFalse(c.addAnnotation(key: "spelling", value: DocumentCanvasView.SpellStyle.spelling,
+                                       range: NSRange(location: v.documentSizeValue + 50, length: 3),
+                                       revision: v.documentRevision &- 1))
+        XCTAssertNil(v.spellResults[BlockID("p0")])
     }
 
     // MARK: addAnnotation / annotationValue / removeAnnotation
@@ -95,7 +117,10 @@ final class TelegramAnnotationInputClientTests: XCTestCase {
         XCTAssertGreaterThan(v.layoutGeneration, before, "a successful annotation must bump layoutGeneration")
     }
 
-    func test_addAnnotationAtAStaleRevisionReturnsFalseAndChangesNothing() {
+    /// TASK H2 — inverted for the reason recorded on
+    /// `test_aStaleRevisionIsNoLongerRejected_itClipsIntoTheCurrentDocument` above. A correction flag
+    /// arrives one revision late by construction; rejecting it is rejecting the flag.
+    func test_addAnnotationAtAStaleRevisionNowLands() {
         let (v, c) = makeClient(["hello wrold today"])
         let blockID = BlockID("p0")
         let s = v.boxes[0].textStart
@@ -104,9 +129,84 @@ final class TelegramAnnotationInputClientTests: XCTestCase {
 
         let ok = c.addAnnotation(key: "spelling", value: DocumentCanvasView.SpellStyle.spelling,
                                  range: wordGlobal, revision: v.documentRevision &- 1)
-        XCTAssertFalse(ok)
-        XCTAssertNil(v.spellResults[blockID], "a stale-revision call must change nothing")
-        XCTAssertEqual(v.layoutGeneration, layoutBefore)
+        XCTAssertTrue(ok)
+        XCTAssertTrue(v.spellResults[blockID]?.ranges.contains {
+            $0.range == NSRange(location: 6, length: 5) && $0.style == .spelling
+        } ?? false)
+        XCTAssertNotEqual(v.layoutGeneration, layoutBefore)
+    }
+
+    /// TASK H2 — G1/G2's ranked suspect 1: `addAnnotation` used to require a Swift
+    /// `DocumentCanvasView.SpellStyle` value, which the layout controller never sends, so it was a
+    /// constant `false`. It now classifies the payload the controller ACTUALLY sends — a boxed
+    /// integer under the private display-style key — through the canvas's own classifier.
+    func test_addAnnotationClassifiesTheBoxedDisplayStyleTheControllerActuallySends() {
+        let (v, c) = makeClient(["hello wrold today"])
+        let blockID = BlockID("p0")
+        let s = v.boxes[0].textStart
+        let wordGlobal = NSRange(location: s + 6, length: 5)
+
+        let ok = c.addAnnotation(key: DocumentCanvasView.displayStyleKey.rawValue,
+                                 value: NSNumber(value: 2),
+                                 range: wordGlobal, revision: v.documentRevision)
+        XCTAssertTrue(ok, "a boxed display style is the payload the controller sends; refusing it is "
+                      + "the whole of suspect 1")
+        XCTAssertTrue(v.spellResults[blockID]?.ranges.contains {
+            $0.range == NSRange(location: 6, length: 5) && $0.style == .spelling
+        } ?? false)
+    }
+
+    /// The negative half of the test above — without it, "we accept the controller's payload" would
+    /// be indistinguishable from "we accept anything", and a genuinely unrelated annotation key
+    /// would silently paint a spelling underline.
+    func test_addAnnotationStillRefusesAPayloadThatDenotesNoMarker() {
+        let (v, c) = makeClient(["hello wrold today"])
+        let s = v.boxes[0].textStart
+        let wordGlobal = NSRange(location: s + 6, length: 5)
+        XCTAssertFalse(c.addAnnotation(key: "nonsense-key", value: "nonsense-value",
+                                       range: wordGlobal, revision: v.documentRevision))
+        XCTAssertNil(v.spellResults[BlockID("p0")])
+    }
+
+    /// TASK H2 — G1/G2's ranked suspect 2: `addRenderingAttributes` whitelisted two keys that are
+    /// not the underline, so the ONE delivery shape upstream's end-to-end test names — bare
+    /// `NSUnderlineStyle` / `NSUnderlineColor` temporary rendering attributes — fell through to
+    /// `return false`. It now reaches `spellResults`, which is what this renderer's underline
+    /// overlay draws from.
+    func test_addRenderingAttributesAcceptsTheTemporaryUnderlineMarker() {
+        let (v, c) = makeClient(["hello wrold today"])
+        let blockID = BlockID("p0")
+        let s = v.boxes[0].textStart
+        let wordGlobal = NSRange(location: s + 6, length: 5)
+
+        let ok = c.addRenderingAttributes([.underlineStyle: NSNumber(value: NSUnderlineStyle.thick.rawValue),
+                                           .underlineColor: UIColor.red],
+                                          range: wordGlobal, revision: v.documentRevision)
+        XCTAssertTrue(ok)
+        XCTAssertTrue(v.spellResults[blockID]?.ranges.contains {
+            $0.range == NSRange(location: 6, length: 5) && $0.style == .spelling
+        } ?? false)
+
+        // …and removal is symmetric, which the two-key whitelist never was.
+        XCTAssertTrue(c.removeRenderingAttributes([.underlineStyle], range: wordGlobal,
+                                                  revision: v.documentRevision))
+        XCTAssertTrue(v.spellResults[blockID]?.ranges.isEmpty ?? true)
+    }
+
+    /// The marker never reaches the canonical document model — the invariant upstream asserts
+    /// alongside its pixel test (`XCTAssertNil(canonical[NSUnderlineStyleAttributeName])`) and the
+    /// one that matters most: a marker written into the model would travel into the message the
+    /// user sends.
+    func test_theTemporaryUnderlineMarkerNeverEntersTheDocumentModel() {
+        let (v, c) = makeClient(["hello wrold today"])
+        let s = v.boxes[0].textStart
+        XCTAssertTrue(c.addRenderingAttributes([.underlineStyle: NSNumber(value: 1)],
+                                               range: NSRange(location: s + 6, length: 5),
+                                               revision: v.documentRevision))
+        let underlinedInModel = v.currentParagraphs().contains { paragraph in
+            paragraph.runs.contains { $0.attributes.underline }
+        }
+        XCTAssertFalse(underlinedInModel, "the spelling marker must never reach canonical storage")
     }
 
     func test_annotationValueForAnUnknownKeyIsNil() {

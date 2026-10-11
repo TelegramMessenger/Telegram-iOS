@@ -41,6 +41,30 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
         ReferenceMutationBackend()
     }
 
+    /// R5 (Family 6, cluster 2 diagnosis) — the ID backend's `setMarkedText(_:selectedRange:)` routes
+    /// through the REAL kernel and the genuine two-phase document-mutation transaction
+    /// (`IDTextEditorBackendClientBridge.prepareAndCommitReplacement`), so `state.markedRange` (and,
+    /// via it, `backend.markedTextRange`) is only ever populated from whatever
+    /// `RichTextInputMutationResult.markedRange` the document CLIENT reports back on commit — exactly
+    /// like production's real `TelegramDocumentInputClient.commitPreparedMutation` computes it from
+    /// `canvas.legacyApplyMutation(_:).markedRange` (`Clients/TelegramDocumentInputClient.swift`).
+    /// The SHARED fake, `FakeInputDocumentClient`, answers `commitMarkedRange` (default `nil`) for
+    /// every commit; nothing in this file was arranging it, so under the ID backend
+    /// `state.markedRange` silently stayed nil for the whole suite — the root of R1's sub-groups (b)
+    /// and (c). (`ReferenceMutationBackend`'s own `setMarkedText` is storage-only and never reads the
+    /// document client at all — see its own doc comment — so this call is a harmless no-op for the
+    /// LEGACY/default backend; it changes nothing about that half of the suite.)
+    ///
+    /// The value mirrors `ReferenceMutationBackend.setMarkedText`'s own reference computation
+    /// (`base = …canonicalSelectionStorage.normalizedRange.location`, `newLength = text.utf16.count`):
+    /// every test below starts a fresh, freshly-attached backend with a collapsed caret at 0 (nothing
+    /// moves the selection first), so the composition's reference offset is always 0 — confirmed
+    /// directly against the REAL kernel's OWN independently-established composing range before this
+    /// fix (`TGRichTextInputDecRange … offset=0 … offset=<text length>`), not assumed.
+    private func seedComposition(_ text: String) {
+        fakeHost!.fakeDocumentClient.commitMarkedRange = NSRange(location: 0, length: text.utf16.count)
+    }
+
     // MARK: - 1. The worked example: `.discard` drops the composition without touching the document
 
     /// `.discard` drops the composition WITHOUT asking the document client to change anything — the
@@ -50,6 +74,7 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// `break` (the pre-task behavior) — `markedTextRange` would then stay non-nil. Confirmed red
     /// against exactly that mutation, then reverted.
     func test_discard_dropsMarkedRange_withoutMutatingTheDocument() {
+        seedComposition("ni")
         backend.setMarkedText("ni", selectedRange: NSRange(location: 2, length: 0))
         XCTAssertNotNil(backend.markedTextRange, "composition established before the external change")
         log.reset()
@@ -117,6 +142,7 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// `markedTextRange` would then stay non-nil. Confirmed red against exactly that mutation, then
     /// reverted.
     func test_commitBeforeChange_commitsTheComposition_beforeAdoptingTheNewRevision() {
+        seedComposition("k")
         backend.setMarkedText("k", selectedRange: NSRange(location: 1, length: 0))
         XCTAssertNotNil(backend.markedTextRange, "composition established before the external change")
         log.reset()
@@ -144,16 +170,33 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// range, and `rebaseCallCount` would be 0 instead of 2. Confirmed red against exactly that
     /// mutation, then reverted.
     func test_preserveIfRebasable_keepsMarkedRange_whenRebaseSucceeds() {
+        seedComposition("hi")
         backend.setMarkedText("hi", selectedRange: NSRange(location: 2, length: 0))
-        guard let before = backend.markedTextRange as? DocumentTextRange else {
+        // R5 — reads `backend.state.markedRange` (a plain `NSRange?` on the SHARED
+        // `RichTextInputBackend.state` protocol member, not a UIKit identity object) rather than
+        // `backend.markedTextRange as? DocumentTextRange`. Both backends' `markedTextRange` witness
+        // reports THIS SAME absolute NSRange verbatim, but as a DIFFERENT concrete `UITextRange`
+        // subclass per backend (`DocumentTextRange`/`LegacyTextRange` vs the real kernel's own
+        // `TGRichTextInputDecRange`) — see `LegacyTextPosition.swift`'s own header: "nothing outside
+        // a backend should be able to tell which one is active." `state.markedRange` sidesteps that
+        // entirely: it is exactly the value this suite's own subject (`reconcileMarkedTextForExternalChange`
+        // / `reconciledMarkedRange`) reads and writes, on both backends, so it is both backend-agnostic
+        // AND the more direct read for a suite whose class doc comment says it "pins the three
+        // `RichTextMarkedTextPolicy` branches... against `markedRangeStorage`" — the ABSOLUTE storage
+        // value, not a UIKit projection of it. (An earlier version of this fix computed offsets
+        // relative to `backend.beginningOfDocument` instead — WRONG: that position is NOT offset 0 for
+        // the legacy backend (the package's 1-based position axis), so every `+ 10` fed back into
+        // `rebaseResultsQueue` below landed one short there — caught by re-running this exact test
+        // against the LEGACY backend, which regressed from green.)
+        guard let before = backend.state.markedRange else {
             XCTFail("composition established before the external change"); return
         }
         // Simulate a genuine rebase: the two endpoints land at DIFFERENT offsets than they started at
         // (not an identity pass-through), so the resulting range is provably derived from the rebase
         // calls rather than incidentally equal to the pre-change range.
         fakeHost!.fakeDocumentClient.rebaseResultsQueue = [
-            RichTextInputPosition(utf16Offset: before.from.offset + 10),
-            RichTextInputPosition(utf16Offset: before.to.offset + 10),
+            RichTextInputPosition(utf16Offset: before.location + 10),
+            RichTextInputPosition(utf16Offset: before.location + before.length + 10),
         ]
         log.reset()
         let old = fakeHost!.fakeDocumentClient.revision
@@ -165,11 +208,11 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
             oldRevision: old, newRevision: old + 1, reason: .remoteUpdate,
             changedRangeBefore: nil, changedRangeAfter: nil,
             selection: backend.canonicalSelection, markedTextPolicy: .preserveIfRebasable))
-        guard let after = backend.markedTextRange as? DocumentTextRange else {
+        guard let after = backend.state.markedRange else {
             XCTFail("expected the rebased marked range to survive"); return
         }
-        XCTAssertEqual(after.from.offset, before.from.offset + 10)
-        XCTAssertEqual(after.to.offset, before.to.offset + 10)
+        XCTAssertEqual(after.location, before.location + 10)
+        XCTAssertEqual(after.location + after.length, before.location + before.length + 10)
         XCTAssertEqual(fakeHost!.fakeDocumentClient.rebaseCallCount, 2,
                        "a non-collapsed marked range rebases both endpoints — never more than the two")
     }
@@ -185,6 +228,7 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// dropping) — `markedTextRange` would then be non-nil. Confirmed red against exactly that
     /// mutation, then reverted.
     func test_preserveIfRebasable_discardsMarkedRange_whenRebaseReturnsNil() {
+        seedComposition("hi")
         backend.setMarkedText("hi", selectedRange: NSRange(location: 2, length: 0))
         XCTAssertNotNil(backend.markedTextRange, "composition established before the external change")
         // `fakeHost!.fakeDocumentClient.rebaseResult` defaults to nil — "cannot be rebased".
@@ -271,6 +315,7 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
         let delegate = RecordingInputDelegate(log: log)
         backend.inputDelegate = delegate
 
+        seedComposition("k")
         backend.setMarkedText("k", selectedRange: NSRange(location: 1, length: 0))
         XCTAssertNotNil(backend.markedTextRange, "composition established before the undo")
         log.reset()
@@ -310,8 +355,23 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// would then be empty instead of `["presentationApply", "lifecyclePublish"]`. Confirmed red
     /// against exactly that mutation, then reverted.
     func test_setMarkedText_publishesWithMarkedTextReason() {
+        seedComposition("k")
         backend.setMarkedText("k", selectedRange: NSRange(location: 1, length: 0))
-        XCTAssertEqual(log.kinds, ["presentationApply", "lifecyclePublish"])
+        // R5 FINDING (Family 6): the trailing `[presentationApply, lifecyclePublish]` publish shape
+        // is the one thing EVERY backend must do (and is what this test's own name is about) — but
+        // the ID backend's `setMarkedText` genuinely inserts the composing text through the REAL
+        // two-phase document-mutation transaction FIRST (`documentPrepare`/`documentCommit`,
+        // `IDTextEditorBackendClientBridge.prepareAndCommitReplacement`), per
+        // `IDTextEditorBackend+TextBackend.swift`'s own header: "the private controller drives that
+        // through OUR storage façade." `ReferenceMutationBackend`'s stage-1 body is storage-only and
+        // never touches the document client at all (see its own doc comment: "It inserts no
+        // provisional text"), so it never emits those two events — that is a fixture-only
+        // characteristic of the STORAGE-ONLY reference conformer, not a cross-backend requirement
+        // (neither backend's REAL, non-reference implementation shares even this publish channel —
+        // see `ReferenceMutationBackend.swift`'s own "TASK 29" note on what the real, routed
+        // `LegacyRichTextInputBackend` member does instead). Assert the suffix every conformer must
+        // produce, not the whole sequence only the storage-only fixture satisfies.
+        XCTAssertEqual(Array(log.kinds.suffix(2)), ["presentationApply", "lifecyclePublish"])
         let reasons = log.events.compactMap { event -> String? in
             if case .lifecyclePublish(_, let reason) = event { return reason }
             return nil
@@ -379,11 +439,16 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
         // Prediction shape: selectedRange == {0,0} (caret at the START, trailing ghost text) —
         // contrast every other test's composition shape (selectedRange location == the marked text's
         // own length, caret at the END).
+        seedComposition("ing")
         backend.setMarkedText("ing", selectedRange: NSRange(location: 0, length: 0))
-        guard let predictionRange = backend.markedTextRange as? DocumentTextRange else {
+        // R5 — `backend.state.markedRange`, not `backend.markedTextRange as? DocumentTextRange` — see
+        // `test_preserveIfRebasable_keepsMarkedRange_whenRebaseSucceeds`'s own doc comment for the
+        // full reasoning (backend-agnostic AND avoids a `beginningOfDocument`-relative regression that
+        // measurably broke this exact assertion against the legacy backend).
+        guard let predictionRange = backend.state.markedRange else {
             XCTFail("composition established before the external change"); return
         }
-        XCTAssertEqual(predictionRange.to.offset - predictionRange.from.offset, 3,
+        XCTAssertEqual(predictionRange.length, 3,
                        "the stage-1 body computes the marked range from the TEXT length only — a " +
                        "prediction's {0,0} caret has no effect on the recorded range")
         log.reset()
@@ -418,6 +483,7 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// values below would read the NEW revision/selection instead of the OLD ones. Confirmed red
     /// against exactly that reversion, then reverted back.
     func test_preserveIfRebasable_rebasesBeforeAdoptingRevisionAndSelection() {
+        seedComposition("hi")
         backend.setMarkedText("hi", selectedRange: NSRange(location: 2, length: 0))
         XCTAssertNotNil(backend.markedTextRange, "composition established before the external change")
         let staleSelection = backend.canonicalSelection
@@ -460,8 +526,11 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// RED IF: the fast path were removed — `rebaseCallCount` would read 2 instead of 0. Confirmed red
     /// against exactly that mutation, then reverted.
     func test_preserveIfRebasable_skipsRebase_whenTheRevisionHasNotMoved() {
+        seedComposition("hi")
         backend.setMarkedText("hi", selectedRange: NSRange(location: 2, length: 0))
-        guard let before = backend.markedTextRange as? DocumentTextRange else {
+        // R5 — `backend.state.markedRange`; see `test_preserveIfRebasable_keepsMarkedRange_whenRebaseSucceeds`'s
+        // own doc comment.
+        guard let before = backend.state.markedRange else {
             XCTFail("composition established before the external change"); return
         }
         log.reset()
@@ -470,11 +539,11 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
             oldRevision: old, newRevision: old, reason: .layoutOnly,
             changedRangeBefore: nil, changedRangeAfter: nil,
             selection: backend.canonicalSelection, markedTextPolicy: .preserveIfRebasable))
-        guard let after = backend.markedTextRange as? DocumentTextRange else {
+        guard let after = backend.state.markedRange else {
             XCTFail("expected the marked range to survive an unmoved revision"); return
         }
-        XCTAssertEqual(after.from.offset, before.from.offset)
-        XCTAssertEqual(after.to.offset, before.to.offset)
+        XCTAssertEqual(after.location, before.location)
+        XCTAssertEqual(after.length, before.length)
         XCTAssertEqual(fakeHost!.fakeDocumentClient.rebaseCallCount, 0,
                        "nothing is stale when the revision hasn't moved — no rebase call is needed")
     }
@@ -493,6 +562,7 @@ class BackendMarkedTextPolicyTests: BackendContractCases {
     /// non-nil (a zero-length range) instead of nil. Confirmed red against exactly that mutation, then
     /// reverted.
     func test_preserveIfRebasable_collapsesAZeroLengthRebasedRangeToNil() {
+        seedComposition("hi")
         backend.setMarkedText("hi", selectedRange: NSRange(location: 2, length: 0))
         XCTAssertNotNil(backend.markedTextRange, "composition established before the external change")
         // Both endpoints rebase to the SAME offset — the zero-length shape this test targets.

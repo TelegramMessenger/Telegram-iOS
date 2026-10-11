@@ -6,11 +6,29 @@ import UIKit
 @available(iOS 16.0, *)
 final class FakeInputDocumentClient: RichTextInputDocumentClient {
     let log: RichTextInputEventLog
-    init(log: RichTextInputEventLog) { self.log = log }
+    /// TASK C2 ADDITION: `text` defaults to `""` so every pre-C2 call site (`FakeInputDocumentClient
+    /// (log:)`, no `text:` argument) is byte-unchanged — nothing before this task read `.text`, so an
+    /// empty default changes no existing test's behavior.
+    init(log: RichTextInputEventLog, text: String = "") {
+        self.log = log
+        self.text = text
+    }
 
     // MARK: state the tests drive
     var revision: UInt64 = 1
     var utf16Length: Int = 100
+    /// TASK C2 ADDITION. The backing text. Stage 1 only ever asserted on mutations; Stage 2's
+    /// family-1 tests compare a canvas projection against it directly.
+    private(set) var text: String
+    /// TASK C2 ADDITION. Incremented in `clamp(_:)`. Stage 1 never counted clamps; the ID backend's
+    /// position arithmetic goes through the document client and the count is the observable.
+    private(set) var clampCallCount = 0
+    /// TASK C2 ADDITION. Test-writable revision. `revision` stays get-only for production code; this
+    /// is the staleness-injection seam for `test_aStalePosition_isRebasedExactlyOnce`.
+    var settableRevision: UInt64 {
+        get { revision }
+        set { revision = newValue }
+    }
     var plainTextToReturn: String? = "Alpha"
     var attributedTextToReturn: NSAttributedString? = NSAttributedString(string: "Alpha")
     /// Read PER CALL by `typingAttributes(at:)`. Deviation D25's test mutates this dictionary
@@ -79,8 +97,28 @@ final class FakeInputDocumentClient: RichTextInputDocumentClient {
     func finish() { sawUnconsumedPreparation = issuedTokens.count != consumedTokens.count }
 
     // MARK: RichTextInputDocumentClient
+    /// Task R7 (cluster 4) — returns the RANGE-CLAMPED substring of `plainTextToReturn`, not the
+    /// whole fixed string regardless of `range`. The real conformer, `TelegramDocumentInputClient
+    /// .plainText(in:)`, is genuinely range-projecting (its whole contract, matching `text(in:)`'s
+    /// own); this fake's previous "ignore `range`, always answer the full canned string" shape was
+    /// silently incompatible with any caller that derives a PARTIAL prefix/suffix length from it —
+    /// exactly what the facade's structural→plain-text offset conversion
+    /// (`TGPlainTextOffsetForStructuralOffset`, `TGRichTextInputDecLayoutController.m`/
+    /// `TGRichTextInputDecTextStorageFacade.m`) now does for every `characterRangeForTextRange:`/
+    /// `replaceCharactersInRange:withString:` call. `plainTextToReturn`/`utf16Length` are
+    /// independently test-set (the base default is `"Alpha"`/`100` — a deliberate mismatch, per this
+    /// file's own doc comments elsewhere), so this clamps to the STRING's own bounds rather than
+    /// trusting `range` to already fit, and returns as much of the requested span as the string
+    /// actually has — never a crash, never the whole string when only a prefix was asked for. Every
+    /// existing consumer that only checked the LOGGED `range` (not this return value) or fed a
+    /// range that already covered the whole fixed string is unaffected byte-for-byte.
     func plainText(in range: NSRange) -> String? {
-        log.record(.documentRead(kind: "plainText", range: range)); return plainTextToReturn
+        log.record(.documentRead(kind: "plainText", range: range))
+        guard let whole = plainTextToReturn else { return nil }
+        let ns = whole as NSString
+        let lo = max(0, min(range.location, ns.length))
+        let hi = max(lo, min(range.location + range.length, ns.length))
+        return ns.substring(with: NSRange(location: lo, length: hi - lo))
     }
     func attributedText(in range: NSRange) -> NSAttributedString? {
         log.record(.documentRead(kind: "attributedText", range: range)); return attributedTextToReturn
@@ -90,7 +128,8 @@ final class FakeInputDocumentClient: RichTextInputDocumentClient {
         return typingAttributesByOffset[position.utf16Offset] ?? [:]
     }
     func clamp(_ position: RichTextInputPosition) -> RichTextInputPosition {
-        RichTextInputPosition(utf16Offset: min(max(position.utf16Offset, 0), utf16Length),
+        clampCallCount += 1
+        return RichTextInputPosition(utf16Offset: min(max(position.utf16Offset, 0), utf16Length),
                               affinity: position.affinity)
     }
     func isValidInsertionPosition(_ position: RichTextInputPosition) -> Bool {

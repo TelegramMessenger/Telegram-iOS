@@ -151,8 +151,8 @@ final class DocumentFragmentTests: XCTestCase {
     }
 
     func test_extract_blockQuote_partiallyCovered_isDropped() {
-        // Place a paragraph before the block quote. Select only the paragraph — the block quote
-        // is NOT fully covered and must be dropped (partial coverage stays dropped).
+        // Place a paragraph before the block quote. Select only the paragraph — the selection never
+        // enters the block quote, so nothing of it is captured.
         let d = Document(blocks: [
             para("a", "AB"),
             .blockQuote(BlockQuote(id: BlockID("q"),
@@ -164,6 +164,34 @@ final class DocumentFragmentTests: XCTestCase {
         let f = d.extractFragment(globalFrom: 1, globalTo: paraSize)
         XCTAssertEqual(f.blocks.count, 1)
         guard case .paragraph = f.blocks[0] else { return XCTFail("expected only the paragraph") }
+    }
+
+    func test_extract_blockQuote_enteredFromOutside_capturesTheCoveredChildrenAsAQuote() {
+        // A selection from a paragraph INTO a quote (Select All in the engine ends in the author
+        // line's text, never past the quote's closing tokens) keeps the covered part as a quote.
+        let d = Document(blocks: [
+            para("a", "AB"),
+            .blockQuote(BlockQuote(id: BlockID("q"),
+                                   children: [.paragraph(ParagraphBlock(id: BlockID("p"), runs: [TextRun(text: "hi")])),
+                                              .paragraph(ParagraphBlock(id: BlockID("r"), runs: [TextRun(text: "yo")]))],
+                                   collapsed: false, author: [TextRun(text: "Ann")]))
+        ])
+        // "AB" is [0, 4); the quote opens at 4 and "hi" starts at 6, so 7 is after the "h".
+        let partial = d.extractFragment(globalFrom: 1, globalTo: 7)
+        XCTAssertEqual(partial.blocks.count, 2)
+        guard case .blockQuote(let quote) = partial.blocks.last else { return XCTFail("the quote's part was dropped") }
+        XCTAssertEqual(quote.children.count, 1)
+        guard case .paragraph(let child) = quote.children.first else { return XCTFail("expected a paragraph child") }
+        XCTAssertEqual(child.runs.map(\.text).joined(), "h")
+        XCTAssertTrue(quote.author.isEmpty, "a partial copy must not carry an uncovered author")
+
+        // To the end of the author's TEXT (not past the quote's closing tokens): both children and
+        // the author, which is wholly covered.
+        let size = DocumentTree.documentSize(d)
+        let throughAuthor = d.extractFragment(globalFrom: 1, globalTo: size - 2)
+        guard case .blockQuote(let whole) = throughAuthor.blocks.last else { return XCTFail("the quote was dropped") }
+        XCTAssertEqual(whole.children.count, 2)
+        XCTAssertEqual(whole.author.map(\.text).joined(), "Ann")
     }
 
     func test_extract_skipsMediaBlock() {

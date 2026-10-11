@@ -99,5 +99,20 @@ extension LegacyRichTextInputBackend {
         guard isAttached else { return }
         legacyCanvas?.nativeCheckOnSelectionChange()
     }
+
+    /// TASK H2 — this backend's half of the checking client's identity resolution.
+    ///
+    /// EXACTLY the expression the three `@objc` client selectors in
+    /// `DocumentCanvasView+NativeTextCheckingClient.swift` used to spell inline, moved behind the
+    /// contract so the ID backend can answer the same question about its OWN identity objects. Same
+    /// accessor, same `nil` on a foreign range: on this backend the change is a pure move, and that
+    /// is what makes "no behaviour change on Legacy" checkable by reading the two lines.
+    ///
+    /// No `isAttached` guard, deliberately, unlike the two members above: this is a pure, stateless
+    /// downcast that reads nothing on the backend or the canvas, so a detached read has nothing to
+    /// go wrong and no fallback to choose. The two members above guard because they reach the canvas.
+    func globalRange(ofCheckingRange range: UITextRange) -> (from: Int, to: Int)? {
+        LegacyTextIdentity.globalRange(of: range)
+    }
 }
 #endif

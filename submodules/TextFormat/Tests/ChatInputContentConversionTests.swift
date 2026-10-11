@@ -276,6 +276,33 @@ final class ChatInputContentConversionTests: XCTestCase {
         ])
     }
 
+    /// One EMPTY line between two carved blocks (quotes, code) round-trips through the chat currency.
+    /// The decoder emitted nothing for a gap of exactly one separator, so editing a sent `"A\n\nB"`
+    /// (a quote each side) reopened as `[A] [B]` (composer harness p20). Two lines, a leading line,
+    /// and a line before a paragraph were already right and are pinned beside it.
+    func test_chatCurrencyRoundTrip_oneEmptyLineBetweenCarvedBlocks() {
+        func quote(_ text: String) -> ChatInputBlock {
+            .blockQuote(ChatInputBlockQuote(content: ChatInputContent(blocks: [.paragraph(ChatInputParagraph(style: .body, runs: [ChatInputRun(text: text)]))]), collapsed: false))
+        }
+        func code(_ text: String) -> ChatInputBlock { .code(ChatInputCode(language: nil, runs: [ChatInputRun(text: text)])) }
+        let blank = ChatInputBlock.paragraph(ChatInputParagraph(style: .body, runs: []))
+        let paragraph = ChatInputBlock.paragraph(ChatInputParagraph(style: .body, runs: [ChatInputRun(text: "P")]))
+        let cases: [[ChatInputBlock]] = [
+            [quote("A"), blank, quote("B")],
+            [code("x"), blank, code("y")],
+            [quote("A"), blank, code("y")],
+            [quote("A"), blank, blank, quote("B")],
+            [quote("A"), blank, paragraph],
+            [blank, quote("B")],
+            [quote("A"), quote("B")],
+            [code("x"), code("y")],
+        ]
+        for blocks in cases {
+            let content = ChatInputContent(blocks: blocks)
+            XCTAssertEqual(chatInputContent(from: attributedString(from: content)), content, "\(attributedString(from: content).string.debugDescription)")
+        }
+    }
+
     func test_plainText_matchesAttributedStringString() {
         let content = richFixture()
         XCTAssertEqual(content.plainText, attributedString(from: content).string)

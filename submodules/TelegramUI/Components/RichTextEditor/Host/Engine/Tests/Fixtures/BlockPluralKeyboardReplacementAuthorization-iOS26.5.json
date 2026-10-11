@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "runtime": {
+    "platform": "iOS",
+    "version": "26.5",
+    "build": "23F73"
+  },
+  "selector": "keyboardInput:shouldReplaceTextInRanges:replacementText:",
+  "owner": "IDBlockTextView(PrivateInputDelegate)",
+  "decision": "safeFallback",
+  "retainedAuthority": {
+    "selector": "keyboardInput:shouldReplaceTextInRange:replacementText:",
+    "policy": "IDBlockAllowsKeyboardReplacement"
+  },
+  "hopper": {
+    "replacementManager": "0xbed7d4",
+    "forwardDeleteManager": "0xbee8b8",
+    "pluralStub": "0x2232600",
+    "singularStub": "0x22325e0",
+    "pluralSend": "0xbedfb4",
+    "singularSend": "0xbedcac",
+    "forwardDeletePluralSend": "0xbeeda4",
+    "forwardDeleteSingularSend": "0xbeeaf4"
+  },
+  "artifacts": {
+    "retainedFocused": ".block-plural-replacement-task3-retained-focused.xcresult",
+    "withdrawnFocused": ".block-plural-replacement-task3-withdrawn-focused.xcresult",
+    "retainedKeyboard": ".block-plural-replacement-task4-retained-keyboard",
+    "withdrawnKeyboard": ".block-plural-replacement-task4-withdrawn-keyboard",
+    "withdrawnUI": ".block-plural-replacement-task4-withdrawn-ui-green2.xcresult"
+  }
+}

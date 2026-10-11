@@ -68,11 +68,34 @@ final class RichTextRenderMetricsTests: XCTestCase {
         XCTAssertEqual(RichTextRenderMetrics.textHeight(body, factor: 0.9, lineCount: 0), 0)
     }
 
-    /// The default metrics are the chat-bubble values: headings at factor 1.0, body at 0.9.
+    /// Body line spacing in POINTS, which is how it is asked for and the only form in which "one
+    /// point more" means anything: the factor multiplies a REDUCED box (`floor(ascender + descender)`
+    /// = 12pt at 17pt SF), and both terms floor, so a range of factors gives the same spacing and a
+    /// small change gives none at all. Pinned here against the real font rather than arithmetic done
+    /// on paper (2026-09-15: body spacing raised 10 → 11pt, pitch 22 → 23).
+    func test_bodyLineSpacingAndPitchInPoints() {
+        let factor = RichTextRenderMetrics.default.body.lineSpacingFactor
+        XCTAssertEqual(RichTextRenderMetrics.reducedLineHeight(body), 12,
+                       "17pt SF: floor(16.30 - 3.99). Every figure below is built on this.")
+        XCTAssertEqual(RichTextRenderMetrics.lineSpacing(body, factor: factor), 11)
+        XCTAssertEqual(RichTextRenderMetrics.linePitch(body, factor: factor), 23)
+    }
+
+    /// A quote sits at 15pt and carries the SAME factor (`withUpdatedFontStyles` multiplies it by
+    /// 1.0), so the body change must not drag quotes with it: at a 10pt reduced box, 0.9 and 0.95
+    /// both floor to 9.
+    func test_quoteLineSpacingIsUnmovedByTheBodyFactor() {
+        let quote = UIFont.systemFont(ofSize: 15)
+        XCTAssertEqual(RichTextRenderMetrics.reducedLineHeight(quote), 10)
+        XCTAssertEqual(RichTextRenderMetrics.lineSpacing(quote, factor: RichTextRenderMetrics.default.body.lineSpacingFactor), 9)
+        XCTAssertEqual(RichTextRenderMetrics.linePitch(quote, factor: RichTextRenderMetrics.default.body.lineSpacingFactor), 19)
+    }
+
+    /// The default metrics are the chat-bubble values: headings at factor 1.0, body at 0.95.
     func test_defaultMetrics_matchTheChatBubbleTable() {
         let m = RichTextRenderMetrics.default
         XCTAssertEqual(m.body.size, 17)
-        XCTAssertEqual(m.body.lineSpacingFactor, 0.9)
+        XCTAssertEqual(m.body.lineSpacingFactor, 0.95)
         XCTAssertEqual(m.body.style, .sans)
         XCTAssertEqual(m.caption.size, 15)
         XCTAssertEqual(m.caption.lineSpacingFactor, 1.0)

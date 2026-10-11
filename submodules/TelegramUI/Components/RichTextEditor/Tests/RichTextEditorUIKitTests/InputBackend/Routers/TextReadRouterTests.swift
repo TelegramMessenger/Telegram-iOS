@@ -152,7 +152,7 @@ final class TextReadRouterTests: XCTestCase {
     /// against the spy's own stub, and the assertion that matters is that the canvas no longer builds
     /// its own `DocumentTokenizer` — TASK 43 deleted both the canvas's dead `inputTokenizer` storage
     /// and its `legacyMakeTokenizer()` construction hook, and
-    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyOneConstructionSite` is what pins
+    /// `InputBackendSourceBoundaryTests.test_theTokenizerHasExactlyTwoConstructionSites` is what pins
     /// that at the source level (two assertions since its own fix round — a construction scan and a
     /// mention allowance; the first version was evadable by `DocumentTokenizer.init(canvas:)`).
     ///

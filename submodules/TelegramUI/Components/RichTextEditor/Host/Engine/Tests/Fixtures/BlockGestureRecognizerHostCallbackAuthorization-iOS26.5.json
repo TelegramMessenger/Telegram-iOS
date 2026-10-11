@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "runtime": {
+    "platform": "iOS",
+    "version": "26.5",
+    "build": "23F73"
+  },
+  "selector": "_textInputViewForAddingGestureRecognizers",
+  "owner": "IDBlockTextView(PrivateInteractionCallbacks)",
+  "decision": "requiredNativeInteractionHost",
+  "fallbackHost": "blockStack",
+  "hopper": {
+    "receiver": "0x1615ff4",
+    "guardCaller": "0x1566108",
+    "guardXref": "0x15661f8",
+    "assistantInitializer": "0x156460c",
+    "graphInstaller": "0x15663f4"
+  },
+  "artifacts": {
+    "units": ".gesture-host-withdrawal-task4-units-green2.xcresult",
+    "lifecycle": ".gesture-host-withdrawal-task4-lifecycle-green2.xcresult",
+    "batchedUI": ".gesture-host-withdrawal-task5-batched-ui-green2.xcresult",
+    "touchUI": ".gesture-host-withdrawal-task5-touch-ui.xcresult"
+  },
+  "isolatedFailureArtifact": {
+    "retained": ".gesture-host-withdrawal-task5-bidi-retained-confirmation.xcresult",
+    "withdrawn": ".gesture-host-withdrawal-task5-bidi-withdrawn-retry.xcresult"
+  }
+}

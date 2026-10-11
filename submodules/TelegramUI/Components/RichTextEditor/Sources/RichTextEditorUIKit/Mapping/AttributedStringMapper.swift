@@ -9,16 +9,27 @@ extension NSAttributedString.Key {
     /// + subtle background; on read-back it round-trips to `CharacterAttributes.inlineCode` (and
     /// suppresses fontFamily/highlight derivation so the mono font + code background don't leak into
     /// the model).
-    static let rtInlineCode = NSAttributedString.Key("RTInlineCode")
+    /// PUBLIC because it is a cross-module contract, not an implementation detail: the mapper, the
+    /// legacy canvas and the engine host's inline-code contributor must all agree on this exact
+    /// string. The alternative — redeclaring `NSAttributedString.Key("RTInlineCode")` in the engine
+    /// module — would put the same literal in two places with nothing to keep them in step, and the
+    /// two backends would silently disagree about the same document. The other `rt*` keys stay
+    /// internal until something outside this module actually needs them.
+    public static let rtInlineCode = NSAttributedString.Key("RTInlineCode")
     /// Marks a run as a spoiler. Render-only storage marker (the `rtInlineCode` precedent); the visible
     /// hide is a SEPARATE display-only `.foregroundColor` rendering attribute (see `BlockLayout`), so this
     /// marker carries no styling and round-trips cleanly to `CharacterAttributes.spoiler`.
-    static let rtSpoiler = NSAttributedString.Key("RTSpoiler")
+    /// PUBLIC for the same reason as `rtInlineCode` and `rtBold`: a cross-module contract. The engine
+    /// host hides spoiler runs through its display-decoration channel and must recognise them.
+    public static let rtSpoiler = NSAttributedString.Key("RTSpoiler")
     /// Marks a run as USER-bold (the toolbar/model `CharacterAttributes.bold`), decoupling model bold from the
     /// rendered font's `.traitBold` — which the iOS "Bold Text" accessibility setting forces onto the script
     /// font TextKit substitutes for Arabic/Hebrew/CJK regardless of user intent. Render-only (the `rtInlineCode`
     /// precedent); read back to `CharacterAttributes.bold`, never persisted to the Core model.
-    static let rtBold = NSAttributedString.Key("RTBold")
+    /// PUBLIC for the same reason as `rtInlineCode`: it is a cross-module contract. The engine host
+    /// must read it because the engine marks bold with its OWN key (`IDInlineTextBold`) and otherwise
+    /// recovers bold from the rendered font — which this mapper flattens for code runs.
+    public static let rtBold = NSAttributedString.Key("RTBold")
     /// Marks a formula run. With a host renderer the visible storage is one `U+FFFC` attachment; without
     /// one it falls back to raw LaTeX text. In both cases read-back restores `CharacterAttributes.formula`.
     static let rtFormula = NSAttributedString.Key("RTFormula")
@@ -82,6 +93,25 @@ public struct AttributedStringMapper {
         return AttributedStringMapper(styleSheet: s, emojiScale: emojiScale, theme: theme,
                                       baseWritingDirection: baseWritingDirection, formulaRenderer: formulaRenderer,
                                       buttonIconProvider: buttonIconProvider)
+    }
+
+    /// A copy that lays out with `metrics`, preserving this mapper's other stylesheet
+    /// customizations, emoji scale, theme and writing direction. The counterpart of
+    /// `RichTextEditorView.renderMetrics` for a host that owns its own mapper.
+    public func withRenderMetrics(_ metrics: RichTextRenderMetrics) -> AttributedStringMapper {
+        var s = styleSheet
+        s.metrics = metrics
+        return withStyleSheet(s)
+    }
+
+    /// The same mapper over a different stylesheet, carrying every other field across. Callers that
+    /// resolve several stylesheet fields at once (code geometry, quote geometry) go through this
+    /// rather than re-listing the initializer, which is how a field gets silently dropped.
+    public func withStyleSheet(_ styleSheet: StyleSheet) -> AttributedStringMapper {
+        AttributedStringMapper(styleSheet: styleSheet, emojiScale: emojiScale, theme: theme,
+                               baseWritingDirection: baseWritingDirection,
+                               formulaRenderer: formulaRenderer,
+                               buttonIconProvider: buttonIconProvider)
     }
 
     /// Points to enlarge a rendered inline emoji beyond its glyph box, per paragraph style (decoupled from
@@ -217,22 +247,49 @@ public struct AttributedStringMapper {
     public func attributes(for ca: CharacterAttributes, style: ParagraphStyleName) -> [NSAttributedString.Key: Any] {
         if let emoji = ca.emoji {
             // An emoji run is purely the inline atom: an invisible square spacer sized to the style font.
-            // No other char attributes apply (they'd be ignored on read-back anyway).
-            return [.font: styleSheet.font(for: style, attributes: ca),
-                    .attachment: EmojiTextAttachment(ref: emoji, scale: emojiScale,
-                                                     renderBoost: emojiRenderBoost(for: style))]
+            // No other char attributes apply — EXCEPT `spoiler`, below.
+            var dict: [NSAttributedString.Key: Any] = [
+                .font: styleSheet.font(for: style, attributes: ca),
+                .attachment: EmojiTextAttachment(ref: emoji, scale: emojiScale,
+                                                 renderBoost: emojiRenderBoost(for: style)),
+            ]
+            // SPOILER SURVIVES AN EMOJI RUN. It used to be dropped here, and the old comment said the
+            // other attributes "would be ignored on read-back anyway" — which was true only because
+            // read-back returned early too, so the claim justified itself. The effect was that an emoji
+            // inside a spoiler lost its spoiler in BOTH directions: the marker never reached the
+            // attributed string, so nothing could hide it, and `ca.spoiler` was dropped on the next
+            // round trip. `emoji` and `spoiler` are independent model fields and both must survive.
+            if ca.spoiler { dict[.rtSpoiler] = true }
+            return dict
         }
         if let button = ca.button {
-            // A button run is purely the inline atom, like an emoji: no other character attribute applies
-            // (they would be ignored on read-back anyway, and a pill draws its own label typography).
-            return [.font: styleSheet.font(for: style, attributes: ca),
-                    .attachment: buttonAttachment(button: button, isBlockPill: false, maxWidth: nil)]
+            // A button run is purely the inline atom, like an emoji: no other character attribute
+            // applies, because a pill draws its own label typography.
+            var dict: [NSAttributedString.Key: Any] = [
+                .font: styleSheet.font(for: style, attributes: ca),
+                .attachment: buttonAttachment(button: button, isBlockPill: false, maxWidth: nil),
+            ]
+            // SPOILER SURVIVES A BUTTON RUN, for the identical reason it survives an emoji run above
+            // — this branch had the SAME defect and the same self-justifying comment ("they would be
+            // ignored on read-back anyway"), which was true only because read-back returned early
+            // too. The emoji branch was fixed; this one was not, so an inline button inside a
+            // spoiler lost its spoiler in BOTH directions: no marker reached the attributed string,
+            // so nothing could hide it, and `ca.spoiler` was dropped on the next round trip.
+            // `button` and `spoiler` are independent model fields and both must survive.
+            if ca.spoiler { dict[.rtSpoiler] = true }
+            return dict
         }
         var dict: [NSAttributedString.Key: Any] = [:]
         dict[.font] = styleSheet.font(for: style, attributes: ca)
         if let formula = ca.formula {
             dict[.rtFormula] = formula
             dict[.foregroundColor] = ca.foreground?.uiColor ?? (style == .caption ? theme.secondaryText : theme.primaryText)
+            // SPOILER SURVIVES A FORMULA RUN. This is a FOURTH early return that dropped it, and
+            // the one that made the formula case look half-fixed: the spoiler line at the end of
+            // this function is never reached for a formula, so the marker never reached the
+            // attributed string and the read-back below had nothing to recover. Emoji, button and
+            // formula all drop through here now.
+            if ca.spoiler { dict[.rtSpoiler] = true }
             return dict
         }
         if ca.bold { dict[.rtBold] = true }   // user-intent marker (read back as CharacterAttributes.bold)
@@ -255,7 +312,18 @@ public struct AttributedStringMapper {
         if let b = ca.baselineOffset { dict[.baselineOffset] = b }
         if ca.inlineCode {
             let size = styleSheet.font(for: style, attributes: ca).pointSize
-            dict[.font] = UIFont.monospacedSystemFont(ofSize: size, weight: .regular)
+            var codeFont = UIFont.monospacedSystemFont(ofSize: size, weight: .regular)
+            // ITALIC SURVIVES INLINE CODE. The face is the only carrier of italic (bold has `.rtBold`,
+            // italic has no marker), and the read-back below derives `ca.italic` from it — so a
+            // monospace face without the trait dropped the user's italic from the model on the next
+            // read. Measured on the engine editor (composer harness, 2026-09-23,
+            // `HarnessMonospaceItalicTests`): `[i,m] "st pa"` came back `[m]` after typing anywhere.
+            if ca.italic,
+               let descriptor = codeFont.fontDescriptor.withSymbolicTraits(
+                   codeFont.fontDescriptor.symbolicTraits.union(.traitItalic)) {
+                codeFont = UIFont(descriptor: descriptor, size: size)
+            }
+            dict[.font] = codeFont
             dict[.backgroundColor] = theme.inlineCodeBackground
             dict[.rtInlineCode] = true
         }
@@ -287,14 +355,29 @@ public struct AttributedStringMapper {
         var ca = CharacterAttributes()
         if let att = dict[.attachment] as? FormulaTextAttachment {
             ca.formula = att.latex
+            // ...except the spoiler marker, which is a model field in its own right — the same
+            // exception the button and emoji branches make. This was the THIRD and last early
+            // return that dropped it, completing the set. Unlike the button case the forward path
+            // was already right: `ca.formula` is handled in the GENERAL branch, which carries the
+            // marker, so only the read-back was losing it.
+            if (dict[.rtSpoiler] as? Bool) == true { ca.spoiler = true }
             return ca
         }
         if let att = dict[.attachment] as? ButtonTextAttachment {
             ca.button = att.button   // button-only; the render-time label/colour never enter the model
+            // ...except the spoiler marker, which is a model field in its own right — the same
+            // exception the emoji branch below makes, and for the same reason. Without it the
+            // forward path's marker was written and then discarded here, so a spoilered inline
+            // button still lost its spoiler on every round trip even once the marker reached the
+            // attributed string. BOTH halves are needed; fixing either alone leaves the loss.
+            if (dict[.rtSpoiler] as? Bool) == true { ca.spoiler = true }
             return ca
         }
         if let att = dict[.attachment] as? EmojiTextAttachment {
             ca.emoji = att.ref   // emoji-only; never leak the spacer font/etc. into the model
+            // ...except the spoiler marker, which is a model field in its own right. See the forward
+            // path for why dropping it here was self-justifying and wrong.
+            if (dict[.rtSpoiler] as? Bool) == true { ca.spoiler = true }
             return ca
         }
         let isCode = (dict[.rtInlineCode] as? Bool) == true
@@ -353,7 +436,20 @@ public struct AttributedStringMapper {
 
     public func attributedString(for block: ParagraphBlock) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        let paragraphStyle = styleSheet.paragraphStyle(for: block.style, attributes: block.paragraph,
+        // A STANDALONE formula is CENTERED, whatever alignment the paragraph carries. That is the
+        // InstantPage V2 renderer's behaviour — `InstantPageV2FormulaItem.centeringBounds` is "the
+        // horizontal band a block formula is centered within", nil only for an inline run or a wide
+        // scrollable one — and the editor lays out to match what will be sent. The stored alignment
+        // is overridden rather than consulted because the renderer ignores it too: a block formula
+        // reaches the wire as `InstantPageBlock.formula`, which carries no alignment at all.
+        //
+        // Keyed on `standaloneFormulaLatex`, the Core definition that already exists so the send
+        // path and the block-spacing classification cannot drift. This is its third consumer.
+        var paragraphAttributes = block.paragraph
+        if block.standaloneFormulaLatex != nil {
+            paragraphAttributes.alignment = .center
+        }
+        let paragraphStyle = styleSheet.paragraphStyle(for: block.style, attributes: paragraphAttributes,
                                                        list: block.list,
                                                        baseWritingDirection: baseWritingDirection)
         for run in block.runs {

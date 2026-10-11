@@ -755,6 +755,8 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
 
             textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
             textInputNode.view.layoutIfNeeded()
+            // `.none` by default, and correct here: this panel does not grow a field around a moving
+            // caret, so it has nothing to say about one. See the caret-reveal design.
             textInputNode.textView.updateLayout(size: textInputNode.bounds.size)
             self.updateSpoiler()
         }

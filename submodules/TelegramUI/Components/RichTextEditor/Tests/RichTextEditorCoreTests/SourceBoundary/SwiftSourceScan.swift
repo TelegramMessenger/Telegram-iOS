@@ -281,7 +281,7 @@ enum SwiftSourceScan {
     /// `callSiteCount` cannot see because the `.` sits between the identifier and the paren.
     ///
     /// **This exists because `callSiteCount` was used for a construction rule and was EVADED.** Task
-    /// 43 added `test_theTokenizerHasExactlyOneConstructionSite` on top of `callSiteCount`; Task 43's
+    /// 43 added `test_theTokenizerHasExactlyTwoConstructionSites` on top of `callSiteCount`; Task 43's
     /// reviewer planted a live second construction site spelled `DocumentTokenizer.init(canvas:)` and
     /// the rule stayed GREEN. Worse, the same commit recommended that exact spelling as a mutation in
     /// a neighbouring test's doc comment, so the form a reader was pointed at was the invisible one.

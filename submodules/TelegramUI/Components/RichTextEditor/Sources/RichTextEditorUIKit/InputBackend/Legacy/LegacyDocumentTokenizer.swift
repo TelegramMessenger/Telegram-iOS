@@ -18,7 +18,7 @@ import RichTextEditorCore
 //    across four UIKit test files, and Task 44 edits NO UIKit test file (deviation D22 — see
 //    `T/Support/LegacyIdentityTestAliases.swift`). Renaming the type would have edited all four.
 //    Renaming only the file costs one dictionary key in
-//    `test_theTokenizerHasExactlyOneConstructionSite` (which keys on `lastPathComponent`) and buys the
+//    `test_theTokenizerHasExactlyTwoConstructionSites` (which keys on `lastPathComponent`) and buys the
 //    PRE-EXISTING `hasPrefix("Legacy")` exclusion in
 //    `test_sharedContracts_referenceNoTelegramImplementationTypes` — the rule that (correctly) forbids
 //    a shared contract file from naming `DocumentCanvasView`, which this implementation file must. No
@@ -43,7 +43,34 @@ import RichTextEditorCore
 /// `nextTextPosition`/`prevTextPosition` so blocks/cells/captions never glue into one word. Paragraph/
 /// line == one leaf region. Every returned position is renderable by construction.
 @available(iOS 13.0, *)
-final class DocumentTokenizer: NSObject, UITextInputTokenizer {
+/// TASK F4 — the backend-neutral half of the tokenizer's surface.
+///
+/// Three canvas sites reach PAST `UITextInputTokenizer` for structural boundaries the protocol
+/// cannot express (`selectWordAt`, `selectParagraphAt`, `spellCheckTargets`), and every one of them
+/// did it with `tokenizer as? DocumentTokenizer`. Under `.inputDec` the canvas's tokenizer is an
+/// `IDDocumentTokenizer` (it must be — the kernel hands a tokenizer's own output straight back into
+/// witnesses that accept only `TGRichTextInputDecPosition`), so all three casts went nil and all
+/// three behaviours SILENTLY no-oped: no double-tap word select, no triple-tap paragraph select,
+/// and — the one this task was chasing — no spell-check word targeting, so `nativeCheckOnSelectionChange()`
+/// drove a check on nothing no matter how many times it ran.
+///
+/// This protocol is exactly what those three sites consumed, and nothing more: two GLOBAL UTF-16
+/// offset pairs, no identity objects. Both tokenizers conform, `IDDocumentTokenizer` by forwarding
+/// to the same `DocumentTokenizer` it already wraps — the boundary logic stays single-sourced, which
+/// is the invariant that file's own header states ("this type performs no text scanning itself").
+///
+/// Declared at the iOS 13 floor deliberately: the canvas is iOS 13 and `IDDocumentTokenizer` is
+/// iOS 17, so a cast to the CONCRETE ID type from a canvas body would need an `#available` dance at
+/// each of the three sites. A protocol has no availability of its own to negotiate.
+@available(iOS 13.0, *)
+protocol DocumentBoundaryTokenizer: AnyObject {
+    /// The word range enclosing `pos`, as GLOBAL UTF-16 offsets; nil at a gap.
+    func wordRange(at pos: Int) -> (from: Int, to: Int)?
+    /// The paragraph/region range enclosing `pos`, as GLOBAL UTF-16 offsets; nil at a gap.
+    func paragraphRange(at pos: Int) -> (from: Int, to: Int)?
+}
+
+final class DocumentTokenizer: NSObject, UITextInputTokenizer, DocumentBoundaryTokenizer {
     private unowned let canvas: DocumentCanvasView
     init(canvas: DocumentCanvasView) { self.canvas = canvas; super.init() }
 

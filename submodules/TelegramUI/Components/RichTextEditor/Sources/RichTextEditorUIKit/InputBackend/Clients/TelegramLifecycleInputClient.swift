@@ -40,7 +40,24 @@ final class TelegramLifecycleInputClient: RichTextInputLifecycleClient {
         }
     }
 
-    /// No rejection concept exists today, so a legacy rejection is silent by design.
+    /// Silent by design **for Legacy** —
+    /// `test_backendDidRejectMutationIsSilentUnderLegacy` pins that and this body must stay empty for
+    /// it. Be precise about WHY, though: Legacy is not rejection-free. It really does call this method,
+    /// at `LegacyRichTextInputBackend+Mutation.swift:277` (`.notEditable`) and `:281`
+    /// (`.revisionMismatch`), from `prepareAndRun`. What makes the Legacy path silent is that
+    /// `prepareAndRun` has **no production entry point** — that file's own header records it: the real
+    /// edit paths are plain forwards, and the rejection machinery is reachable only through the
+    /// test-only `ReferenceMutationBackend`. But the wording that used to stand here ("no rejection concept exists today") is no longer
+    /// true of the other implementor: the InputDec backend DOES reject, at
+    /// `TelegramDocumentInputClient.swift:120`, when a mutation's `expectedRevision` fails to match.
+    ///
+    /// Tasks D4c and D4d both lost time to that. A real rejection arrives here and is dropped without
+    /// a log, an assertion, or a counter, so the symptom presented as a mutation that silently did
+    /// nothing — which is indistinguishable from the five empty-stub witnesses this programme has
+    /// already found, and sent both investigations chasing the wrong layer first.
+    ///
+    /// Leave the Legacy path silent; if you need to see ID-backend rejections, instrument HERE — it is
+    /// the one place every rejection passes through.
     func backendDidRejectMutation(_ mutation: RichTextInputMutation,
                                   reason: RichTextInputMutationRejection) {}
 

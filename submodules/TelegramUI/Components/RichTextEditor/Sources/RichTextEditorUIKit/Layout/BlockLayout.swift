@@ -22,6 +22,8 @@ final class BlockLayout: BlockLayoutEngine {
     // per call, plus a 1-entry (width, renderVersion) memo. Separate from the live stack, so measuring
     // never disturbs what is displayed.
     private var measureScratch: BlockLayout?
+    /// The line cap `capLines` last applied, so a scratch layout created later inherits it.
+    private var lineCap: (lines: Int, mode: NSLineBreakMode) = (0, .byWordWrapping)
     private var memoWidth: CGFloat = .nan
     private var memoRenderVersion: Int = -1
     private var memoHeight: CGFloat = 0
@@ -47,6 +49,10 @@ final class BlockLayout: BlockLayoutEngine {
     init(attributedString: NSAttributedString, width: CGFloat) {
         contentStorage = NSTextContentStorage()
         layoutManager = NSTextLayoutManager()
+        // See `BlockLayoutTK1.init` — same rule, same boundary. Worth more here: before this,
+        // TextKit 2 added the leading to EVERY fragment where TextKit 1 added one for the block, so
+        // a wrapped paragraph drifted further off V2's grid with every line it gained.
+        RichTextFontLeading.suppress(in: layoutManager)
         container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
         container.lineFragmentPadding = 0
         layoutManager.textContainer = container
@@ -76,6 +82,17 @@ final class BlockLayout: BlockLayoutEngine {
         container.size = CGSize(width: width, height: .greatestFiniteMagnitude)
     }
 
+    func capLines(_ lines: Int, truncating mode: NSLineBreakMode) {
+        lineCap = (lines, mode)
+        container.maximumNumberOfLines = lines
+        container.lineBreakMode = mode
+        // The scratch is the MEASURE of this same text, so an uncapped one would report a height the
+        // live layout cannot draw — measure and draw disagreeing about a three-line cap is precisely
+        // how this defect reached a device the first time.
+        measureScratch?.capLines(lines, truncating: mode)
+        memoRenderVersion = -1
+    }
+
     /// The baseline TextKit actually produced for the first line, relative to the layout top, with NO
     /// correction applied. `BlockLayoutEngine`'s shared extension derives `baselineDelta` from it.
     var rawFirstBaselineFromTop: CGFloat? {
@@ -102,7 +119,11 @@ final class BlockLayout: BlockLayoutEngine {
         if memoRenderVersion == renderVersion && abs(memoWidth - width) < 0.5 { return memoHeight }
         let scratch: BlockLayout
         if let s = measureScratch { scratch = s }
-        else { scratch = BlockLayout(attributedString: attributedString, width: width); measureScratch = scratch }
+        else {
+            scratch = BlockLayout(attributedString: attributedString, width: width)
+            scratch.capLines(lineCap.lines, truncating: lineCap.mode)
+            measureScratch = scratch
+        }
         // The reuse is allocation-only: we re-feed the current string + width and reflow each call (a
         // different width per call is the norm). The live layout is never touched.
         scratch.attributedString = attributedString
@@ -227,15 +248,12 @@ final class BlockLayout: BlockLayoutEngine {
             let bounds = attachment.attachmentBounds(for: attrs, location: range.location,
                                                      textContainer: container, proposedLineFragment: frame,
                                                      position: CGPoint(x: frame.minX, y: baseline))
-            var box = CGRect(x: frame.minX + bounds.minX, y: baseline - bounds.maxY,
+            let box = CGRect(x: frame.minX + bounds.minX, y: baseline - bounds.maxY,
                              width: bounds.width, height: bounds.height)
-            // An emoji renders a touch larger than its reserved glyph box (`renderBoost`). Grow the VISIBLE
-            // box symmetrically so it stays square and centered on the glyph — the reservation (and thus the
-            // line height) is untouched, so the extra size bleeds into the line's leading.
-            if let boost = (attachment as? EmojiTextAttachment)?.renderBoost, boost > 0 {
-                box = box.insetBy(dx: -boost / 2, dy: -boost / 2)
-            }
-            result = box
+            // An emoji renders a touch larger than its reserved glyph box (`renderBoost`). The grow is
+            // `EmojiTextAttachment.visibleBox`'s, shared with every other surface that hosts one — see
+            // its comment for what spelling it per surface cost.
+            result = EmojiTextAttachment.visibleBox(box, for: attachment)
             return false
         }
         return result
