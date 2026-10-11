@@ -440,7 +440,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         var inProgress = false
         var canSkip = false
         
-        var testUpgradeAnimation = "".isEmpty
+        var testUpgradeAnimation = !"".isEmpty
                 
         var upgradeForm: BotPaymentForm?
         var upgradeFormDisposable: Disposable?

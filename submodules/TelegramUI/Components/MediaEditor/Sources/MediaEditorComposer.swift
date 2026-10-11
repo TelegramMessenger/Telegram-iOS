@@ -223,6 +223,12 @@ public final class MediaEditorComposer {
                     }
                 })
             }
+        } else {
+            // No result texture this frame: `MediaEditorRenderer.renderFrame` leaves it unset when
+            // it cannot build one, and on the first frame of an export there is no previous value
+            // to fall back on. The export waits on a semaphore for this completion, so returning
+            // in silence here wedged that queue for good.
+            completion(nil)
         }
     }
     

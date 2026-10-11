@@ -9686,6 +9686,10 @@ Sorry for the inconvenience.";
 "Story.Editor.Next" = "Next";
 "Story.Editor.Done" = "Done";
 
+"Story.Editor.MediaUnavailable" = "This media isn't stored on your device and couldn't be downloaded from iCloud. Check your connection and try again.";
+"Story.Editor.MediaUnavailableSomeSkipped" = "Some media isn't stored on your device and couldn't be downloaded from iCloud. Only the available items will be posted.";
+"Story.Editor.DownloadingMedia" = "Downloading from iCloud...";
+
 "Story.Editor.DraftDiscardMedia" = "Discard Media?";
 "Story.Editor.DraftDiscardDraft" = "Discard Draft?";
 "Story.Editor.DraftKeepMedia" = "Save Draft";

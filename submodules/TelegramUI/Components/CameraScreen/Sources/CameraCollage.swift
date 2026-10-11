@@ -11,6 +11,7 @@ import MetalEngine
 import TelegramPresentationData
 import Photos
 import MediaEditor
+import MediaAssetsContext
 
 final class CameraCollage {
     final class CaptureResult {
@@ -69,13 +70,16 @@ final class CameraCollage {
                                 self.internalContent = .pending(.image(image))
                                 contentUpdated()
                                 
-                                PHImageManager.default().requestAVAsset(forVideo: asset, options: nil, resultHandler: { [weak self] avAsset, _, _ in
-                                    if let avAsset, let self {
-                                        Queue.mainQueue().async {
-                                            self.internalContent = .video(asset: avAsset, thumbnail: nil, duration: 0.0, source: .asset(asset))
-                                            contentUpdated()
-                                        }
+                                // Must go through the shared loader: an iCloud-evicted video
+                                // yields no AVAsset without network access, and the slot would
+                                // stay on its placeholder forever.
+                                let _ = (assetVideoAsset(asset)
+                                |> deliverOnMainQueue).start(next: { [weak self] result in
+                                    guard let self, case let .result(avAsset) = result else {
+                                        return
                                     }
+                                    self.internalContent = .video(asset: avAsset, thumbnail: nil, duration: 0.0, source: .asset(asset))
+                                    contentUpdated()
                                 })
                             }
                         }

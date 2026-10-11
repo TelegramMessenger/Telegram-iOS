@@ -8,6 +8,7 @@ import AccountContext
 import MediaEditor
 import DrawingUI
 import SwiftSignalKit
+import MediaAssetsContext
 
 extension MediaEditorScreenImpl {
     func isEligibleForDraft() -> Bool {
@@ -76,7 +77,7 @@ extension MediaEditorScreenImpl {
             return
         }
         
-        try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
+        ensureStoryDraftDirectory(peerId: self.context.engine.account.peerId)
         
         let values = mediaEditor.values
         let privacy = self.state.privacy
@@ -220,23 +221,25 @@ extension MediaEditorScreenImpl {
                     let _ = items
                 case let .asset(asset):
                     if asset.mediaType == .video {
-                        PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
-                            if let urlAsset = avAsset as? AVURLAsset {
-                                if let draft = innerSaveDraft(media: .video(path: urlAsset.url.relativePath, dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: duration)) {
-                                    completion?(draft)
-                                }
+                        let _ = (assetVideoAsset(asset)
+                        |> deliverOnMainQueue).start(next: { result in
+                            guard case let .result(avAsset) = result, let urlAsset = avAsset as? AVURLAsset else {
+                                return
                             }
-                        }
+                            if let draft = innerSaveDraft(media: .video(path: urlAsset.url.relativePath, dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: duration)) {
+                                completion?(draft)
+                            }
+                        })
                     } else {
-                        let options = PHImageRequestOptions()
-                        options.deliveryMode = .highQualityFormat
-                        PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
-                            if let image {
-                                if let draft = innerSaveDraft(media: .image(image: image, dimensions: PixelDimensions(image.size))) {
-                                    completion?(draft)
-                                }
+                        let _ = (assetFullImage(asset)
+                        |> deliverOnMainQueue).start(next: { result in
+                            guard case let .result(image) = result else {
+                                return
                             }
-                        }
+                            if let draft = innerSaveDraft(media: .image(image: image, dimensions: PixelDimensions(image.size))) {
+                                completion?(draft)
+                            }
+                        })
                     }
                 case let .draft(draft, _):
                     if draft.isVideo {

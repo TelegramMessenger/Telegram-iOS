@@ -1347,8 +1347,20 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             self.currentAssetDownloadDisposable.set(
                 (downloadManager.downloadProgress(identifier: asset.localIdentifier)
                 |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let self, case .completed = status, let controller = self.controller, let customSelection = self.controller?.customSelection {
-                        customSelection(controller, asset)
+                    guard let self, let controller = self.controller else {
+                        return
+                    }
+                    switch status {
+                    case .completed:
+                        if let customSelection = controller.customSelection {
+                            customSelection(controller, asset)
+                        }
+                    case .failed:
+                        // Tapping did nothing at all before this: the download simply stopped
+                        // reporting and the asset never opened.
+                        controller.presentMediaUnavailableAlert()
+                    case .none, .progress:
+                        break
                     }
                 })
             )
@@ -2059,6 +2071,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     private let groupedPromise = ValuePromise<Bool>(true)
     
     private let downloadManager = AssetDownloadManager()
+    private let assetAvailabilityDisposable = MetaDisposable()
+    private let batchDownloadDisposable = MetaDisposable()
     
     private var isDismissing = false
     
@@ -2480,6 +2494,75 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.assetAvailabilityDisposable.dispose()
+        self.batchDownloadDisposable.dispose()
+    }
+    
+    /// Hands `assets` on only once each one is readable on this device, downloading the ones iCloud
+    /// has evicted first. `openMedia` already does this for a single tap; a multi-selection used to
+    /// skip it entirely and reach the editor with assets that cannot be read, which surfaced later
+    /// as a blank story or a Post spinner that never stopped.
+    ///
+    /// Assets that cannot be downloaded are dropped rather than failing the whole selection. If
+    /// none survive there is nothing to open, so the user is told instead.
+    fileprivate func withLocallyAvailableAssets(_ assets: [PHAsset], completion: @escaping ([PHAsset]) -> Void) {
+        guard !assets.isEmpty else {
+            completion([])
+            return
+        }
+        
+        let availabilitySignals = assets.map { asset in
+            return checkIfAssetIsLocal(asset)
+            |> map { isLocal -> (PHAsset, Bool) in
+                return (asset, isLocal)
+            }
+        }
+        self.assetAvailabilityDisposable.set((combineLatest(availabilitySignals)
+        |> deliverOnMainQueue).start(next: { [weak self] availability in
+            guard let self else {
+                return
+            }
+            let missing = availability.filter({ !$0.1 }).map({ $0.0 })
+            guard !missing.isEmpty else {
+                completion(assets)
+                return
+            }
+            
+            // Drop any batch still in flight BEFORE starting this one: `MetaDisposable.set`
+            // disposes the old value after the new signal has already started, and disposing a
+            // batch cancels the manager's only queue — which would be this new batch.
+            self.batchDownloadDisposable.set(nil)
+            
+            // Per-asset progress reaches the grid cells through the same manager, so the selected
+            // thumbnails show their own download rings while this runs.
+            self.batchDownloadDisposable.set((self.downloadManager.downloadBatch(assets: missing)
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                guard let self, case let .completed(unavailableIdentifiers) = status else {
+                    return
+                }
+                let unavailable = Set(unavailableIdentifiers)
+                let available = assets.filter { !unavailable.contains($0.localIdentifier) }
+                if available.isEmpty {
+                    self.presentMediaUnavailableAlert()
+                } else {
+                    completion(available)
+                }
+            }))
+        }))
+    }
+    
+    fileprivate func presentMediaUnavailableAlert() {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+        self.present(
+            textAlertController(
+                context: self.context,
+                forceTheme: defaultDarkColorPresentationTheme,
+                title: nil,
+                text: presentationData.strings.Story_Editor_MediaUnavailable,
+                actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
+            ),
+            in: .window(.root)
+        )
     }
     
     override public func loadDisplayNode() {
@@ -3715,6 +3798,26 @@ public func storyMediaPickerController(
     )
     controller.forceSourceRect = true
     controller.getSourceRect = getSourceRect
+    weak var pickerController: MediaPickerScreenImpl?
+    let sendSelection: (TGMediaSelectionContext?, Bool) -> Void = { selectionContext, forCollage in
+        guard let selectionContext, let selectedItems = selectionContext.selectedItems() else {
+            return
+        }
+        var assets: [PHAsset] = []
+        for item in selectedItems {
+            if let item = item as? TGMediaAsset, let asset = item.backingAsset {
+                assets.append(asset)
+            }
+        }
+        guard let pickerController else {
+            multipleCompletion(assets, forCollage)
+            return
+        }
+        pickerController.withLocallyAvailableAssets(assets, completion: { availableAssets in
+            multipleCompletion(availableAssets, forCollage)
+        })
+    }
+    
     controller.requestController = { [selectionContext] _, present in
         let mediaPickerController = MediaPickerScreenImpl(
             context: context,
@@ -3730,28 +3833,13 @@ public func storyMediaPickerController(
             selectionContext: selectionContext,
             mainButtonState: nil,
             mainButtonAction: { [weak selectionContext] in
-                if let selectionContext, let selectedItems = selectionContext.selectedItems() {
-                    var results: [Any] = []
-                    for item in selectedItems {
-                        if let item = item as? TGMediaAsset, let asset = item.backingAsset {
-                            results.append(asset)
-                        }
-                    }
-                    multipleCompletion(results, forCollage)
-                }
+                sendSelection(selectionContext, forCollage)
             },
             secondaryButtonAction: { [weak selectionContext] in
-                if let selectionContext, let selectedItems = selectionContext.selectedItems() {
-                    var results: [Any] = []
-                    for item in selectedItems {
-                        if let item = item as? TGMediaAsset, let asset = item.backingAsset {
-                            results.append(asset)
-                        }
-                    }
-                    multipleCompletion(results, true)
-                }
+                sendSelection(selectionContext, true)
             }
         )
+        pickerController = mediaPickerController
         mediaPickerController.groupsPresented = groupsPresented
         mediaPickerController.customSelection = { controller, result in
             if let result = result as? MediaEditorDraft {

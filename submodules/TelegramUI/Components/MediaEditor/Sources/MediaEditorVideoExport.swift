@@ -267,6 +267,13 @@ public final class MediaEditorVideoExport {
     
     private let composerSemaphore = DispatchSemaphore(value: 0)
     
+    /// Upper bound on producing one frame. No frame legitimately comes close to this; the bound is
+    /// there so that a producer which fails to call its completion fails the export instead of
+    /// parking this queue forever — which is how such an omission presented: a Post spinner that
+    /// never stopped and a pending story that blocked every story behind it.
+    private static let frameProductionTimeout: Double = 30.0
+    private var frameProductionTimedOut = false
+    
     public init(postbox: Postbox, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat = 1.0) {
         self.postbox = postbox
         self.subject = subject
@@ -1080,7 +1087,12 @@ public final class MediaEditorVideoExport {
                         }
                         self.stickerSemaphore.signal()
                     })
-                    self.stickerSemaphore.wait()
+                    if self.stickerSemaphore.wait(timeout: .now() + MediaEditorVideoExport.frameProductionTimeout) == .timedOut {
+                        Logger.shared.log("VideoExport", "Timed out waiting for a sticker frame")
+                        self.frameProductionTimedOut = true
+                        writer.markVideoAsFinished()
+                        return false
+                    }
                     
                     if !updatedProgress, let imageArguments = self.imageArguments, let duration = self.durationValue {
                         let progress = imageArguments.position.seconds / duration.seconds
@@ -1089,29 +1101,44 @@ public final class MediaEditorVideoExport {
                     }
                 }
                 
+                // Appending to an input that has been finished or cancelled raises, so a frame
+                // abandoned by the timeout below must not append afterwards. The check and the
+                // append share this lock, and the timeout takes it before finishing the input.
+                let frameAbandoned = Atomic<Bool>(value: false)
                 composer.process(
                     main: mainInput!,
                     additional: additionalInput,
                     timestamp: timestamp,
                     pool: writer.pixelBufferPool,
                     completion: { pixelBuffer in
-                        if let pixelBuffer {
-                            if !writer.appendPixelBuffer(pixelBuffer, at: outputTimestamp) {
-                                writer.markVideoAsFinished()
-                                appendFailed = true
-                            } else {
-                                if self.isBounceEnabled {
-                                    self.bounceFrames.append(BounceFrame(pixelBuffer: pixelBuffer, timestamp: outputTimestamp))
-                                }
-                                self.updateProgress(at: outputTimestamp)
+                        frameAbandoned.with { abandoned in
+                            guard !abandoned else {
+                                return
                             }
-                        } else {
-                            appendFailed = true
+                            if let pixelBuffer {
+                                if !writer.appendPixelBuffer(pixelBuffer, at: outputTimestamp) {
+                                    writer.markVideoAsFinished()
+                                    appendFailed = true
+                                } else {
+                                    if self.isBounceEnabled {
+                                        self.bounceFrames.append(BounceFrame(pixelBuffer: pixelBuffer, timestamp: outputTimestamp))
+                                    }
+                                    self.updateProgress(at: outputTimestamp)
+                                }
+                            } else {
+                                appendFailed = true
+                            }
                         }
                         self.composerSemaphore.signal()
                     }
                 )
-                self.composerSemaphore.wait()
+                if self.composerSemaphore.wait(timeout: .now() + MediaEditorVideoExport.frameProductionTimeout) == .timedOut {
+                    Logger.shared.log("VideoExport", "Timed out waiting for a composed frame")
+                    let _ = frameAbandoned.swap(true)
+                    self.frameProductionTimedOut = true
+                    writer.markVideoAsFinished()
+                    return false
+                }
                 
                 if let imageArguments = self.imageArguments, let duration = self.durationValue {
                     let position = imageArguments.position + CMTime(value: 1, timescale: Int32(imageArguments.frameRate))
@@ -1252,6 +1279,15 @@ public final class MediaEditorVideoExport {
             return
         }
         
+        if self.frameProductionTimedOut {
+            Logger.shared.log("VideoExport", "Failed: timed out producing a frame")
+            try? FileManager.default.removeItem(at: outputUrl)
+            writer.cancelWriting()
+            self.internalStatus = .finished
+            self.statusValue = .failed(.writing(nil))
+            return
+        }
+        
         if writer.status == .failed {
             if let error = writer.error {
                 Logger.shared.log("VideoExport", "Failed with writer error \(error.localizedDescription)")
@@ -1285,7 +1321,6 @@ public final class MediaEditorVideoExport {
                         let _ = (self.duration.get()
                         |> take(1)).start(next: { duration in
                             let exportDuration = end - self.startTimestamp
-                            print("video processing took \(exportDuration)s")
                             if duration.seconds > 0 {
                                 Logger.shared.log("VideoExport", "Completed with path \(self.outputPath)")
                                 Logger.shared.log("VideoExport", "Video processing took \(exportDuration / duration.seconds)")

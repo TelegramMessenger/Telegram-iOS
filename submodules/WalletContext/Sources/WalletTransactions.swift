@@ -544,7 +544,8 @@ struct WalletTransactionHistory {
             let retainedIdentities = WalletTransactionIdentityIndex(retaining)
             existing.removeAll { transaction in
                 let keep = pageIdentities.contains(transaction)
-                    || retainedIdentities.contains(transaction)
+                    || (retainedIdentities.contains(transaction)
+                        && !(hasGap && walletTransactionIsNewer(oldest, transaction)))
                     || transaction.status == .pending
                     || walletTransactionIsNewer(transaction, newest)
                     || (!hasGap && page.nextOffset != nil && walletTransactionIsNewer(oldest, transaction))

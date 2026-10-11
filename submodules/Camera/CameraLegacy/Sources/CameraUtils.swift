@@ -4,6 +4,7 @@ import Camera
 import Foundation
 import Accelerate
 import CoreImage
+import TelegramCore
 
 extension AVFrameRateRange {
     func clamp(rate: Float64) -> Float64 {
@@ -228,20 +229,20 @@ func resizePixelBuffer(from srcPixelBuffer: CVPixelBuffer,
     let dstFlags = CVPixelBufferLockFlags(rawValue: 0)
     
     guard kCVReturnSuccess == CVPixelBufferLockBaseAddress(srcPixelBuffer, srcFlags) else {
-        print("Error: could not lock source pixel buffer")
+        Logger.shared.log("Camera", "Could not lock the source pixel buffer")
         return
     }
     defer { CVPixelBufferUnlockBaseAddress(srcPixelBuffer, srcFlags) }
     
     guard kCVReturnSuccess == CVPixelBufferLockBaseAddress(dstPixelBuffer, dstFlags) else {
-        print("Error: could not lock destination pixel buffer")
+        Logger.shared.log("Camera", "Could not lock the destination pixel buffer")
         return
     }
     defer { CVPixelBufferUnlockBaseAddress(dstPixelBuffer, dstFlags) }
     
     guard let srcData = CVPixelBufferGetBaseAddress(srcPixelBuffer),
           let dstData = CVPixelBufferGetBaseAddress(dstPixelBuffer) else {
-        print("Error: could not get pixel buffer base address")
+        Logger.shared.log("Camera", "Could not get the pixel buffer base address")
         return
     }
     
@@ -260,7 +261,7 @@ func resizePixelBuffer(from srcPixelBuffer: CVPixelBuffer,
     
     let error = vImageScale_ARGB8888(&srcBuffer, &dstBuffer, nil, vImage_Flags(0))
     if error != kvImageNoError {
-        print("Error:", error)
+        Logger.shared.log("Camera", "vImageScale_ARGB8888 failed with \(error)")
     }
 }
 
