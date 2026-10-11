@@ -91,8 +91,8 @@ private let iconlessTitleExpandedHorizontalPadding: CGFloat = 8.0
 private let iconlessTitleHorizontalPadding: CGFloat = 8.0
 private let iconAnimationResponse: CGFloat = 18.0
 private let iconAnimationSnapDistance: CGFloat = 0.5
-private let animationTriggerProgress: CGFloat = 0.3
-private let interactiveAnimationResetProgress: CGFloat = 0.1
+private let animationTriggerProgress: CGFloat = 0.1
+private let interactiveAnimationResetProgress: CGFloat = 0.01
 
 public struct ItemListRevealOptionsAnimationSettings: Equatable {
     public var revealStartOverlap: CGFloat
@@ -459,7 +459,6 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         isPrimary: Bool,
         metrics: ItemListRevealOptionLayoutMetrics,
         revealProgress: CGFloat,
-        animationRevealProgress: CGFloat,
         overswipeProgress: CGFloat,
         expandedProgress: CGFloat,
         isStretched: Bool,
@@ -519,7 +518,8 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         let animationSettings = ItemListRevealOptionsAnimationSettingsStore.current
         let minimumContentScale = clampToUnitInterval(animationSettings.minimumContentScale)
         let contentScale = motionScale.map { max(0.0001, $0) } ?? (minimumContentScale + (1.0 - minimumContentScale) * revealProgress)
-        transition.updateAlpha(node: self.contentContainerNode, alpha: motionOpacity.map { clampToUnitInterval($0) } ?? contentAlpha)
+        let contentOpacity = motionOpacity.map { clampToUnitInterval($0) } ?? contentAlpha
+        transition.updateAlpha(node: self.contentContainerNode, alpha: contentOpacity)
         transition.updateTransform(node: self.contentContainerNode, transform: CGAffineTransform(scaleX: contentScale, y: contentScale))
 
         var didApplyManualContentCenter = false
@@ -566,7 +566,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
                 transition.updateFrame(node: animationNode, frame: iconFrame)
             }
             if self.enableAnimations {
-                if animationRevealProgress >= animationTriggerProgress {
+                if min(contentScale, contentOpacity) >= animationTriggerProgress {
                     self.setAnimationTriggered(true)
                 } else if !transition.isAnimated && revealProgress <= interactiveAnimationResetProgress {
                     self.setAnimationTriggered(false)
@@ -772,7 +772,7 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
             let center = self.isLeft ? max(0, size.width - distance) + CGFloat(g.center) : distance - CGFloat(g.center)
             let nodeWidth = stretched ? CGFloat(g.width) : metrics.slotWidth
             node.frame = CGRect(x: center - nodeWidth / 2, y: 0, width: nodeWidth, height: size.height)
-            node.updateLayout(isLeft: self.isLeft, isPrimary: primary, metrics: metrics, revealProgress: CGFloat(motion.scales[order].value), animationRevealProgress: CGFloat(motion.scales[order].target), overswipeProgress: 0, expandedProgress: primary ? CGFloat(min(1, max(0, motion.expansion.value))) : 0, isStretched: stretched, isExpanded: motion.isExpanded && primary, transition: .immediate, motionScale: CGFloat(motion.scales[order].value), motionOpacity: CGFloat(motion.opacities[order].value))
+            node.updateLayout(isLeft: self.isLeft, isPrimary: primary, metrics: metrics, revealProgress: CGFloat(motion.scales[order].value), overswipeProgress: 0, expandedProgress: primary ? CGFloat(min(1, max(0, motion.expansion.value))) : 0, isStretched: stretched, isExpanded: motion.isExpanded && primary, transition: .immediate, motionScale: CGFloat(motion.scales[order].value), motionOpacity: CGFloat(motion.opacities[order].value))
         }
     }
 
@@ -783,8 +783,6 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
     }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // During overdrag the visible pill can extend beyond the measured open
-        // width. Route touches by the rendered controls, including that overflow.
         guard !self.isHidden, self.alpha > 0.01, self.isUserInteractionEnabled, self.containsActionPoint(point) else {
             return nil
         }
@@ -917,7 +915,6 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
             let baseCircleFrame: CGRect
             let nodeFrame: CGRect
             let revealProgress: CGFloat
-            let animationRevealProgress: CGFloat
 
             if self.isLeft {
                 let baseCircleLeft = size.width - boundedRevealedDistance + self.sideInset + edgeInset + CGFloat(i) * stride
@@ -925,8 +922,6 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
                 let visualBaseCircleLeft = size.width - boundedVisualRevealedDistance + self.sideInset + edgeInset + CGFloat(i) * stride
                 let distanceFromShutterEdge = size.width - (visualBaseCircleLeft + metrics.shapeSize.width)
                 revealProgress = revealProgressCurve((distanceFromShutterEdge + animationSettings.revealStartOverlap) / max(1.0, animationSettings.revealStartOverlap + animationSettings.revealEndDistance), response: animationSettings.revealProgressResponse)
-                let animationDistanceFromShutterEdge = size.width - (baseCircleLeft + metrics.shapeSize.width)
-                animationRevealProgress = revealProgressCurve((animationDistanceFromShutterEdge + animationSettings.revealStartOverlap) / max(1.0, animationSettings.revealStartOverlap + animationSettings.revealEndDistance), response: animationSettings.revealProgressResponse)
 
                 if isStretched {
                     let primaryLeft = size.width - boundedRevealedDistance + self.sideInset + edgeInset
@@ -947,8 +942,6 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
                 baseCircleFrame = CGRect(origin: CGPoint(x: baseCircleRight - metrics.shapeSize.width, y: 0.0), size: metrics.shapeSize)
                 let visualBaseCircleRight = boundedVisualRevealedDistance + self.sideInset - edgeInset - CGFloat(self.optionNodes.count - 1 - i) * stride
                 revealProgress = revealProgressCurve((visualBaseCircleRight - metrics.shapeSize.width + animationSettings.revealStartOverlap) / max(1.0, animationSettings.revealStartOverlap + animationSettings.revealEndDistance), response: animationSettings.revealProgressResponse)
-                let animationBaseCircleRight = boundedRevealedDistance + self.sideInset - edgeInset - CGFloat(self.optionNodes.count - 1 - i) * stride
-                animationRevealProgress = revealProgressCurve((animationBaseCircleRight - metrics.shapeSize.width + animationSettings.revealStartOverlap) / max(1.0, animationSettings.revealStartOverlap + animationSettings.revealEndDistance), response: animationSettings.revealProgressResponse)
 
                 if isStretched {
                     let primaryRight = revealedDistance + self.sideInset - edgeInset
@@ -968,7 +961,7 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
 
             transition.updateFrame(node: node, frame: nodeFrame)
 
-            node.updateLayout(isLeft: self.isLeft, isPrimary: isPrimary, metrics: metrics, revealProgress: revealProgress, animationRevealProgress: animationRevealProgress, overswipeProgress: overswipeProgress, expandedProgress: expandedProgress, isStretched: isStretched, isExpanded: isExpanded, transition: transition)
+            node.updateLayout(isLeft: self.isLeft, isPrimary: isPrimary, metrics: metrics, revealProgress: revealProgress, overswipeProgress: overswipeProgress, expandedProgress: expandedProgress, isStretched: isStretched, isExpanded: isExpanded, transition: transition)
 
             if self.isLeft {
                 i -= 1
