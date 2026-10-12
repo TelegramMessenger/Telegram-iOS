@@ -695,6 +695,23 @@ extension Document {
             // past its text end, so this is the same suffix.
             let tail = extractFragment(globalFrom: block.start + block.size, globalTo: size,
                                        carryingNonTextBlocks: true).blocks
+            // **A MULTI-block fragment rewriting a block's whole text keeps its own styles.** The
+            // emptied block is kept so that what replaces its text FOLDS into it — a pure delete
+            // leaves the line, a one-block rewrite keeps the heading or the list item. A fragment of
+            // several blocks folds into BOTH halves of the split, and the tail half of an emptied
+            // block is nothing but a copy of its style: an AI rewrite of `H1 "Title"` answering
+            // `[H1, p]` gave two H1s, and a list item answering `[p, table, p]` turned both
+            // paragraphs into items. Such a fragment replaces the block, as before the emptied
+            // block existed. A caret in an EMPTY line (`clampedLo == clampedHi`) is a paste, not a
+            // rewrite, and keeps the splice the legacy canvas's paste at that caret makes.
+            if clampedLo < clampedHi, fragment.blocks.count > 1 {
+                let frag = fragment.regeneratingTopLevelIDs().blocks
+                let assembled = prefix + frag + tail
+                let doc = Document(blocks: assembled)
+                let lastFragIndex = prefix.count + frag.count - 1
+                let caret = doc.globalTextStart(ofBlockAt: lastFragIndex) + blockContentLength(assembled[lastFragIndex])
+                return (doc, max(0, min(caret, DocumentTree.documentSize(doc))), lastFragIndex)
+            }
             delBlocks = prefix + [emptied] + tail
             delCaret = Document(blocks: delBlocks).globalTextStart(ofBlockAt: prefix.count)
         } else if headMidPara, tailMidPara,

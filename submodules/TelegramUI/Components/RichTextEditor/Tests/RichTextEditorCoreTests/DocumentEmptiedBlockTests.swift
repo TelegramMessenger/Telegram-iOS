@@ -164,4 +164,48 @@ final class DocumentEmptiedBlockTests: XCTestCase {
         let deleted = between.replacingRange(globalFrom: at, globalTo: at, with: Document(blocks: []))
         XCTAssertEqual(texts(deleted.document), ["", "B"], "an empty delete in an empty line changes nothing")
     }
+
+    // MARK: - A MULTI-block rewrite keeps the fragment's own styles
+
+    private func styles(_ d: Document) -> [ParagraphStyleName?] {
+        d.blocks.map { if case .paragraph(let p) = $0 { return p.style } else { return nil } }
+    }
+    private func lists(_ d: Document) -> [ListMarker?] {
+        d.blocks.map { if case .paragraph(let p) = $0 { return p.list?.marker } else { return nil } }
+    }
+
+    /// The AI rewrite of a heading that answers with a heading AND a body paragraph. Folding that
+    /// into the emptied heading imposed its style on BOTH ends of the fragment — two H1s — because
+    /// the split of an emptied block has a tail half that only exists as a copy of its style.
+    func test_rewritingAWholeHeadingWithSeveralBlocksKeepsTheirOwnStyles() {
+        let d = doc(para("a", "A"), para("h", "Title", style: .heading1))
+        let (lo, hi) = textRange(d, 1)
+        let fragment = doc(para("n", "New title", style: .heading1), para("b", "Body text"))
+        let (out, caret) = d.replacingRange(globalFrom: lo, globalTo: hi, with: fragment)
+
+        XCTAssertEqual(texts(out), ["A", "New title", "Body text"])
+        XCTAssertEqual(styles(out), [.body, .heading1, .body], "the body paragraph was retyped as the heading")
+        XCTAssertEqual(caret, out.globalTextStart(ofBlockAt: 2) + 9, "the caret follows the inserted content")
+    }
+
+    func test_rewritingAWholeListItemWithSeveralBlocksAddsNoListMembership() {
+        let d = doc(para("a", "a"), para("l", "item", list: ListMembership(marker: .bullet, level: 0)), para("b", "b"))
+        let (lo, hi) = textRange(d, 1)
+        let fragment = doc(para("x", "A"), .table(TableBlock.empty(rows: 1, columns: 1)), para("y", "B"))
+        let (out, _) = d.replacingRange(globalFrom: lo, globalTo: hi, with: fragment)
+
+        XCTAssertEqual(kinds(out), ["paragraph", "paragraph", "table", "paragraph", "paragraph"])
+        XCTAssertEqual(texts(out), ["a", "A", "B", "b"])
+        XCTAssertEqual(lists(out), [nil, nil, nil, nil, nil], "the fragment's paragraphs were turned into list items")
+    }
+
+    /// Control: a caret in an EMPTY paragraph is a paste, not a rewrite, and keeps the splice — the
+    /// pasted ends fold into the line (no blank line is left after them), as a paste at that caret
+    /// on the legacy canvas does.
+    func test_controlAMultiBlockPasteAtACaretInAnEmptyLineStillConsumesTheLine() {
+        let d = doc(para("a", ""), para("b", "B"))
+        let (at, _) = textRange(d, 0)
+        let (out, _) = d.replacingRange(globalFrom: at, globalTo: at, with: doc(para("x", "X"), para("y", "Y")))
+        XCTAssertEqual(texts(out), ["X", "Y", "B"])
+    }
 }
