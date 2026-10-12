@@ -1492,9 +1492,11 @@ public struct ComponentTransition {
             blurFilter.setValue(toRadius as NSNumber, forKey: "inputRadius")
             layer.filters = [blurFilter]
             layer.animate(from: fromRadius as NSNumber, to: toRadius as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: duration, delay: delay, removeOnCompletion: removeOnCompletion, completion: { [weak layer] flag in
-                if let layer {
-                    if toRadius <= 0.0 {
-                        layer.filters = nil
+                if let layer, toRadius <= 0.0 {
+                    // A newer transition may already have installed its own blur.
+                    if let filters = layer.filters, filters.contains(where: { ($0 as? NSObject) === blurFilter }) {
+                        let remainingFilters = filters.filter { ($0 as? NSObject) !== blurFilter }
+                        layer.filters = remainingFilters.isEmpty ? nil : remainingFilters
                     }
                 }
                 

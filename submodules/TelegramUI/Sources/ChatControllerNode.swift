@@ -199,6 +199,18 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             self.overlayNavigationBar?.title = self.overlayTitle
         }
     }
+
+    var overlayTitleContent: ChatTitleContent? {
+        didSet {
+            self.overlayNavigationBar?.titleContent = self.overlayTitleContent
+        }
+    }
+
+    var overlayTitleActivities: ChatTitleComponent.Activities? {
+        didSet {
+            self.overlayNavigationBar?.titleActivities = self.overlayTitleActivities
+        }
+    }
     
     let wrappingNode: SpaceWarpNode
     let contentContainerNode: ChatNodeContainer
@@ -1349,7 +1361,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             if self.containerNode == nil {
                 let containerNode = ASDisplayNode()
                 containerNode.clipsToBounds = true
-                containerNode.cornerRadius = 15.0
+                containerNode.cornerRadius = 26.0
                 containerNode.addSubnode(self.backgroundNode)
                 containerNode.addSubnode(self.historyNodeContainer)
                 self.contentContainerNode.isHidden = true
@@ -1361,7 +1373,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 self.navigationBar?.isHidden = true
             }
             if self.overlayNavigationBar == nil {
-                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, tapped: { [weak self] in
+                let overlayNavigationBar = ChatOverlayNavigationBar(context: self.context, theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, tapped: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.dismissAsOverlay()
                         if case let .peer(id) = strongSelf.chatPresentationInterfaceState.chatLocation {
@@ -1372,6 +1384,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     self?.dismissAsOverlay()
                 })
                 overlayNavigationBar.title = self.overlayTitle
+                overlayNavigationBar.titleContent = self.overlayTitleContent
+                overlayNavigationBar.titleActivities = self.overlayTitleActivities
                 self.overlayNavigationBar = overlayNavigationBar
                 self.containerNode?.addSubnode(overlayNavigationBar)
             }
@@ -1842,7 +1856,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         case .standard(.embedded):
             break
         case .overlay:
-            insets.top = 44.0
+            insets.top = ChatOverlayNavigationBar.height
         default:
             insets.top += navigationBarHeight
         }
@@ -2530,7 +2544,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let overlayNavigationBar = self.overlayNavigationBar {
-            let barFrame = CGRect(origin: CGPoint(), size: CGSize(width: contentBounds.size.width, height: 44.0))
+            let barFrame = CGRect(origin: CGPoint(), size: CGSize(width: contentBounds.size.width, height: ChatOverlayNavigationBar.height))
             transition.updateFrame(node: overlayNavigationBar, frame: barFrame)
             overlayNavigationBar.updateLayout(size: barFrame.size, transition: transition)
         }
