@@ -655,8 +655,15 @@ extension Document {
             // `suffix.first` is the NEXT block — folding the fragment into it would destroy the break.
             return clampedHi > b.start && clampedHi < b.start + b.size - 1
         }()
-        let prefix = extractFragment(globalFrom: 0, globalTo: clampedLo, carryingNonTextBlocks: true).blocks
-        let suffix = extractFragment(globalFrom: clampedHi, globalTo: size, carryingNonTextBlocks: true).blocks
+        // The complement is taken AROUND the replaced range (`complementOf`): a second line the
+        // range's own copy carries as metadata is not left in it as body text.
+        let removed = (lo: clampedLo, hi: clampedHi)
+        let prefix = extractFragment(globalFrom: 0, globalTo: clampedLo, carryingNonTextBlocks: true,
+                                     endsTheCopiedDocument: true, nested: false, languagesAsText: false,
+                                     complementOf: removed).blocks
+        let suffix = extractFragment(globalFrom: clampedHi, globalTo: size, carryingNonTextBlocks: true,
+                                     endsTheCopiedDocument: true, nested: false, languagesAsText: false,
+                                     complementOf: removed).blocks
 
         // Build the DELETE result + the deletion caret. Join the boundary paragraphs whenever BOTH boundaries are
         // mid-text (so `prefix.last` is the lo-paragraph's head and `suffix.first` is the hi-paragraph's tail) —
@@ -1107,7 +1114,8 @@ extension Document {
     public func extractFragment(globalFrom lo: Int, globalTo hi: Int,
                                 carryingNonTextBlocks: Bool = false) -> Document {
         return self.extractFragment(globalFrom: lo, globalTo: hi, carryingNonTextBlocks: carryingNonTextBlocks,
-                                    endsTheCopiedDocument: true, nested: false, languagesAsText: false)
+                                    endsTheCopiedDocument: true, nested: false, languagesAsText: false,
+                                    complementOf: nil)
     }
 
     /// `extractFragment` with every code block's LANGUAGE as the text the range covered: the covered part
@@ -1122,7 +1130,8 @@ extension Document {
     public func extractFragmentAsCoveredText(globalFrom lo: Int, globalTo hi: Int,
                                              carryingNonTextBlocks: Bool = false) -> Document {
         return self.extractFragment(globalFrom: lo, globalTo: hi, carryingNonTextBlocks: carryingNonTextBlocks,
-                                    endsTheCopiedDocument: true, nested: false, languagesAsText: true)
+                                    endsTheCopiedDocument: true, nested: false, languagesAsText: true,
+                                    complementOf: nil)
     }
 
     /// Every code block's language as a body line before its code (the code then languageless): a fragment
@@ -1155,8 +1164,18 @@ extension Document {
     /// (true at the top; for a container's children, true only when nothing with a text position
     /// follows them there — an EXPANDED details that ends its document; never a block quote's, whose
     /// author line follows them). `nested`: these are a container's children.
+    ///
+    /// `complementOf`: nil for a copy. For one half of `replacingRange`'s complement it is the range
+    /// being replaced, in this document's coordinates: a second line that range's own copy carries
+    /// as METADATA — a code block's language once it covers some of the code text, a pull quote's
+    /// whole author once it covers the whole body — is that range's, and is not kept here as a body
+    /// paragraph (the language-only and author-only branches below). Kept, the replacement had it
+    /// twice: `[p "intro"] [pull "pulled" by "Auth"]`, replace `"intro…pulled"` with its own copy →
+    /// a stray `p "Auth"` after the pull quote; from a code block's text into the next paragraph → a
+    /// `p "swift"` before a code block still in swift.
     private func extractFragment(globalFrom lo: Int, globalTo hi: Int, carryingNonTextBlocks: Bool,
-                                 endsTheCopiedDocument: Bool, nested: Bool, languagesAsText: Bool) -> Document {
+                                 endsTheCopiedDocument: Bool, nested: Bool, languagesAsText: Bool,
+                                 complementOf removed: (lo: Int, hi: Int)?) -> Document {
         guard lo < hi else { return Document(blocks: []) }
         var out: [Block] = []
         var cursor = 0
@@ -1180,8 +1199,16 @@ extension Document {
         // `HarnessDetailsTrailingEmptyLineCopyTests`). A TOP-LEVEL empty last paragraph keeps the bare
         // rule: it is the document's trailing line, which a paste supplies itself.
         let documentEnd = DocumentTree.documentSize(self)
+        func covers(_ range: (lo: Int, hi: Int), emptyRegionAt start: Int, blockEnd: Int) -> Bool {
+            range.lo <= start
+                && (range.hi > start || (range.hi == start && endsTheCopiedDocument && blockEnd == documentEnd))
+        }
         func coversEmptyRegion(at start: Int, blockEnd: Int) -> Bool {
-            lo <= start && (hi > start || (hi == start && endsTheCopiedDocument && blockEnd == documentEnd))
+            covers((lo, hi), emptyRegionAt: start, blockEnd: blockEnd)
+        }
+        // `complementOf`, for a container's children laid out from `origin`.
+        func removedInChildren(at origin: Int) -> (lo: Int, hi: Int)? {
+            removed.map { (lo: $0.lo - origin, hi: $0.hi - origin) }
         }
         // A container's children copied WHOLE: every language they hold was covered.
         func wholly(_ children: [Block]) -> [Block] {
@@ -1233,12 +1260,17 @@ extension Document {
                     }
                     out.append(.code(CodeBlock(id: .generate(), language: nil, runs: runs)))
                 }
+                // The replaced range's copy is this code block, in its language (`complementOf`).
+                let languageIsRemoved = removed.map { r in
+                    max(r.lo, codeStart) < min(r.hi, codeStart + c.utf16Count)
+                        || (c.utf16Count == 0 && covers(r, emptyRegionAt: codeStart, blockEnd: cursor + size))
+                } ?? false
                 if a < b {
                     code(sliceRuns(c.runs, fromUTF16: a - codeStart, toUTF16: b - codeStart))
                 } else if c.utf16Count == 0, coversEmptyRegion(at: codeStart, blockEnd: cursor + size) {
                     // An EMPTY code block is carried like an empty paragraph (see `coversEmptyRegion`).
                     code([])
-                } else if let language = c.language, c.languageUTF16Count > 0,
+                } else if let language = c.language, c.languageUTF16Count > 0, !languageIsRemoved,
                           max(lo, cursor + 2) < min(hi, cursor + 2 + c.languageUTF16Count) {
                     // Only the LANGUAGE line's text is covered (a range ending at the code text's start):
                     // it copies as text. The language is on the editor's axis, and a Cut or a move deleted
@@ -1263,6 +1295,12 @@ extension Document {
                 let authorA = max(lo, authorStart), authorB = min(hi, authorStart + pq.authorUTF16Count)
                 let authorSlice = authorA < authorB
                     ? sliceRuns(pq.author, fromUTF16: authorA - authorStart, toUTF16: authorB - authorStart) : []
+                // The replaced range's copy is this pull quote, author and all (`complementOf`).
+                let authorIsRemoved = removed.map { r in
+                    pq.utf16Count > 0
+                        ? r.lo <= ptStart && r.hi >= ptStart + pq.utf16Count
+                        : covers(r, emptyRegionAt: ptStart, blockEnd: cursor + size)
+                } ?? false
                 if a < b {
                     let r = sliceRuns(pq.runs, fromUTF16: a - ptStart, toUTF16: b - ptStart)
                     let author = (a == ptStart && b == ptStart + pq.utf16Count) ? pq.author : authorSlice
@@ -1270,7 +1308,7 @@ extension Document {
                 } else if pq.utf16Count == 0, coversEmptyRegion(at: ptStart, blockEnd: cursor + size) {
                     // An EMPTY pull text is wholly covered once covered at all, so the author comes too.
                     out.append(.pullQuote(PullQuote(id: .generate(), runs: [], author: pq.author)))
-                } else if !authorSlice.isEmpty {
+                } else if !authorSlice.isEmpty, !authorIsRemoved {
                     // Only the author's text of a pull quote with text: it copies as text.
                     out.append(.paragraph(ParagraphBlock(id: .generate(), runs: regeneratingRunIdentities(authorSlice))))
                 }
@@ -1296,7 +1334,8 @@ extension Document {
                         .extractFragment(globalFrom: lo - childrenStart, globalTo: hi - childrenStart,
                                          carryingNonTextBlocks: carryingNonTextBlocks,
                                          endsTheCopiedDocument: false, nested: true,
-                                         languagesAsText: languagesAsText)
+                                         languagesAsText: languagesAsText,
+                                         complementOf: removedInChildren(at: childrenStart))
                     // The author's covered text comes too (the pull quote's rule above, p19 fix wave).
                     let authorStart = childrenStart + DocumentTree.documentSize(Document(blocks: bq.children)) + 1
                     let authorA = max(lo, authorStart), authorB = min(hi, authorStart + bq.authorUTF16Count)
@@ -1335,7 +1374,8 @@ extension Document {
                             .extractFragment(globalFrom: lo - childrenStart, globalTo: hi - childrenStart,
                                              carryingNonTextBlocks: carryingNonTextBlocks,
                                              endsTheCopiedDocument: endsTheCopiedDocument && cursor + size == documentEnd,
-                                             nested: true, languagesAsText: languagesAsText).blocks
+                                             nested: true, languagesAsText: languagesAsText,
+                                             complementOf: removedInChildren(at: childrenStart)).blocks
                         // An expanded details always has a body line: the engine bridge mints an empty
                         // paragraph for a childless one, so a fragment without it would put a line on
                         // screen that the model does not have, and every position after it would be one
