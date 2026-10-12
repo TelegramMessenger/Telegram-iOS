@@ -465,7 +465,7 @@ public func setupCrashReportPrompt(context: AccountContext, isInternalBuild: Boo
         let pending = reports.filter { !$0.wasPresented }
         guard !pending.isEmpty else { return }
         didPresent = true
-        let controller = textAlertController(sharedContext: context.sharedContext, title: "New Crash Log Available", text: "The app closed unexpectedly. Would you like to send a crash log to help us fix the issue?", actions: [
+        let controller = textAlertController(sharedContext: context.sharedContext, title: "New Crash Log Available", text: "The app closed unexpectedly.\n\n Would you like to send a crash log to help us fix the issue?", actions: [
             TextAlertAction(type: .genericAction, title: "Not Now", action: {}),
             TextAlertAction(type: .defaultAction, title: "Send Log", action: {
                 actions.send(pending[0], context: context)

@@ -7,104 +7,11 @@ import TelegramPresentationData
 import SwiftSignalKit
 import ComponentFlow
 import ViewControllerComponent
-import SheetComponent
 import ButtonComponent
 import WalletContext
 import WalletCardComponent
 
-private final class PeerWalletContentComponent: CombinedComponent {
-    typealias EnvironmentType = ViewControllerComponentContainer.Environment
-
-    let context: AccountContext
-    let peer: EnginePeer
-    let balance: Int64?
-    let address: String?
-    let fiatCurrency: WalletContext.FiatCurrency
-    let fiatRate: WalletContext.FiatRate?
-    let sendMoney: () -> Void
-    let openQr: () -> Void
-
-    init(context: AccountContext, peer: EnginePeer, balance: Int64?, address: String?, fiatCurrency: WalletContext.FiatCurrency, fiatRate: WalletContext.FiatRate?, sendMoney: @escaping () -> Void, openQr: @escaping () -> Void) {
-        self.context = context
-        self.peer = peer
-        self.balance = balance
-        self.address = address
-        self.fiatCurrency = fiatCurrency
-        self.fiatRate = fiatRate
-        self.sendMoney = sendMoney
-        self.openQr = openQr
-    }
-
-    static func ==(lhs: PeerWalletContentComponent, rhs: PeerWalletContentComponent) -> Bool {
-        return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.balance == rhs.balance && lhs.address == rhs.address && lhs.fiatCurrency == rhs.fiatCurrency && lhs.fiatRate == rhs.fiatRate
-    }
-
-    static var body: Body {
-        let handle = Child(RoundedRectangle.self)
-        let card = Child(WalletCardComponent.self)
-        let sendButton = Child(ButtonComponent.self)
-
-        return { context in
-            let component = context.component
-            let environment = context.environment[EnvironmentType.self].value
-            let contentWidth = max(1.0, context.availableSize.width - environment.safeInsets.left - environment.safeInsets.right)
-            let centerX = environment.safeInsets.left + contentWidth * 0.5
-            let handle = handle.update(
-                component: RoundedRectangle(color: environment.theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.3), cornerRadius: 2.5),
-                availableSize: CGSize(width: 36.0, height: 5.0),
-                transition: context.transition
-            )
-            context.add(handle.position(CGPoint(x: centerX, y: 7.5)))
-
-            var contentHeight: CGFloat = 16.0
-            let card = card.update(
-                component: WalletCardComponent(
-                    theme: environment.theme,
-                    balance: component.balance,
-                    fiatCurrency: component.fiatCurrency,
-                    fiatRate: component.fiatRate,
-                    dateTimeFormat: environment.dateTimeFormat,
-                    name: component.peer.debugDisplayTitle.uppercased(),
-                    address: component.address ?? "",
-                    isVisible: environment.isVisible,
-                    cardPressed: component.openQr,
-                    qrPressed: component.openQr
-                ),
-                availableSize: CGSize(width: max(1.0, contentWidth - 32.0), height: context.availableSize.height),
-                transition: context.transition
-            )
-            context.add(card.position(CGPoint(x: centerX, y: contentHeight + card.size.height * 0.5)))
-            contentHeight += card.size.height + 24.0
-
-            let buttonInsets = ContainerViewLayout.concentricInsets(bottomInset: environment.safeInsets.bottom, innerDiameter: 52.0, sideInset: 30.0)
-            let sendButton = sendButton.update(
-                component: ButtonComponent(
-                    background: ButtonComponent.Background(
-                        style: .glass,
-                        color: environment.theme.list.itemCheckColors.fillColor,
-                        foreground: environment.theme.list.itemCheckColors.foregroundColor,
-                        pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                        cornerRadius: 26.0
-                    ),
-                    content: AnyComponentWithIdentity(id: "send", component: AnyComponent(Text(
-                        text: environment.strings.Wallet_SendMoney,
-                        font: Font.semibold(17.0),
-                        color: environment.theme.list.itemCheckColors.foregroundColor
-                    ))),
-                    isEnabled: component.context.walletContext != nil,
-                    action: component.sendMoney
-                ),
-                availableSize: CGSize(width: max(1.0, contentWidth - buttonInsets.left - buttonInsets.right), height: 52.0),
-                transition: context.transition
-            )
-            context.add(sendButton.position(CGPoint(x: centerX, y: contentHeight + sendButton.size.height * 0.5)))
-            contentHeight += sendButton.size.height + buttonInsets.bottom
-            return CGSize(width: context.availableSize.width, height: contentHeight)
-        }
-    }
-}
-
-private final class PeerWalletSheetComponent: CombinedComponent {
+private final class PeerWalletOverlayComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
 
     let context: AccountContext
@@ -119,7 +26,7 @@ private final class PeerWalletSheetComponent: CombinedComponent {
         self.sendMoney = sendMoney
     }
 
-    static func ==(lhs: PeerWalletSheetComponent, rhs: PeerWalletSheetComponent) -> Bool {
+    static func ==(lhs: PeerWalletOverlayComponent, rhs: PeerWalletOverlayComponent) -> Bool {
         return lhs.context === rhs.context && lhs.peer == rhs.peer && lhs.balance == rhs.balance
     }
 
@@ -178,102 +85,176 @@ private final class PeerWalletSheetComponent: CombinedComponent {
         return State(context: self.context, peer: self.peer, balance: self.balance)
     }
 
-    static var body: Body {
-        let sheet = Child(SheetComponent<EnvironmentType>.self)
-        let animateOut = StoredActionSlot(Action<Void>.self)
-        let externalState = SheetComponent<EnvironmentType>.ExternalState()
+    final class View: UIView {
+        private let dimView = UIControl()
+        private let card = ComponentView<Empty>()
+        private let sendButton = ComponentView<Empty>()
+        private var dismissAction: (() -> Void)?
 
-        return { context in
-            let environment = context.environment[EnvironmentType.self]
-            let controller = environment.controller
-            let component = context.component
-            let state = context.state
-            let sheet = sheet.update(
-                component: SheetComponent<EnvironmentType>(
-                    content: AnyComponent(PeerWalletContentComponent(
-                        context: component.context,
-                        peer: state.peer,
-                        balance: state.balance,
-                        address: state.address,
-                        fiatCurrency: state.fiatCurrency,
-                        fiatRate: state.fiatRate,
-                        sendMoney: {
-                            guard let controller = controller() as? PeerWalletScreen else { return }
-                            component.sendMoney(controller)
-                        },
-                        openQr: { [weak state] in
-                            guard let address = state?.address, !address.isEmpty, let controller = controller() else { return }
-                            controller.push(component.context.sharedContext.makeWalletReceiveScreen(context: component.context, address: address, isOwnWallet: false))
-                        }
-                    )),
-                    style: .glass,
-                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
-                    followContentSizeChanges: true,
-                    clipsContent: true,
-                    autoAnimateOut: false,
-                    externalState: externalState,
-                    animateOut: animateOut
-                ),
-                environment: {
-                    environment
-                    SheetComponentEnvironment(
-                        metrics: environment.metrics,
-                        deviceMetrics: environment.deviceMetrics,
-                        isDisplaying: environment.value.isVisible,
-                        isCentered: environment.presentsFloatingPanels,
-                        hasInputHeight: !environment.inputHeight.isZero,
-                        regularMetricsSize: CGSize(width: 430.0, height: 900.0),
-                        dismiss: { animated in
-                            (controller() as? PeerWalletScreen)?.finish(animated: animated, animateOut: animateOut)
-                        }
-                    )
-                },
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            context.add(sheet.position(CGPoint(x: context.availableSize.width * 0.5, y: context.availableSize.height * 0.5)))
-            if let controller = controller() {
-                var sideInset: CGFloat = 0.0
-                var bottomInset = max(environment.safeInsets.bottom, externalState.contentHeight)
-                if case .regular = environment.metrics.widthClass {
-                    sideInset = floor((context.availableSize.width - 430.0) * 0.5) - 12.0
-                    bottomInset = (context.availableSize.height + externalState.contentHeight) * 0.5
-                }
-                controller.presentationContext.containerLayoutUpdated(ContainerViewLayout(
-                    size: context.availableSize,
-                    metrics: environment.metrics,
-                    deviceMetrics: environment.deviceMetrics,
-                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0),
-                    safeInsets: UIEdgeInsets(top: 0.0, left: max(sideInset, environment.safeInsets.left), bottom: 0.0, right: max(sideInset, environment.safeInsets.right)),
-                    reservedCorners: environment.reservedCorners,
-                    division: nil,
-                    additionalInsets: .zero,
-                    statusBarHeight: environment.fullStatusBarHeight,
-                    inputHeight: nil,
-                    inputHeightIsInteractivellyChanging: false,
-                    inVoiceOver: false,
-                    presentedInFormSheet: false
-                ), transition: context.transition.containedViewLayoutTransition)
-            }
-            return context.availableSize
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            self.dimView.backgroundColor = UIColor.black.withAlphaComponent(0.2)
+            self.dimView.addTarget(self, action: #selector(self.dimPressed), for: .touchUpInside)
+            self.addSubview(self.dimView)
         }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        @objc private func dimPressed() {
+            self.dismissAction?()
+        }
+
+        func setDimHidden() {
+            self.dimView.alpha = 0.0
+            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+        }
+
+        func animateIn(sourceView: UIView?) {
+            self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            guard !UIAccessibility.isReduceMotionEnabled else {
+                self.card.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                self.sendButton.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                return
+            }
+            if let card = self.card.view, let parent = card.superview {
+                if let sourceView, sourceView.window === self.window, self.window != nil {
+                    let sourceRect = sourceView.convert(sourceView.bounds, to: parent)
+                    let sourceCenter = CGPoint(x: sourceRect.midX, y: sourceRect.midY)
+                    let scale = max(0.05, min(1.0, min(sourceRect.width / max(1.0, card.bounds.width), sourceRect.height / max(1.0, card.bounds.height))))
+                    card.layer.animateSpring(from: NSValue(cgPoint: sourceCenter), to: NSValue(cgPoint: card.center), keyPath: "position", duration: 0.65, damping: 65.0)
+                    card.layer.animateSpring(from: scale, to: 1.0, keyPath: "transform.scale", duration: 0.65, damping: 65.0)
+                } else {
+                    card.layer.animateSpring(from: 0.85, to: 1.0, keyPath: "transform.scale", duration: 0.65, damping: 65.0)
+                }
+                card.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            }
+            if let button = self.sendButton.view, let parent = button.superview {
+                let bottom = self.convert(CGPoint(x: 0.0, y: self.bounds.maxY), to: parent).y
+                button.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: bottom - button.frame.minY + 8.0)), to: NSValue(cgPoint: .zero), keyPath: "position", duration: 0.5, damping: 85.0, additive: true)
+            }
+        }
+
+        func animateOut(completion: @escaping () -> Void) {
+            self.isUserInteractionEnabled = false
+            guard !UIAccessibility.isReduceMotionEnabled, let button = self.sendButton.view, let parent = button.superview else {
+                self.alpha = 0.0
+                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in completion() })
+                return
+            }
+            self.dimView.alpha = 0.0
+            self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+            if let card = self.card.view {
+                card.alpha = 0.0
+                card.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+            }
+            let bottom = self.convert(CGPoint(x: 0.0, y: self.bounds.maxY), to: parent).y
+            button.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: bottom - button.frame.minY + 8.0), duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false, additive: true, completion: { _ in completion() })
+        }
+
+        func update(component: PeerWalletOverlayComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+            let environment = environment[EnvironmentType.self].value
+            let controller = environment.controller
+            self.dismissAction = {
+                (controller() as? PeerWalletScreen)?.finish(animated: true)
+            }
+            transition.setFrame(view: self.dimView, frame: CGRect(origin: .zero, size: availableSize))
+            let openQr: () -> Void = { [weak state] in
+                guard let address = state?.address, !address.isEmpty, let controller = controller() else { return }
+                controller.push(component.context.sharedContext.makeWalletReceiveScreen(context: component.context, address: address, isOwnWallet: false))
+            }
+            let contentWidth = max(1.0, availableSize.width - environment.safeInsets.left - environment.safeInsets.right)
+            let centerX = environment.safeInsets.left + contentWidth * 0.5
+            let buttonBottomInset = max(16.0, environment.safeInsets.bottom)
+            let buttonTop = availableSize.height - buttonBottomInset - 52.0
+            let cardTopLimit = max(environment.safeInsets.top, environment.statusBarHeight) + 16.0
+            let cardHeightLimit = max(1.0, buttonTop - 24.0 - cardTopLimit)
+            let cardWidth = min(430.0, max(1.0, contentWidth - 44.0), cardHeightLimit * 370.0 / 220.0)
+            let cardSize = self.card.update(
+                transition: transition,
+                component: AnyComponent(WalletCardComponent(
+                    theme: environment.theme,
+                    balance: state.balance,
+                    fiatCurrency: state.fiatCurrency,
+                    fiatRate: state.fiatRate,
+                    dateTimeFormat: environment.dateTimeFormat,
+                    name: state.peer.debugDisplayTitle.uppercased(),
+                    address: state.address ?? "",
+                    isVisible: environment.isVisible,
+                    cardPressed: openQr,
+                    qrPressed: openQr
+                )),
+                environment: {},
+                containerSize: CGSize(width: cardWidth, height: cardHeightLimit)
+            )
+            let cardCenterY = max(cardTopLimit + cardSize.height * 0.5, min(availableSize.height * 0.5, buttonTop - 24.0 - cardSize.height * 0.5))
+            if let cardView = self.card.view {
+                if cardView.superview == nil {
+                    self.addSubview(cardView)
+                }
+                transition.setFrame(view: cardView, frame: CGRect(x: centerX - cardSize.width * 0.5, y: cardCenterY - cardSize.height * 0.5, width: cardSize.width, height: cardSize.height))
+            }
+
+            let buttonSize = self.sendButton.update(
+                transition: transition,
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        style: .glass,
+                        color: environment.theme.list.itemCheckColors.fillColor,
+                        foreground: environment.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                        cornerRadius: 26.0
+                    ),
+                    content: AnyComponentWithIdentity(id: "send", component: AnyComponent(Text(
+                        text: environment.strings.Wallet_SendMoney,
+                        font: Font.semibold(17.0),
+                        color: environment.theme.list.itemCheckColors.foregroundColor
+                    ))),
+                    isEnabled: component.context.walletContext != nil,
+                    action: {
+                        guard let controller = controller() as? PeerWalletScreen else { return }
+                        component.sendMoney(controller)
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: min(406.0, max(1.0, contentWidth - 72.0)), height: 52.0)
+            )
+            if let buttonView = self.sendButton.view {
+                if buttonView.superview == nil {
+                    self.addSubview(buttonView)
+                }
+                transition.setFrame(view: buttonView, frame: CGRect(x: centerX - buttonSize.width * 0.5, y: buttonTop, width: buttonSize.width, height: buttonSize.height))
+            }
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: .zero)
+    }
+
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
 
 public final class PeerWalletScreen: ViewControllerComponentContainer {
     private var isFinishing = false
+    private var didAnimateIn = false
+    private weak var sourceView: UIView?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, balance: Int64?, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, balance: Int64?, sourceView: UIView? = nil, sendMoney: @escaping (PeerWalletScreen) -> Void) {
+        self.sourceView = sourceView
         super.init(
             context: context,
-            component: PeerWalletSheetComponent(context: context, peer: peer, balance: balance, sendMoney: sendMoney),
+            component: PeerWalletOverlayComponent(context: context, peer: peer, balance: balance, sendMoney: sendMoney),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
             theme: .default,
             updatedPresentationData: updatedPresentationData
         )
         self.navigationPresentation = .flatModal
-        self.automaticallyControlPresentationContextLayout = false
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -285,21 +266,25 @@ public final class PeerWalletScreen: ViewControllerComponentContainer {
         self.view.disablesInteractiveModalDismiss = true
     }
 
+    public override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if !self.didAnimateIn {
+            self.didAnimateIn = true
+            (self.node.hostView.componentView as? PeerWalletOverlayComponent.View)?.animateIn(sourceView: self.sourceView)
+        }
+    }
+
     public func openSendMoney(_ controller: ViewController) {
         guard !self.isFinishing, let navigationController = self.navigationController as? NavigationController else { return }
         self.isFinishing = true
-        if let sheetView = self.node.hostView.findTaggedView(
-            tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()
-        ) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
-            sheetView.setDimHidden(true, animated: true)
-        }
+        (self.node.hostView.componentView as? PeerWalletOverlayComponent.View)?.setDimHidden()
         navigationController.pushViewController(controller, animated: true, completion: { [weak self, weak navigationController] in
             guard let self, let navigationController else { return }
             navigationController.setViewControllers(navigationController.viewControllers.filter { $0 !== self }, animated: false)
         })
     }
 
-    fileprivate func finish(animated: Bool, animateOut: ActionSlot<Action<Void>>, completion: (() -> Void)? = nil) {
+    fileprivate func finish(animated: Bool, completion: (() -> Void)? = nil) {
         guard !self.isFinishing else { return }
         self.isFinishing = true
         let dismiss: () -> Void = { [weak self] in
@@ -310,8 +295,8 @@ public final class PeerWalletScreen: ViewControllerComponentContainer {
                 self.dismiss(completion: completion)
             }
         }
-        if animated {
-            animateOut.invoke(Action { _ in dismiss() })
+        if animated, let componentView = self.node.hostView.componentView as? PeerWalletOverlayComponent.View {
+            componentView.animateOut(completion: dismiss)
         } else {
             dismiss()
         }

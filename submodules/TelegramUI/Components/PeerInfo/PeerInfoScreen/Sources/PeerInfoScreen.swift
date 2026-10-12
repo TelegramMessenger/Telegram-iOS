@@ -1476,7 +1476,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if peer.id == self.context.account.peerId {
                 self.openSettings(section: .wallet)
             } else {
-                let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, balance: (self.data?.cachedData as? CachedUserData)?.gramBalance, sendMoney: { [weak self] peerWalletScreen in
+                let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, balance: (self.data?.cachedData as? CachedUserData)?.gramBalance, sourceView: self.headerNode.walletBalance?.view, sendMoney: { [weak self] peerWalletScreen in
                     guard let self, let controller = self.controller, let walletContext = self.context.walletContext else { return }
                     let sendController = WalletSendScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, useDefaultAccent: false, peer: peer, walletContext: walletContext, allowOpenRecipientChat: false, completed: { [weak self] in
                         guard let self, let navigationController = self.controller?.navigationController as? NavigationController else { return }
@@ -5518,7 +5518,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                              
                 let sectionWidth = layout.size.width - insets.left - insets.right
                 if isFirstSection && sectionItems.first is PeerInfoScreenHeaderItem && !self.state.isEditing {
-                    if self.data?.peer?.profileColor == nil {
+                    if self.data?.peer?.profileColor == nil && !self.headerNode.hasBottomStrip {
                         contentHeight -= 16.0
                     }
                 }

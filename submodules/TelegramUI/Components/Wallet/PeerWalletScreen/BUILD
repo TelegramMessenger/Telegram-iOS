@@ -8,7 +8,6 @@ swift_library(
     deps = [
         "//submodules/AccountContext",
         "//submodules/ComponentFlow",
-        "//submodules/Components/SheetComponent",
         "//submodules/Components/ViewControllerComponent",
         "//submodules/Display",
         "//submodules/SSignalKit/SwiftSignalKit",
