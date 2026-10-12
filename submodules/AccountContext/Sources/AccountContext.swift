@@ -1600,6 +1600,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
     func makeWalletScreen(context: AccountContext) -> ViewController
     func makeWalletReceiveScreen(context: AccountContext, address: String) -> ViewController
+    func makeWalletReceiveScreen(context: AccountContext, address: String, isOwnWallet: Bool) -> ViewController
     func makeWalletReceiveScreen(context: AccountContext, address: String, appeared: @escaping () -> Void) -> ViewController
     func makeWalletImportScreen(context: AccountContext, mode: WalletImportScreenMode, completion: (() -> Void)?) -> ViewController
     func makeWalletSettingsScreen(context: AccountContext) -> ViewController

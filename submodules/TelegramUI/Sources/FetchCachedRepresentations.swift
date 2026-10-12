@@ -22,6 +22,7 @@ import GradientBackground
 import LegacyImpl
 import UniversalMediaPlayer
 import RangeSet
+import PassRenderer
 
 // The media-representation pipeline has an Account but no AccountContext, so
 // the backend is read straight from app configuration — the same shape
@@ -223,8 +224,45 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchPreparedSvgRepresentation(resource: resource, resourceData: data, representation: representation)
         }
+    } else if let representation = representation as? CachedPassImageRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchPassImageRepresentation(resourceData: data, representation: representation)
+        }
     }
     return .never()
+}
+
+private func passTransitGlyph(_ type: PassTransitType) -> CGImage? {
+    let name: String
+    switch type {
+    case .air:
+        name = "airplane"
+    case .train:
+        name = "tram.fill"
+    case .bus:
+        name = "bus.fill"
+    case .boat:
+        name = "ferry.fill"
+    case .generic:
+        name = "arrow.right"
+    }
+    return UIImage(systemName: name, withConfiguration: UIImage.SymbolConfiguration(pointSize: 56.0, weight: .regular))?.cgImage
+}
+
+private func fetchPassImageRepresentation(resourceData: MediaResourceData, representation: CachedPassImageRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        let data = renderPassPNG(path: resourceData.path, options: PassRenderOptions(language: representation.language, scale: representation.scale, transitGlyph: passTransitGlyph)) ?? Data()
+        let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
+        if let _ = try? data.write(to: URL(fileURLWithPath: path)) {
+            subscriber.putNext(.temporaryPath(path))
+        }
+        subscriber.putCompletion()
+        return EmptyDisposable
+    }) |> runOn(Queue.concurrentDefaultQueue())
 }
 
 private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int64) -> Signal<CachedMediaResourceRepresentationResult, NoError> {

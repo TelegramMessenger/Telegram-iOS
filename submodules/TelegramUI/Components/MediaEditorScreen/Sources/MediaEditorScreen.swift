@@ -56,6 +56,7 @@ import GlassBarButtonComponent
 import GlassBackgroundComponent
 import Weather
 import UniformTypeIdentifiers
+import MediaAssetsContext
 
 /// iPhone Duo, sticker editor: the square sticker frame (0.97 of the preview's width), the undo button above it and the
 /// cut-out and outline buttons below it have to fit between the top of the screen and the editor's bottom bar, and keep
@@ -3197,6 +3198,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         
         private let gradientView: UIImageView
         private var gradientColorsDisposable: Disposable?
+        private var sourceLoadStateDisposable: Disposable?
+        private weak var sourceLoadingTooltip: SaveProgressScreen?
         
         fileprivate var cropScrollView: CropScrollView?
         private var cropScrollViewFrame: CGRect = .zero
@@ -3620,6 +3623,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         deinit {
             self.subjectDisposable?.dispose()
             self.gradientColorsDisposable?.dispose()
+            self.sourceLoadStateDisposable?.dispose()
             self.appInForegroundDisposable?.dispose()
             self.playbackPositionDisposable?.dispose()
             self.availableReactionsDisposable?.dispose()
@@ -4062,6 +4066,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     }
                 }
             })
+            // Reading the subject can mean an iCloud download. Report it, and if the media never
+            // arrives say so — the editor would otherwise sit on an empty canvas indefinitely.
+            self.sourceLoadStateDisposable = (mediaEditor.sourceLoadState
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                self?.updateSourceLoadState(state)
+            })
+            
             self.mediaEditor = mediaEditor
             self.updateCrop()
             self.mediaEditorPromise.set(.single(mediaEditor))
@@ -5110,6 +5121,35 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
         }
         
+        private func updateSourceLoadState(_ state: MediaEditorSourceLoadState) {
+            guard let controller = self.controller else {
+                return
+            }
+            switch state {
+            case let .loading(progress):
+                let text = self.presentationData.strings.Story_Editor_DownloadingMedia
+                if let tooltip = self.sourceLoadingTooltip {
+                    tooltip.content = .progress(text, progress ?? 0.0)
+                } else {
+                    let tooltip = SaveProgressScreen(context: self.context, content: .progress(text, progress ?? 0.0))
+                    tooltip.cancelled = { [weak self] in
+                        // Only stops reporting; the fetch is harmless and the editor fills in if
+                        // it does finish.
+                        self?.sourceLoadingTooltip = nil
+                    }
+                    controller.present(tooltip, in: .window(.root))
+                    self.sourceLoadingTooltip = tooltip
+                }
+            case .ready:
+                self.sourceLoadingTooltip?.dismiss()
+                self.sourceLoadingTooltip = nil
+            case .unavailable:
+                self.sourceLoadingTooltip?.dismiss()
+                self.sourceLoadingTooltip = nil
+                controller.presentMediaUnavailableAlert()
+            }
+        }
+        
         func updateVideoExportProgress(_ progress: Float) {
             guard let controller = self.controller else {
                 return
@@ -5187,15 +5227,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
                 
                 if let asset = result as? PHAsset {
-                    let options = PHImageRequestOptions()
-                    options.deliveryMode = .highQualityFormat
-                    PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
-                        if let image {
-                            Queue.mainQueue().async {
-                                completeWithImage(image)
-                            }
+                    let _ = (assetFullImage(asset)
+                    |> deliverOnMainQueue).start(next: { result in
+                        guard case let .result(image) = result else {
+                            return
                         }
-                    }
+                        completeWithImage(image)
+                    })
                 } else if let image = result as? UIImage {
                     completeWithImage(image)
                 }
@@ -5342,7 +5380,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         if case let .data(data) = state {
                             let path = data.path
                             
-                            try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
+                            ensureStoryDraftDirectory(peerId: self.context.engine.account.peerId)
                             
                             var originalFileName: String = "audio_\(Int.random(in: 0 ..< .max)).mp3"
                             if let file = file.media as? TelegramMediaFile {
@@ -5384,7 +5422,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
                 isSettingTrack = true
                 
-                try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
+                ensureStoryDraftDirectory(peerId: self.context.engine.account.peerId)
                 
                 let isScopedResource = url.startAccessingSecurityScopedResource()
                 Logger.shared.log("MediaEditor", "isScopedResource = \(isScopedResource)")
@@ -8048,10 +8086,6 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             self.stickerResultController?.disappeared = nil
                         }
                         
-                        if self.node.mediaEditor?.values.hasChanges == true {
-                            print()
-                        }
-                        
                         let _ = (imagesReady.get()
                         |> filter { $0 }
                         |> take(1)
@@ -8578,7 +8612,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             }, completionHandler: { _, error in
                 if let error = error {
-                    print("\(error)")
+                    Logger.shared.log("MediaEditor", "Failed to save to the photo library: \(error)")
                 }
                 let _ = try? FileManager.default.removeItem(atPath: tempVideoPath)
             })
@@ -8637,14 +8671,17 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 case let .video(path, _):
                     assetSignal = .single(AVURLAsset(url: NSURL(fileURLWithPath: path) as URL))
                 case let .asset(asset):
-                    assetSignal = Signal { subscriber in
-                        PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
-                            if let avAsset {
-                                subscriber.putNext(avAsset)
-                                subscriber.putCompletion()
-                            }
+                    assetSignal = assetVideoAsset(asset)
+                    |> mapToSignal { [weak self] result -> Signal<AVAsset, NoError> in
+                        switch result {
+                        case let .result(avAsset):
+                            return .single(avAsset)
+                        case .unavailable:
+                            self?.presentMediaUnavailableAlert()
+                            return .complete()
+                        case .progress:
+                            return .complete()
                         }
-                        return EmptyDisposable
                     }
                 default:
                     fatalError()
@@ -8656,25 +8693,32 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             case let .image(image, _, _, _, _):
                 exportSubject = .single(.image(image: image))
             case let .asset(asset):
-                exportSubject = Signal { subscriber in
-                    if asset.mediaType == .video {
-                        PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
-                            if let avAsset {
-                                subscriber.putNext(.video(asset: avAsset, isStory: true))
-                                subscriber.putCompletion()
-                            }
-                        }
-                    } else {
-                        let options = PHImageRequestOptions()
-                        options.deliveryMode = .highQualityFormat
-                        PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
-                            if let image {
-                                subscriber.putNext(.image(image: image))
-                                subscriber.putCompletion()
-                            }
+                if asset.mediaType == .video {
+                    exportSubject = assetVideoAsset(asset)
+                    |> mapToSignal { [weak self] result -> Signal<MediaEditorVideoExport.Subject, NoError> in
+                        switch result {
+                        case let .result(avAsset):
+                            return .single(.video(asset: avAsset, isStory: true))
+                        case .unavailable:
+                            self?.presentMediaUnavailableAlert()
+                            return .complete()
+                        case .progress:
+                            return .complete()
                         }
                     }
-                    return EmptyDisposable
+                } else {
+                    exportSubject = assetFullImage(asset)
+                    |> mapToSignal { [weak self] result -> Signal<MediaEditorVideoExport.Subject, NoError> in
+                        switch result {
+                        case let .result(image):
+                            return .single(.image(image: image))
+                        case .unavailable:
+                            self?.presentMediaUnavailableAlert()
+                            return .complete()
+                        case .progress:
+                            return .complete()
+                        }
+                    }
                 }
             case let .draft(draft, _):
                 if draft.isVideo {
@@ -9329,11 +9373,11 @@ public final class BlurredGradientComponent: Component {
 }
 
 func draftPath(engine: TelegramEngine) -> String {
-    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())"
+    return storyDraftDirectory(peerId: engine.account.peerId)
 }
 
 private func fullDraftPath(peerId: EnginePeer.Id, path: String) -> String {
-    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(peerId.toInt64())/" + path
+    return storyDraftDirectory(peerId: peerId) + "/" + path
 }
 
 func hasFirstResponder(_ view: UIView) -> Bool {

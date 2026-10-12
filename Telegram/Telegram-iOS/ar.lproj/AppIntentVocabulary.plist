@@ -12,6 +12,38 @@
 				<string>أرسل رسالة لخالد عبر تيليجرام (Telegram) وأخبره أن هديته وصلت إلى المنزل</string>
 			</array>
 		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INStartAudioCallIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>اتصل بخالد عبر تيليجرام (Telegram)</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSearchForMessagesIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>اقرأ رسائلي غير المقروءة في تيليجرام (Telegram)</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSetMessageAttributeIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>ضع علامة مقروءة على رسائلي في تيليجرام (Telegram)</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSearchCallHistoryIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>أظهر مكالماتي الفائتة في تيليجرام (Telegram)</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

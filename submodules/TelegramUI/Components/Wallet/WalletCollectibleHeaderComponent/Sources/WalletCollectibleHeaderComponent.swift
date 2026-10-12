@@ -40,7 +40,7 @@ func walletCollectibleLottieData(_ data: Data) -> Data? {
     return decoded
 }
 
-private final class WalletRemoteLottieContent: LottieComponent.Content {
+final class WalletRemoteLottieContent: LottieComponent.Content {
     let context: AccountContext
     let file: WalletNftFile
 
@@ -176,7 +176,7 @@ public final class WalletCollectibleHeaderComponent: Component {
                 width: mediaSide,
                 height: mediaSide
             )
-            let mediaCornerRadius: CGFloat = 16.0
+            let mediaCornerRadius: CGFloat = 32.0
             let _ = self.image.update(
                 transition: transition,
                 component: AnyComponent(WalletCollectibleImageComponent(

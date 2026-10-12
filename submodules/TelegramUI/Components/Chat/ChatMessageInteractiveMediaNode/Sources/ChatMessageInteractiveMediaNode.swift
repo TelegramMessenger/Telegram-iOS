@@ -972,6 +972,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 }
             } else if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 unboundSize = CGSize(width: max(10.0, floor(dimensions.cgSize.width * 0.5)), height: max(10.0, floor(dimensions.cgSize.height * 0.5)))
+            } else if let file = media as? TelegramMediaFile, file.isDisplayablePass {
+                unboundSize = chatMessagePassImageSize
             } else if let file = media as? TelegramMediaFile, var dimensions = file.dimensions {
                 if let thumbnail = file.previewRepresentations.first {
                     let dimensionsVertical = dimensions.width < dimensions.height
@@ -1646,7 +1648,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                             
-                            if isSecretMedia {
+                            if file.isDisplayablePass {
+                                let language = presentationData.strings.baseLanguageCode
+                                updateImageSignal = { _, _ in
+                                    return chatMessagePassImage(account: context.account, fileReference: .message(message: MessageReference(message), media: file), language: language)
+                                }
+                            } else if isSecretMedia {
                                 updateImageSignal = { synchronousLoad, _ in
                                     return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
                                 }
@@ -2978,6 +2985,13 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             badgeContent = nil
             if case .progress = state {   
             } else {
+                state = .none
+            }
+        }
+        
+        if let file = media as? TelegramMediaFile, file.isDisplayablePass {
+            badgeContent = nil
+            if case .play = state {
                 state = .none
             }
         }

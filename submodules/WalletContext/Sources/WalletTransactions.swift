@@ -31,7 +31,6 @@ struct WalletTransferDestination {
         guard let info = try? parseTonAddress(value: address), !isTestnetAddress(info.format) else {
             throw WalletContext.WalletError.invalidAddress
         }
-        // Friendly-address flags are part of the sender's intent, even for an uninitialized account.
         switch info.format {
         case .raw:
             self.bounce = false
@@ -508,6 +507,7 @@ struct WalletTransactionHistory {
     private var nextOffset: String?
     private var generation: UInt64 = 0
     private var routeRevision: UInt64 = 0
+    private var contiguousIds = Set<String>()
 
     var nextPageRequest: PageRequest? {
         self.nextOffset.map {
@@ -518,6 +518,7 @@ struct WalletTransactionHistory {
     mutating func reset() {
         self.hasLoadedFirstPage = false
         self.nextOffset = nil
+        self.contiguousIds.removeAll()
         self.generation &+= 1
     }
 
@@ -527,24 +528,27 @@ struct WalletTransactionHistory {
         retaining: [WalletContext.Transaction] = [],
         log: ((String) -> Void)? = nil
     ) -> WalletContext.TransactionsState {
-        let existingIdentities = WalletTransactionIdentityIndex(previous.items)
-        let hasGap = !page.items.isEmpty && !page.items.contains(where: existingIdentities.contains)
-        if !self.hasLoadedFirstPage || hasGap {
+        let orderedPage = sortedWalletTransactions(page.items)
+        let hasGap = !self.hasLoadedFirstPage
+            || orderedPage.last.map { !self.contiguousIds.contains($0.id) } ?? false
+        if hasGap {
             self.nextOffset = page.nextOffset
             self.routeRevision &+= 1
+            self.contiguousIds.removeAll()
         }
+        self.contiguousIds.formUnion(page.items.lazy.map(\.id))
         self.hasLoadedFirstPage = true
         var existing = previous.items
-        let orderedPage = sortedWalletTransactions(page.items)
         if let newest = orderedPage.first, let oldest = orderedPage.last {
             let pageIdentities = WalletTransactionIdentityIndex(page.items)
             let retainedIdentities = WalletTransactionIdentityIndex(retaining)
             existing.removeAll { transaction in
                 let keep = pageIdentities.contains(transaction)
-                    || retainedIdentities.contains(transaction)
+                    || (retainedIdentities.contains(transaction)
+                        && !(hasGap && walletTransactionIsNewer(oldest, transaction)))
                     || transaction.status == .pending
                     || walletTransactionIsNewer(transaction, newest)
-                    || (page.nextOffset != nil && walletTransactionIsNewer(oldest, transaction))
+                    || (!hasGap && page.nextOffset != nil && walletTransactionIsNewer(oldest, transaction))
                 if !keep {
                     log?("event=wallet_history_cache_replaced id=\(transaction.id) hash=\(transaction.transactionHash ?? "nil")")
                 }
@@ -568,11 +572,25 @@ struct WalletTransactionHistory {
         log: ((String) -> Void)? = nil
     ) -> (state: WalletContext.TransactionsState, shouldContinue: Bool) {
         guard request.generation == self.generation else { return (previous, false) }
+        guard request.routeRevision == self.routeRevision else {
+            let shouldContinue = self.nextOffset != nil
+            return (
+                WalletContext.TransactionsState(
+                    items: previous.items,
+                    offset: previous.offset,
+                    canLoadMore: shouldContinue,
+                    isLoadingMore: shouldContinue,
+                    error: previous.error
+                ),
+                shouldContinue
+            )
+        }
         let identities = WalletTransactionIdentityIndex(previous.items + page.items)
         let hasNewTransactions = identities.groups.contains { $0[0] >= previous.items.count }
         let items = mergeTransactions(existing: previous.items, new: page.items, source: "page", log: log)
-        if request.routeRevision == self.routeRevision && request.offset == self.nextOffset {
+        if request.offset == self.nextOffset {
             self.nextOffset = page.nextOffset
+            self.contiguousIds.formUnion(page.items.lazy.map(\.id))
         }
         let shouldContinue = !hasNewTransactions && self.nextOffset != nil
         return (

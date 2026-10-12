@@ -22,7 +22,6 @@ import EdgeEffect
 import ButtonComponent
 import ListSectionComponent
 import ListActionItemComponent
-import WalletCollectibleItemComponent
 import WalletTransactionItemComponent
 import WalletTransactionScreen
 import InfoParagraphComponent
@@ -40,7 +39,6 @@ import Markdown
 private let walletSectionOverscan: CGFloat = 100.0
 private let walletTransactionItemHeight: CGFloat = 79.0
 private let walletCollectibleTransactionItemHeight: CGFloat = 132.0
-private let walletCollectibleItemHeight: CGFloat = 58.0
 
 private struct WalletItemsLayout {
     let itemOffsets: [CGFloat]
@@ -776,7 +774,7 @@ private final class WalletScreenComponent: Component {
         private var transferMotionObserver: NSObjectProtocol?
         private var isUpdatingTransferAnimations = false
 
-        private let collectiblesSection = LazySectionView()
+        private let collectiblesSection = WalletCollectiblesGridView()
         private let emptyTransactionsInfo = ComponentView<Empty>()
         private let emptyTransactionsFooter = ComponentView<Empty>()
         private let accountProtectionIcon = renderSettingsIcon(
@@ -1416,6 +1414,19 @@ private final class WalletScreenComponent: Component {
                 .offsetBy(dx: -sectionFrame.minX, dy: -sectionFrame.minY)
         }
 
+        private func collectiblesVisibleBounds(for frame: CGRect, viewportSize: CGSize) -> CGRect {
+            return CGRect(origin: self.scrollView.contentOffset, size: viewportSize)
+                .offsetBy(dx: -frame.minX, dy: -frame.minY)
+        }
+
+        private func hideSection(_ section: WalletCollectiblesGridView, transition: ComponentTransition) {
+            transition.setAlpha(view: section, alpha: 0.0, completion: { [weak section] _ in
+                guard let section, section.alpha == 0.0 else { return }
+                section.removeFromSuperview()
+                section.clearVisibleItems()
+            })
+        }
+
         private func updateVisibleSections(transition: ComponentTransition) {
             switch self.selectedSection {
             case .transactions:
@@ -1428,7 +1439,7 @@ private final class WalletScreenComponent: Component {
             case .collectibles:
                 if self.collectiblesSection.superview != nil {
                     self.collectiblesSection.updateVisibleBounds(
-                        self.visibleBounds(for: self.collectiblesSection.frame, viewportSize: self.scrollView.bounds.size),
+                        self.collectiblesVisibleBounds(for: self.collectiblesSection.frame, viewportSize: self.scrollView.bounds.size),
                         transition: transition
                     )
                 }
@@ -3576,49 +3587,30 @@ private final class WalletScreenComponent: Component {
                 }
                 self.hideEmptyTransactionsFooter(transition: transition)
 
-                let itemContext = component.context
-                let itemTheme = environment.theme
-                let items: [LazySectionView.Item] = collectibles.map { collectible in
-                    return LazySectionView.Item(
-                        id: AnyHashable(collectible.address),
-                        height: walletCollectibleItemHeight,
-                        component: { [weak self] in
-                            return AnyComponent(ListActionItemComponent(
-                                theme: itemTheme,
-                                style: .glass,
-                                title: AnyComponent(WalletCollectibleItemComponent(
-                                    context: itemContext,
-                                    theme: itemTheme,
-                                    collectible: collectible
-                                )),
-                                contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: 0.0),
-                                separatorInset: 60.0,
-                                icon: nil,
-                                accessory: nil,
-                                action: { [weak self] _ in
-                                    self?.openCollectible(collectible)
-                                },
-                                highlighting: .default
-                            ))
-                        }
-                    )
-                }
-
                 let collectiblesOriginY = contentHeight + 12.0
                 let collectiblesFrame = CGRect(
                     origin: CGPoint(x: environment.safeInsets.left + sideInset, y: collectiblesOriginY),
                     size: CGSize(width: cardWidth, height: 0.0)
                 )
-                let collectiblesSectionSize = self.updateSection(
-                    self.collectiblesSection,
+                let wasVisible = self.collectiblesSection.superview != nil
+                let gridTransition: ComponentTransition = wasVisible ? contentLayoutTransition : .immediate
+                let collectiblesSectionSize = self.collectiblesSection.update(
+                    context: component.context,
                     theme: environment.theme,
-                    state: state,
-                    items: items,
-                    footer: nil,
-                    frame: collectiblesFrame,
-                    viewportSize: availableSize,
-                    transition: contentLayoutTransition
+                    items: collectibles,
+                    width: cardWidth,
+                    visibleBounds: self.collectiblesVisibleBounds(for: collectiblesFrame, viewportSize: availableSize),
+                    transition: gridTransition,
+                    openCollectible: { [weak self] collectible in
+                        self?.openCollectible(collectible)
+                    }
                 )
+                if !wasVisible {
+                    self.scrollView.addSubview(self.collectiblesSection)
+                }
+                contentLayoutTransition.setAlpha(view: self.collectiblesSection, alpha: 1.0)
+                gridTransition.setPosition(view: self.collectiblesSection, position: CGPoint(x: collectiblesFrame.midX, y: collectiblesFrame.minY))
+                gridTransition.setBounds(view: self.collectiblesSection, bounds: CGRect(origin: .zero, size: collectiblesSectionSize))
                 contentHeight = collectiblesOriginY + collectiblesSectionSize.height
 
                 transition.setBackgroundColor(view: self, color: environment.theme.list.blocksBackgroundColor)

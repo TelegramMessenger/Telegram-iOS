@@ -1024,6 +1024,26 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return false
     }
     
+    public var isDisplayablePass: Bool {
+        guard self.isPass else {
+            return false
+        }
+        if let size = self.size, size > 1 * 1024 * 1024 {
+            return false
+        }
+        return true
+    }
+    
+    public var isPass: Bool {
+        if self.mimeType == "application/vnd.apple.pkpass" {
+            return true
+        }
+        if let fileName = self.fileName, fileName.lowercased().hasSuffix(".pkpass") {
+            return true
+        }
+        return false
+    }
+    
     public var isVideo: Bool {
         for attribute in self.attributes {
             if case .Video = attribute {

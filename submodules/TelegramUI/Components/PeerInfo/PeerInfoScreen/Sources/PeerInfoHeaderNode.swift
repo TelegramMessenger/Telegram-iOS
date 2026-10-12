@@ -45,6 +45,21 @@ import BundleIconComponent
 import MarqueeComponent
 import EdgeEffect
 
+private let peerInfoGramCutoutImage: UIImage? = {
+    guard let base = generateTintedImage(image: UIImage(bundleImageName: "Wallet/TopGram"), color: .white),
+          let star = UIImage(bundleImageName: "Wallet/TransactionGramHighlight") else {
+        return nil
+    }
+    return generateImage(base.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        UIGraphicsPushContext(context)
+        let frame = CGRect(origin: .zero, size: size)
+        base.draw(in: frame)
+        star.draw(in: frame, blendMode: .destinationOut, alpha: 1.0)
+        UIGraphicsPopContext()
+    })?.withRenderingMode(.alwaysTemplate)
+}()
+
 final class PeerInfoHeaderNavigationTransition {
     let sourceNavigationBar: NavigationBar
     let sourceTitleView: ChatTitleView
@@ -163,6 +178,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     var musicBackground: UIView?
     var music: ComponentView<Empty>?
+    var walletBalance: ComponentView<Empty>?
+    var hasBottomStrip: Bool {
+        return self.music != nil || self.walletBalance != nil
+    }
     
     var performButtonAction: ((PeerInfoHeaderButtonKey, PeerInfoHeaderButtonNode?, ContextGesture?) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
@@ -177,6 +196,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayEmojiPackTooltip: (() -> Void)?
     
     var displaySavedMusic: (() -> Void)?
+    var openWallet: (() -> Void)?
     
     var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
     var displayStatusPremiumIntro: (() -> Void)?
@@ -595,8 +615,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 currentSavedMusic = cachedUserData.savedMusic
             }
         }
+        // Wallet amounts use 1_000_000_000 units per coin; show the strip starting at 0.1.
+        let currentWalletBalance: Int64?
+        if self.isMyProfile, !self.isSettings, peer?.id == self.context.account.peerId,
+           let balance = screenData?.walletBalance, balance >= 100_000_000 {
+            currentWalletBalance = balance
+        } else if !self.isSettings, let peer, peer.id != self.context.account.peerId,
+                  let userData = screenData?.cachedData as? CachedUserData,
+                  let balance = userData.gramBalance, balance >= 100_000_000 {
+            currentWalletBalance = balance
+        } else {
+            currentWalletBalance = nil
+        }
         let musicHeight: CGFloat = hasBackground || self.isAvatarExpanded ? 24.0 : 16.0
-        let bottomInset: CGFloat = currentSavedMusic != nil ? musicHeight : 0.0
+        let bottomInset: CGFloat = currentSavedMusic != nil || currentWalletBalance != nil ? musicHeight : 0.0
         
         let isLandscape = containerInset > 16.0
         
@@ -1457,8 +1489,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             subtitleConstrainedSize = CGSize(width: max(0.0, width - stripLeft - stripRight - textSideInset * 2.0 - subtitleRatingInset), height: .greatestFiniteMagnitude)
             expandedSubtitleConstrainedSize = CGSize(width: max(0.0, width - stripLeft - stripRight - 16.0 * 2.0 - subtitleRatingInset), height: .greatestFiniteMagnitude)
         } else {
-            subtitleConstrainedSize = titleConstrainedSize
-            expandedSubtitleConstrainedSize = titleConstrainedSize
+            subtitleConstrainedSize = CGSize(width: max(0.0, titleConstrainedSize.width - subtitleRatingInset), height: titleConstrainedSize.height)
+            expandedSubtitleConstrainedSize = subtitleConstrainedSize
         }
         let subtitleMainState = self.isSettings && self.isAvatarExpanded ? TitleNodeStateExpanded : TitleNodeStateRegular
 
@@ -1739,10 +1771,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleCollapseFraction = max(0.0, min(1.0, contentOffset / titleCollapseOffset))
             
             subtitleFrame = CGRect(origin: CGPoint(x: 16.0 + stripLeft - subtitleButtonHorizontalOffset * (1.0 - titleCollapseFraction), y: minTitleFrame.maxY + 2.0), size: subtitleSize)
-            if self.isSettings {
-                subtitleFrame.origin.x += subtitleRatingInset
-            } else if subtitleRatingSize != nil {
-                subtitleFrame.origin.x += 22.0
+            subtitleFrame.origin.x += subtitleRatingInset
+            if let ratingView = self.subtitleRating?.view as? PeerInfoRatingComponent.View {
+                subtitleFrame.origin.x -= ratingView.visibleLeftInset
             }
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0 - stripRight, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
@@ -1755,7 +1786,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleOffset = -min(titleCollapseOffset, contentOffset)
             titleCollapseFraction = max(0.0, min(1.0, contentOffset / titleCollapseOffset))
                         
-            let subtitleLeadingInset = self.isSettings ? subtitleRatingInset : 0.0
+            let subtitleLeadingInset = subtitleRatingInset
             var effectiveSubtitleWidth = subtitleLeadingInset + subtitleSize.width
             if let subtitleBadgeSize {
                 effectiveSubtitleWidth += (subtitleBadgeSize.width + 7.0) * (1.0 - titleCollapseFraction)
@@ -2615,7 +2646,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if !state.isEditing {
             if !isSettings && !isMyProfile {
                 if self.isAvatarExpanded {
-                    resolvedHeight -= 21.0
+                    resolvedHeight -= (currentSavedMusic != nil || currentWalletBalance != nil) ? 20.0 : 21.0
                 } else {
                     resolvedHeight += 79.0
                     
@@ -2625,30 +2656,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             } else {
                 if self.isAvatarExpanded {
-                    resolvedHeight -= 21.0
+                    resolvedHeight -= (currentSavedMusic != nil || currentWalletBalance != nil) ? 20.0 : 21.0
                 }
             }
         }
         
-        if let currentSavedMusic {
+        if currentSavedMusic != nil || currentWalletBalance != nil {
             var musicTransition = transition
-            var artist = presentationData.strings.MediaPlayer_UnknownArtist
-            var track: String?
-            for attribute in currentSavedMusic.attributes {
-                if case let  .Audio(_, _, title, performer, _) = attribute {
-                    artist = performer ?? artist
-                    track = title
-                    break
-                }
-            }
-            if track == nil {
-                if let fileName = currentSavedMusic.fileName {
-                    track = fileName
-                } else {
-                    track = presentationData.strings.MediaPlayer_UnknownTrack
-                }
-            }
-            
             if hasBackground || self.isAvatarExpanded {
                 if self.musicBackground == nil {
                     musicTransition = .immediate
@@ -2664,7 +2678,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     return musicBackground
                 }()
                 musicTransition.updateFrame(view: musicBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: backgroundHeight - 24.0 - buttonRightOrigin.y), size: CGSize(width: backgroundFrame.width, height: 24.0)))
-                
+
                 if let _ = self.navigationTransition {
                     transition.updateAlpha(layer: musicBackground.layer, alpha: 1.0 - transitionFraction)
                 } else {
@@ -2680,68 +2694,183 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     musicBackground.removeFromSuperview()
                 }
             }
-            
-            let music = self.music ?? {
-                let componentView = ComponentView<Empty>()
-                self.music = componentView
-                return componentView
-            }()
-            
-            let musicString = NSMutableAttributedString()
+
             let isOverlay = self.isAvatarExpanded || hasBackground
-            // iPhone Duo: the row is laid out in the band beside the side strip, so its label is centered on the
-            // avatar's and title's axis. Without a strip the band is the full width.
-            let musicBandWidth = backgroundFrame.width - stripLeft - stripRight
-            musicString.append(NSAttributedString(string: track ?? "", font: Font.semibold(12.0), textColor: isOverlay ? .white : presentationData.theme.list.itemAccentColor))
-            musicString.append(NSAttributedString(string: " - \(artist)", font: Font.regular(12.0), textColor: isOverlay ? UIColor.white.withAlphaComponent(0.7) : presentationData.theme.list.itemSecondaryTextColor))
-            
-            let musicSize = music.update(
-                transition: .immediate,
-                component: AnyComponent(
-                    PlainButtonComponent(
-                        content: AnyComponent(
-                            HStack([
-                                AnyComponentWithIdentity(
-                                    id: "icon",
-                                    component: AnyComponent(BundleIconComponent(name: "Media Editor/SmallAudio", tintColor: isOverlay ? .white : presentationData.theme.list.itemAccentColor))
-                                ),
-                                AnyComponentWithIdentity(
-                                    id: "label",
-                                    component: AnyComponent(MarqueeComponent(attributedText: musicString, maxWidth: musicBandWidth - 96.0))
-                                ),
-                                AnyComponentWithIdentity(
-                                    id: "arrow",
-                                    component: AnyComponent(BundleIconComponent(name: "Item List/InlineTextRightArrow", tintColor: isOverlay ? .white : presentationData.theme.list.itemSecondaryTextColor))
-                                )
-                            ], spacing: 4.0)
-                        ),
-                        minSize: CGSize(width: musicBandWidth, height: musicHeight),
+            let stripSecondaryColor = hasCoverColor ? navigationContentsSecondaryColor.mixedWith(.white, alpha: 0.45) : navigationContentsSecondaryColor
+            let stripWidth = max(0.0, backgroundFrame.width - stripLeft - stripRight)
+            var musicBandWidth = stripWidth
+            if let currentWalletBalance {
+                let balance = self.walletBalance ?? {
+                    let componentView = ComponentView<Empty>()
+                    self.walletBalance = componentView
+                    return componentView
+                }()
+                var formattedBalance = formatTonAmountText(currentWalletBalance, dateTimeFormat: presentationData.dateTimeFormat, maxDecimalPositions: 2)
+                let decimalSeparator = presentationData.dateTimeFormat.decimalSeparator
+                if let decimalRange = formattedBalance.range(of: decimalSeparator) {
+                    formattedBalance += String(repeating: "0", count: max(0, 2 - formattedBalance[decimalRange.upperBound...].count))
+                } else {
+                    formattedBalance += decimalSeparator + "00"
+                }
+                let primaryColor = isOverlay ? UIColor.white : presentationData.theme.list.itemAccentColor
+                let secondaryColor = stripSecondaryColor
+                let balanceTitle = presentationData.strings.Wallet_Send_Balance("").string.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Reserve room for the music control and shrink unusually long amounts/localizations to fit.
+                let maximumBalanceWidth = max(1.0, stripWidth - 32.0 - (currentSavedMusic == nil ? 0.0 : 80.0))
+                let titleWidth = (balanceTitle as NSString).size(withAttributes: [.font: Font.regular(12.0)]).width
+                let amountWidth = (formattedBalance as NSString).size(withAttributes: [.font: Font.semibold(12.0)]).width
+                let textScale = min(1.0, max(1.0, maximumBalanceWidth - 36.0) / max(1.0, titleWidth + amountWidth))
+                let amountText = tonAmountAttributedString(formattedBalance, integralFont: Font.semibold(12.0 * textScale), fractionalFont: Font.semibold(9.0 * textScale), color: primaryColor, decimalSeparator: decimalSeparator)
+                let balanceSize = balance.update(
+                    transition: .immediate,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(HStack([
+                            AnyComponentWithIdentity(
+                                id: "title",
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: balanceTitle, font: Font.regular(12.0 * textScale), textColor: secondaryColor))))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: self.isAvatarExpanded ? "iconCutout" : "iconWithStar",
+                                component: self.isAvatarExpanded ? AnyComponent(Image(
+                                    image: peerInfoGramCutoutImage,
+                                    tintColor: secondaryColor,
+                                    size: CGSize(width: 14.0, height: 14.0)
+                                )) : AnyComponent(ZStack([
+                                    AnyComponentWithIdentity(
+                                        id: "base",
+                                        component: AnyComponent(BundleIconComponent(name: "Wallet/TopGram", tintColor: secondaryColor, maxSize: CGSize(width: 14.0, height: 14.0)))
+                                    ),
+                                    AnyComponentWithIdentity(
+                                        id: "star",
+                                        component: AnyComponent(BundleIconComponent(name: "Wallet/TransactionGramHighlight", tintColor: .white, maxSize: CGSize(width: 14.0, height: 14.0)))
+                                    )
+                                ]))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: "amount",
+                                component: AnyComponent(MultilineTextComponent(text: .plain(amountText)))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: "arrow",
+                                component: AnyComponent(BundleIconComponent(name: "Item List/InlineTextRightArrow", tintColor: stripSecondaryColor))
+                            )
+                        ], spacing: 4.0)),
+                        minSize: CGSize(width: 0.0, height: musicHeight),
                         action: { [weak self] in
-                            self?.displaySavedMusic?()
+                            self?.openWallet?()
                         }
-                    )
-                ),
-                environment: {},
-                containerSize: CGSize(width: musicBandWidth, height: musicHeight)
-            )
-            let musicFrame = CGRect(origin: CGPoint(x: stripLeft, y: (apparentBackgroundHeight - backgroundHeight) + backgroundHeight - musicHeight - (hasBackground || self.isAvatarExpanded ? 0.0 : 4.0)), size: musicSize)
-            if let musicView = music.view {
-                if musicView.superview == nil {
-                    self.regularContentNode.view.addSubview(musicView)
-                    if transition.isAnimated {
-                        musicView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: maximumBalanceWidth, height: musicHeight)
+                )
+                musicBandWidth = max(0.0, stripWidth - balanceSize.width - 48.0)
+                let balanceFrame = CGRect(origin: CGPoint(
+                    x: stripLeft + (currentSavedMusic == nil ? floor((stripWidth - balanceSize.width) * 0.5) : stripWidth - 16.0 - balanceSize.width),
+                    y: apparentBackgroundHeight - musicHeight - (isOverlay ? 0.0 : 4.0)
+                ), size: balanceSize)
+                if let balanceView = balance.view {
+                    balanceView.isAccessibilityElement = true
+                    balanceView.accessibilityLabel = presentationData.strings.Wallet_Send_Balance(formattedBalance).string
+                    balanceView.accessibilityTraits = .button
+                    if balanceView.superview == nil {
+                        // A newly loaded strip item fades in at its final position.
+                        ContainedViewLayoutTransition.immediate.updateFrame(view: balanceView, frame: balanceFrame)
+                        self.regularContentNode.view.addSubview(balanceView)
+                        if transition.isAnimated {
+                            balanceView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        }
+                    } else if additive {
+                        musicTransition.updateFrameAdditiveToCenter(view: balanceView, frame: balanceFrame)
+                    } else {
+                        musicTransition.updateFrame(view: balanceView, frame: balanceFrame)
+                    }
+                    if self.navigationTransition != nil {
+                        transition.updateAlpha(layer: balanceView.layer, alpha: 1.0 - transitionFraction)
+                    } else {
+                        ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(layer: balanceView.layer, alpha: backgroundBannerAlpha)
                     }
                 }
-                if additive {
-                    musicTransition.updateFrameAdditiveToCenter(view: musicView, frame: musicFrame)
-                } else {
-                    musicTransition.updateFrame(view: musicView, frame: musicFrame)
+            }
+            if let currentSavedMusic {
+                var artist = presentationData.strings.MediaPlayer_UnknownArtist
+                var track: String?
+                for attribute in currentSavedMusic.attributes {
+                    if case let  .Audio(_, _, title, performer, _) = attribute {
+                        artist = performer ?? artist
+                        track = title
+                        break
+                    }
                 }
-                
-                if let _ = self.navigationTransition {
-                    transition.updateAlpha(layer: musicView.layer, alpha: 1.0 - transitionFraction)
-                } else {
-                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(layer: musicView.layer, alpha: backgroundBannerAlpha)
+                if track == nil {
+                    if let fileName = currentSavedMusic.fileName {
+                        track = fileName
+                    } else {
+                        track = presentationData.strings.MediaPlayer_UnknownTrack
+                    }
+                }
+
+                let music = self.music ?? {
+                    let componentView = ComponentView<Empty>()
+                    self.music = componentView
+                    return componentView
+                }()
+
+                let musicString = NSMutableAttributedString()
+                // Keep music inside the profile band, including when a side strip is visible.
+                musicString.append(NSAttributedString(string: track ?? "", font: Font.semibold(12.0), textColor: isOverlay ? .white : presentationData.theme.list.itemAccentColor))
+                let artistSeparatorIndex = musicString.length
+                musicString.append(NSAttributedString(string: " \(artist)", font: Font.regular(12.0), textColor: stripSecondaryColor))
+                musicString.addAttribute(.kern, value: CGFloat(2.0), range: NSRange(location: artistSeparatorIndex, length: 1))
+
+                let musicSize = music.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        PlainButtonComponent(
+                            content: AnyComponent(
+                                HStack([
+                                    AnyComponentWithIdentity(
+                                        id: "icon",
+                                        component: AnyComponent(BundleIconComponent(name: "Media Editor/SmallAudio", tintColor: isOverlay ? .white : presentationData.theme.list.itemAccentColor))
+                                    ),
+                                    AnyComponentWithIdentity(
+                                        id: "label",
+                                        component: AnyComponent(MarqueeComponent(attributedText: musicString, maxWidth: max(1.0, musicBandWidth - (currentWalletBalance == nil ? 96.0 : 32.0))))
+                                    ),
+                                    AnyComponentWithIdentity(
+                                        id: "arrow",
+                                        component: AnyComponent(BundleIconComponent(name: "Item List/InlineTextRightArrow", tintColor: stripSecondaryColor))
+                                    )
+                                ], spacing: 4.0)
+                            ),
+                            minSize: CGSize(width: currentWalletBalance == nil ? musicBandWidth : 0.0, height: musicHeight),
+                            action: { [weak self] in
+                                self?.displaySavedMusic?()
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: musicBandWidth, height: musicHeight)
+                )
+                let musicFrame = CGRect(origin: CGPoint(x: stripLeft + (currentWalletBalance == nil ? 0.0 : 16.0), y: (apparentBackgroundHeight - backgroundHeight) + backgroundHeight - musicHeight - (hasBackground || self.isAvatarExpanded ? 0.0 : 4.0) + 1.0 - UIScreenPixel), size: musicSize)
+                if let musicView = music.view {
+                    if musicView.superview == nil {
+                        // A newly loaded strip item fades in at its final position.
+                        ContainedViewLayoutTransition.immediate.updateFrame(view: musicView, frame: musicFrame)
+                        self.regularContentNode.view.addSubview(musicView)
+                        if transition.isAnimated {
+                            musicView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        }
+                    } else if additive {
+                        musicTransition.updateFrameAdditiveToCenter(view: musicView, frame: musicFrame)
+                    } else {
+                        musicTransition.updateFrame(view: musicView, frame: musicFrame)
+                    }
+
+                    if let _ = self.navigationTransition {
+                        transition.updateAlpha(layer: musicView.layer, alpha: 1.0 - transitionFraction)
+                    } else {
+                        ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(layer: musicView.layer, alpha: backgroundBannerAlpha)
+                    }
                 }
             }
         } else {
@@ -2755,8 +2884,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     musicBackground.removeFromSuperview()
                 }
             }
+        }
+        if currentSavedMusic == nil {
             if let music = self.music {
                 self.music = nil
+                music.view?.isUserInteractionEnabled = false
                 if transition.isAnimated {
                     music.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                         music.view?.removeFromSuperview()
@@ -2766,7 +2898,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             }
         }
-        
+        if currentWalletBalance == nil, let balance = self.walletBalance {
+            self.walletBalance = nil
+            balance.view?.isUserInteractionEnabled = false
+            if transition.isAnimated {
+                balance.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    balance.view?.removeFromSuperview()
+                })
+            } else {
+                balance.view?.removeFromSuperview()
+            }
+        }
+
         if isFirstTime {
             self.updateAvatarMask(transition: .immediate)
         }
@@ -2784,8 +2927,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         var result = super.point(inside: point, with: event)
-        if let musicView = self.music?.view, musicView.frame.contains(point) {
-            result = true
+        for stripView in [self.music?.view, self.walletBalance?.view].compactMap({ $0 }) {
+            if stripView.alpha > 0.0, stripView.bounds.contains(self.view.convert(point, to: stripView)) {
+                result = true
+            }
         }
         return result
     }
@@ -2873,6 +3018,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             return giftsCoverView
         }
         
+        if let balanceView = self.walletBalance?.view, let result = balanceView.hitTest(self.view.convert(point, to: balanceView), with: event) {
+            return result
+        }
+
         if let musicView = self.music?.view, let result = musicView.hitTest(self.view.convert(point, to: musicView), with: event) {
             return result
         }

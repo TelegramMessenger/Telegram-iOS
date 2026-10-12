@@ -9686,6 +9686,10 @@ Sorry for the inconvenience.";
 "Story.Editor.Next" = "Next";
 "Story.Editor.Done" = "Done";
 
+"Story.Editor.MediaUnavailable" = "This media isn't stored on your device and couldn't be downloaded from iCloud. Check your connection and try again.";
+"Story.Editor.MediaUnavailableSomeSkipped" = "Some media isn't stored on your device and couldn't be downloaded from iCloud. Only the available items will be posted.";
+"Story.Editor.DownloadingMedia" = "Downloading from iCloud...";
+
 "Story.Editor.DraftDiscardMedia" = "Discard Media?";
 "Story.Editor.DraftDiscardDraft" = "Discard Draft?";
 "Story.Editor.DraftKeepMedia" = "Save Draft";
@@ -16850,6 +16854,8 @@ Error: %8$@";
 "Wallet.Recipient.NoResultsText" = "There were no results for “%@”.\nTry another name or address.";
 "Wallet.Recipient.InvalidAddressText" = "This wallet address is invalid.\nCheck it or try another address.";
 "Wallet.Receive.ShowQR" = "Show my QR";
+"Wallet.Receive.PeerShowQR" = "Show QR";
+"Wallet.Receive.PeerText" = "Send GRAM to this address\nor scan this QR code.";
 "Wallet.Receive.CopyAddress" = "Copy my address";
 "Wallet.Receive.Text" = "Share your address or this\nQR code to receive GRAM.";
 "Wallet.Receive.Buy" = "Buy with cash or crypto";

@@ -665,12 +665,16 @@ actor WalletEngineRuntime {
         }
     }
 
+    func walletBalance(address: String) async throws -> Int64 {
+        try await self.statuslessHost.walletBalance(address: address)
+    }
+
     func refreshArchivedWalletBalances(_ wallets: [WalletContext.PreviousWallet]) async throws -> [WalletContext.PreviousWallet] {
         var balances: [String: Int64] = [:]
         for address in Set(wallets.map(\.address)) {
             try Task.checkCancellation()
             do {
-                balances[address] = try await self.statuslessHost.walletBalance(address: address)
+                balances[address] = try await self.walletBalance(address: address)
             } catch {
                 try Task.checkCancellation()
                 self.logger.error("wallet_archived_balance_refresh_failed", error)

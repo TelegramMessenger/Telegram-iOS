@@ -302,8 +302,7 @@ public func clearStoryDrafts(engine: TelegramEngine) {
 }
 
 public func deleteAllStoryDrafts(peerId: EnginePeer.Id) {
-    let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(peerId.toInt64())/"
-    try? FileManager.default.removeItem(atPath: path)
+    try? FileManager.default.removeItem(atPath: storyDraftDirectory(peerId: peerId))
 }
 
 public func storyDrafts(engine: TelegramEngine) -> Signal<[MediaEditorDraft], NoError> {
@@ -366,6 +365,34 @@ public extension MediaEditorDraft {
     }
 }
 
+public func storyDraftDirectory(peerId: EnginePeer.Id) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(peerId.toInt64())"
+}
+
 func fullDraftPath(peerId: EnginePeer.Id, path: String) -> String {
-    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(peerId.toInt64())/" + path
+    return storyDraftDirectory(peerId: peerId) + "/" + path
+}
+
+/// Creates the story-draft directory and keeps it out of iCloud and iTunes backups.
+///
+/// A draft holds a full-resolution copy of media the user already has in their photo library, so
+/// backing the directory up inflates every backup by the size of everything they have ever started
+/// editing — for media that is regenerable and that a restored device cannot use anyway, since a
+/// draft refers to library assets by local path. Saving a draft always goes through here, so
+/// installations that predate the flag pick it up on their next save rather than needing a
+/// migration.
+@discardableResult
+public func ensureStoryDraftDirectory(peerId: EnginePeer.Id) -> String {
+    let path = storyDraftDirectory(peerId: peerId)
+    try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+    excludeFromBackup(path: path)
+    return path
+}
+
+/// Marks `path` as regenerable local data that must not be copied into the user's backup.
+public func excludeFromBackup(path: String) {
+    var url = URL(fileURLWithPath: path)
+    var resourceValues = URLResourceValues()
+    resourceValues.isExcludedFromBackup = true
+    try? url.setResourceValues(resourceValues)
 }

@@ -275,7 +275,7 @@ public func chatMessageGalleryControllerData(
             return nil
         } else if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice || file.isInstantVideo {
             return .audio(file)
-        } else if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "application/vnd.apple.pkpass" || (file.fileName != nil && file.fileName!.lowercased().hasSuffix(".pkpass")) {
+        } else if let file = galleryMedia as? TelegramMediaFile, file.isPass {
             return .pass(file)
         } else {
             if let file = galleryMedia as? TelegramMediaFile {

@@ -4182,6 +4182,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return WalletReceiveScreen(context: context, address: address)
     }
 
+    public func makeWalletReceiveScreen(context: AccountContext, address: String, isOwnWallet: Bool) -> ViewController {
+        return WalletReceiveScreen(context: context, address: address, isOwnWallet: isOwnWallet)
+    }
+
     public func makeWalletReceiveScreen(context: AccountContext, address: String, appeared: @escaping () -> Void) -> ViewController {
         return WalletReceiveScreen(context: context, address: address, appeared: appeared)
     }

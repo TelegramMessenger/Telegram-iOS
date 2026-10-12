@@ -487,6 +487,9 @@ extension HarnessSharedAccountContext {
     public func makeWalletReceiveScreen(context: AccountContext, address: String) -> ViewController {
         fatalError("harness: SharedAccountContext.makeWalletReceiveScreen is not provided")
     }
+    public func makeWalletReceiveScreen(context: AccountContext, address: String, isOwnWallet: Bool) -> ViewController {
+        fatalError("harness: SharedAccountContext.makeWalletReceiveScreen is not provided")
+    }
     public func makeWalletReceiveScreen(context: AccountContext, address: String, appeared: @escaping () -> Void) -> ViewController {
         fatalError("harness: SharedAccountContext.makeWalletReceiveScreen is not provided")
     }

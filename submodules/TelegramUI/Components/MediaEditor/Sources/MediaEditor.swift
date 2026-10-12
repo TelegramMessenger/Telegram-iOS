@@ -12,6 +12,7 @@ import FastBlur
 import AccountContext
 import ImageTransparency
 import ImageObjectSeparation
+import MediaAssetsContext
 
 public struct MediaEditorPlayerState: Equatable {
     public struct Track: Equatable {
@@ -88,6 +89,16 @@ public struct MediaEditorPlayerState: Equatable {
         }
         return true
     }
+}
+
+/// How far along reading a `MediaEditor` subject's media is.
+public enum MediaEditorSourceLoadState: Equatable {
+    /// Fetching; the fraction is nil until the photo library reports one.
+    case loading(Float?)
+    case ready
+    /// The media could not be produced — typically an iCloud asset that is not on the device and
+    /// could not be downloaded. Nothing further will arrive.
+    case unavailable
 }
 
 public final class MediaEditor {
@@ -193,6 +204,18 @@ public final class MediaEditor {
     private let context: AccountContext
     private let mode: Mode
     private let subject: Subject
+    
+    private let sourceLoadStateValue = ValuePromise<MediaEditorSourceLoadState>(.ready, ignoreRepeated: true)
+    /// Progress of reading the subject's media, which for a photo-library asset may include an
+    /// iCloud download. `.unavailable` is terminal — nothing further arrives, so the host must
+    /// surface it rather than leave the user on an empty canvas.
+    public var sourceLoadState: Signal<MediaEditorSourceLoadState, NoError> {
+        return self.sourceLoadStateValue.get()
+    }
+    
+    private func updateSourceLoadState(_ state: MediaEditorSourceLoadState) {
+        self.sourceLoadStateValue.set(state)
+    }
     
     private let clock = CMClockGetHostTimeClock()
         
@@ -653,7 +676,7 @@ public final class MediaEditor {
         
         let context = self.context
         if let device = renderTarget.mtlDevice, CVMetalTextureCacheCreate(nil, nil, device, nil, &self.textureCache) != kCVReturnSuccess {
-            print("error")
+            Logger.shared.log("MediaEditor", "Failed to create the Metal texture cache")
         }
             
         struct TextureSourceResult {
@@ -729,66 +752,67 @@ public final class MediaEditor {
             }
         }
         
+        // Both halves of a PHAsset load — the thumbnail and, for a video, the AVAsset — may have to
+        // come down from iCloud when the local copy has been evicted. Each reports progress through
+        // `sourceLoadState`, and an asset that cannot be produced ends in `.unavailable` instead of
+        // leaving the editor on an empty canvas with nothing ever arriving.
         func textureSourceResult(for asset: PHAsset, rect: CGRect? = nil, scale: CGFloat = 1.0, offset: CGPoint = .zero) -> Signal<TextureSourceResult, NoError> {
-            return Signal { [weak self] subscriber in
-                let isVideo = asset.mediaType == .video
-                                
-                let targetSize = isVideo ? CGSize(width: 128.0, height: 128.0) : CGSize(width: 1920.0, height: 1920.0)
-                let options = PHImageRequestOptions()
-                let deliveryMode: PHImageRequestOptionsDeliveryMode = .highQualityFormat
-                options.deliveryMode = deliveryMode
-                options.isNetworkAccessAllowed = true
-             
-                let requestId = PHImageManager.default().requestImage(
-                    for: asset,
-                    targetSize: targetSize,
-                    contentMode: .aspectFit,
-                    options: options,
-                    resultHandler: { [weak self] image, info in
-                        if let image {
-                            var degraded = false
-                            if let info {
-                                if let cancelled = info[PHImageCancelledKey] as? Bool, cancelled {
-                                    return
-                                }
-                                if let degradedValue = info[PHImageResultIsDegradedKey] as? Bool, degradedValue {
-                                    degraded = true
-                                }
-                            }
-                            if isVideo {
-                                PHImageManager.default().requestAVAsset(forVideo: asset, options: nil, resultHandler: { asset, _, _ in
-                                    if let asset, let player = self?.makePlayer(asset: asset) {
-                                        subscriber.putNext(
-                                            TextureSourceResult(
-                                                player: player,
-                                                rect: rect,
-                                                scale: scale,
-                                                offset: offset,
-                                                gradientColors: mediaEditorGetGradientColors(from: image)
-                                            )
-                                        )
-                                        subscriber.putCompletion()
-                                    }
-                                })
-                            } else {
-                                if !degraded {
-                                    subscriber.putNext(
-                                        TextureSourceResult(
-                                            image: image,
-                                            rect: rect,
-                                            scale: scale,
-                                            offset: offset,
-                                            gradientColors: mediaEditorGetGradientColors(from: image)
-                                        )
-                                    )
-                                    subscriber.putCompletion()
-                                }
-                            }
+            self.updateSourceLoadState(.loading(nil))
+            
+            let isVideo = asset.mediaType == .video
+            let targetSize = isVideo ? CGSize(width: 128.0, height: 128.0) : CGSize(width: 1920.0, height: 1920.0)
+            
+            return assetFullImage(asset, targetSize: targetSize, contentMode: .aspectFit)
+            |> mapToSignal { [weak self] imageResult -> Signal<TextureSourceResult, NoError> in
+                guard let self else {
+                    return .complete()
+                }
+                switch imageResult {
+                case let .progress(progress):
+                    self.updateSourceLoadState(.loading(progress))
+                    return .complete()
+                case .unavailable:
+                    self.updateSourceLoadState(.unavailable)
+                    return .complete()
+                case let .result(image):
+                    let gradientColors = mediaEditorGetGradientColors(from: image)
+                    guard isVideo else {
+                        self.updateSourceLoadState(.ready)
+                        return .single(
+                            TextureSourceResult(
+                                image: image,
+                                rect: rect,
+                                scale: scale,
+                                offset: offset,
+                                gradientColors: gradientColors
+                            )
+                        )
+                    }
+                    return assetVideoAsset(asset)
+                    |> mapToSignal { [weak self] videoResult -> Signal<TextureSourceResult, NoError> in
+                        guard let self else {
+                            return .complete()
+                        }
+                        switch videoResult {
+                        case let .progress(progress):
+                            self.updateSourceLoadState(.loading(progress))
+                            return .complete()
+                        case .unavailable:
+                            self.updateSourceLoadState(.unavailable)
+                            return .complete()
+                        case let .result(avAsset):
+                            self.updateSourceLoadState(.ready)
+                            return .single(
+                                TextureSourceResult(
+                                    player: self.makePlayer(asset: avAsset),
+                                    rect: rect,
+                                    scale: scale,
+                                    offset: offset,
+                                    gradientColors: gradientColors
+                                )
+                            )
                         }
                     }
-                )
-                return ActionDisposable {
-                    PHImageManager.default().cancelImageRequest(requestId)
                 }
             }
         }
@@ -2373,14 +2397,14 @@ public final class MediaEditor {
                 do {
                     try handler.perform([personRequest])
                 } catch {
-                    print(error)
+                    Logger.shared.log("MediaEditor", "Person segmentation request failed: \(error)")
                 }
             }
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {
                 try handler.perform([faceRequest])
             } catch {
-                print(error)
+                Logger.shared.log("MediaEditor", "Face detection request failed: \(error)")
             }
         }
     }

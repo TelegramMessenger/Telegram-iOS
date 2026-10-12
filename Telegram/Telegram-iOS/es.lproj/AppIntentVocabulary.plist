@@ -12,6 +12,38 @@
 				<string>Envía un mensaje de Telegram a Alicia diciéndole que estarás allí en 15 minutos</string>
 			</array>
 		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INStartAudioCallIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Llama a Alicia por Telegram</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSearchForMessagesIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Lee mis mensajes no leídos en Telegram</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSetMessageAttributeIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Marca mis mensajes de Telegram como leídos</string>
+			</array>
+		</dict>
+		<dict>
+			<key>IntentName</key>
+			<string>INSearchCallHistoryIntent</string>
+			<key>IntentExamples</key>
+			<array>
+				<string>Muestra mis llamadas perdidas en Telegram</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

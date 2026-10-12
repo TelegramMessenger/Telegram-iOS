@@ -616,6 +616,13 @@ public class GlassBackgroundView: UIView {
             glassHighlightRecognizer.isEnabled = isInteractive
         }
         
+        // UIKit can sample backdrop luminance synchronously while changing
+        // appearance or effect. Install the new limits before either update.
+        if let nativeParamsView = self.nativeParamsView {
+            nativeParamsView.lumaMin = isDark ? 0.0 : 0.8
+            nativeParamsView.lumaMax = isDark ? 0.15 : 0.801
+        }
+
         if let nativeView = self.nativeView, let nativeViewClippingContext = self.nativeViewClippingContext, (nativeView.bounds.size != size || nativeViewClippingContext.shape != shape || (nativeView.overrideUserInterfaceStyle == .dark) != isDark) {
             nativeViewClippingContext.update(shape: shape, size: size, transition: transition)
             if transition.animation.isImmediate {
@@ -744,7 +751,7 @@ public class GlassBackgroundView: UIView {
                 #endif
                 transition.setAlpha(view: foregroundView, alpha: isVisible ? 1.0 : 0.0)
             } else {
-                if let nativeParamsView = self.nativeParamsView, let nativeView = self.nativeView {
+                if let nativeView = self.nativeView {
                     if #available(iOS 26.0, *) {
                         var glassEffect: UIGlassEffect?
                         
@@ -811,14 +818,6 @@ public class GlassBackgroundView: UIView {
                                     }
                                 }
                             }
-                        }
-                        
-                        if isDark {
-                            nativeParamsView.lumaMin = 0.0
-                            nativeParamsView.lumaMax = 0.15
-                        } else {
-                            nativeParamsView.lumaMin = 0.8
-                            nativeParamsView.lumaMax = 0.801
                         }
                     }
                 }
@@ -953,15 +952,9 @@ public final class GlassBackgroundContainerView: UIView {
     
     public func update(size: CGSize, isDark: Bool, transition: ComponentTransition) {
         if let nativeParamsView = self.nativeParamsView, let nativeView = self.nativeView {
+            nativeParamsView.lumaMin = isDark ? 0.0 : 0.8
+            nativeParamsView.lumaMax = isDark ? 0.15 : 0.801
             nativeView.overrideUserInterfaceStyle = isDark ? .dark : .light
-            
-            if isDark {
-                nativeParamsView.lumaMin = 0.0
-                nativeParamsView.lumaMax = 0.15
-            } else {
-                nativeParamsView.lumaMin = 0.8
-                nativeParamsView.lumaMax = 0.801
-            }
             if let nativeParamsView = self.nativeParamsView {
                 transition.setFrame(view: nativeParamsView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
             }

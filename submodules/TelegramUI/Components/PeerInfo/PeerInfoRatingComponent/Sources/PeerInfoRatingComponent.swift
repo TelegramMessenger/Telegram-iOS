@@ -5,6 +5,28 @@ import ComponentFlow
 import MultilineTextComponent
 import Svg
 
+// The SVG badges have transparent margins inside their 26 pt image canvas.
+private func ratingImageLeftInset(_ image: UIImage?) -> CGFloat? {
+    guard let image, let cgImage = image.cgImage else { return nil }
+    let width = cgImage.width
+    let height = cgImage.height
+    var pixels = [UInt8](repeating: 0, count: width * height * 4)
+    return pixels.withUnsafeMutableBytes { buffer -> CGFloat? in
+        guard let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue) else {
+            return nil
+        }
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        for x in 0 ..< width {
+            for y in 0 ..< height {
+                if buffer[(y * width + x) * 4 + 3] > 0 {
+                    return CGFloat(x) / image.scale
+                }
+            }
+        }
+        return nil
+    }
+}
+
 private func generateNumberOffsets() -> [CGPoint] {
     return [
         CGPoint(x: 0.25, y: -0.33),
@@ -165,6 +187,7 @@ public final class PeerInfoRatingComponent: Component {
     }
     
     public final class View: UIView {
+        public private(set) var visibleLeftInset: CGFloat = 0.0
         private let borderLayer: SimpleLayer
         private let backgroundLayer: SimpleLayer
         
@@ -424,6 +447,9 @@ public final class PeerInfoRatingComponent: Component {
                         context.restoreGState()
                     }
                 })
+                let imageLeftInset = [ratingImageLeftInset(backgroundImage), ratingImageLeftInset(borderImage)].compactMap { $0 }.min() ?? 0.0
+                self.visibleLeftInset = floorToScreenPixels((size.width - iconSize.width) * 0.5) + imageLeftInset
+
                 if let previousContents = self.backgroundLayer.contents, CFGetTypeID(previousContents as CFTypeRef) == CGImage.typeID {
                     self.backgroundLayer.contents = backgroundImage!.cgImage
                     alphaTransition.animateContentsImage(layer: self.backgroundLayer, from: previousContents as! CGImage, to: backgroundImage!.cgImage!, duration: 0.2, curve: .easeInOut)

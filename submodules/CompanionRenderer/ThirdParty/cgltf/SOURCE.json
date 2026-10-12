@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/jkuhlmann/cgltf",
+  "revision": "85cd62382dfea638278962690cf515023f33ed00",
+  "files": {
+    "cgltf.h": "efb169dee911696b5d35fc8e3f7ea0c56d679debc529eba9ca6aa6443ba9d5e9",
+    "LICENSE": "f619925f80ef862497aaf8e8155ef218fa6a2190055129523ca3df9119a9ba95"
+  }
+}

@@ -113,6 +113,14 @@ extension MediaEditorScreenImpl {
         }
     }
 
+    /// Shown when media the editor needs cannot be produced — in practice an iCloud asset that is
+    /// not on the device and could not be downloaded. Saying so is the point: the alternative is a
+    /// spinner that never ends or a story that posts blank.
+    func presentMediaUnavailableAlert(someSkipped: Bool = false, completion: @escaping () -> Void = {}) {
+        let strings = self.context.sharedContext.currentPresentationData.with { $0 }.strings
+        self.presentCollageAlert(text: someSkipped ? strings.Story_Editor_MediaUnavailableSomeSkipped : strings.Story_Editor_MediaUnavailable, completion: completion)
+    }
+    
     func presentCollageAlert(text: String, completion: @escaping () -> Void = {}) {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
         Queue.mainQueue().justDispatch { [weak self] in

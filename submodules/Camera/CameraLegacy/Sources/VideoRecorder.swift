@@ -173,20 +173,15 @@ private final class VideoRecorderImpl {
                     return
                 }
                 if self.videoInput != nil && (self.audioInput != nil || !self.configuration.hasAudio) {
-                    let start = CACurrentMediaTime()
                     if !self.assetWriter.startWriting() {
                         if let error = self.assetWriter.error {
                             self.transitionToFailedStatus(error: .avError(error))
                         }
-
-                    } else {
                     }
-                    print("started In \(CACurrentMediaTime() - start)")
                     return
                 }
                 return
             } else if self.assetWriter.status == .writing && !self.startedSession {
-                print("Started session at \(presentationTime)")
                 self.assetWriter.startSession(atSourceTime: presentationTime)
                 self.recordingStartSampleTime = presentationTime
                 self.lastVideoSampleTime = presentationTime

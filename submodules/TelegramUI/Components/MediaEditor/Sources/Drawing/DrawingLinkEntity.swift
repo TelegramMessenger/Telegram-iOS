@@ -178,7 +178,7 @@ public final class DrawingLinkEntity: DrawingEntity, Codable {
             let imagePath = "\(self.uuid)_white.png"
             let fullImagePath = fullEntityMediaPath(imagePath)
             if let imageData = image.pngData() {
-                try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+                ensureEntitiesDirectory()
                 try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
                 try container.encodeIfPresent(imagePath, forKey: .whiteImage)
             }
@@ -188,7 +188,7 @@ public final class DrawingLinkEntity: DrawingEntity, Codable {
             let imagePath = "\(self.uuid)black.png"
             let fullImagePath = fullEntityMediaPath(imagePath)
             if let imageData = image.pngData() {
-                try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+                ensureEntitiesDirectory()
                 try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
                 try container.encodeIfPresent(imagePath, forKey: .blackImage)
             }

@@ -1,4 +1,5 @@
 import Foundation
+import TelegramCore
 import QuartzCore
 import Metal
 import simd
@@ -116,7 +117,7 @@ class DefaultRenderPass: RenderPass {
         do {
             self.pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
         } catch {
-            print(error.localizedDescription)
+            Logger.shared.log("MediaEditor", "RenderPass: failed to create pipeline state for \(self.fragmentShaderFunctionName): \(error.localizedDescription)")
         }
     }
     

@@ -30,6 +30,7 @@ import AccountUtils
 import CoreSpotlight
 import TelegramAudio
 import DebugSettingsUI
+import CrashReporting
 import BackgroundTasks
 import UIKitRuntimeUtils
 import StoreKit
@@ -246,6 +247,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private var dataImportSplash: LegacyDataImportSplash?
     private var memoryUsageOverlayView: UILabel?
     
+    private let crashReportPromptDisposable = MetaDisposable()
     private var buildConfig: BuildConfig?
     let episodeId = arc4random()
     
@@ -349,6 +351,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
+        CrashReportCollector.shared.start()
         
         let _ = voipTokenPromise.get().start(next: { token in
             self.voipDeviceToken.set(.single(token))
@@ -1379,6 +1382,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 contextValue.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
                 contextValue.context.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
             }
+            self.crashReportPromptDisposable.set(nil)
             self.contextValue = context
             if let context = context {
                 setupLegacyComponents(context: context.context)
@@ -1414,6 +1418,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
                     
                     self.resetIntentsIfNeeded(context: context.context)
+                    self.crashReportPromptDisposable.set(setupCrashReportPrompt(context: context.context, isInternalBuild: buildConfig.isInternalBuild, navigationController: context.rootController, present: { [weak appDelegate = self, weak applicationContext = context] controller in
+                        guard let appDelegate, let applicationContext, appDelegate.contextValue === applicationContext else { return }
+                        appDelegate.mainWindow.present(controller, on: .root)
+                    }))
                 }))
             } else {
                 self.mainWindow.viewController = nil

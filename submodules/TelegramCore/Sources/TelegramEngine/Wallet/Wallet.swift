@@ -524,7 +524,10 @@ func _internal_getWalletUserAddresses(
                     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                     if let cacheId {
                         if let entry = CodableEntry(CachedWalletUserAddresses(addresses: addresses, timestamp: timestamp)) {
-                            transaction.putItemCacheEntry(id: cacheId, entry: entry)
+                            if addresses.isEmpty && !force {   
+                            } else {
+                                transaction.putItemCacheEntry(id: cacheId, entry: entry)
+                            }
                         }
                     }
                     for address in addresses {

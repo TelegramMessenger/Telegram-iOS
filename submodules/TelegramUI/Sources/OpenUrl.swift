@@ -15,6 +15,7 @@ import OverlayStatusController
 import PresentationDataUtils
 import UrlWhitelist
 import OpenUserGeneratedUrl
+import DebugCompanionScreen
 
 public struct ParsedSecureIdUrl {
     public let peerId: EnginePeer.Id
@@ -391,6 +392,17 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
         return
     }
     
+    if canonicalUrl.scheme?.lowercased() == "tg", canonicalUrl.host?.lowercased() == "companion" {
+        dismissInput()
+        let controller = DebugCompanionScreen(context: context, standalone: navigationController == nil)
+        if let navigationController {
+            navigationController.pushViewController(controller)
+        } else {
+            context.sharedContext.presentGlobalController(controller, nil)
+        }
+        return
+    }
+
     if canonicalUrl.scheme == "mailto" {
         context.sharedContext.applicationBindings.openUrl(url)
         return
@@ -441,6 +453,10 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
         if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
             var convertedUrl: String?
             let host = parsedUrl.host?.lowercased() ?? ""
+            if host == "debug", parsedUrl.path == "/crash_reports" {
+                handleResolvedUrl(.settings(.path("debug/crash_reports")))
+                return
+            }
             if host == "sendgrams" {
                 guard parsedUrl.path.isEmpty || parsedUrl.path == "/",
                       let components = URLComponents(url: parsedUrl, resolvingAgainstBaseURL: false) else {
