@@ -97,6 +97,17 @@ final class DocumentFragmentDetailsCoverageTests: XCTestCase {
                        ["details \"Tit\" [\"p \\\"body\\\"\"]"])
     }
 
+    /// One level down: a body line that is itself a container of empty lines (a quote of two empty
+    /// paragraphs) is its own `"\n"`-joined line, which read as text and pasted a space.
+    func test_aDetailsWhoseBodyIsAQuoteOfEmptyLines_pastedIntoATitle_addsNoSpaces() {
+        let document = Document(blocks: [details("d", "Tit", [para("body")])])
+        let start = position(document, .detailsTitle(BlockID("d")), 0)
+        let quote = Block.blockQuote(BlockQuote(id: .generate(), children: [para(""), para("")], collapsed: false))
+        let fragment = Document(blocks: [details("f", "T", [quote])])
+        XCTAssertEqual(describe(document.replacingRange(globalFrom: start, globalTo: start + 1, with: fragment).document),
+                       ["details \"Tit\" [\"p \\\"body\\\"\"]"])
+    }
+
     // MARK: - Controls
 
     /// A range entering the title still copies a details, with the empty body line it needs to be
