@@ -1145,10 +1145,23 @@ extension Document {
                 guard !quote.children.isEmpty, lo >= childrenStart, hi <= childrenStart + childrenSize else {
                     return nil
                 }
+                // **A quote pasted into a quote brings its children, not a second quote.** A part of a
+                // quote copies AS a quote (`extractFragment`, the code block's precedent), and the code
+                // block's other half is that a code fragment pasted into code lands as its text; landed
+                // as a block here, a word copied inside a quote and pasted back into it nested a quote
+                // (`[quote [p "Second paragraph."] [quote [p "Second"]]]`), and the AI edit of a word
+                // in a quote, handed back unchanged, split the child around a nested quote. One level
+                // per quote: a copy from deeper keeps the levels this quote does not account for. A
+                // quote carrying AUTHOR text keeps its own level — its children alone would drop it.
+                var inserted = fragment
+                if fragment.blocks.count == 1, case .blockQuote(let wrapped) = fragment.blocks[0],
+                   !wrapped.collapsed, wrapped.author.allSatisfy({ $0.text.isEmpty }) {
+                    inserted = Document(schemaVersion: fragment.schemaVersion, blocks: wrapped.children)
+                }
                 // A quote's children never end the copied document: its author line follows them.
                 let inner = children.replacingRangeReportingInsertion(globalFrom: lo - childrenStart,
                                                                       globalTo: hi - childrenStart,
-                                                                      with: fragment,
+                                                                      with: inserted,
                                                                       endsTheCopiedDocument: false,
                                                                       nested: true)
                 var newBlocks = blocks

@@ -67,6 +67,56 @@ final class DocumentContainerReplaceTests: XCTestCase {
         XCTAssertEqual(childTexts(deleted.blocks[1]), ["aef"], "a delete inside a quote keeps one quote")
     }
 
+    // MARK: - A copy made inside a quote, pasted back inside a quote
+
+    /// A part of a quote copies AS a quote (`extractFragment`, after the code and pull-quote
+    /// precedent), so pasted into a quote it lands inside the quote's children, not as a second quote
+    /// nested in the first.
+    func test_aCopyMadeInsideAQuote_pastedIntoTheQuote_doesNotNestAQuote() {
+        let d = Document(blocks: [para("First paragraph."), quote(para("Second paragraph."))])
+        let start = childTextStart(d, child: 0)
+        let copy = d.extractFragment(globalFrom: start, globalTo: start + 6)   // "Second"
+        guard case .blockQuote? = copy.blocks.first else { return XCTFail("precondition: the copy is a quote") }
+        let end = start + 17
+        let (out, caret) = d.replacingRange(globalFrom: end, globalTo: end, with: copy)
+        XCTAssertEqual(out.blocks.count, 2)
+        guard case let .blockQuote(q) = out.blocks[1] else { return XCTFail("the quote is gone") }
+        XCTAssertFalse(q.children.contains { if case .blockQuote = $0 { return true } else { return false } },
+                       "the paste nested a quote: \(q.children)")
+        XCTAssertEqual(childTexts(out.blocks[1]), ["Second paragraph.Second"])
+        XCTAssertEqual(caret, end + 6)
+    }
+
+    /// The AI edit of a word inside a quote, answered with what it was given.
+    func test_aWordInsideAQuote_replacedWithItsOwnCopy_changesNothing() {
+        let d = Document(blocks: [para("First paragraph."), quote(para("Second paragraph."))])
+        let start = childTextStart(d, child: 0)
+        let copy = d.extractFragment(globalFrom: start, globalTo: start + 6)
+        let (out, _) = d.replacingRange(globalFrom: start, globalTo: start + 6, with: copy)
+        XCTAssertEqual(childTexts(out.blocks[1]), ["Second paragraph."])
+    }
+
+    /// Control: a quote carrying author text stays a quote of its own — unwrapping it would drop the
+    /// author's text.
+    func test_controlAQuoteWithAnAuthorPastedIntoAQuoteStaysAQuote() {
+        let d = Document(blocks: [para("intro"), quote(para("abcd"))])
+        let at = childTextStart(d, child: 0) + 2
+        let authored = Block.blockQuote(BlockQuote(id: .generate(), children: [para("x")], author: [TextRun(text: "Ann")]))
+        let (out, _) = d.replacingRange(globalFrom: at, globalTo: at, with: Document(blocks: [authored]))
+        guard case let .blockQuote(q) = out.blocks[1] else { return XCTFail("the quote is gone") }
+        XCTAssertTrue(q.children.contains { if case .blockQuote(let inner) = $0 { return inner.author.map(\.text).joined() == "Ann" } else { return false } },
+                      "\(q.children)")
+    }
+
+    /// Control: a copy made inside a quote, pasted OUTSIDE any quote, is a quote there.
+    func test_controlACopyMadeInsideAQuote_pastedOutside_isAQuote() {
+        let d = Document(blocks: [para("First paragraph."), quote(para("Second paragraph."))])
+        let start = childTextStart(d, child: 0)
+        let copy = d.extractFragment(globalFrom: start, globalTo: start + 6)
+        let (out, _) = d.replacingRange(globalFrom: 6, globalTo: 6, with: copy)
+        XCTAssertEqual(out.blocks.filter { if case .blockQuote = $0 { return true } else { return false } }.count, 2)
+    }
+
     func test_aFragmentPastedInACodeBlockIsSplicedAsText() {
         let code = CodeBlock(id: BlockID("c"), language: "swift", runs: [TextRun(text: "let x")])
         let d = Document(blocks: [para("intro"), .code(code)])
