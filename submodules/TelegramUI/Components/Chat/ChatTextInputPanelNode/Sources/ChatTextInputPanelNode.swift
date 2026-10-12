@@ -5357,6 +5357,24 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         return true
     }
 
+    /// The legacy text view's half of a hardware format shortcut (⌘B, ⌘I, ⌘U, ⇧⌘M, ⇧⌘X, ⇧⌘P,
+    /// ⇧⌘N): the chat's input-state transform, applied as ONE undoable step on the text view — the
+    /// Format menu's `applyFormattingAttribute` rule. Run bare, the echo was an attribute-only
+    /// write, which keeps UIKit's typing steps and records nothing, so undo after ⌘B took back the
+    /// typing and left the bold on nothing (`HarnessLegacyFormatShortcutUndoTests`). Returns false
+    /// when the input is not the legacy text view, and the caller keeps its own path.
+    public func performLegacyFormatShortcut(_ transform: @escaping (ChatTextInputState) -> ChatTextInputState) -> Bool {
+        guard let textView = self.richTextInputNode?.inputView as? ChatInputTextView else {
+            return false
+        }
+        textView.performUndoableTextChange {
+            self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                return (transform(current), inputMode)
+            }
+        }
+        return true
+    }
+
     /// A Format command. On the legacy backend the new state comes back through
     /// `updateInputTextState`, a programmatic text set that would clear the text view's undo stack;
     /// `performUndoableTextChange` makes the command one undoable step instead. (The native editor

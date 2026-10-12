@@ -19,8 +19,9 @@ import ChatInputTextNode
 /// `ChatControllerKeyShortcuts` → `ChatControllerLoadDisplayNode.updateTextInputStateAndMode` →
 /// `ChatInputTextView.attributedText`.
 ///
-/// **Tier 1**: the shortcut's legacy path is the chat's interaction closure, which the harness host
-/// copies; typing is `insertText(_:)`; the stack is the text view's `undoManager`.
+/// **Tier 1**: the shortcut's legacy path is `ChatTextInputPanelNode.performLegacyFormatShortcut`,
+/// which `ChatControllerKeyShortcuts` calls; typing is `insertText(_:)`; the stack is the text view's
+/// `undoManager`.
 final class HarnessLegacyFormatShortcutUndoTests: XCTestCase {
     private func arrangeTypedAndSelected() throws -> HarnessLegacy.Arranged {
         let value = try HarnessLegacy.arrange(ChatInputContent())
@@ -47,10 +48,9 @@ final class HarnessLegacyFormatShortcutUndoTests: XCTestCase {
         let value = try self.arrangeTypedAndSelected()
         arranged = value
 
-        // The shortcut's legacy path, as `ChatControllerKeyShortcuts` spells it.
-        value.host.panel.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold, value: nil), inputMode)
-        }
+        // The shortcut's legacy path: the panel method `ChatControllerKeyShortcuts` calls.
+        XCTAssertTrue(value.host.panel.performLegacyFormatShortcut { chatTextInputAddFormattingAttribute($0, attribute: ChatTextInputAttributes.bold, value: nil) },
+                      "precondition: the legacy text view took the shortcut")
         HarnessEngine.settle(value.root)
         XCTAssertEqual(self.boldRuns(value), ["world"], "precondition: the shortcut did not bold the selection")
 

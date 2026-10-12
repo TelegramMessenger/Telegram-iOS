@@ -391,8 +391,12 @@ public protocol ChatRichTextInputNode: AnyObject {
     /// restore) a set empties the stack, as a stock text view's does. The interaction's closure
     /// wraps every transform in this (`ChatControllerLoadDisplayNode`).
     ///
-    /// Defaulted to running `body` unchanged: the legacy backend's set behaves as it always has (its
-    /// Format commands take `ChatInputTextView.performUndoableTextChange` in the panel instead).
+    /// Defaulted to running `body` unchanged: the legacy backend's set behaves as it always has. Its
+    /// Format commands and keyboard format shortcuts take `ChatInputTextView.performUndoableTextChange`
+    /// in the panel instead. It must NOT wrap everything sent here: the panel also syncs every
+    /// keystroke and caret move through `updateTextInputStateAndMode`, and with a custom emoji in the
+    /// draft each of those echoes compares unequal (the emoji attribute compares by identity), so a
+    /// wrapper registered an empty undo step per caret move (`HarnessLegacyPhantomUndoStepTests`).
     func performUndoableInputChange(_ body: () -> Void)
 
     /// Inserts `text` — an insert the CHAT makes on the user's behalf: an emoji from its emoji keyboard
@@ -1060,14 +1064,6 @@ final class ChatRichTextInputNodeImpl: ASDisplayNode, ChatRichTextInputNode {
         Keyboard.applyAutocorrection(textView: self.textInputNodeImpl.textView)
     }
 
-    /// The chat's own edits — a keyboard format shortcut, autocomplete, the emoji keyboard, the date
-    /// editor, Translate — as ONE step on the text view's undo stack, the way the Format menu's
-    /// `performUndoableTextChange` makes its commands one. Run bare, the echo of an attribute-only
-    /// change kept UIKit's typing steps and recorded nothing for the change, so undo after ⌘B took
-    /// back the typing and left the bold on nothing (`HarnessLegacyFormatShortcutUndoTests`).
-    func performUndoableInputChange(_ body: () -> Void) {
-        self.textInputNodeImpl.textView.performUndoableTextChange(body)
-    }
 
     var usesNativeRichTextEngine: Bool { return false }
 

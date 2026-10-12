@@ -28,11 +28,16 @@ extension ChatControllerImpl {
         if self.chatDisplayNode.isInputViewFocused {
             // The format shortcuts ask the panel first: on the native rich-text engine they run the
             // editor's own command (`performNativeFormatShortcut`), which keeps the document's blocks
-            // and records one undo step. The input-state path below is the legacy backend's, unchanged.
+            // and records one undo step; on the legacy text view the panel applies the input-state
+            // transform as one undoable step (`performLegacyFormatShortcut`), the Format menu's rule.
+            // The bare input-state path below is only for a panel that is neither.
             inputShortcuts = [
                 KeyShortcut(input: "B", modifiers: [.command], action: { [weak self] in
                     if let strongSelf = self {
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.bold) == true {
+                            return
+                        }
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performLegacyFormatShortcut({ current in chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold, value: nil) }) == true {
                             return
                         }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
@@ -45,6 +50,9 @@ extension ChatControllerImpl {
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.italic) == true {
                             return
                         }
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performLegacyFormatShortcut({ current in chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic, value: nil) }) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic, value: nil), inputMode)
                         }
@@ -53,6 +61,9 @@ extension ChatControllerImpl {
                 KeyShortcut(input: "M", modifiers: [.shift, .command], action: { [weak self] in
                     if let strongSelf = self {
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.monospace) == true {
+                            return
+                        }
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performLegacyFormatShortcut({ current in chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace, value: nil) }) == true {
                             return
                         }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
@@ -65,6 +76,9 @@ extension ChatControllerImpl {
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.underline) == true {
                             return
                         }
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performLegacyFormatShortcut({ current in chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.underline, value: nil) }) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.underline, value: nil), inputMode)
                         }
@@ -75,6 +89,9 @@ extension ChatControllerImpl {
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.strikethrough) == true {
                             return
                         }
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performLegacyFormatShortcut({ current in chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.strikethrough, value: nil) }) == true {
+                            return
+                        }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
                             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.strikethrough, value: nil), inputMode)
                         }
@@ -83,6 +100,9 @@ extension ChatControllerImpl {
                 KeyShortcut(input: "P", modifiers: [.command, .shift], action: { [weak self] in
                     if let strongSelf = self {
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.spoiler) == true {
+                            return
+                        }
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performLegacyFormatShortcut({ current in chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.spoiler, value: nil) }) == true {
                             return
                         }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
@@ -98,6 +118,9 @@ extension ChatControllerImpl {
                 KeyShortcut(input: "N", modifiers: [.shift, .command], action: { [weak self] in
                     if let strongSelf = self {
                         if strongSelf.chatDisplayNode.textInputPanelNode?.performNativeFormatShortcut(.clearFormatting) == true {
+                            return
+                        }
+                        if strongSelf.chatDisplayNode.textInputPanelNode?.performLegacyFormatShortcut({ current in chatTextInputClearFormattingAttributes(current) }) == true {
                             return
                         }
                         strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
