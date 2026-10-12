@@ -1000,8 +1000,13 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         // An image-gap caret is full-image-height; its whole rect would never fit the visible band (→ always
         // scroll) and would jump/oscillate. Track a short band at its top edge instead.
         if caret.height > 64 { caret = CGRect(x: caret.minX, y: caret.minY, width: caret.width, height: 24) }
-        let target = caret.insetBy(dx: 0, dy: -12)
         let insets = scrollView.adjustedContentInset
+        // The band's padding is what the visible height leaves, at most 12pt: in a field shorter than
+        // the caret plus 24pt, a full band cannot be shown, and revealing it aligned one of ITS edges
+        // and cut the caret (`ShortFieldCaretRevealTests`).
+        let visibleHeight = scrollView.bounds.height - insets.top - insets.bottom
+        let padding = max(0.0, min(12.0, (visibleHeight - caret.height) / 2.0))
+        let target = caret.insetBy(dx: 0, dy: -padding)
         // The document's two ends are nil here: this canvas has no cheap answer for either, and its
         // reveal has always worked against the ±12 band above instead. The solver reads nil as "do
         // the ordinary minimum scroll", which is exactly legacy's behaviour — parity, not a downgrade.

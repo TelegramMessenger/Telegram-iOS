@@ -61,4 +61,28 @@ final class CaretRevealSolverTests: XCTestCase {
         XCTAssertNil(RichTextCaretRevealSolver.offsetY(for: withoutEnds),
                      "the line itself is visible, so without the ends rule there is nothing to do")
     }
+
+    /// A rect TALLER than the visible area — the legacy canvas's caret ±12pt band in a field one or
+    /// two lines tall — fails both containment tests in turn: aligning its top pushes its bottom out,
+    /// and the next call aligns the bottom, which pushes the top out again. Every reveal flipped the
+    /// offset. Once the visible area lies inside such a rect, there is nothing better to do.
+    /// (Review of the squash, 2026-10-12.)
+    func test_aRectTallerThanTheViewportIsStableOnceItCoversTheViewport() {
+        var input = RichTextCaretRevealInput(
+            caret: CGRect(x: 15.0, y: 100.0, width: 2.0, height: 47.0),   // a 23pt line ±12
+            firstLineTop: nil,
+            lastLineBottom: nil,
+            contentHeight: 400.0,
+            viewportHeight: 30.0,
+            topInset: 0.0,
+            bottomInset: 0.0,
+            offsetY: 200.0
+        )
+        guard let first = RichTextCaretRevealSolver.offsetY(for: input) else {
+            return XCTFail("precondition: the caret is out of view and must be revealed")
+        }
+        input.offsetY = first
+        XCTAssertNil(RichTextCaretRevealSolver.offsetY(for: input),
+                     "a second reveal moved the offset again (from \(first)) — it flips on every call")
+    }
 }

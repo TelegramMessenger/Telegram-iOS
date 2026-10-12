@@ -58,6 +58,12 @@ public enum RichTextCaretRevealSolver {
 
         let visibleTop = input.offsetY + input.topInset
         let visibleBottom = input.offsetY + input.viewportHeight - input.bottomInset
+        // A rect taller than the visible area can never be wholly shown, and aligning one edge
+        // pushes the other out, so the next call would align the other: every reveal flipped the
+        // offset. Once the visible area lies inside the rect there is nothing better to do.
+        if bottom - top > visibleBottom - visibleTop, visibleTop >= top - 0.5, visibleBottom <= bottom + 0.5 {
+            return nil
+        }
         let target: CGFloat
         if top < visibleTop {
             target = top - input.topInset
