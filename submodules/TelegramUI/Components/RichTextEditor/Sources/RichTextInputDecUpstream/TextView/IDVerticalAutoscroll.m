@@ -1,6 +1,10 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
+
+#import "TGPrivateMethodAliases.h"
+
 #import "IDVerticalAutoscrollInternal.h"
 
 #include <math.h>
@@ -9,7 +13,7 @@
 @property(nonatomic, weak, readwrite, nullable)
     id<IDVerticalAutoscrollTarget> target;
 @property(nonatomic, strong, readwrite, nullable)
-    UIScrollView *scrollContainer;
+    UIScrollView *id_scrollContainer;
 @property(nonatomic, readwrite) CGPoint point;
 @property(nonatomic, readwrite)
     IDVerticalAutoscrollDirection directions;
@@ -23,6 +27,21 @@
 @end
 
 @implementation IDVerticalAutoscroll
+
+// Renamed members keep their previous selectors at run time (`TGPrivateMethodAliases.h`): the names are
+// UIKit's private ones, which must not be compiled into the binary, and this object may be reached by
+// them, as the layout controller's connection is.
++ (void)initialize {
+    if (self != IDVerticalAutoscroll.class) {
+        return;
+    }
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_scrollContainer, @selector(id_scrollContainer) },
+        { TGPN_setScrollContainer_, @selector(setId_scrollContainer:) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
 
 static IDVerticalAutoscrollTimerFactory
 IDVerticalAutoscrollProductionTimerFactory(void) {
@@ -91,11 +110,11 @@ IDVerticalAutoscrollProductionTimerFactory(void) {
 
     if (self.timer != nil &&
         self.target == target &&
-        self.scrollContainer == scrollContainer &&
+        self.id_scrollContainer == scrollContainer &&
         self.directions == directions &&
         self.repeatInterval == repeatInterval) {
         CGPoint oldGlobal =
-            [self.scrollContainer convertPoint:self.point
+            [self.id_scrollContainer convertPoint:self.point
                                          toView:nil];
         CGPoint newGlobal =
             [scrollContainer convertPoint:point toView:nil];
@@ -125,7 +144,7 @@ IDVerticalAutoscrollProductionTimerFactory(void) {
         self.count = 0;
     }
     self.target = target;
-    self.scrollContainer = scrollContainer;
+    self.id_scrollContainer = scrollContainer;
     self.point = point;
     self.directions = directions;
     self.repeatInterval = repeatInterval;
@@ -147,7 +166,7 @@ IDVerticalAutoscrollProductionTimerFactory(void) {
     [self.timer invalidate];
     self.timer = nil;
     self.target = nil;
-    self.scrollContainer = nil;
+    self.id_scrollContainer = nil;
     self.point = CGPointZero;
     self.directions = 0;
     self.repeatInterval = 0.0;

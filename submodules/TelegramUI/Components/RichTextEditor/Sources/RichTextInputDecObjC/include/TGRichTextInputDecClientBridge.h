@@ -181,7 +181,7 @@ typedef NS_ENUM(NSInteger, TGRichTextInputDecSelectionReason) {
 /// The kernel's own interaction assistant (`IDUIKitInteractionCapability.privateAssistant`), once
 /// `.interaction` is requested and its contract is accepted — `nil` before attach, after detach,
 /// or whenever the contract was rejected. Backs the canvas thunk `-interactionAssistant`.
-- (nullable id)interactionAssistant;
+- (nullable id)canvasInteractionAssistant;
 
 /// The presentation client's stable interaction container — backs the canvas thunk
 /// `-selectionContainerView`. See `RichTextInputPresentationClient.interactionContainerView`'s own

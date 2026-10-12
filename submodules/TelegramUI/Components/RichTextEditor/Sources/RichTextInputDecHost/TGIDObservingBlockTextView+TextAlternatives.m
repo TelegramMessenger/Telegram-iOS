@@ -2,6 +2,7 @@
 
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import <objc/message.h>
 #import "IDBlockDocument.h"
 #import "IDBlockTextViewInternal.h"
@@ -9,7 +10,7 @@
 #import "IDRichTextLayoutControllerInternal.h"
 
 static NSString *const TGIDTextAlternativesKey = @"NSTextAlternatives";
-static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternativesDisplayStyle";
+#define TGIDTextAlternativesDisplayStyleKey TGPN_NSTextAlternativesDisplayStyle()
 
 @implementation TGIDObservingBlockTextView (TGIDTextAlternatives)
 
@@ -93,7 +94,7 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
                               lowConfidence:(BOOL)lowConfidence {
     Class cls = NSClassFromString(@"NSTextAlternatives");
     if (cls == Nil) return nil;
-    SEL initializer = NSSelectorFromString(@"initWithPrimaryString:alternativeStrings:isLowConfidence:");
+    SEL initializer = NSSelectorFromString(TGPN_initWithPrimaryString_alternativeStrings_isLowConfidence_());
     if (![cls instancesRespondToSelector:initializer]) return nil;
     id allocated = [cls alloc];
     return ((id (*)(id, SEL, id, id, BOOL))objc_msgSend)(allocated, initializer, primary,
@@ -129,7 +130,7 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
     [self insertText:text alternatives:alternatives style:style];
 }
 
-- (void)replaceRange:(UITextRange *)range
+- (void)tgpn_replaceRange:(UITextRange *)range
     withAnnotatedString:(NSAttributedString *)annotatedString
     relativeReplacementRange:(NSRange)relativeReplacementRange {
     (void)relativeReplacementRange;
@@ -166,13 +167,13 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
     NSRange candidate = NSMakeRange(caret - primary.length, primary.length);
     UITextRange *textRange = [self tgid_textRangeForCanonicalRange:candidate];
     if (textRange == nil || ![[self textInRange:textRange] isEqualToString:primary]) return;
-    SEL lowConfidenceSelector = NSSelectorFromString(@"isLowConfidence");
+    SEL lowConfidenceSelector = NSSelectorFromString(TGPN_isLowConfidence());
     BOOL lowConfidence = [alternatives respondsToSelector:lowConfidenceSelector]
         && ((BOOL (*)(id, SEL))objc_msgSend)(alternatives, lowConfidenceSelector);
     [self tgid_annotateCanonicalRange:candidate alternatives:alternatives style:lowConfidence ? 1 : 0];
 }
 
-- (void)addTextAlternativesDisplayStyle:(NSInteger)style toRange:(UITextRange *)range {
+- (void)tgpn_addTextAlternativesDisplayStyle:(NSInteger)style toRange:(UITextRange *)range {
     if (range == nil) return;
     [self.id_richLayoutController id_addAnnotationAttribute:TGIDTextAlternativesDisplayStyleKey
                                                        value:@(style)
@@ -181,7 +182,7 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
 
 // MARK: - The tap's question
 
-- (nullable UITextRange *)rangeWithTextAlternatives:(id _Nullable * _Nullable)alternatives
+- (nullable UITextRange *)tgpn_rangeWithTextAlternatives:(id _Nullable * _Nullable)alternatives
                                           atPosition:(UITextPosition *)position {
     if (alternatives != NULL) *alternatives = nil;
     if (position == nil) return nil;
@@ -209,7 +210,7 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
     return [self tgid_textRangeForCanonicalRange:found];
 }
 
-- (NSAttributedString *)annotatedSubstringForRange:(UITextRange *)range {
+- (NSAttributedString *)tgpn_annotatedSubstringForRange:(UITextRange *)range {
     return [self.id_richLayoutController id_annotatedSubstringForRange:range];
 }
 
@@ -225,7 +226,7 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
     return NSMakeRange(0, length < 0 ? 0 : (NSUInteger)length);
 }
 
-- (void)removeAllTextAlternatives {
+- (void)tgpn_removeAllTextAlternatives {
     NSMutableArray<NSValue *> *ranges = [NSMutableArray array];
     [self tgid_enumerateAlternativesInCanonicalRange:[self tgid_wholeDocumentCanonicalRange]
                                           usingBlock:^(NSRange canonicalRange, id run) {
@@ -234,7 +235,7 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
     for (NSValue *value in ranges) [self tgid_removeAlternativesInCanonicalRange:value.rangeValue];
 }
 
-- (void)removeAlternativesForCurrentWord {
+- (void)tgpn_removeAlternativesForCurrentWord {
     UITextRange *selection = self.selectedTextRange;
     if (selection == nil) return;
     UITextRange *word = [self.tokenizer rangeEnclosingPosition:selection.start
@@ -253,7 +254,7 @@ static NSString *const TGIDTextAlternativesDisplayStyleKey = @"NSTextAlternative
 
 /// The keyboard's emoji suggestions annotate the word they stood for; those are the alternatives
 /// whose primary string has no letter or digit in it.
-- (void)removeEmojiAlternatives {
+- (void)tgpn_removeEmojiAlternatives {
     NSCharacterSet *alphanumerics = NSCharacterSet.alphanumericCharacterSet;
     NSMutableArray<NSValue *> *ranges = [NSMutableArray array];
     [self tgid_enumerateAlternativesInCanonicalRange:[self tgid_wholeDocumentCanonicalRange]

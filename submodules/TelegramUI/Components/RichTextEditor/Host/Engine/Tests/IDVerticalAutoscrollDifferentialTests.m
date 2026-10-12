@@ -158,7 +158,7 @@
         @"active": @(mirror.isActive),
         @"targetPresent": @((BOOL)(mirror.target != nil)),
         @"containerPresent":
-            @((BOOL)(mirror.scrollContainer != nil)),
+            @((BOOL)(mirror.id_scrollContainer != nil)),
         @"point": [NSValue valueWithCGPoint:mirror.point],
         @"directions": @(mirror.directions),
         @"repeatInterval": @(mirror.repeatInterval),

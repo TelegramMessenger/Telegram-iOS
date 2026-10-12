@@ -238,13 +238,14 @@ static void IDFloatingAssertSignature(XCTestCase *testCase,
     NSString *source = [NSString stringWithContentsOfFile:
         IDEngineSourceFile(@"PrivateUIKit/IDPrivateUIKit.m")
         encoding:NSUTF8StringEncoding error:nil];
+    // The private names are spelled through their encoded table entries (`TGPrivateRuntimeNames.h`).
     XCTAssertTrue([source containsString:
-        @"assistant, \"_floatingCursorSession\", @\"_UITextFloatingCursorSession\""]);
+        @"assistant, TGPN__floatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession()"]);
     XCTAssertTrue([source containsString:
-        @"display, \"_activeFloatingCursorSession\", @\"_UITextFloatingCursorSession\""]);
-    XCTAssertTrue([source containsString:@"IDPrivateTestingBoolIvar(session, \"_isValid\""]);
+        @"display, TGPN__activeFloatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession()"]);
+    XCTAssertTrue([source containsString:@"IDPrivateTestingBoolIvar(session, TGPN__isValid().UTF8String"]);
     XCTAssertFalse([source containsString:
-        @"NSSelectorFromString(@\"_activeFloatingCursorSession\")"]);
+        @"NSSelectorFromString(TGPN__activeFloatingCursorSession())"]);
     XCTAssertFalse([source containsString:@"static __strong UITextPosition"]);
 }
 
@@ -666,7 +667,7 @@ static void IDFloatingAssertSignature(XCTestCase *testCase,
     IDFloatingCursorAssistantSpy *spy =
         [self installAssistantSpyInView:view];
 
-    [view.id_interactionCapability resignedFirstResponder];
+    [view.id_interactionCapability id_resignedFirstResponder];
     XCTAssertEqual(spy.resignedCount, 1U);
     XCTAssertEqual(spy.endCount, 0U);
 

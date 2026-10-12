@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import "IDPrivateUIKit+RichTextLayout.h"
 
 #import "IDUIKitRuntimeContract.h"
@@ -65,51 +66,51 @@ static NSArray<NSString *> *IDPrivateRichLayoutRequiredSelectorNames(void) {
         selectorNames = @[
             @"textStorage",
             @"textContainers",
-            @"firstTextContainer",
-            @"textContainerForPosition:",
+            TGPN_firstTextContainer(),
+            TGPN_textContainerForPosition_(),
             @"beginningOfDocument",
             @"endOfDocument",
-            @"emptyTextRangeAtPosition:",
+            TGPN_emptyTextRangeAtPosition_(),
             @"textRangeFromPosition:toPosition:",
             @"positionFromPosition:offset:",
             @"positionFromPosition:offset:affinity:",
             @"positionFromPosition:inDirection:offset:affinity:anchorPositionOffset:",
-            @"textRangeForLineEnclosingPosition:",
-            @"textRangeForLineEnclosingPosition:effectiveAffinity:",
-            @"attributesAtPosition:inDirection:",
-            @"baseWritingDirectionAtPosition:",
+            TGPN_textRangeForLineEnclosingPosition_(),
+            TGPN_textRangeForLineEnclosingPosition_effectiveAffinity_(),
+            TGPN_attributesAtPosition_inDirection_(),
+            TGPN_baseWritingDirectionAtPosition_(),
             @"comparePosition:toPosition:",
             @"offsetFromPosition:toPosition:",
-            @"affinityForPosition:",
-            @"characterRangeForTextRange:",
-            @"boundingRectForCharacterRange:",
-            @"characterRangeForTextRange:clippedToDocument:",
-            @"characterRangesForTextRange:clippedToDocument:",
-            @"textRangeForCharacterRange:",
-            @"textRangeForCharacterRanges:",
-            @"positionWithOffset:affinity:",
-            @"textInputController",
-            @"adoptTextInputController:",
-            @"detachFromTextInputController",
-            @"canAccessLayoutManager",
+            TGPN_affinityForPosition_(),
+            TGPN_characterRangeForTextRange_(),
+            TGPN_boundingRectForCharacterRange_(),
+            TGPN_characterRangeForTextRange_clippedToDocument_(),
+            TGPN_characterRangesForTextRange_clippedToDocument_(),
+            TGPN_textRangeForCharacterRange_(),
+            TGPN_textRangeForCharacterRanges_(),
+            TGPN_positionWithOffset_affinity_(),
+            TGPN_textInputController(),
+            TGPN_adoptTextInputController_(),
+            TGPN_detachFromTextInputController(),
+            TGPN_canAccessLayoutManager(),
             @"invalidateDisplayForCharacterRange:",
-            @"rangeOfCharacterClusterAtIndex:type:",
-            @"selectionRectsForRange:fromView:forContainerPassingTest:",
-            @"requestTextGeometryAtPosition:typingAttributes:resultBlock:",
-            @"insertionRectForPosition:typingAttributes:placeholderAttachment:textContainer:",
-            @"cursorPositionAtPoint:inContainer:",
-            @"nearestPositionAtPoint:inContainer:",
-            @"_visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:",
+            TGPN_rangeOfCharacterClusterAtIndex_type_(),
+            TGPN_selectionRectsForRange_fromView_forContainerPassingTest_(),
+            TGPN_requestTextGeometryAtPosition_typingAttributes_resultBlock_(),
+            TGPN_insertionRectForPosition_typingAttributes_placeholderAttachment_textContainer_(),
+            TGPN_cursorPositionAtPoint_inContainer_(),
+            TGPN_nearestPositionAtPoint_inContainer_(),
+            TGPN__visualSelectionRangeForExtent_forPoint_fromPosition_inDirection_(),
             @"ensureLayoutForRange:",
             @"invalidateLayoutForRange:",
             @"attributedTextInRange:",
-            @"annotatedSubstringForRange:",
-            @"addAnnotationAttribute:value:forRange:",
-            @"annotationAttribute:atPosition:",
-            @"removeAnnotationAttribute:forRange:",
-            @"addRenderingAttributes:forRange:",
-            @"removeRenderingAttributes:forRange:",
-            @"_invalidateTemporaryAttributesInRange:",
+            TGPN_annotatedSubstringForRange_(),
+            TGPN_addAnnotationAttribute_value_forRange_(),
+            TGPN_annotationAttribute_atPosition_(),
+            TGPN_removeAnnotationAttribute_forRange_(),
+            TGPN_addRenderingAttributes_forRange_(),
+            TGPN_removeRenderingAttributes_forRange_(),
+            TGPN__invalidateTemporaryAttributesInRange_(),
         ];
     });
     return selectorNames;
@@ -142,7 +143,7 @@ void IDPrivateInstallRichCursorTraceForUITesting(id layoutController) {
         @"UI-test cursor trace installation preflight");
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        SEL selector = NSSelectorFromString(@"cursorPositionAtPoint:inContainer:");
+        SEL selector = NSSelectorFromString(TGPN_cursorPositionAtPoint_inContainer_());
         Method method = class_getInstanceMethod([layoutController class], selector);
         IDPrivateRichOriginalCursorPositionIMP = method_getImplementation(method);
         method_setImplementation(method, (IMP)IDPrivateRichTracedCursorPosition);
@@ -215,17 +216,17 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
     dispatch_once(&once, ^{
         specs = @[
             @{
-                @"selector": @"textInputController",
+                @"selector": TGPN_textInputController(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[],
             },
             @{
-                @"selector": @"firstTextContainer",
+                @"selector": TGPN_firstTextContainer(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[],
             },
             @{
-                @"selector": @"textContainerForPosition:",
+                @"selector": TGPN_textContainerForPosition_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[IDPrivateTypeEncoding(@encode(id))],
             },
@@ -241,7 +242,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"textRangeForLineEnclosingPosition:effectiveAffinity:",
+                @"selector": TGPN_textRangeForLineEnclosingPosition_effectiveAffinity_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -249,12 +250,12 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"textRangeForLineEnclosingPosition:",
+                @"selector": TGPN_textRangeForLineEnclosingPosition_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[IDPrivateTypeEncoding(@encode(id))],
             },
             @{
-                @"selector": @"attributesAtPosition:inDirection:",
+                @"selector": TGPN_attributesAtPosition_inDirection_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -262,17 +263,17 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"baseWritingDirectionAtPosition:",
+                @"selector": TGPN_baseWritingDirectionAtPosition_(),
                 @"return": IDPrivateTypeEncoding(@encode(NSWritingDirection)),
                 @"arguments": @[IDPrivateTypeEncoding(@encode(id))],
             },
             @{
-                @"selector": @"boundingRectForCharacterRange:",
+                @"selector": TGPN_boundingRectForCharacterRange_(),
                 @"return": IDPrivateTypeEncoding(@encode(CGRect)),
                 @"arguments": @[IDPrivateTypeEncoding(@encode(NSRange))],
             },
             @{
-                @"selector": @"insertionRectForPosition:typingAttributes:placeholderAttachment:textContainer:",
+                @"selector": TGPN_insertionRectForPosition_typingAttributes_placeholderAttachment_textContainer_(),
                 @"return": IDPrivateTypeEncoding(@encode(CGRect)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -282,7 +283,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"_visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:",
+                @"selector": TGPN__visualSelectionRangeForExtent_forPoint_fromPosition_inDirection_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -292,7 +293,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"cursorPositionAtPoint:inContainer:",
+                @"selector": TGPN_cursorPositionAtPoint_inContainer_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(CGPoint)),
@@ -300,7 +301,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"nearestPositionAtPoint:inContainer:",
+                @"selector": TGPN_nearestPositionAtPoint_inContainer_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(CGPoint)),
@@ -318,7 +319,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 @"arguments": @[IDPrivateTypeEncoding(@encode(id))],
             },
             @{
-                @"selector": @"rangeOfCharacterClusterAtIndex:type:",
+                @"selector": TGPN_rangeOfCharacterClusterAtIndex_type_(),
                 @"return": IDPrivateTypeEncoding(@encode(NSRange)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(NSUInteger)),
@@ -326,7 +327,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"selectionRectsForRange:fromView:forContainerPassingTest:",
+                @"selector": TGPN_selectionRectsForRange_fromView_forContainerPassingTest_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -335,7 +336,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"requestTextGeometryAtPosition:typingAttributes:resultBlock:",
+                @"selector": TGPN_requestTextGeometryAtPosition_typingAttributes_resultBlock_(),
                 @"return": IDPrivateTypeEncoding(@encode(void)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -349,7 +350,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 @"arguments": @[IDPrivateTypeEncoding(@encode(id))],
             },
             @{
-                @"selector": @"annotationAttribute:atPosition:",
+                @"selector": TGPN_annotationAttribute_atPosition_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -357,12 +358,12 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"annotatedSubstringForRange:",
+                @"selector": TGPN_annotatedSubstringForRange_(),
                 @"return": IDPrivateTypeEncoding(@encode(id)),
                 @"arguments": @[IDPrivateTypeEncoding(@encode(id))],
             },
             @{
-                @"selector": @"addAnnotationAttribute:value:forRange:",
+                @"selector": TGPN_addAnnotationAttribute_value_forRange_(),
                 @"return": IDPrivateTypeEncoding(@encode(void)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -371,7 +372,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"removeAnnotationAttribute:forRange:",
+                @"selector": TGPN_removeAnnotationAttribute_forRange_(),
                 @"return": IDPrivateTypeEncoding(@encode(void)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -379,7 +380,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"addRenderingAttributes:forRange:",
+                @"selector": TGPN_addRenderingAttributes_forRange_(),
                 @"return": IDPrivateTypeEncoding(@encode(void)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -387,7 +388,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"removeRenderingAttributes:forRange:",
+                @"selector": TGPN_removeRenderingAttributes_forRange_(),
                 @"return": IDPrivateTypeEncoding(@encode(void)),
                 @"arguments": @[
                     IDPrivateTypeEncoding(@encode(id)),
@@ -395,7 +396,7 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateRichLayoutABISpecs(void
                 ],
             },
             @{
-                @"selector": @"_invalidateTemporaryAttributesInRange:",
+                @"selector": TGPN__invalidateTemporaryAttributesInRange_(),
                 @"return": IDPrivateTypeEncoding(@encode(void)),
                 @"arguments": @[IDPrivateTypeEncoding(@encode(id))],
             },
@@ -466,7 +467,7 @@ static NSArray<NSString *> *IDPrivateRichLayoutABIMismatches(id layoutController
 static NSArray<NSDictionary<NSString *, id> *> *IDPrivateMutableSelectionRectABISpecs(void) {
     return @[
         @{
-            @"selector": @"setRect:fromView:",
+            @"selector": TGPN_setRect_fromView_(),
             @"return": IDPrivateTypeEncoding(@encode(void)),
             @"arguments": @[
                 IDPrivateTypeEncoding(@encode(CGRect)),
@@ -474,12 +475,12 @@ static NSArray<NSDictionary<NSString *, id> *> *IDPrivateMutableSelectionRectABI
             ],
         },
         @{
-            @"selector": @"setContainsStart:",
+            @"selector": TGPN_setContainsStart_(),
             @"return": IDPrivateTypeEncoding(@encode(void)),
             @"arguments": @[IDPrivateTypeEncoding(@encode(BOOL))],
         },
         @{
-            @"selector": @"setContainsEnd:",
+            @"selector": TGPN_setContainsEnd_(),
             @"return": IDPrivateTypeEncoding(@encode(void)),
             @"arguments": @[IDPrivateTypeEncoding(@encode(BOOL))],
         },
@@ -623,7 +624,7 @@ id IDPrivateNewInputControllerWithRichLayoutControllerUsingClass(
     id layoutController,
     id delegate,
     Class inputControllerClass) {
-    SEL initializer = NSSelectorFromString(@"initWithTextLayoutController:");
+    SEL initializer = NSSelectorFromString(TGPN_initWithTextLayoutController_());
     SEL delegateSetter = NSSelectorFromString(@"setDelegate:");
     [IDPrivateUIKit requireObject:inputControllerClass
              respondsToSelector:@selector(alloc)
@@ -659,7 +660,7 @@ id IDPrivateNewInputControllerWithRichLayoutController(id layoutController,
     return IDPrivateNewInputControllerWithRichLayoutControllerUsingClass(
         layoutController,
         delegate,
-        NSClassFromString(@"UITextInputController"));
+        NSClassFromString(TGPN_UITextInputController()));
 }
 
 static NSString *IDPrivateTemporaryLayoutManagerABIMismatch(
@@ -699,11 +700,11 @@ void IDPrivateRequireRichTemporaryLayoutManager(NSTextLayoutManager *layoutManag
     NSMutableArray<NSString *> *problems = [NSMutableArray array];
     NSString *addProblem = IDPrivateTemporaryLayoutManagerABIMismatch(
         layoutManager,
-        @"addTemporaryAttribute:value:forTextRange:",
+        TGPN_addTemporaryAttribute_value_forTextRange_(),
         3);
     NSString *removeProblem = IDPrivateTemporaryLayoutManagerABIMismatch(
         layoutManager,
-        @"removeTemporaryAttribute:forTextRange:",
+        TGPN_removeTemporaryAttribute_forTextRange_(),
         2);
     if (addProblem != nil) [problems addObject:addProblem];
     if (removeProblem != nil) [problems addObject:removeProblem];
@@ -723,7 +724,7 @@ void IDPrivateRichAddTemporaryAttribute(NSTextLayoutManager *layoutManager,
                                         NSTextRange *range,
                                         NSString *stage) {
     IDPrivateRequireRichTemporaryLayoutManager(layoutManager, stage);
-    SEL selector = NSSelectorFromString(@"addTemporaryAttribute:value:forTextRange:");
+    SEL selector = NSSelectorFromString(TGPN_addTemporaryAttribute_value_forTextRange_());
     ((void (*)(id, SEL, id, id, id))objc_msgSend)(layoutManager,
                                                   selector,
                                                   attribute,
@@ -736,7 +737,7 @@ void IDPrivateRichRemoveTemporaryAttribute(NSTextLayoutManager *layoutManager,
                                            NSTextRange *range,
                                            NSString *stage) {
     IDPrivateRequireRichTemporaryLayoutManager(layoutManager, stage);
-    SEL selector = NSSelectorFromString(@"removeTemporaryAttribute:forTextRange:");
+    SEL selector = NSSelectorFromString(TGPN_removeTemporaryAttribute_forTextRange_());
     ((void (*)(id, SEL, id, id))objc_msgSend)(layoutManager,
                                               selector,
                                               attribute,
@@ -744,7 +745,7 @@ void IDPrivateRichRemoveTemporaryAttribute(NSTextLayoutManager *layoutManager,
 }
 
 static NSString *IDPrivateTemporaryCanvasABIMismatch(UIView *canvas) {
-    NSString *selectorName = @"invalidateTemporaryAttributesInRange:";
+    NSString *selectorName = TGPN_invalidateTemporaryAttributesInRange_();
     NSMethodSignature *signature = [canvas
         methodSignatureForSelector:NSSelectorFromString(selectorName)];
     if (signature == nil) {
@@ -781,7 +782,7 @@ void IDPrivateRichInvalidateTemporaryAttributes(UIView *canvas,
     IDPrivateRequireRichTemporaryCanvas(canvas, stage);
     ((void (*)(id, SEL, id))objc_msgSend)(
         canvas,
-        NSSelectorFromString(@"invalidateTemporaryAttributesInRange:"),
+        NSSelectorFromString(TGPN_invalidateTemporaryAttributesInRange_()),
         range);
 }
 

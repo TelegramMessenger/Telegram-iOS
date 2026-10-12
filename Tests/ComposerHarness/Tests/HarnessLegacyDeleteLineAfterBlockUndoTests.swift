@@ -39,10 +39,16 @@ import ChatInputTextNode
 ///    `{4, 0}` → `ChatTextInputPanelNode.chatInputTextNode(shouldChangeTextIn:replacementText:)` →
 ///    `replaceCharacters(in:with:)` on a 3-character copy → `NSRangeException`.
 ///
+/// **Fixed (2026-10-12)** at step 2: `chatInputContent(from:)` (TextFormat) reads a line break that is
+/// the text's LAST character, right after a carved block, as an empty trailing paragraph. So
+/// `"abc\n"` reads back as `[code "abc"] [p ""]`, the chat pushes back what is on screen, and UIKit's
+/// undo operation still describes the text it was recorded against. The same rule puts the line that
+/// Return adds after a quote or code block into the model. Pinned below the harness by
+/// `ChatInputContentConversionTests.test_chatCurrencyRoundTrip_emptyLastLineAfterACarvedBlock`.
+///
 /// **Tier 1**: `deleteBackward` and the view's `undoManager` are what the keyboard and ⌘Z / shake call;
-/// the push-back is the chat's own condition. The exception is caught by XCTest, which records it as a
-/// failure of the case that raised it, so the undo case is red by raising, and the first case pins the
-/// lost line break without undoing.
+/// the push-back is the chat's own condition. Before the fix the exception was caught by XCTest and
+/// recorded as a failure of the case that raised it, so the undo cases were red by raising.
 final class HarnessLegacyDeleteLineAfterBlockUndoTests: XCTestCase {
     private static let afterCode = ChatInputContent(blocks: [
         .code(ChatInputCode(language: nil, runs: [ChatInputRun(text: "abc")])),
@@ -84,7 +90,7 @@ final class HarnessLegacyDeleteLineAfterBlockUndoTests: XCTestCase {
         XCTAssertEqual(result.afterDelete, "abc\n", "emptying the line after a quote also removed its line break (outside the undo stack)")
     }
 
-    /// Red today by RAISING `NSRangeException` inside `undo()`.
+    /// Raised `NSRangeException` inside `undo()` before the fix.
     func testUndoAfterEmptyingTheLineAfterACodeBlockRestoresIt() throws {
         let result = try self.deleteLastLine(Self.afterCode, undo: true)
         XCTAssertEqual(result.afterUndo, "abc\nx = 1", "undo did not restore the deleted line")

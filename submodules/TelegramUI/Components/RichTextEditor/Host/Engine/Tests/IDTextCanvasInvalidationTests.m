@@ -229,7 +229,7 @@
 - (void)testNativeTemporaryAttributeCallbackDoesNotCreatePersistentAttributes {
     IDTextCanvasFixture *fixture = [[IDTextCanvasFixture alloc]
         initWithText:@"mispelled word" size:CGSizeMake(220, 80)];
-    [fixture.canvas invalidateTemporaryAttributesInRange:
+    [fixture.canvas tgpn_invalidateTemporaryAttributesInRange:
         [NSValue valueWithRange:NSMakeRange(0, 9)]];
     NSDictionary *attributes = [fixture.contentStorage.textStorage
         attributesAtIndex:1 effectiveRange:NULL];
@@ -247,7 +247,7 @@
     IDTask4RangeAdapter *adapter = [IDTask4RangeAdapter new];
     adapter.textKit2Ranges = @[@"first", @"second"];
 
-    [fixture.canvas invalidateTemporaryAttributesInRange:adapter];
+    [fixture.canvas tgpn_invalidateTemporaryAttributesInRange:adapter];
 
     XCTAssertEqualObjects(renderer.invalidatedRanges, adapter.textKit2Ranges);
 }
@@ -260,7 +260,7 @@
     context.customRenderController = renderer;
     fixture.canvas.context = context;
 
-    [fixture.canvas invalidateTemporaryAttributesInRange:[IDTask4RangeAdapter new]];
+    [fixture.canvas tgpn_invalidateTemporaryAttributesInRange:[IDTask4RangeAdapter new]];
 
     XCTAssertEqual(renderer.displayCount, 1U);
 }
@@ -274,7 +274,7 @@
     NSException *caught = nil;
 
     @try {
-        [fixture.canvas invalidateTemporaryAttributesInRange:[IDTask4RangeAdapter new]];
+        [fixture.canvas tgpn_invalidateTemporaryAttributesInRange:[IDTask4RangeAdapter new]];
     } @catch (NSException *exception) {
         caught = exception;
     }

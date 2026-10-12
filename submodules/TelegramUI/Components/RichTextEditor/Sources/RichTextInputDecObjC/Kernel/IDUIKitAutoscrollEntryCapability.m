@@ -1,6 +1,8 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
+
 #import "IDUIKitAutoscrollEntryCapability.h"
 
 #import "TGRichTextInputDecHostPreflight.h"
@@ -88,7 +90,8 @@ static IDUIKitCapabilityReport *IDUIKitAutoscrollEntryReport(
             contract,
             result,
             IDUIKitCapabilityStateRejectedContract,
-            @"The validated UITextAutoscrolling protocol could not be adopted.");
+            [NSString stringWithFormat:@"The validated %@ protocol could not be adopted.",
+                TGPN_UITextAutoscrolling()]);
         return self;
     }
 

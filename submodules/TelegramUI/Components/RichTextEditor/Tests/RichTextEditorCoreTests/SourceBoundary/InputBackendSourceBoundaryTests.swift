@@ -24,8 +24,8 @@ import XCTest
 final class InputBackendSourceBoundaryTests: XCTestCase {
 
     // ------------------------------------------------------------------------------------
-    // InputDec exemption (docs/superpowers/plans/2026-08-16-inputdec-backend-introduction.md,
-    // Task A4). Relaxed ONCE, in one commit, and never widened afterward.
+    // InputDec exemption (the InputDec backend-introduction plan's Task A4; the plan is in git
+    // history). Relaxed ONCE, in one commit, and never widened afterward.
     //
     // Exempt from: R8's `^ID[A-Z]` basename rule, R1's `\bID[A-Z]\w+` name rule, and R2's
     // Telegram-implementation-type list. NOT exempt from R1's banned-machinery list

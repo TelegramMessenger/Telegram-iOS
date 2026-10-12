@@ -59,12 +59,17 @@ static BOOL IDSourceMethodExistsInImplementation(
     NSRange bodyRange = NSMakeRange(
         NSMaxRange(implementationStart),
         implementationEnd.location - NSMaxRange(implementationStart));
-    NSString *escaped = [NSRegularExpression escapedPatternForString:selectorName];
-    NSRegularExpression *expression = [NSRegularExpression
-        regularExpressionWithPattern:[NSString stringWithFormat:
-            @"(?m)^\\s*[-+]\\s*\\([^\\n)]*\\)\\s*%@\\s*\\{", escaped]
-                               options:0 error:nil];
-    return [expression firstMatchInString:source options:0 range:bodyRange] != nil;
+    // A callback UIKit sends under a private name is compiled under its neutral `tgpn_` name
+    // (`TGPrivateMethodAliases.h`); either spelling is the definition.
+    for (NSString *name in @[selectorName, IDNeutralSelectorName(selectorName)]) {
+        NSString *escaped = [NSRegularExpression escapedPatternForString:name];
+        NSRegularExpression *expression = [NSRegularExpression
+            regularExpressionWithPattern:[NSString stringWithFormat:
+                @"(?m)^\\s*[-+]\\s*\\([^\\n)]*\\)\\s*%@\\s*\\{", escaped]
+                                   options:0 error:nil];
+        if ([expression firstMatchInString:source options:0 range:bodyRange] != nil) return YES;
+    }
+    return NO;
 }
 
 static NSArray<NSString *> *IDParsedInteractionHostABISelectors(void) {
@@ -76,13 +81,21 @@ static NSArray<NSString *> *IDParsedInteractionHostABISelectors(void) {
     NSRange end = [source rangeOfString:@"\n}\n" options:0 range:tail];
     if (end.location == NSNotFound) return @[];
     NSRange body = NSMakeRange(start.location, NSMaxRange(end) - start.location);
+    // A selector is spelled either as a literal or, for a private UIKit name, as its encoded
+    // table entry (`TGPN_<name>()`, `TGPrivateRuntimeNames.h`).
     NSRegularExpression *expression = [NSRegularExpression
-        regularExpressionWithPattern:@"IDInteractionABISpecMake\\(\\s*@\"([^\"]+)\""
+        regularExpressionWithPattern:@"IDInteractionABISpecMake\\(\\s*(?:@\"([^\"]+)\"|(TGPN_\\w+)\\(\\))"
                                options:0 error:nil];
+    NSDictionary<NSString *, NSString *> *decoded = IDPrivateRuntimeNamesByFunction();
     NSMutableArray<NSString *> *names = [NSMutableArray array];
     for (NSTextCheckingResult *match
          in [expression matchesInString:source options:0 range:body]) {
-        [names addObject:[source substringWithRange:[match rangeAtIndex:1]]];
+        if ([match rangeAtIndex:1].location != NSNotFound) {
+            [names addObject:[source substringWithRange:[match rangeAtIndex:1]]];
+        } else {
+            NSString *function = [source substringWithRange:[match rangeAtIndex:2]];
+            [names addObject:decoded[function] ?: function];
+        }
     }
     return names.copy;
 }

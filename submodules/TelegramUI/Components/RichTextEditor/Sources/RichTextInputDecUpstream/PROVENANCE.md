@@ -98,7 +98,7 @@ SwiftPM). Kernel headers come from the vendored sibling module, which this targe
 
 ## Every deviation from a verbatim copy
 
-There are **six**, and only the second and fifth change a line of upstream logic.
+There were **six** at the port, and only the second and fifth change a line of upstream logic. A seventh, repo-wide, came later (2026-10-12).
 
 **The fidelity check, stated exactly.** Strip the five wrapper lines from each ported file and
 `diff` the remainder against its upstream original:
@@ -263,16 +263,14 @@ with `required == true`). `IDPrivateUIKit.isCompatible` is `YES` on iOS 26.5, so
 real and green. `test_theRuntimeContractGateActuallyChecksSomething` and
 `test_theGateReadsUpstreamsOwnManifestAndNotTheRewrittenOne` pin all of it.
 
-**Regenerating the blob:**
+**Regenerating the blob.** Since 2026-10-12 the array stores every byte XOR 0x5A (deviation 7), so
+it is regenerated through the encoder rather than copied:
 
 ```sh
 # from submodules/TelegramUI/Components/RichTextEditor/
-python3 - <<'EOS'
-import hashlib
-src = "Sources/RichTextInputDecObjC/Vendor/UIKitBehaviorContracts-iOS26.5.json"
-data = open(src, "rb").read()
-print(len(data), hashlib.sha256(data).hexdigest())   # 118270 a60bb026...
-EOS
+src=Sources/RichTextInputDecObjC/Vendor/UIKitBehaviorContracts-iOS26.5.json
+shasum -a 256 "$src"     # a60bb026..., 118270 bytes
+Scripts/generate-private-runtime-names.py --encode-bytes "$src"   # the array's rows
 ```
 
 ### 6. The nine `*Internal.h` headers are private, not public
@@ -298,6 +296,20 @@ rule simple. Both build systems get `Internal/` as a private search path. Note t
 solves the same problem differently, by spelling its cross-directory imports path-qualified
 (`#import "Kernel/IDUIKitRuntimeContract.h"`, `../RichTextInputDecObjC/include/TGRichTextInputDec.h:29-37`)
 — that option is not open here, because it would mean editing upstream's import lines.
+
+### 7. Private UIKit names are not spelled in source (2026-10-12)
+
+Not a port deviation: a repo-wide rule applied after the port, to this tree and to
+`RichTextInputDecObjC` alike, recorded here because it changes many upstream lines. Every private
+UIKit name the engine reaches at run time is spelled through `TGPN_<name>()`
+(`RichTextInputDecObjC/include/TGPrivateRuntimeNames.h`, generated from
+`Scripts/private-runtime-names.txt`), and every callback UIKit sends to an engine object is compiled
+under a neutral `tgpn_` (or existing `id_`) name and added under the private one from `+initialize`
+(`TGPrivateMethodAliases.h`). Some of the engine's OWN members whose names collided with a private
+UIKit name were renamed `id_…` (for example `id_textInputController`, `id_selectionContainerView`,
+`id_scrollContainer`). The package `CLAUDE.md`, "Private UIKit names are not in the binary", has the
+rules; `PrivateRuntimeNamesTests` enforces them. So the 76/2 fidelity check above describes the
+tree as it was at the port, not this one.
 
 ## What did NOT come across, and why
 

@@ -18,7 +18,7 @@ FOUNDATION_EXPORT NSErrorDomain const
 @property(nonatomic, strong, readonly) NSUndoManager *undoManager;
 @property(nonatomic, copy)
     NSDictionary<NSAttributedStringKey, id> *typingAttributes;
-@property(nonatomic, strong, readonly, nullable) id textInputTraits;
+@property(nonatomic, strong, readonly, nullable) id id_textInputTraits;
 @property(nonatomic, strong, readonly)
     IDUIKitCapabilityReport *report;
 
@@ -50,8 +50,8 @@ FOUNDATION_EXPORT NSErrorDomain const
 - (void)performCut:(nullable id)sender;
 - (void)performCopy:(nullable id)sender;
 - (void)performPaste:(nullable id)sender;
-- (void)setContinuousSpellCheckingEnabled:(BOOL)enabled;
-- (BOOL)isContinuousSpellCheckingEnabled;
+- (void)id_setContinuousSpellCheckingEnabled:(BOOL)enabled;
+- (BOOL)id_isContinuousSpellCheckingEnabled;
 - (BOOL)insertDictationResultIfSupported:
     (NSArray<UIDictationPhrase *> *)dictationResult;
 - (void)detach;

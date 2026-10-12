@@ -1,6 +1,9 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateMethodAliases.h"
+
+#import "TGPrivateRuntimeNames.h"
 #import "IDUIKitInteractionCapability.h"
 
 #import <objc/message.h>
@@ -139,6 +142,24 @@ IDUIKitFloatingCursorRuntimeContract(void) {
 
 @implementation IDUIKitInteractionCapability
 
+// Renamed members keep their previous selectors at run time (`TGPrivateMethodAliases.h`): the names are
+// UIKit's private ones, which must not be compiled into the binary, and this object may be reached by
+// them, as the layout controller's connection is.
++ (void)initialize {
+    if (self != IDUIKitInteractionCapability.class) {
+        return;
+    }
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_selectionChanged, @selector(id_selectionChanged) },
+        { TGPN_setNeedsSelectionDisplayUpdate, @selector(id_setNeedsSelectionDisplayUpdate) },
+        { TGPN_resignedFirstResponder, @selector(id_resignedFirstResponder) },
+        { TGPN_selectWord, @selector(id_selectWord) },
+        { TGPN_autoscrollWillNotStart, @selector(id_autoscrollWillNotStart) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
+
 - (instancetype)initWithContract:
     (IDUIKitRuntimeCapabilityContract *)contract
                          resolver:(IDUIKitCapabilityResolver *)resolver
@@ -244,7 +265,7 @@ IDUIKitFloatingCursorRuntimeContract(void) {
         @try {
             ((void (*)(id, SEL, BOOL))objc_msgSend)(
                 cleanupTarget,
-                NSSelectorFromString(@"clearGestureRecognizers:"),
+                NSSelectorFromString(TGPN_clearGestureRecognizers_()),
                 YES);
         } @catch (NSException *caught) {
             cleanupException = caught;
@@ -301,27 +322,27 @@ IDUIKitFloatingCursorRuntimeContract(void) {
     if (assistant == nil) return;
     ((void (*)(id, SEL, BOOL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"setSelectionDisplayVisible:"),
+        NSSelectorFromString(TGPN_setSelectionDisplayVisible_()),
         visible);
     ((void (*)(id, SEL))objc_msgSend)(
         assistant,
         NSSelectorFromString(
-            active ? @"activateSelection" : @"deactivateSelection"));
+            active ? TGPN_activateSelection() : TGPN_deactivateSelection()));
 }
 
-- (void)selectionChanged {
+- (void)id_selectionChanged {
     id assistant = [self activeAssistant];
     if (assistant == nil) return;
     ((void (*)(id, SEL))objc_msgSend)(
-        assistant, NSSelectorFromString(@"selectionChanged"));
+        assistant, NSSelectorFromString(TGPN_selectionChanged()));
 }
 
-- (void)setNeedsSelectionDisplayUpdate {
+- (void)id_setNeedsSelectionDisplayUpdate {
     id assistant = [self activeAssistant];
     if (assistant == nil) return;
     ((void (*)(id, SEL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"setNeedsSelectionDisplayUpdate"));
+        NSSelectorFromString(TGPN_setNeedsSelectionDisplayUpdate()));
 }
 
 - (void)setGestureRecognizersEnabled:(BOOL)enabled {
@@ -330,7 +351,7 @@ IDUIKitFloatingCursorRuntimeContract(void) {
         if (assistant == nil) return;
         ((void (*)(id, SEL))objc_msgSend)(
             assistant,
-            NSSelectorFromString(@"setGestureRecognizers"));
+            NSSelectorFromString(TGPN_setGestureRecognizers()));
     } else {
         [self clearGestureRecognizersForced:YES];
     }
@@ -341,7 +362,7 @@ IDUIKitFloatingCursorRuntimeContract(void) {
     if (assistant == nil) return;
     ((void (*)(id, SEL, BOOL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"clearGestureRecognizers:"),
+        NSSelectorFromString(TGPN_clearGestureRecognizers_()),
         forced);
 }
 
@@ -372,19 +393,19 @@ IDUIKitFloatingCursorRuntimeContract(void) {
         assistant, NSSelectorFromString(@"endFloatingCursor"));
 }
 
-- (void)resignedFirstResponder {
+- (void)id_resignedFirstResponder {
     id assistant = [self activeAssistant];
     if (assistant == nil) return;
     ((void (*)(id, SEL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"resignedFirstResponder"));
+        NSSelectorFromString(TGPN_resignedFirstResponder()));
 }
 
-- (void)selectWord {
+- (void)id_selectWord {
     id assistant = [self activeAssistant];
     if (assistant == nil) return;
     ((void (*)(id, SEL))objc_msgSend)(
-        assistant, NSSelectorFromString(@"selectWord"));
+        assistant, NSSelectorFromString(TGPN_selectWord()));
 }
 
 - (void)selectAll:(id)sender {
@@ -394,18 +415,18 @@ IDUIKitFloatingCursorRuntimeContract(void) {
         assistant, NSSelectorFromString(@"selectAll:"), sender);
 }
 
-- (void)autoscrollWillNotStart {
+- (void)id_autoscrollWillNotStart {
     id assistant = [self activeAssistant];
     if (assistant == nil) return;
     ((void (*)(id, SEL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"autoscrollWillNotStart"));
+        NSSelectorFromString(TGPN_autoscrollWillNotStart()));
 }
 
 - (void)autoscrollDidTick {
     id assistant = [self activeAssistant];
     if (assistant == nil) return;
-    SEL selector = NSSelectorFromString(@"setAutoscrolled:");
+    SEL selector = NSSelectorFromString(TGPN_setAutoscrolled_());
     if (![assistant respondsToSelector:selector]) return;
     NSMethodSignature *signature = [assistant methodSignatureForSelector:selector];
     if (signature.numberOfArguments != 3 || strcmp(signature.methodReturnType, @encode(void)) != 0

@@ -1,6 +1,10 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
+
+#import "TGPrivateMethodAliases.h"
+
 #import "IDNativeSelectionPresentationBackend.h"
 
 #import "IDBlockStackCanvasView.h"
@@ -17,6 +21,20 @@
 
 @implementation IDNativeSelectionPresentationBackend
 
+// Renamed members keep their previous selectors at run time (`TGPrivateMethodAliases.h`): the names are
+// UIKit's private ones, which must not be compiled into the binary, and this object may be reached by
+// them, as the layout controller's connection is.
++ (void)initialize {
+    if (self != IDNativeSelectionPresentationBackend.class) {
+        return;
+    }
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_selectionContainerView, @selector(id_selectionContainerView) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
+
 - (instancetype)initWithHostView:(IDBlockTextView *)hostView {
     if (hostView == nil) {
         [NSException raise:NSInvalidArgumentException
@@ -29,7 +47,7 @@
     return self;
 }
 
-- (UIView *)selectionContainerView {
+- (UIView *)id_selectionContainerView {
     if (self.existingSelectionContainerView == nil) {
         IDBlockTextView *hostView = self.hostView;
         if (hostView == nil) {
@@ -72,7 +90,7 @@
 }
 
 - (void)placeSelectionContainerView {
-    UIView *container = [self selectionContainerView];
+    UIView *container = [self id_selectionContainerView];
     IDBlockTextView *hostView = self.hostView;
     if (container != nil && hostView != nil) {
         container.frame = [self containerFrame];

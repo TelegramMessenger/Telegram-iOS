@@ -4,8 +4,10 @@ import UIKit
 
 /// Task C12 — Family 9 (touch interaction and selection). Seven `IDUIKitInteractionCapability`
 /// witnesses, ALL new: `setSelectionActive(_:visible:)`, `selectionChanged()`,
-/// `setNeedsSelectionDisplayUpdate()`, `setGestureRecognizersEnabled(_:)`,
-/// `clearGestureRecognizersForced(_:)`, `selectWord()`, `selectAll(_:)`. `.detach()` — the eighth
+/// `id_setNeedsSelectionDisplayUpdate()`, `setGestureRecognizersEnabled(_:)`,
+/// `clearGestureRecognizersForced(_:)`, `id_selectWord()`, `selectAll(_:)`. (The two `id_` ones are
+/// named after private UIKit selectors, and `#function` would write such a name into the binary as
+/// text: package `CLAUDE.md`, "Private UIKit names are not in the binary".) `.detach()` — the eighth
 /// member this task's brief lists — stays where it already lived (`IDTextEditorBackend.detach()`),
 /// unchanged in shape; this task adds one new, guarded call to `clearGestureRecognizersForced(true)`
 /// there (see that method's own doc comment).
@@ -98,7 +100,7 @@ extension IDTextEditorBackend {
         guard isAttached else { return }
         var error: NSError?
         _ = TGRichTextInputDecPerform({
-            self.kernelInteraction?.selectionChanged()
+            self.kernelInteraction?.id_selectionChanged()
         }, &error)
         if let error { reportKernelFailure(error, witness: #function) }
     }
@@ -106,11 +108,11 @@ extension IDTextEditorBackend {
     /// `.setNeedsSelectionDisplayUpdate()` — a lighter-weight sibling of `selectionChanged()`:
     /// requests a redraw of the assistant's chrome without asserting the SELECTION itself changed
     /// (mirrors `setNeedsDisplay` vs. a genuine model change). No call site yet.
-    func setNeedsSelectionDisplayUpdate() {
+    func id_setNeedsSelectionDisplayUpdate() {
         guard isAttached else { return }
         var error: NSError?
         _ = TGRichTextInputDecPerform({
-            self.kernelInteraction?.setNeedsSelectionDisplayUpdate()
+            self.kernelInteraction?.id_setNeedsSelectionDisplayUpdate()
         }, &error)
         if let error { reportKernelFailure(error, witness: #function) }
     }
@@ -146,11 +148,11 @@ extension IDTextEditorBackend {
     /// drive independently (see this file's header). No call site yet;
     /// `test_selectWordRoutesThroughTheInteractionCapability` (`IDBackendFamily9Tests`) drives it
     /// directly (white-box).
-    func selectWord() {
+    func id_selectWord() {
         guard isAttached else { return }
         var error: NSError?
         _ = TGRichTextInputDecPerform({
-            self.kernelInteraction?.selectWord()
+            self.kernelInteraction?.id_selectWord()
         }, &error)
         if let error { reportKernelFailure(error, witness: #function) }
     }

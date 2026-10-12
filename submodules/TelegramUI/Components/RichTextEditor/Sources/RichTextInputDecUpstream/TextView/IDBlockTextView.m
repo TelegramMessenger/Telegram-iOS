@@ -46,6 +46,12 @@
     UIEdgeInsets _id_laidOutTextContainerInset;
 }
 
+// Not guarded to this class: a subclass that overrides one of the `tgpn_` callbacks must have its
+// override installed under the private name too (`IDBlockTextViewInstallPrivateCallbacks`).
++ (void)initialize {
+    IDBlockTextViewInstallPrivateCallbacks(self);
+}
+
 @synthesize autocapitalizationType = _autocapitalizationType;
 @synthesize autocorrectionType = _autocorrectionType;
 @synthesize spellCheckingType = _spellCheckingType;
@@ -865,7 +871,7 @@ ID_DEFINE_SCALAR_TRAIT_SETTER(UITextAutocorrectionType, AutocorrectionType, _aut
     // switch checking off for good.
     if (!_id_hasRecordedDefaultContinuousSpellChecking) {
         _id_defaultContinuousSpellChecking =
-            self.id_behaviorInput.isContinuousSpellCheckingEnabled;
+            self.id_behaviorInput.id_isContinuousSpellCheckingEnabled;
         _id_hasRecordedDefaultContinuousSpellChecking = YES;
     }
     BOOL enabled = _id_defaultContinuousSpellChecking;
@@ -874,7 +880,7 @@ ID_DEFINE_SCALAR_TRAIT_SETTER(UITextAutocorrectionType, AutocorrectionType, _aut
     } else if (value == UITextSpellCheckingTypeNo) {
         enabled = NO;
     }
-    [self.id_behaviorInput setContinuousSpellCheckingEnabled:enabled];
+    [self.id_behaviorInput id_setContinuousSpellCheckingEnabled:enabled];
     [self id_reloadInputViewsForChangedTrait];
 }
 ID_DEFINE_SCALAR_TRAIT_SETTER(UITextSmartQuotesType, SmartQuotesType, _smartQuotesType)
@@ -1036,7 +1042,7 @@ ID_DEFINE_SCALAR_TRAIT_SETTER(BOOL, AllowsNumberPadPopover, _allowsNumberPadPopo
     [self id_recordLatestCanonicalSelectionForAutoscroll];
     [self id_adoptEmptyBlockTypingAttributesIfNeeded];
     [self.id_inlineTextFormattingController selectionDidChange];
-    [self.id_interactionCapability selectionChanged];
+    [self.id_interactionCapability id_selectionChanged];
     [self setNeedsLayout];
     [self id_scrollCaretToVisibleIfNeeded];
     [self id_updateSelectionPresentation];
@@ -1337,7 +1343,7 @@ ID_DEFINE_SCALAR_TRAIT_SETTER(BOOL, AllowsNumberPadPopover, _allowsNumberPadPopo
 
 - (void)id_updateInteractionGeometry {
     [self.id_interactionCapability
-        setNeedsSelectionDisplayUpdate];
+        id_setNeedsSelectionDisplayUpdate];
     [self id_updateSelectionPresentation];
 }
 

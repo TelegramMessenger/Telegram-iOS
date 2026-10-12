@@ -1889,8 +1889,8 @@ selectionPresentationBackendFactory:
                                 MAX(CGRectGetHeight(editor.bounds) - insets.top - insets.bottom, 0));
     id<IDSelectionPresentationBackend> presentationBackend =
         editor.id_selectionPresentationBackend;
-    UIView *firstContainer = [presentationBackend selectionContainerView];
-    UIView *secondContainer = [presentationBackend selectionContainerView];
+    UIView *firstContainer = [presentationBackend id_selectionContainerView];
+    UIView *secondContainer = [presentationBackend id_selectionContainerView];
     BOOL containerStable = firstContainer != nil && firstContainer == secondContainer &&
         firstContainer.superview == editor;
     NSString *backend =

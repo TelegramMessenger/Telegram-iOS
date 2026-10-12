@@ -157,7 +157,7 @@
         : NSMakeRange(0, self.utf16Length);
 }
 
-- (IDBlockWritingDirection)baseWritingDirectionAtPosition:
+- (IDBlockWritingDirection)id_snapshotBaseWritingDirectionAtPosition:
     (IDBlockTextPosition)position {
     if (position.utf16Offset > self.utf16Length) {
         [NSException raise:NSInvalidArgumentException

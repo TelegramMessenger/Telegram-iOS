@@ -283,7 +283,7 @@ static NSArray<NSString *> *IDBlockHostMethodDefinitionPaths(
                                options:0 error:nil];
     NSRegularExpression *method = [NSRegularExpression
         regularExpressionWithPattern:[NSString stringWithFormat:
-            @"(?m)^\\s*-\\s*\\([^\\n)]*\\)\\s*%@\\s*\\{",
+            @"(?m)^\\s*-\\s*\\([^\\n)]*\\)\\s*(?:tgpn_)?%@\\s*\\{",
             escapedSelector]
                                options:0 error:nil];
     for (NSString *folder in @[@"App", @"TextView", @"PrivateUIKit"]) {
@@ -851,7 +851,9 @@ static NSSet<NSString *> *IDLiteralPrivateSelectorInventory(NSString *source) {
 }
 
 static NSRegularExpression *IDPrivateCallbackBoundaryExpression(void) {
-    NSString *pattern = @"(?m)^\\s*-\\s*\\([^\\n\\)]*\\)\\s*(textLayoutManager|textContainer|setTextContainer:|invalidateTextContainerOrigin|textContainerOrigin|textStorage|_nsRangeForTextKitRanges:|textInputView|_textInputViewForAddingGestureRecognizers|textLayoutController|_internalTextLayoutController|layoutManager|_inputController|textInputController|_implicitPasteConfigurationClasses|textInput:|textInputDidChange:|textInputDidChangeSelection:|keyboardInputChangedSelection:|keyboardInputShouldDelete:|keyboardInput:|interactionAssistant|customRenderController|textColor|_convertPointFromRenderSpace:|selectionContainerView|_existingSelectionContainerView|_placeSelectionContainerView|_isInteractiveTextSelectionDisabled|_updateSelectionGestures|_performViewportLayout:|_viewportWillLayout|_viewportDidLayout|viewportBoundsForTextViewportLayoutController:|textViewportLayoutController:|textViewportLayoutControllerWillLayout:|textViewportLayoutControllerDidLayout:|_removeUnusedElementViews|updateContentSizeIfNeeded|setNeedsDisplayInRect:|flushElementViews|invalidateTemporaryAttributesInRange:|setTextEmphasisBackgroundView:|_updateRenderingSurfaceViewsForTextRange:|isEditingDidChange|observeEnclosingScrollView|_traitsChanged|_textKit2CanvasDidLayout|_updateInteractionGeometry|hoverEffectContainerLayer|uniqueWritingToolsAnimatedLayoutInfo|setUniqueWritingToolsAnimatedLayoutInfo:|isLayoutFragmentView|rangeOfCharacterClusterAtIndex:|boundingRectForCharacterRange:|selectionRectsForRange:[^\\n]*\\n\\s*fromView:|requestTextGeometryAtPosition:|annotatedSubstringForRange:|addAnnotationAttribute:|removeAnnotationAttribute:|addRenderingAttributes:|removeRenderingAttributes:|_invalidateTemporaryAttributesInRange:)";
+    // `(?:tgpn_)?`: a callback UIKit sends under a private name is compiled under its neutral
+    // `tgpn_` name (`TGPrivateMethodAliases.h`), and is still that callback's definition.
+    NSString *pattern = @"(?m)^\\s*-\\s*\\([^\\n\\)]*\\)\\s*(?:tgpn_)?(textLayoutManager|textContainer|setTextContainer:|invalidateTextContainerOrigin|textContainerOrigin|textStorage|_nsRangeForTextKitRanges:|textInputView|_textInputViewForAddingGestureRecognizers|textLayoutController|_internalTextLayoutController|layoutManager|_inputController|textInputController|_implicitPasteConfigurationClasses|textInput:|textInputDidChange:|textInputDidChangeSelection:|keyboardInputChangedSelection:|keyboardInputShouldDelete:|keyboardInput:|interactionAssistant|customRenderController|textColor|_convertPointFromRenderSpace:|selectionContainerView|_existingSelectionContainerView|_placeSelectionContainerView|_isInteractiveTextSelectionDisabled|_updateSelectionGestures|_performViewportLayout:|_viewportWillLayout|_viewportDidLayout|viewportBoundsForTextViewportLayoutController:|textViewportLayoutController:|textViewportLayoutControllerWillLayout:|textViewportLayoutControllerDidLayout:|_removeUnusedElementViews|updateContentSizeIfNeeded|setNeedsDisplayInRect:|flushElementViews|invalidateTemporaryAttributesInRange:|setTextEmphasisBackgroundView:|_updateRenderingSurfaceViewsForTextRange:|isEditingDidChange|observeEnclosingScrollView|_traitsChanged|_textKit2CanvasDidLayout|_updateInteractionGeometry|hoverEffectContainerLayer|uniqueWritingToolsAnimatedLayoutInfo|setUniqueWritingToolsAnimatedLayoutInfo:|isLayoutFragmentView|rangeOfCharacterClusterAtIndex:|boundingRectForCharacterRange:|selectionRectsForRange:[^\\n]*\\n\\s*fromView:|requestTextGeometryAtPosition:|annotatedSubstringForRange:|addAnnotationAttribute:|removeAnnotationAttribute:|addRenderingAttributes:|removeRenderingAttributes:|_invalidateTemporaryAttributesInRange:)";
     return [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
 }
 
@@ -1647,7 +1649,7 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
         @"- (id)_internalTextLayoutController {"]);
     XCTAssertEqual(IDSourceOccurrenceCount(
         callbacks,
-        @"- (id)textLayoutController {\n"
+        @"- (id)tgpn_textLayoutController {\n"
          "    return self.id_richLayoutController;\n"
          "}"), 1U);
     XCTAssertEqual(IDSourceOccurrenceCount(
@@ -1830,12 +1832,13 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
         read(@"PrivateUIKit/IDPrivateUIKit+TextLayoutCanvas.m");
     NSString *manifest =
         read(@"PrivateUIKit/Contracts/UIKitBehaviorContracts-iOS26.5.json");
+    // Private names are spelled through their encoded table entries (`TGPrivateRuntimeNames.h`).
     XCTAssertTrue([privateImplementation containsString:
-        @"boundsForTextParagraphAnchoredAttachment:"]);
+        @"TGPN_boundsForTextParagraphAnchoredAttachment_"]);
     XCTAssertTrue([privateImplementation containsString:
-        @"textAttachmentViewProviderForTextParagraphAnchoredAttachment:"]);
+        @"TGPN_textAttachmentViewProviderForTextParagraphAnchoredAttachment_"]);
     XCTAssertTrue([privateImplementation containsString:
-        @"drawTextParagraphAnchoredAttachment:bounds:context:"]);
+        @"TGPN_drawTextParagraphAnchoredAttachment_bounds_context_"]);
     XCTAssertTrue([privateHeader containsString:
         @"IDPrivateCanvasParagraphAnchoredBounds"]);
     for (NSString *identifier in @[
@@ -2342,11 +2345,11 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
     XCTAssertNotNil(privateUIKit);
 
     NSString *methodRegion =
-        @"- (UIView *)_textInputViewForAddingGestureRecognizers {\n"
+        @"- (UIView *)tgpn__textInputViewForAddingGestureRecognizers {\n"
          "    return self;\n"
          "}";
     NSString *abiRegion =
-        @"IDInteractionABISpecMake(@\"_textInputViewForAddingGestureRecognizers\", @encode(id), @[]),";
+        @"IDInteractionABISpecMake(TGPN__textInputViewForAddingGestureRecognizers(), @encode(id), @[]),";
     XCTAssertEqual(IDSourceOccurrenceCount(callbacks, methodRegion), 1U);
     XCTAssertEqual(IDSourceOccurrenceCount(privateUIKit, abiRegion), 1U);
 
@@ -3915,7 +3918,25 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
     NSRange end = [implementation rangeOfString:@"\n@end"];
     XCTAssertNotEqual(end.location, NSNotFound);
     implementation = [implementation substringToIndex:end.location];
-    NSArray<NSString *> *definitions = IDMethodDefinitionSelectors(implementation);
+    // A callback UIKit sends under a PRIVATE name is answered by the file's alias table, onto the
+    // `id_` method (or a neutral `tgpn_` wrapper) that implements it (`TGPrivateMethodAliases.h`),
+    // so the selectors this file answers are its public-named definitions plus its alias rows.
+    NSMutableArray<NSString *> *definitions = [NSMutableArray array];
+    for (NSString *selector in IDMethodDefinitionSelectors(implementation)) {
+        if (![selector hasPrefix:@"tgpn_"]) [definitions addObject:selector];
+    }
+    NSRange installer = [source rangeOfString:
+        @"void IDRichTextLayoutControllerInstallPrivateCallbacks(Class cls) {"];
+    XCTAssertNotEqual(installer.location, NSNotFound);
+    NSString *table = installer.location == NSNotFound ? @"" : [source substringFromIndex:installer.location];
+    NSRegularExpression *row = [NSRegularExpression
+        regularExpressionWithPattern:@"\\{\\s*(TGPN_\\w+),\\s*@selector\\(" options:0 error:nil];
+    NSDictionary<NSString *, NSString *> *decoded = IDPrivateRuntimeNamesByFunction();
+    for (NSTextCheckingResult *match in [row matchesInString:table options:0
+                                                       range:NSMakeRange(0, table.length)]) {
+        NSString *function = [table substringWithRange:[match rangeAtIndex:1]];
+        [definitions addObject:decoded[function] ?: function];
+    }
     NSArray<NSString *> *required = IDRichLayoutRequiredSelectorNames();
     NSMutableArray<NSString *> *expectedDefinitions = [required mutableCopy];
     [expectedDefinitions addObject:@"layoutManager"];
@@ -4084,8 +4105,9 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
         NSString *body = [NSString stringWithContentsOfFile:path
                                                    encoding:NSUTF8StringEncoding
                                                       error:nil];
-        NSUInteger expectedCount =
-            [file isEqualToString:@"IDNativeSelectionPresentationBackend.m"] ? 1U : 0U;
+        // The selection backend's own container accessor is `id_selectionContainerView` (it shared
+        // UIKit's private name, which may not be compiled in), so no TextView source defines one.
+        NSUInteger expectedCount = 0U;
         XCTAssertEqual(IDPrivateCallbackBoundaryMatchCount(body),
                        expectedCount,
                        @"Private UIKit callback definition in TextView/%@",
@@ -4324,9 +4346,9 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
     XCTAssertTrue([legacy containsString:
         @"- (void)invalidateTextContainerOrigin"]);
     XCTAssertTrue([blockTextView containsString:
-        @"- (CGPoint)textContainerOrigin"]);
+        @"- (CGPoint)tgpn_textContainerOrigin"]);
     XCTAssertTrue([blockCanvas containsString:
-        @"- (CGPoint)textContainerOrigin"]);
+        @"- (CGPoint)tgpn_textContainerOrigin"]);
     XCTAssertTrue([blockLayout containsString:
         @"- (CGPoint)id_textContainerOrigin"]);
 }
@@ -4428,9 +4450,11 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
         [@"invalidateTextContainer" stringByAppendingString:@"Origin"];
     NSString *getter =
         [@"textContainer" stringByAppendingString:@"Origin"];
+    // The canvas answers both under their private names through its alias table
+    // (`TGPrivateMethodAliases.h`), backed by the `id_` methods.
     NSDictionary<NSString *, NSString *> *definitions = @{
-        invalidation: @"- (void)invalidateTextContainerOrigin {",
-        getter: @"- (CGPoint)textContainerOrigin {",
+        invalidation: @"{ TGPN_invalidateTextContainerOrigin, @selector(id_invalidateTextContainerOrigin) }",
+        getter: @"{ TGPN_textContainerOrigin, @selector(id_textContainerOrigin) }",
     };
     for (NSString *name in IDRemovableCanvasOriginSelectorNames()) {
         XCTAssertFalse([source containsString:definitions[name]], @"%@", name);
@@ -4551,7 +4575,7 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
     XCTAssertTrue([snapshotHeader containsString:
         @"IDBlockLayoutCapabilityBaseWritingDirection"]);
     XCTAssertTrue([snapshotHeader containsString:
-        @"baseWritingDirectionAtPosition:"]);
+        @"id_snapshotBaseWritingDirectionAtPosition:"]);
 }
 
 - (void)testNeutralSelectionHeadersContainNoUIKitOrPrivateVocabulary {
@@ -5081,7 +5105,7 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
         read(@"PrivateUIKit/IDBlockLayout+PrivateCanvasCallbacks.m");
     XCTAssertTrue([canvas containsString:@"- (id)id_customRenderController {"]);
     XCTAssertTrue([flat containsString:@"- (id)customRenderController {"]);
-    XCTAssertTrue([blockCanvas containsString:@"- (id)customRenderController {"]);
+    XCTAssertTrue([blockCanvas containsString:@"- (id)tgpn_customRenderController {"]);
 }
 
 - (void)testBlockInteractionPolicyWithdrawalInfrastructureIsAbsent {
@@ -5195,8 +5219,9 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
          ]) {
         XCTAssertTrue([flat containsString:name], @"flat provider %@", name);
     }
-    XCTAssertTrue([blockCanvas containsString:@"- (void)_textKit2CanvasDidLayout {"]);
-    XCTAssertTrue([canvas containsString:@"- (void)_textKit2CanvasDidLayout {"]);
+    XCTAssertTrue([blockCanvas containsString:@"- (void)tgpn__textKit2CanvasDidLayout {"]);
+    XCTAssertTrue([canvas containsString:
+        @"{ TGPN__textKit2CanvasDidLayout, @selector(id_textKit2CanvasDidLayout) }"]);
 }
 
 - (void)testBlockIsEditingAuthorizationFixtureIsPinnedAndComplete {
@@ -5394,13 +5419,12 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
         containsString:@"IDPrivateRequireBlockTextViewVisualSelectionABI"]);
     NSString *richCallbacks =
         read(@"PrivateUIKit/IDRichTextLayoutController+PrivateCallbacks.m");
-    XCTAssertTrue([richCallbacks
-        containsString:@"- (UITextRange *)_visualSelectionRangeForExtent:"]);
-    XCTAssertTrue([richCallbacks containsString:@"forPoint:(CGPoint)point"]);
-    XCTAssertTrue([richCallbacks
-        containsString:@"fromPosition:(UITextPosition *)position"]);
-    XCTAssertTrue([richCallbacks
-        containsString:@"inDirection:(UITextStorageDirection)direction"]);
+    // Answered under its private name by the alias table onto the `id_` method
+    // (`TGPrivateMethodAliases.h`), whose signature is the callback's.
+    XCTAssertTrue([richCallbacks containsString:
+        @"TGPN__visualSelectionRangeForExtent_forPoint_fromPosition_inDirection_"]);
+    XCTAssertTrue([richCallbacks containsString:
+        @"@selector(id_visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:)"]);
     XCTAssertTrue([read(@"TextView/IDRichTextLayoutController.m")
         containsString:@"id_visualSelectionRangeForExtent:"]);
     XCTAssertTrue([read(@"PrivateUIKit/Contracts/UIKitBehaviorContracts-iOS26.5.json")
@@ -5502,7 +5526,7 @@ static NSArray<NSString *> *IDFinalOwnershipAuditViolationsForSources(
     XCTAssertTrue([flat containsString:
         @"- (CGPoint)_convertPointFromRenderSpace:(CGPoint)point {"]);
     XCTAssertTrue([blockCanvas containsString:
-        @"- (id)customRenderController {"]);
+        @"- (id)tgpn_customRenderController {"]);
     XCTAssertTrue([canvasBridge containsString:
         @"IDPrivateCanvasCustomRenderController"]);
     XCTAssertTrue([canvas containsString:

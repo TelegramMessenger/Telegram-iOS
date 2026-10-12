@@ -196,7 +196,14 @@ static BOOL IDTextCanvasContentSizeForUsageBounds(
 @end
 
 
+// `IDTextLayoutCanvasView+PrivateCallbacks.m`: adds the callbacks UIKit sends under private names.
+FOUNDATION_EXTERN void IDTextLayoutCanvasViewInstallPrivateCallbacks(Class cls);
+
 @implementation IDTextLayoutCanvasView
+
++ (void)initialize {
+    IDTextLayoutCanvasViewInstallPrivateCallbacks(self);
+}
 
 @synthesize layoutFragmentViewsNeedDisplay = _layoutFragmentViewsNeedDisplay;
 
@@ -308,17 +315,17 @@ static BOOL IDTextCanvasContentSizeForUsageBounds(
         self.id_hoverEffectContainerLayer.frame = self.layer.bounds;
         self.id_hoverEffectContainerLayer.hidden = IDPrivateCanvasContextIsEditing(self.context);
     }
-    if (self.selectionContainerView.superview == self) {
-        self.selectionContainerView.frame = self.bounds;
+    if (self.id_selectionContainerView.superview == self) {
+        self.id_selectionContainerView.frame = self.bounds;
     }
 }
 
-- (void)setSelectionContainerView:(UIView *)selectionContainerView {
-    if (_selectionContainerView == selectionContainerView) {
+- (void)setId_selectionContainerView:(UIView *)selectionContainerView {
+    if (_id_selectionContainerView == selectionContainerView) {
         return;
     }
-    [_selectionContainerView removeFromSuperview];
-    _selectionContainerView = selectionContainerView;
+    [_id_selectionContainerView removeFromSuperview];
+    _id_selectionContainerView = selectionContainerView;
     if (selectionContainerView != nil) {
         [self addSubview:selectionContainerView];
     }
@@ -484,8 +491,8 @@ static BOOL IDTextCanvasContentSizeForUsageBounds(
     IDTextRenderingSurfaceView *fragmentSurface = (IDTextRenderingSurfaceView *)surface;
     if (self.id_textEmphasisBackgroundView.superview == self) {
         [self insertSubview:surface belowSubview:self.id_textEmphasisBackgroundView];
-    } else if (self.selectionContainerView.superview == self) {
-        [self insertSubview:surface belowSubview:self.selectionContainerView];
+    } else if (self.id_selectionContainerView.superview == self) {
+        [self insertSubview:surface belowSubview:self.id_selectionContainerView];
     } else {
         [self insertSubview:surface atIndex:0];
     }
@@ -606,8 +613,8 @@ static BOOL IDTextCanvasContentSizeForUsageBounds(
                                        reason:@"External rendering-surface placement stage supports only 0 and 1"
                                      userInfo:nil];
     }
-    UIView *selection = self.selectionContainerView.superview == self
-        ? self.selectionContainerView
+    UIView *selection = self.id_selectionContainerView.superview == self
+        ? self.id_selectionContainerView
         : nil;
     if (group == 1) {
         if (placement == 0 && selection != nil) {
@@ -749,8 +756,8 @@ static BOOL IDTextCanvasContentSizeForUsageBounds(
     UIView *emphasisView = self.id_textEmphasisBackgroundView;
     if (hasHighlight && emphasisView != nil) {
         [self id_addRenderingSurface:emphasisView group:1 placement:1];
-        if (self.selectionContainerView.superview == self) {
-            [self insertSubview:emphasisView belowSubview:self.selectionContainerView];
+        if (self.id_selectionContainerView.superview == self) {
+            [self insertSubview:emphasisView belowSubview:self.id_selectionContainerView];
         } else {
             [self addSubview:emphasisView];
         }

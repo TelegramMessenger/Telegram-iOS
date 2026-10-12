@@ -19,11 +19,16 @@
     return NSProtocolFromString(name);
 }
 
+// `class_getInstanceMethod` deliberately does not run `+initialize`, and our classes add the
+// callbacks UIKit calls under private names from `+initialize` (`TGPrivateMethodAliases.h`). So the
+// class is initialized first, or a contract checked before any instance exists finds no callbacks.
 - (Method)instanceMethodForClass:(Class)cls selector:(SEL)selector {
+    (void)[cls class];
     return class_getInstanceMethod(cls, selector);
 }
 
 - (Method)classMethodForClass:(Class)cls selector:(SEL)selector {
+    (void)[cls class];
     return class_getClassMethod(cls, selector);
 }
 

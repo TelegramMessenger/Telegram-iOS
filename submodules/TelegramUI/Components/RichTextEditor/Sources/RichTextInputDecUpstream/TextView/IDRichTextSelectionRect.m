@@ -2,6 +2,7 @@
 #if TARGET_OS_IOS
 
 #import "IDRichTextSelectionRect.h"
+#import "IDRichTextLayoutControllerInternal.h"
 
 @interface IDRichTextSelectionRect ()
 @property(nonatomic) CGRect storedRect;
@@ -13,6 +14,12 @@
 @end
 
 @implementation IDRichTextSelectionRect
+
++ (void)initialize {
+    if (self == IDRichTextSelectionRect.class) {
+        IDRichTextSelectionRectInstallPrivateCallbacks(self);
+    }
+}
 
 - (instancetype)initWithRect:(CGRect)rect
                 containsStart:(BOOL)containsStart

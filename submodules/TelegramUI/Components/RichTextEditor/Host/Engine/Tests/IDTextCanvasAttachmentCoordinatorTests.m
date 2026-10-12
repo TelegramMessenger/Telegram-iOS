@@ -618,7 +618,7 @@ static IDPrivateCanvasPlatformSurfaceUpdater IDTask5PlatformSurfaceUpdater(
     [textView.textStorage addAttribute:NSTextHighlightStyleAttributeName
                                  value:@1
                                  range:textView.probeRange];
-    fixture.canvas.selectionContainerView = selection;
+    fixture.canvas.id_selectionContainerView = selection;
     [fixture.canvas setTextEmphasisBackgroundView:emphasis withTextView:textView];
     [fixture.canvas id_updateRenderingSurfaceViewsForTextRange:[IDTask5TextRangeProbe new]
                                                      inTextView:textView
@@ -808,7 +808,7 @@ static IDPrivateCanvasPlatformSurfaceUpdater IDTask5PlatformSurfaceUpdater(
         initWithText:@"matrix"
                 size:CGSizeMake(220, 80)];
     UIView *selection = [UIView new];
-    fixture.canvas.selectionContainerView = selection;
+    fixture.canvas.id_selectionContainerView = selection;
     UIView *backgroundBack = [UIView new];
     UIView *backgroundFront = [UIView new];
     UIView *contentsBack = [UIView new];

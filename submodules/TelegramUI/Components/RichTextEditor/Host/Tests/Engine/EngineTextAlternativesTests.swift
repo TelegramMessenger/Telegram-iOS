@@ -13,6 +13,24 @@ import RichTextEditorCore
 /// text — uses, and it lives on the host's shim; these tests drive it the way such a client and the
 /// tap do, and read the result the way a device dump does: the annotation the tap is answered from,
 /// and the rendering attribute the canvas draws.
+/// The members of the family UIKit sends under PRIVATE names. The engine adds them at run time
+/// (`TGPrivateMethodAliases.h`) and no shipping header declares them, so the tests declare them here
+/// and send them the way UIKit does.
+@objc private protocol UIKitTextAlternativesCallbacks {
+    @objc(rangeWithTextAlternatives:atPosition:)
+    func range(withTextAlternatives alternatives: AutoreleasingUnsafeMutablePointer<AnyObject?>?,
+               at position: UITextPosition) -> UITextRange?
+    @objc(replaceRange:withAnnotatedString:relativeReplacementRange:)
+    func replace(_ range: UITextRange, withAnnotatedString annotatedString: NSAttributedString,
+                 relativeReplacementRange: NSRange)
+    @objc(removeAlternativesForCurrentWord)
+    func removeAlternativesForCurrentWord()
+}
+
+private func uikitCallbacks(_ view: TGIDObservingBlockTextView) -> UIKitTextAlternativesCallbacks {
+    unsafeBitCast(view, to: UIKitTextAlternativesCallbacks.self)
+}
+
 @available(iOS 18.4, *)
 final class EngineTextAlternativesTests: XCTestCase {
     private var window: UIWindow!
@@ -71,7 +89,7 @@ final class EngineTextAlternativesTests: XCTestCase {
         engine.insertText("the", alternatives: ["teh"], style: .none)
         XCTAssertEqual(engine.attributedBlocks.first?.string, "hello the", "the text landed through the gate")
         var alternatives: AnyObject?
-        let range = engine.range(withTextAlternatives: &alternatives, at: position(7))
+        let range = uikitCallbacks(engine).range(withTextAlternatives: &alternatives, at: position(7))
         XCTAssertNotNil(range, "the tap finds alternatives inside the word")
         XCTAssertEqual(range.map(canonical), NSRange(location: 6, length: 3))
         XCTAssertEqual((alternatives as? NSObject)?.value(forKey: "primaryString") as? String, "the")
@@ -83,7 +101,7 @@ final class EngineTextAlternativesTests: XCTestCase {
     func test_aCaretParkedRightAfterTheWordStillFindsIt() {
         engine.insertText("the", alternatives: ["teh"], style: .none)
         var alternatives: AnyObject?
-        let range = engine.range(withTextAlternatives: &alternatives, at: position(9))
+        let range = uikitCallbacks(engine).range(withTextAlternatives: &alternatives, at: position(9))
         XCTAssertEqual(range.map(canonical), NSRange(location: 6, length: 3))
         XCTAssertNotNil(alternatives)
     }
@@ -96,19 +114,19 @@ final class EngineTextAlternativesTests: XCTestCase {
     func test_removingTheAnnotationClearsBothTheTapsAnswerAndTheUnderline() {
         engine.insertText("the", alternatives: ["teh"], style: .none)
         var alternatives: AnyObject?
-        guard let range = engine.range(withTextAlternatives: &alternatives, at: position(7)) else { return XCTFail("no range") }
+        guard let range = uikitCallbacks(engine).range(withTextAlternatives: &alternatives, at: position(7)) else { return XCTFail("no range") }
         engine.removeAnnotation(TGIDObservingBlockTextView.tgid_textAlternativesKey(), for: range)
         engine.removeAnnotation(TGIDObservingBlockTextView.tgid_textAlternativesDisplayStyleKey(), for: range)
-        XCTAssertNil(engine.range(withTextAlternatives: &alternatives, at: position(7)))
+        XCTAssertNil(uikitCallbacks(engine).range(withTextAlternatives: &alternatives, at: position(7)))
         XCTAssertEqual(renderedDisplayStyles(), [])
     }
 
     func test_removeAlternativesForCurrentWordClearsTheWordUnderTheCaret() {
         engine.insertText("the", alternatives: ["teh"], style: .none)
         engine.selectedTextRange = engine.textRange(from: position(8), to: position(8))
-        engine.removeAlternativesForCurrentWord()
+        uikitCallbacks(engine).removeAlternativesForCurrentWord()
         var alternatives: AnyObject?
-        XCTAssertNil(engine.range(withTextAlternatives: &alternatives, at: position(7)))
+        XCTAssertNil(uikitCallbacks(engine).range(withTextAlternatives: &alternatives, at: position(7)))
         XCTAssertEqual(renderedDisplayStyles(), [])
     }
 
@@ -117,7 +135,7 @@ final class EngineTextAlternativesTests: XCTestCase {
             TGIDObservingBlockTextView.tgid_textAlternativesDisplayStyleKey(): 0,
         ]
         let whole = engine.textRange(from: position(0), to: position(5))!   // "hello"
-        engine.replace(whole, withAnnotatedString: NSAttributedString(string: "hallo", attributes: attributes),
+        uikitCallbacks(engine).replace(whole, withAnnotatedString: NSAttributedString(string: "hallo", attributes: attributes),
                        relativeReplacementRange: NSRange(location: 0, length: 5))
         XCTAssertEqual(engine.attributedBlocks.first?.string, "hallo ")
         XCTAssertEqual(renderedDisplayStyles(), ["block0 0..<5 style=0"])
@@ -125,7 +143,7 @@ final class EngineTextAlternativesTests: XCTestCase {
 
     func test_aTextWithoutAlternativesAnswersNothing() {
         var alternatives: AnyObject?
-        XCTAssertNil(engine.range(withTextAlternatives: &alternatives, at: position(2)))
+        XCTAssertNil(uikitCallbacks(engine).range(withTextAlternatives: &alternatives, at: position(2)))
         XCTAssertEqual(renderedDisplayStyles(), [])
     }
 
@@ -142,7 +160,7 @@ final class EngineTextAlternativesTests: XCTestCase {
         XCTAssertEqual(editor.document.blocks[0].asParagraph?.runs.map(\.text).joined(), "hello the")
         var alternatives: AnyObject?
         let at = editor.engine.position(from: editor.engine.beginningOfDocument, offset: 7)!
-        XCTAssertNotNil(editor.engine.range(withTextAlternatives: &alternatives, at: at))
+        XCTAssertNotNil(uikitCallbacks(editor.engine).range(withTextAlternatives: &alternatives, at: at))
         editor.removeFromSuperview()
     }
 }

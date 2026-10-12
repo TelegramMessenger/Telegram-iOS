@@ -3,20 +3,25 @@
 
 #import "IDBlockLayout.h"
 #import "IDTextCanvasAttachmentLifecycle.h"
+#import "TGPrivateMethodAliases.h"
+#import "TGPrivateRuntimeNames.h"
 
+
+// The host answers the canvas callbacks under the same neutral `tgpn_` names they are compiled
+// under here, so they are forwarded with a direct send; only UIKit uses the private names.
 @protocol IDBlockLayoutCanvasHost <NSObject>
 @optional
-@property(nonatomic, strong, readonly, nullable) id customRenderController;
+- (nullable id)tgpn_customRenderController;
+- (CGRect)tgpn__clipRectForFadedEdges;
+- (void)tgpn__textKit2CanvasDidLayout;
+- (void)tgpn__updateInteractionGeometry;
 @property(nonatomic, strong, readonly) UIColor *textColor;
 @property(nonatomic, readonly, getter=isEditable) BOOL editable;
 @property(nonatomic, readonly, getter=isEditing) BOOL editing;
-- (CGRect)_clipRectForFadedEdges;
 - (void)id_attachmentView:(UIView *)view
     didLayoutInFragmentFrame:(CGRect)fragmentFrame;
 - (void)id_attachmentViewsDidEnterViewport:(NSSet<UIView *> *)views;
 - (void)id_attachmentViewsDidLeaveViewport:(NSSet<UIView *> *)views;
-- (void)_textKit2CanvasDidLayout;
-- (void)_updateInteractionGeometry;
 @end
 
 @interface IDBlockLayout (CanvasHostAccess) <IDTextCanvasAttachmentLifecycleSink>
@@ -25,20 +30,22 @@
 - (CGPoint)id_textContainerOrigin;
 @end
 
+FOUNDATION_EXTERN void IDBlockLayoutInstallPrivateCallbacks(Class cls);
+
 @implementation IDBlockLayout (PrivateCanvasCallbacks)
 
 - (NSTextLayoutManager *)layoutManager {
     return [self id_blockLayoutManager];
 }
 
-- (CGPoint)textContainerOrigin {
+- (CGPoint)tgpn_textContainerOrigin {
     return [self id_textContainerOrigin];
 }
 
-- (id)customRenderController {
+- (id)tgpn_customRenderController {
     id<IDBlockLayoutCanvasHost> host = [self id_canvasHost];
-    return [host respondsToSelector:@selector(customRenderController)]
-        ? host.customRenderController
+    return [host respondsToSelector:@selector(tgpn_customRenderController)]
+        ? [host tgpn_customRenderController]
         : nil;
 }
 
@@ -59,10 +66,10 @@
     return [host respondsToSelector:@selector(isEditing)] && host.isEditing;
 }
 
-- (CGRect)_clipRectForFadedEdges {
+- (CGRect)tgpn__clipRectForFadedEdges {
     id<IDBlockLayoutCanvasHost> host = [self id_canvasHost];
-    return [host respondsToSelector:@selector(_clipRectForFadedEdges)]
-        ? [host _clipRectForFadedEdges]
+    return [host respondsToSelector:@selector(tgpn__clipRectForFadedEdges)]
+        ? [host tgpn__clipRectForFadedEdges]
         : CGRectNull;
 }
 
@@ -89,20 +96,31 @@
     }
 }
 
-- (void)_textKit2CanvasDidLayout {
+- (void)tgpn__textKit2CanvasDidLayout {
     id<IDBlockLayoutCanvasHost> host = [self id_canvasHost];
-    if ([host respondsToSelector:@selector(_textKit2CanvasDidLayout)]) {
-        [host _textKit2CanvasDidLayout];
+    if ([host respondsToSelector:@selector(tgpn__textKit2CanvasDidLayout)]) {
+        [host tgpn__textKit2CanvasDidLayout];
     }
 }
 
-- (void)_updateInteractionGeometry {
+- (void)tgpn__updateInteractionGeometry {
     id<IDBlockLayoutCanvasHost> host = [self id_canvasHost];
-    if ([host respondsToSelector:@selector(_updateInteractionGeometry)]) {
-        [host _updateInteractionGeometry];
+    if ([host respondsToSelector:@selector(tgpn__updateInteractionGeometry)]) {
+        [host tgpn__updateInteractionGeometry];
     }
 }
 
 @end
+
+void IDBlockLayoutInstallPrivateCallbacks(Class cls) {
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_textContainerOrigin, @selector(tgpn_textContainerOrigin) },
+        { TGPN_customRenderController, @selector(tgpn_customRenderController) },
+        { TGPN__clipRectForFadedEdges, @selector(tgpn__clipRectForFadedEdges) },
+        { TGPN__textKit2CanvasDidLayout, @selector(tgpn__textKit2CanvasDidLayout) },
+        { TGPN__updateInteractionGeometry, @selector(tgpn__updateInteractionGeometry) },
+    };
+    TGPrivateInstallMethodAliases(cls, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
 
 #endif

@@ -245,7 +245,7 @@ extension IDTextEditorBackend {
         guard isAttached, let host else { return }
         var error: NSError?
         _ = TGRichTextInputDecPerform({
-            self.kernelInteraction?.resignedFirstResponder()
+            self.kernelInteraction?.id_resignedFirstResponder()
         }, &error)
         if let error { reportKernelFailure(error, witness: #function) }
         host.lifecycleClient.backendDidEndEditing()

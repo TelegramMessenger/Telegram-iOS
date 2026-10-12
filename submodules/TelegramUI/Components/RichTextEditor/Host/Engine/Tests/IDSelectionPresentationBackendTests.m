@@ -61,7 +61,7 @@
     return self;
 }
 
-- (UIView *)selectionContainerView {
+- (UIView *)id_selectionContainerView {
     if (self.existingSelectionContainerView == nil) {
         UIView *container = [[UIView alloc] initWithFrame:self.hostView.bounds];
         container.userInteractionEnabled = NO;
@@ -113,7 +113,7 @@
 @end
 
 @implementation IDVerticalAutoscrollTickFixture
-- (UIScrollView *)scrollContainer { return self.fixtureContainer; }
+- (UIScrollView *)id_scrollContainer { return self.fixtureContainer; }
 - (CGPoint)point { return self.fixturePoint; }
 - (IDVerticalAutoscrollDirection)directions {
     return self.fixtureDirections;
@@ -147,7 +147,8 @@
     return [self.target respondsToSelector:selector];
 }
 - (void)forwardInvocation:(NSInvocation *)invocation {
-    if (invocation.selector == NSSelectorFromString(@"setNeedsSelectionDisplayUpdate")) {
+    // The capability's own method (it no longer shares UIKit's private name, `TGPrivateRuntimeNames.h`).
+    if (invocation.selector == @selector(id_setNeedsSelectionDisplayUpdate)) {
         [self.eventSink addObject:@"interaction"];
     }
     [invocation invokeWithTarget:self.target];
@@ -248,8 +249,8 @@
     IDNativeSelectionPresentationBackend *backend =
         (IDNativeSelectionPresentationBackend *)view.id_selectionPresentationBackend;
 
-    UIView *first = [backend selectionContainerView];
-    UIView *second = [backend selectionContainerView];
+    UIView *first = [backend id_selectionContainerView];
+    UIView *second = [backend id_selectionContainerView];
     [backend placeSelectionContainerView];
 
     XCTAssertEqual(first, second);
@@ -275,7 +276,7 @@
     IDNativeSelectionPresentationBackend *backend =
         (IDNativeSelectionPresentationBackend *)view.id_selectionPresentationBackend;
 
-    UIView *container = [backend selectionContainerView];
+    UIView *container = [backend id_selectionContainerView];
     [backend placeSelectionContainerView];
 
     IDBlockStackCanvasView *stack = view.id_blockStackCanvasView;
@@ -351,7 +352,7 @@
                   eventSink:view.orderingEvents];
     [view layoutIfNeeded];
     [self installSelection:NSMakeRange(12, 72) inView:view];
-    [view.id_selectionPresentationBackend selectionContainerView];
+    [view.id_selectionPresentationBackend id_selectionContainerView];
     [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
     NSUInteger updateCount = recording.presentationUpdateCount;
     NSRange unchangedSelection = [self canonicalRangeForView:view
@@ -431,7 +432,7 @@
     view.id_activeAutoscrollEndpoint =
         IDVerticalAutoscrollSelectionEndpointEnd;
     UIView *container =
-        [view.id_selectionPresentationBackend selectionContainerView];
+        [view.id_selectionPresentationBackend id_selectionContainerView];
     [NSRunLoop.mainRunLoop
         runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
     NSUInteger presentationCount =
@@ -675,7 +676,7 @@
         initWithFrame:CGRectMake(0, 0, 240, 120)
         attributedBlocks:self.blocks];
     id<IDSelectionPresentationBackend> backend = view.id_selectionPresentationBackend;
-    UIView *container = [backend selectionContainerView];
+    UIView *container = [backend id_selectionContainerView];
     NSString *text = view.text;
     [self installSelection:NSMakeRange(3, 7) inView:view];
     NSRange selection = [self canonicalRangeForView:view
@@ -761,7 +762,7 @@
                 ^id<IDSelectionPresentationBackend>(IDBlockTextView *hostView) {
                     recording = [[IDRecordingSelectionPresentationBackend alloc]
                         initWithHostView:hostView];
-                    [recording selectionContainerView];
+                    [recording id_selectionContainerView];
                     return recording;
                 }],
         NSException,

@@ -201,15 +201,15 @@ static NSUInteger IDReferenceCompatibilityGateCount;
         XCTAssertNil(view.id_behaviorKernel.autoscrollEntry);
         XCTAssertNil(view.id_textAutoscroll);
     } else if ([capability isEqualToString:@"checking"]) {
-        [view.id_behaviorInput setContinuousSpellCheckingEnabled:YES];
+        [view.id_behaviorInput id_setContinuousSpellCheckingEnabled:YES];
         XCTAssertFalse(
-            view.id_behaviorInput.isContinuousSpellCheckingEnabled);
+            view.id_behaviorInput.id_isContinuousSpellCheckingEnabled);
     } else if ([capability isEqualToString:@"typingAttributes"]) {
         view.id_behaviorInput.typingAttributes = @{
             NSForegroundColorAttributeName: UIColor.redColor,
         };
         XCTAssertEqualObjects(view.id_behaviorInput.typingAttributes, @{});
-        XCTAssertNil(view.id_behaviorInput.textInputTraits);
+        XCTAssertNil(view.id_behaviorInput.id_textInputTraits);
     } else if ([capability isEqualToString:@"prediction"]) {
         NSAttributedString *marked = [[NSAttributedString alloc]
             initWithString:@"Q"
@@ -657,7 +657,7 @@ static NSUInteger IDReferenceCompatibilityGateCount;
                         [view textRangeFromPosition:start toPosition:end];
                 } else if (state == 3) {
                     [view.id_interactionCapability
-                        setNeedsSelectionDisplayUpdate];
+                        id_setNeedsSelectionDisplayUpdate];
                     [view id_updateSelectionPresentation];
                 } else if (state == 4) {
                     [view.id_interactionCapability

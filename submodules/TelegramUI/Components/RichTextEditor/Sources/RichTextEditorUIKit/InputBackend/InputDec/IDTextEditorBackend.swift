@@ -2274,7 +2274,7 @@ final class IDTextEditorBackend: RichTextInputBackend {
         guard let source = host?.hostInputView as? UITextInputTraits else { return }
         var error: NSError?
         TGRichTextInputDecPerform({
-            TGRichTextInputDecSynchronizeTextInputTraits(self.kernelInput?.textInputTraits, source)
+            TGRichTextInputDecSynchronizeTextInputTraits(self.kernelInput?.id_textInputTraits, source)
         }, &error)
         if let error { reportKernelFailure(error, witness: #function) }
     }

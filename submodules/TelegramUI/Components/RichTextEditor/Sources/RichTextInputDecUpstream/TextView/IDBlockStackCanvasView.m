@@ -273,7 +273,14 @@ static BOOL IDCanvasRectSpansY(CGRect rect, CGFloat y) {
     return y >= CGRectGetMinY(rect) && y < CGRectGetMaxY(rect);
 }
 
+// `IDBlockTextView+PrivateCallbacks.m`: adds `textContainerOrigin`, which UIKit sends under a private name.
+FOUNDATION_EXTERN void IDBlockStackCanvasViewInstallPrivateCallbacks(Class cls);
+
 @implementation IDBlockStackCanvasView
+
++ (void)initialize {
+    IDBlockStackCanvasViewInstallPrivateCallbacks(self);
+}
 
 - (IDBlockDocument *)id_document {
     return self.document;

@@ -303,6 +303,34 @@ final class ChatInputContentConversionTests: XCTestCase {
         }
     }
 
+    /// An EMPTY LAST LINE after a carved block (code, quote) round-trips. The decoder consumed the line
+    /// break after the last block as its separator and then found nothing after it, so `"abc\n"` read
+    /// back as `[code "abc"]`: the legacy composer, which echoes the model back into its text view,
+    /// wrote `"abc"` outside UIKit's undo stack and the next Undo raised `NSRangeException` (composer
+    /// harness, `HarnessLegacyDeleteLineAfterBlockUndoTests`).
+    func test_chatCurrencyRoundTrip_emptyLastLineAfterACarvedBlock() {
+        func quote(_ text: String) -> ChatInputBlock {
+            .blockQuote(ChatInputBlockQuote(content: ChatInputContent(blocks: [.paragraph(ChatInputParagraph(style: .body, runs: [ChatInputRun(text: text)]))]), collapsed: false))
+        }
+        func code(_ text: String) -> ChatInputBlock { .code(ChatInputCode(language: nil, runs: [ChatInputRun(text: text)])) }
+        let blank = ChatInputBlock.paragraph(ChatInputParagraph(style: .body, runs: []))
+        let cases: [[ChatInputBlock]] = [
+            [code("abc"), blank],
+            [quote("abc"), blank],
+            [code("abc"), blank, blank],
+            [quote("A"), blank, code("abc"), blank],
+        ]
+        for blocks in cases {
+            let content = ChatInputContent(blocks: blocks)
+            let text = attributedString(from: content)
+            XCTAssertEqual(chatInputContent(from: text), content, "\(text.string.debugDescription)")
+            XCTAssertEqual(content.plainText, text.string)
+        }
+        // Control: a block that ENDS the text is not followed by an empty line.
+        let codeOnly = ChatInputContent(blocks: [code("abc")])
+        XCTAssertEqual(chatInputContent(from: attributedString(from: codeOnly)), codeOnly)
+    }
+
     func test_plainText_matchesAttributedStringString() {
         let content = richFixture()
         XCTAssertEqual(content.plainText, attributedString(from: content).string)

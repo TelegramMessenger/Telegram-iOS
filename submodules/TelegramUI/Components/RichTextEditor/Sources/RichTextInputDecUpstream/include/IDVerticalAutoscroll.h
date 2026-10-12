@@ -27,7 +27,7 @@ typedef NS_OPTIONS(NSUInteger, IDVerticalAutoscrollDirection) {
 @property(nonatomic, weak, readonly, nullable)
     id<IDVerticalAutoscrollTarget> target;
 @property(nonatomic, strong, readonly, nullable)
-    UIScrollView *scrollContainer;
+    UIScrollView *id_scrollContainer;
 @property(nonatomic, readonly) CGPoint point;
 @property(nonatomic, readonly)
     IDVerticalAutoscrollDirection directions;

@@ -259,7 +259,7 @@ static UITextLayoutDirection IDTestUIKitDirection(
                       IDBlockLayoutCapabilityBaseWritingDirection);
         for (NSUInteger offset = 0; offset <= text.length; offset += 1) {
             IDBlockWritingDirection actual = [snapshot
-                baseWritingDirectionAtPosition:
+                id_snapshotBaseWritingDirectionAtPosition:
                     IDBlockTextPositionMake(offset,
                                             IDBlockTextAffinityDownstream)];
             IDBlockWritingDirection expected =

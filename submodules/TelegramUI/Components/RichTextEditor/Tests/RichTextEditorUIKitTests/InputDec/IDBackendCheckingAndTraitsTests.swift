@@ -151,7 +151,7 @@ final class IDBackendCheckingAndTraitsTests: XCTestCase {
         try XCTSkipUnless(IDTextEditorBackend.isSupported())
         let h = focusedHarness(.inputDec)
         let backend = try XCTUnwrap(h.canvas.inputBackend as? IDTextEditorBackend)
-        let traits = try XCTUnwrap(backend.kernelInput?.textInputTraits as? NSObject,
+        let traits = try XCTUnwrap(backend.kernelInput?.id_textInputTraits as? NSObject,
                                    "no controller traits object — the comparison would be vacuous")
         let autocorrection = traits.value(forKey: "autocorrectionType") as? Int
         let spellChecking = traits.value(forKey: "spellCheckingType") as? Int
@@ -173,7 +173,7 @@ final class IDBackendCheckingAndTraitsTests: XCTestCase {
         let h = focusedHarness(.inputDec)
         let backend = try XCTUnwrap(h.canvas.inputBackend as? IDTextEditorBackend)
         h.canvas.isSpellCheckingEnabled = false
-        let traits = try XCTUnwrap(backend.kernelInput?.textInputTraits as? NSObject)
+        let traits = try XCTUnwrap(backend.kernelInput?.id_textInputTraits as? NSObject)
         let afterDisable = traits.value(forKey: "spellCheckingType") as? Int
         h.canvas.isSpellCheckingEnabled = true
         let afterEnable = traits.value(forKey: "spellCheckingType") as? Int

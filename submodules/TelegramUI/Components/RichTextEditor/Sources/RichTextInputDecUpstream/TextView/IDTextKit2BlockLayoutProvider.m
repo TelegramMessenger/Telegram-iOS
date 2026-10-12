@@ -195,7 +195,7 @@ static UITextLayoutDirection IDTextKit2Direction(
     return range;
 }
 
-- (IDBlockWritingDirection)baseWritingDirectionAtPosition:
+- (IDBlockWritingDirection)id_snapshotBaseWritingDirectionAtPosition:
     (IDBlockTextPosition)position {
     if (!self.valid ||
         !(self.capabilities & IDBlockLayoutCapabilityBaseWritingDirection) ||

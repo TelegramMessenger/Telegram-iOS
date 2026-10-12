@@ -577,7 +577,7 @@
 
 - (void)select:(id)sender {
     if ([self canPerformAction:_cmd withSender:sender]) {
-        [self.id_interactionCapability selectWord];
+        [self.id_interactionCapability id_selectWord];
     }
 }
 

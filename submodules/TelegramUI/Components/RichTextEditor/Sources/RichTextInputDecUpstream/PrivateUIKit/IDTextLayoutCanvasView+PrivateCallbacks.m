@@ -6,6 +6,8 @@
 #import "IDTextCanvasInvalidation.h"
 #import "IDTextLayoutCanvasViewInternal.h"
 #import "IDPrivateUIKit+TextLayoutCanvas.h"
+#import "TGPrivateMethodAliases.h"
+#import "TGPrivateRuntimeNames.h"
 
 @interface IDTextLayoutCanvasView (PrivateCallbacks) <NSTextViewportLayoutControllerDelegate>
 
@@ -13,11 +15,6 @@
                  addRenderingSurface:(UIView *)surface
                                group:(NSInteger)group
                            placement:(NSInteger)placement;
-- (void)setTextEmphasisBackgroundView:(UIView *)backgroundView
-                         withTextView:(UIView *)textView;
-- (void)_updateRenderingSurfaceViewsForTextRange:(id)textRange
-                                      inTextView:(UIView *)textView
-                                          bounds:(CGRect)bounds;
 
 @end
 
@@ -68,48 +65,25 @@
     return [self id_addRenderingSurface:surface group:group placement:placement];
 }
 
-- (void)setTextEmphasisBackgroundView:(UIView *)backgroundView
-                         withTextView:(UIView *)textView {
-    [self id_setTextEmphasisBackgroundView:backgroundView withTextView:textView];
-}
 
-- (void)_updateRenderingSurfaceViewsForTextRange:(id)textRange
-                                      inTextView:(UIView *)textView
-                                          bounds:(CGRect)bounds {
-    [self id_updateRenderingSurfaceViewsForTextRange:textRange
-                                           inTextView:textView
-                                               bounds:bounds];
-}
 
-- (void)invalidateTextContainerOrigin {
-    [self id_invalidateTextContainerOrigin];
-}
 
-- (CGPoint)textContainerOrigin {
-    return [self id_textContainerOrigin];
-}
 
 - (BOOL)isEditing {
     return [self id_isEditing];
 }
 
-- (void)_textKit2CanvasDidLayout {
-    [self id_textKit2CanvasDidLayout];
-}
 
-- (void)_updateInteractionGeometry {
-    [self id_updateInteractionGeometry];
-}
 
 - (CALayer *)hoverEffectContainerLayer {
     return self.id_hoverEffectContainerLayer;
 }
 
-- (id)uniqueWritingToolsAnimatedLayoutInfo {
+- (id)tgpn_uniqueWritingToolsAnimatedLayoutInfo {
     return self.id_uniqueWritingToolsAnimatedLayoutInfo;
 }
 
-- (void)setUniqueWritingToolsAnimatedLayoutInfo:(id)info {
+- (void)tgpn_setUniqueWritingToolsAnimatedLayoutInfo:(id)info {
     self.id_uniqueWritingToolsAnimatedLayoutInfo = info;
 }
 
@@ -120,7 +94,7 @@
     }
 }
 
-- (void)invalidateTemporaryAttributesInRange:(id)range {
+- (void)tgpn_invalidateTemporaryAttributesInRange:(id)range {
     id renderer = IDPrivateCanvasCustomRenderController(self.context);
     if (renderer == nil) {
         return;
@@ -135,5 +109,26 @@
 }
 
 @end
+
+// The canvas view's callbacks that UIKit and TextKit send under PRIVATE names, compiled under
+// neutral names and added under the private ones (`TGPrivateMethodAliases.h`). Called from
+// `+[IDTextLayoutCanvasView initialize]`.
+void IDTextLayoutCanvasViewInstallPrivateCallbacks(Class cls) {
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_setTextEmphasisBackgroundView_withTextView_, @selector(id_setTextEmphasisBackgroundView:withTextView:) },
+        { TGPN__updateRenderingSurfaceViewsForTextRange_inTextView_bounds_, @selector(id_updateRenderingSurfaceViewsForTextRange:inTextView:bounds:) },
+        { TGPN_invalidateTextContainerOrigin, @selector(id_invalidateTextContainerOrigin) },
+        { TGPN_textContainerOrigin, @selector(id_textContainerOrigin) },
+        { TGPN__textKit2CanvasDidLayout, @selector(id_textKit2CanvasDidLayout) },
+        { TGPN__updateInteractionGeometry, @selector(id_updateInteractionGeometry) },
+        { TGPN_uniqueWritingToolsAnimatedLayoutInfo, @selector(tgpn_uniqueWritingToolsAnimatedLayoutInfo) },
+        { TGPN_setUniqueWritingToolsAnimatedLayoutInfo_, @selector(tgpn_setUniqueWritingToolsAnimatedLayoutInfo:) },
+        { TGPN_invalidateTemporaryAttributesInRange_, @selector(tgpn_invalidateTemporaryAttributesInRange:) },
+        // The selection container is a property of ours whose accessors share UIKit's private names.
+        { TGPN_selectionContainerView, @selector(id_selectionContainerView) },
+        { TGPN_setSelectionContainerView_, @selector(setId_selectionContainerView:) },
+    };
+    TGPrivateInstallMethodAliases(cls, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
 
 #endif

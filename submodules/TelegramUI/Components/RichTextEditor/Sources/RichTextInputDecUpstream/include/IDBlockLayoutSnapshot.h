@@ -157,7 +157,7 @@ typedef struct {
 - (IDBlockCaretNavigationResult)caretNavigationResultForPoint:(CGPoint)point;
 - (NSRange)lineRangeEnclosingPosition:(IDBlockTextPosition)position
                      resolvedAffinity:(nullable IDBlockTextAffinity *)affinity;
-- (IDBlockWritingDirection)baseWritingDirectionAtPosition:
+- (IDBlockWritingDirection)id_snapshotBaseWritingDirectionAtPosition:
     (IDBlockTextPosition)position;
 - (IDBlockCaretNavigationResult)caretNavigationResultFromPosition:
     (IDBlockTextPosition)position

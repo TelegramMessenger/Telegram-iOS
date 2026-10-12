@@ -5,7 +5,8 @@ The stage-1 plan and its 39-rule handoff do not survive on master. Everything be
 them because **stage 2's correctness depends on it** — this is not a summary, it is the load-bearing
 residue. Where a claim was measured, the measurement is kept.
 
-Stage 2's own plan is `docs/superpowers/plans/2026-08-16-inputdec-backend-introduction.md` (kept).
+Stage 2's own plan was `docs/superpowers/plans/2026-08-16-inputdec-backend-introduction.md`, removed
+from the tree on 2026-10-12 (it is in git history).
 Its shared artifact with stage 1 is exactly one thing: the protocol family in
 `Sources/RichTextEditorUIKit/InputBackend/`. **If stage 2 needs a contract change, the contract is what
 changes — not a stage-1 file.**

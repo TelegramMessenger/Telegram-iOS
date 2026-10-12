@@ -440,7 +440,7 @@ static BOOL IDFloatingReconstructionCycleIsQuiescent(NSDictionary *state,
     XCTAssertTrue([layout containsString:@"[self id_canvasDidLayout]"]);
     XCTAssertFalse([layout containsString:@"_textKit2CanvasDidLayout"]);
     NSString *contextCompletion = IDBlockIntegrationMethodRegion(
-        canvasSource, @"- (void)_textKit2CanvasDidLayout {");
+        canvasSource, @"- (void)tgpn__textKit2CanvasDidLayout {");
     XCTAssertNotNil(contextCompletion);
     XCTAssertTrue([contextCompletion containsString:@"respondsToSelector:"]);
     XCTAssertFalse([contextCompletion containsString:@"NSSelectorFromString"]);
@@ -1353,7 +1353,7 @@ static BOOL IDFloatingReconstructionCycleIsQuiescent(NSDictionary *state,
         [view id_NSRangeForTextRange:view.selectedTextRange], interruptedSelection));
     XCTAssertEqual(view.id_selectionPresentationBackend.selectionContainerCreationCount,
                    containerCreations);
-    XCTAssertTrue(view.id_selectionPresentationBackend.selectionContainerView.superview == view);
+    XCTAssertTrue(view.id_selectionPresentationBackend.id_selectionContainerView.superview == view);
     window.hidden = YES;
 }
 

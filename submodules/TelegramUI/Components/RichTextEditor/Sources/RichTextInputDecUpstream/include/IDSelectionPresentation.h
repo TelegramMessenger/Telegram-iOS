@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly, nullable) UIView *existingSelectionContainerView;
 @property(nonatomic, readonly) NSUInteger presentationUpdateCount;
 @property(nonatomic, readonly) NSUInteger selectionContainerCreationCount;
-- (UIView *)selectionContainerView;
+- (UIView *)id_selectionContainerView;
 - (void)placeSelectionContainerView;
 - (void)updateWithSnapshot:(IDSelectionPresentationSnapshot *)snapshot;
 - (void)tearDown;

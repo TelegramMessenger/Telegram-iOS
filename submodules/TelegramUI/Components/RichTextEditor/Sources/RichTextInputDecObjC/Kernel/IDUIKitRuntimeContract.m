@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import "IDUIKitRuntimeContract.h"
 
 #include <string.h>

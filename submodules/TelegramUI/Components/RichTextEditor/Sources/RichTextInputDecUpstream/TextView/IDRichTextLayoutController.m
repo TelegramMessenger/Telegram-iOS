@@ -1,6 +1,8 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
+#import "TGPrivateMethodAliases.h"
 #import "IDRichTextLayoutController.h"
 
 #import "IDRichTextLayoutControllerInternal.h"
@@ -37,10 +39,25 @@
 @end
 
 @interface IDRichTextInputControllerConnection : NSObject
-@property(nonatomic, strong, nullable) id textInputController;
+@property(nonatomic, strong, nullable) id id_textInputController;
 @end
 
 @implementation IDRichTextInputControllerConnection
+
+// UIKit reads the controller through this object by name (`-[_UITextLayoutControllerBase
+// textInputController]`, reached from `_UIKeyboardStateManager`): the property is compiled under a
+// neutral name and its accessors are added under the private ones (`TGPrivateMethodAliases.h`).
++ (void)initialize {
+    if (self != IDRichTextInputControllerConnection.class) {
+        return;
+    }
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_textInputController, @selector(id_textInputController) },
+        { TGPN_setTextInputController_, @selector(setId_textInputController:) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
 @end
 
 @interface IDRichTextLayoutController ()
@@ -57,6 +74,12 @@
 @end
 
 @implementation IDRichTextLayoutController
+
++ (void)initialize {
+    if (self == IDRichTextLayoutController.class) {
+        IDRichTextLayoutControllerInstallPrivateCallbacks(self);
+    }
+}
 
 static void IDRichRaise(NSString *stage, NSString *detail) {
     NSString *reason = [NSString stringWithFormat:@"IDRichTextLayoutController %@ failed: %@",
@@ -449,8 +472,8 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 
 - (NSRange)canonicalRangeForTextRange:(IDRichTextRange *)range clipped:(BOOL)clipped {
     NSString *stage = clipped
-        ? @"characterRangeForTextRange:clippedToDocument:"
-        : @"characterRangeForTextRange:";
+        ? TGPN_characterRangeForTextRange_clippedToDocument_()
+        : TGPN_characterRangeForTextRange_();
     return [self id_projectedCanonicalRangeForTextRange:range
                                                 clipped:clipped
                                                   stage:stage];
@@ -488,7 +511,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 }
 
 - (NSTextContainer *)id_textContainerForPosition:(UITextPosition *)position {
-    (void)[self id_validPosition:position stage:@"textContainerForPosition:"];
+    (void)[self id_validPosition:position stage:TGPN_textContainerForPosition_()];
     return self.id_interactionTextContainer;
 }
 
@@ -502,25 +525,25 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 
 - (id)inputController {
     return ((IDRichTextInputControllerConnection *)
-        _id_textInputControllerConnection).textInputController;
+        _id_textInputControllerConnection).id_textInputController;
 }
 
 - (void)id_adoptTextInputController:(id)controller {
     if (controller == nil) {
-        IDRichRaise(@"adoptTextInputController:", @"controller is nil");
+        IDRichRaise(TGPN_adoptTextInputController_(), @"controller is nil");
     }
     id adopted = self.inputController;
     if (adopted != nil && adopted != controller) {
-        IDRichRaise(@"adoptTextInputController:",
+        IDRichRaise(TGPN_adoptTextInputController_(),
                     @"a different controller is already adopted");
     }
     ((IDRichTextInputControllerConnection *)
-        _id_textInputControllerConnection).textInputController = controller;
+        _id_textInputControllerConnection).id_textInputController = controller;
 }
 
 - (void)id_detachFromTextInputController {
     ((IDRichTextInputControllerConnection *)
-        _id_textInputControllerConnection).textInputController = nil;
+        _id_textInputControllerConnection).id_textInputController = nil;
 }
 
 - (UITextPosition *)id_beginningOfDocument {
@@ -631,7 +654,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
         position = [self id_beginningOfDocument];
     }
     IDRichTextPosition *valid = [self id_validPosition:position
-                                                stage:@"emptyTextRangeAtPosition:"];
+                                                stage:TGPN_emptyTextRangeAtPosition_()];
     return [[IDRichTextRange alloc] initWithStart:valid end:valid];
 }
 
@@ -802,14 +825,14 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 
 - (UITextRange *)id_textRangeForLineEnclosingPosition:(UITextPosition *)position {
     IDRichTextPosition *valid = [self id_validPosition:position
-                                                stage:@"textRangeForLineEnclosingPosition:"];
+                                                stage:TGPN_textRangeForLineEnclosingPosition_()];
     return [self id_textRangeForLineEnclosingPosition:valid
                                      effectiveAffinity:valid.affinity];
 }
 
 - (UITextRange *)id_textRangeForLineEnclosingPosition:(UITextPosition *)position
                                       effectiveAffinity:(UITextStorageDirection)affinity {
-    NSString *stage = @"textRangeForLineEnclosingPosition:effectiveAffinity:";
+    NSString *stage = TGPN_textRangeForLineEnclosingPosition_effectiveAffinity_();
     IDRichTextPosition *valid = [self id_validPosition:position stage:stage];
     NSUInteger revision = self.document.documentRevision;
     NSUInteger canonicalOffset = [self id_canonicalOffsetForPosition:valid];
@@ -831,7 +854,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 
 - (NSDictionary<NSAttributedStringKey, id> *)id_attributesAtPosition:(UITextPosition *)position
                                                           inDirection:(UITextStorageDirection)direction {
-    NSString *stage = @"attributesAtPosition:inDirection:";
+    NSString *stage = TGPN_attributesAtPosition_inDirection_();
     IDRichTextPosition *valid = [self id_validPosition:position stage:stage];
     IDCanonicalLocation *location = nil;
     IDBlockLayout *layout = [self id_layoutForPosition:valid stage:stage location:&location];
@@ -839,7 +862,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 }
 
 - (NSWritingDirection)id_baseWritingDirectionAtPosition:(UITextPosition *)position {
-    NSString *stage = @"baseWritingDirectionAtPosition:";
+    NSString *stage = TGPN_baseWritingDirectionAtPosition_();
     IDRichTextPosition *valid = [self id_validPosition:position stage:stage];
     IDCanonicalLocation *location = nil;
     IDBlockLayout *layout = [self id_layoutForPosition:valid stage:stage location:&location];
@@ -882,7 +905,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 }
 
 - (UITextStorageDirection)id_affinityForPosition:(UITextPosition *)position {
-    return [self id_validPosition:position stage:@"affinityForPosition:"].affinity;
+    return [self id_validPosition:position stage:TGPN_affinityForPosition_()].affinity;
 }
 
 - (NSRange)id_projectedCanonicalRangeForTextRange:(UITextRange *)range
@@ -919,8 +942,8 @@ static BOOL IDRichSelectionGeometryResultIsValid(
         return NSMakeRange(0, 0);
     }
     NSString *stage = clipped
-        ? @"characterRangeForTextRange:clippedToDocument:"
-        : @"characterRangeForTextRange:";
+        ? TGPN_characterRangeForTextRange_clippedToDocument_()
+        : TGPN_characterRangeForTextRange_();
     NSRange characterRange = [self id_projectedCanonicalRangeForTextRange:range
                                                                    clipped:clipped
                                                                      stage:stage];
@@ -931,7 +954,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 - (NSArray<NSValue *> *)id_characterRangesForTextRange:(UITextRange *)range
                                                 clipped:(BOOL)clipped {
     NSString *stage = clipped
-        ? @"characterRangesForTextRange:clippedToDocument:"
+        ? TGPN_characterRangesForTextRange_clippedToDocument_()
         : @"characterRangesForTextRange:";
     NSRange characterRange = [self id_projectedCanonicalRangeForTextRange:range
                                                                    clipped:clipped
@@ -940,7 +963,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 }
 
 - (UITextRange *)id_textRangeForCharacterRange:(NSRange)range {
-    NSString *stage = @"textRangeForCharacterRange:";
+    NSString *stage = TGPN_textRangeForCharacterRange_();
     if (range.length > NSUIntegerMax - range.location) {
         IDRichRaise(stage, @"range overflows NSUInteger");
     }
@@ -953,17 +976,17 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 
 - (UITextRange *)id_textRangeForCharacterRanges:(NSArray<NSValue *> *)ranges {
     if (![ranges isKindOfClass:NSArray.class] || ranges.count != 1) {
-        IDRichRaise(@"textRangeForCharacterRanges:",
+        IDRichRaise(TGPN_textRangeForCharacterRanges_(),
                     @"P0 requires exactly one contiguous range");
     }
     id value = ranges.firstObject;
     if (![value isKindOfClass:NSValue.class] ||
         strcmp([value objCType], @encode(NSRange)) != 0) {
-        IDRichRaise(@"textRangeForCharacterRanges:",
+        IDRichRaise(TGPN_textRangeForCharacterRanges_(),
                     @"range element has a foreign value type");
     }
     NSRange range = [value rangeValue];
-    NSString *stage = @"textRangeForCharacterRanges:";
+    NSString *stage = TGPN_textRangeForCharacterRanges_();
     if (range.length > NSUIntegerMax - range.location) {
         IDRichRaise(stage, @"range element overflows NSUInteger");
     }
@@ -977,7 +1000,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 - (UITextPosition *)id_positionWithOffset:(NSInteger)offset
                                   affinity:(UITextStorageDirection)affinity {
     if (offset < 0 || (NSUInteger)offset > self.document.canonicalLength) {
-        IDRichRaise(@"positionWithOffset:affinity:", @"offset is outside the document");
+        IDRichRaise(TGPN_positionWithOffset_affinity_(), @"offset is outside the document");
     }
     return [self id_positionForCanonicalOffset:(NSUInteger)offset
                                        affinity:affinity
@@ -1002,7 +1025,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
                forContainerPassingTest:(BOOL (^)(id container))predicate {
     NSRange characterRange = [self id_projectedCanonicalRangeForTextRange:range
                                                                   clipped:YES
-                                                                    stage:@"selectionRectsForRange:fromView:forContainerPassingTest:"];
+                                                                    stage:TGPN_selectionRectsForRange_fromView_forContainerPassingTest_()];
     if (predicate != nil && !predicate(self.id_interactionTextContainer)) {
         return @[];
     }
@@ -1088,7 +1111,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
                                                     CGRect rect,
                                                     CGFloat baselineOffset,
                                                     UITextPosition *position))resultBlock {
-    NSString *stage = @"requestTextGeometryAtPosition:typingAttributes:resultBlock:";
+    NSString *stage = TGPN_requestTextGeometryAtPosition_typingAttributes_resultBlock_();
     IDRichTextPosition *valid = [self id_validPosition:position stage:stage];
     if (resultBlock == nil) return;
     CGRect rect = [self id_insertionRectForPosition:valid
@@ -1135,7 +1158,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
                       typingAttributes:(NSDictionary<NSAttributedStringKey, id> *)attributes
                  placeholderAttachment:(id)attachment
                          textContainer:(NSTextContainer * _Nullable * _Nullable)textContainer {
-    NSString *stage = @"insertionRectForPosition:typingAttributes:placeholderAttachment:textContainer:";
+    NSString *stage = TGPN_insertionRectForPosition_typingAttributes_placeholderAttachment_textContainer_();
     IDRichTextPosition *valid = [self id_validPosition:position stage:stage];
     (void)attributes;
     (void)attachment;
@@ -1158,7 +1181,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 
 - (UITextPosition *)id_nearestPositionAtPoint:(CGPoint)point
                                     inContainer:(NSTextContainer *)container {
-    NSString *stage = @"nearestPositionAtPoint:inContainer:";
+    NSString *stage = TGPN_nearestPositionAtPoint_inContainer_();
     if (container != nil && container != self.id_interactionTextContainer) {
         IDRichRaise(stage, @"container is not the document interaction container");
     }
@@ -1355,7 +1378,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
     UIView *hostView = self.id_blockStack.superview;
     __block CGRect result = CGRectNull;
     [self id_enumerateLayoutsForTextRange:textRange
-                                    stage:@"boundingRectForCharacterRange:"
+                                    stage:TGPN_boundingRectForCharacterRange_()
                                usingBlock:^(IDBlockLayout *layout, NSRange localRange) {
         CGRect local = [layout boundingRectForLocalRange:localRange];
         if (CGRectIsNull(local) || !IDRichRectIsFinite(local)) return;
@@ -1397,7 +1420,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 - (nullable id)id_annotationAttribute:(id)attribute
                            atPosition:(UITextPosition *)position {
     IDRichTextPosition *valid = [self id_validPosition:position
-                                                stage:@"annotationAttribute:atPosition:"];
+                                                stage:TGPN_annotationAttribute_atPosition_()];
     return [self.annotationStore annotationAttribute:attribute
                                    atCanonicalOffset:[self
                                        id_canonicalOffsetForPosition:valid]];
@@ -1413,7 +1436,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 - (NSAttributedString *)id_annotatedSubstringForRange:(UITextRange *)range {
     NSRange canonical = [self id_projectedCanonicalRangeForTextRange:range
                                                               clipped:YES
-                                                                stage:@"annotatedSubstringForRange:"];
+                                                                stage:TGPN_annotatedSubstringForRange_()];
     return [self.annotationStore annotatedSubstringForCanonicalRange:canonical];
 }
 
@@ -1488,7 +1511,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 - (void)id_addAnnotationAttribute:(id)attribute
                             value:(id)value
                          forRange:(UITextRange *)range {
-    NSString *stage = @"addAnnotationAttribute:value:forRange:";
+    NSString *stage = TGPN_addAnnotationAttribute_value_forRange_();
     NSRange canonical = [self id_temporaryCanonicalRangeForTextRange:range stage:stage];
     [self.annotationStore addAttribute:attribute value:value canonicalRange:canonical];
     [self id_addTemporaryAttribute:attribute
@@ -1500,7 +1523,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 
 - (void)id_removeAnnotationAttribute:(id)attribute
                              forRange:(UITextRange *)range {
-    NSString *stage = @"removeAnnotationAttribute:forRange:";
+    NSString *stage = TGPN_removeAnnotationAttribute_forRange_();
     NSRange canonical = [self id_temporaryCanonicalRangeForTextRange:range stage:stage];
     [self.annotationStore removeAttribute:attribute canonicalRange:canonical];
     [self id_removeTemporaryAttribute:attribute canonicalRange:canonical stage:stage];
@@ -1510,9 +1533,9 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 - (void)id_addRenderingAttributes:(NSDictionary *)attributes
                           forRange:(UITextRange *)range {
     if (![attributes isKindOfClass:NSDictionary.class]) {
-        IDRichRaise(@"addRenderingAttributes:forRange:", @"attributes are not a dictionary");
+        IDRichRaise(TGPN_addRenderingAttributes_forRange_(), @"attributes are not a dictionary");
     }
-    NSString *stage = @"addRenderingAttributes:forRange:";
+    NSString *stage = TGPN_addRenderingAttributes_forRange_();
     NSRange canonical = [self id_temporaryCanonicalRangeForTextRange:range stage:stage];
     [attributes enumerateKeysAndObjectsUsingBlock:^(id attribute, id value, BOOL *stop) {
         [self.annotationStore addAttribute:attribute value:value canonicalRange:canonical];
@@ -1527,9 +1550,9 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 - (void)id_removeRenderingAttributes:(id<NSFastEnumeration>)attributes
                              forRange:(UITextRange *)range {
     if (attributes == nil) {
-        IDRichRaise(@"removeRenderingAttributes:forRange:", @"attribute collection is nil");
+        IDRichRaise(TGPN_removeRenderingAttributes_forRange_(), @"attribute collection is nil");
     }
-    NSString *stage = @"removeRenderingAttributes:forRange:";
+    NSString *stage = TGPN_removeRenderingAttributes_forRange_();
     NSRange canonical = [self id_temporaryCanonicalRangeForTextRange:range stage:stage];
     for (id attribute in attributes) {
         [self.annotationStore removeAttribute:attribute canonicalRange:canonical];
@@ -1539,7 +1562,7 @@ static BOOL IDRichSelectionGeometryResultIsValid(
 }
 
 - (void)id_invalidateTemporaryAttributesInRange:(UITextRange *)range {
-    NSString *stage = @"_invalidateTemporaryAttributesInRange:";
+    NSString *stage = TGPN__invalidateTemporaryAttributesInRange_();
     NSRange canonical = [self id_temporaryCanonicalRangeForTextRange:range stage:stage];
     [self id_enumerateTemporaryLayoutsForCanonicalRange:canonical
                                                    stage:stage

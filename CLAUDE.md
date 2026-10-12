@@ -331,6 +331,15 @@ but so an accidental one is caught and a deliberate one re-records the pin in th
 generator (`generate-contract-data.py`) has not been brought across yet, so prefer regenerating over
 editing once it is.
 
+**No private UIKit name reaches the binary as text (2026-10-12).** Both trees spell every private
+name they cross with UIKit through `TGPN_<name>()` (XOR-encoded, generated from
+`submodules/TelegramUI/Components/RichTextEditor/Scripts/private-runtime-names.txt`), compile UIKit's
+callbacks under neutral `tgpn_` names added under the private ones from `+initialize`, and store the
+embedded contract tables encoded. `PrivateRuntimeNamesTests` guards the sources and
+`Scripts/scan-private-runtime-names.py` checks a release binary. The rules, and the one known
+residual (the legacy canvas's text-checking client), are in the package `CLAUDE.md`, "Private UIKit
+names are not in the binary".
+
 **The open half is the PROOF.** Upstream also holds the engine's tests — 1,078 unit and 196 UI
 cases, a stock-`UITextView` oracle host and their fixtures — and those are not here yet. Until they
 are, this repo owns the engine without owning what shows it works, and `~/Documents/InputDec` must
@@ -550,8 +559,8 @@ exactly this reason — see the verification traps in the package `CLAUDE.md`.
 
 **Certified build vs. selection floor is a decision already made, not yet code.** The kernel is
 *certified* against exactly one OS build (iOS 26.5 / 23F73 — the only combination it has ever run
-against upstream, per `Vendor/VENDOR.md`). The plan commits (decision 2, dated 2026-08-17 in
-`docs/superpowers/plans/2026-08-16-inputdec-backend-introduction.md`) to eventually *selecting* the ID
+against upstream, per `Vendor/VENDOR.md`). The backend-introduction plan committed (its decision 2,
+dated 2026-08-17; the plan left the tree on 2026-10-12 and is in git history) to eventually *selecting* the ID
 backend on a **floor** of iOS 17.0 rather than gating on that exact certified build — but no code
 enforces this yet: there is no `IDTextEditorBackend`, no `isSupported()`, nothing beyond the probe
 described above. Treat the decision as the constraint later stages must satisfy, not as a description

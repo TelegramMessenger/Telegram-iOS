@@ -375,7 +375,7 @@ static __weak id IDInteractionProbeSender;
     XCTAssertEqual(capability.floatingCursorReport.state,
                    IDUIKitCapabilityStateRejectedContract);
 
-    [capability selectionChanged];
+    [capability id_selectionChanged];
     [capability beginFloatingCursorAtPoint:CGPointMake(3, 4)];
     [capability updateFloatingCursorAtPoint:CGPointMake(5, 6)
                                   animated:YES];
@@ -390,8 +390,8 @@ static __weak id IDInteractionProbeSender;
     NSObject *sender = [NSObject new];
 
     [capability setSelectionActive:YES visible:YES];
-    [capability selectionChanged];
-    [capability setNeedsSelectionDisplayUpdate];
+    [capability id_selectionChanged];
+    [capability id_setNeedsSelectionDisplayUpdate];
     [capability setGestureRecognizersEnabled:YES];
     [capability setGestureRecognizersEnabled:NO];
     [capability clearGestureRecognizersForced:NO];
@@ -399,10 +399,10 @@ static __weak id IDInteractionProbeSender;
     [capability updateFloatingCursorAtPoint:CGPointMake(8, 9)
                                   animated:YES];
     [capability endFloatingCursor];
-    [capability resignedFirstResponder];
-    [capability selectWord];
+    [capability id_resignedFirstResponder];
+    [capability id_selectWord];
     [capability selectAll:sender];
-    [capability autoscrollWillNotStart];
+    [capability id_autoscrollWillNotStart];
     [capability setSelectionActive:NO visible:NO];
 
     XCTAssertEqualObjects(IDInteractionProbeEvents, (@[
@@ -435,7 +435,7 @@ static __weak id IDInteractionProbeSender;
 
     [capability detach];
     [capability detach];
-    [capability selectionChanged];
+    [capability id_selectionChanged];
     [capability setGestureRecognizersEnabled:YES];
     [capability beginFloatingCursorAtPoint:CGPointMake(1, 2)];
 

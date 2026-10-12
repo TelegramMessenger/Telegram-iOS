@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import "IDPrivateUIKit+TextLayoutCanvas.h"
 
 #import "IDPrivateUIKit.h"
@@ -27,7 +28,7 @@
 /// layout can shift; what makes either safe to discover is refusing anything that does not answer
 /// `setObject:forKey:` and `objectForKey:`, which is what turns a silent wrong-object write into a
 /// loud refusal at construction.
-static NSString *const IDCanvasMapIvarName = @"_textCanvasViews";
+#define IDCanvasMapIvarName TGPN__textCanvasViews()
 
 static NSMapTable *IDCanvasMap(id layoutController) {
     Ivar ivar = class_getInstanceVariable(object_getClass(layoutController),
@@ -35,11 +36,12 @@ static NSMapTable *IDCanvasMap(id layoutController) {
     id candidate = ivar == NULL ? nil : object_getIvar(layoutController, ivar);
     [IDPrivateUIKit requireObject:candidate
                respondsToSelector:@selector(setObject:forKey:)
-                            stage:@"Canvas map at _UITextKit2LayoutController._textCanvasViews"];
+                            stage:[NSString stringWithFormat:@"Canvas map at %@.%@",
+                                     TGPN__UITextKit2LayoutController(), TGPN__textCanvasViews()]];
     [IDPrivateUIKit requireObject:candidate
                respondsToSelector:@selector(objectForKey:)
-                            stage:@"Canvas map lookup at "
-                                  @"_UITextKit2LayoutController._textCanvasViews"];
+                            stage:[NSString stringWithFormat:@"Canvas map lookup at %@.%@",
+                                     TGPN__UITextKit2LayoutController(), TGPN__textCanvasViews()]];
     return candidate;
 }
 
@@ -59,17 +61,17 @@ UIView *IDPrivateRegisteredTextLayoutCanvas(id controller, NSTextContainer *cont
 
 void IDPrivateSetContinuousSpellCheckingEnabled(id controller, BOOL enabled) {
     ((void (*)(id, SEL, BOOL))objc_msgSend)(
-        controller, NSSelectorFromString(@"setContinuousSpellCheckingEnabled:"), enabled);
+        controller, NSSelectorFromString(TGPN_setContinuousSpellCheckingEnabled_()), enabled);
 }
 
 BOOL IDPrivateContinuousSpellCheckingEnabled(id controller) {
     return ((BOOL (*)(id, SEL))objc_msgSend)(
-        controller, NSSelectorFromString(@"continuousSpellCheckingEnabled"));
+        controller, NSSelectorFromString(TGPN_continuousSpellCheckingEnabled()));
 }
 
 id IDPrivateCanvasCustomRenderController(id context) {
     return ((id (*)(id, SEL))objc_msgSend)(
-        context, NSSelectorFromString(@"customRenderController"));
+        context, NSSelectorFromString(TGPN_customRenderController()));
 }
 
 UIColor *IDPrivateCanvasTextColor(id context) {
@@ -91,7 +93,7 @@ CGPoint IDPrivateCanvasContextTextContainerOrigin(id context) {
     if (context == nil) {
         return CGPointZero;
     }
-    SEL selector = NSSelectorFromString(@"textContainerOrigin");
+    SEL selector = NSSelectorFromString(TGPN_textContainerOrigin());
     [IDPrivateUIKit requireObject:context
               respondsToSelector:selector
                            stage:@"Canvas context text-container-origin contract"];
@@ -102,7 +104,7 @@ CGRect IDPrivateCanvasContextClipRectForFadedEdges(id context) {
     if (context == nil) {
         return CGRectNull;
     }
-    SEL selector = NSSelectorFromString(@"_clipRectForFadedEdges");
+    SEL selector = NSSelectorFromString(TGPN__clipRectForFadedEdges());
     if (![context respondsToSelector:selector]) {
         return CGRectNull;
     }
@@ -118,7 +120,7 @@ BOOL IDPrivateCanvasTextRangeIsEmpty(id textRange) {
 }
 
 NSRange IDPrivateCanvasNSRangeForTextKitRange(UIView *textView, id textRange) {
-    SEL selector = NSSelectorFromString(@"_nsRangeForTextKitRanges:");
+    SEL selector = NSSelectorFromString(TGPN__nsRangeForTextKitRanges_());
     [IDPrivateUIKit requireObject:textView
               respondsToSelector:selector
                            stage:@"Text emphasis TextKit-range conversion contract"];
@@ -157,13 +159,13 @@ void IDPrivateCanvasSetEmphasisOrigin(UIView *emphasisView, CGPoint origin) {
 
 void IDPrivateCanvasPrepareCustomRenderer(id controller, CGFloat contentsScale) {
     [IDPrivateUIKit requireObject:controller
-              respondsToSelector:NSSelectorFromString(@"beginLayout")
+              respondsToSelector:NSSelectorFromString(TGPN_beginLayout())
                            stage:@"Custom renderer begin-layout contract"];
     [IDPrivateUIKit requireObject:controller
-              respondsToSelector:NSSelectorFromString(@"didLayoutFragment:")
+              respondsToSelector:NSSelectorFromString(TGPN_didLayoutFragment_())
                            stage:@"Custom renderer fragment-layout contract"];
     [IDPrivateUIKit requireObject:controller
-              respondsToSelector:NSSelectorFromString(@"endLayoutWithConsumer:")
+              respondsToSelector:NSSelectorFromString(TGPN_endLayoutWithConsumer_())
                            stage:@"Custom renderer end-layout contract"];
     SEL setContentsScale = NSSelectorFromString(@"setContentsScale:");
     if ([controller respondsToSelector:setContentsScale]) {
@@ -174,11 +176,11 @@ void IDPrivateCanvasPrepareCustomRenderer(id controller, CGFloat contentsScale) 
 }
 
 void IDPrivateCanvasCustomRendererBeginLayout(id controller) {
-    ((void (*)(id, SEL))objc_msgSend)(controller, NSSelectorFromString(@"beginLayout"));
+    ((void (*)(id, SEL))objc_msgSend)(controller, NSSelectorFromString(TGPN_beginLayout()));
 }
 
 void IDPrivateCanvasCustomRendererPreLayoutNotify(id controller) {
-    SEL selector = NSSelectorFromString(@"preLayoutNotify");
+    SEL selector = NSSelectorFromString(TGPN_preLayoutNotify());
     if ([controller respondsToSelector:selector]) {
         ((void (*)(id, SEL))objc_msgSend)(controller, selector);
     }
@@ -187,13 +189,13 @@ void IDPrivateCanvasCustomRendererPreLayoutNotify(id controller) {
 void IDPrivateCanvasCustomRendererDidLayoutFragment(id controller,
                                                      NSTextLayoutFragment *fragment) {
     ((void (*)(id, SEL, id))objc_msgSend)(
-        controller, NSSelectorFromString(@"didLayoutFragment:"), fragment);
+        controller, NSSelectorFromString(TGPN_didLayoutFragment_()), fragment);
 }
 
 void IDPrivateCanvasCustomRendererEndLayout(id controller,
                                             IDPrivateCanvasSurfaceConsumer consumer) {
     ((void (*)(id, SEL, id))objc_msgSend)(
-        controller, NSSelectorFromString(@"endLayoutWithConsumer:"), consumer);
+        controller, NSSelectorFromString(TGPN_endLayoutWithConsumer_()), consumer);
 }
 
 UIView *IDPrivateCanvasRequireCustomEndConsumerHost(UIView *surface,
@@ -223,7 +225,7 @@ CALayer *IDPrivateCanvasCustomSurfaceLayer(id surface) {
 }
 
 void IDPrivateCanvasCustomRendererPostLayoutNotify(id controller) {
-    SEL selector = NSSelectorFromString(@"postLayoutNotify");
+    SEL selector = NSSelectorFromString(TGPN_postLayoutNotify());
     if ([controller respondsToSelector:selector]) {
         ((void (*)(id, SEL))objc_msgSend)(controller, selector);
     }
@@ -239,7 +241,7 @@ void IDPrivateCanvasSetNeedsDisplay(id customRenderController) {
 
 BOOL IDPrivateCanvasCanInvalidateTemporaryAttributes(id customRenderController) {
     return [customRenderController respondsToSelector:
-        NSSelectorFromString(@"invalidateTemporaryAttributesInRange:")];
+        NSSelectorFromString(TGPN_invalidateTemporaryAttributesInRange_())];
 }
 
 NSArray *IDPrivateTextKit2Ranges(id rangeAdapter) {
@@ -247,10 +249,10 @@ NSArray *IDPrivateTextKit2Ranges(id rangeAdapter) {
         return @[rangeAdapter];
     }
     [IDPrivateUIKit requireObject:rangeAdapter
-              respondsToSelector:NSSelectorFromString(@"textKit2Ranges")
+              respondsToSelector:NSSelectorFromString(TGPN_textKit2Ranges())
                            stage:@"Temporary-attribute TextKit 2 range adapter"];
     id ranges = ((id (*)(id, SEL))objc_msgSend)(
-        rangeAdapter, NSSelectorFromString(@"textKit2Ranges"));
+        rangeAdapter, NSSelectorFromString(TGPN_textKit2Ranges()));
     if (![ranges isKindOfClass:NSArray.class]) {
         [IDPrivateUIKit requireObject:nil stage:@"Temporary-attribute TextKit 2 ranges result"];
     }
@@ -260,7 +262,7 @@ NSArray *IDPrivateTextKit2Ranges(id rangeAdapter) {
 void IDPrivateCanvasInvalidateTemporaryAttributes(id customRenderController, id textKit2Range) {
     ((void (*)(id, SEL, id))objc_msgSend)(
         customRenderController,
-        NSSelectorFromString(@"invalidateTemporaryAttributesInRange:"),
+        NSSelectorFromString(TGPN_invalidateTemporaryAttributesInRange_()),
         textKit2Range);
 }
 
@@ -268,7 +270,7 @@ void IDPrivateCanvasSetHostsLayoutEngine(UIView *view, BOOL hostsLayoutEngine) {
     if (view == nil) {
         return;
     }
-    SEL selector = NSSelectorFromString(@"_setHostsLayoutEngine:");
+    SEL selector = NSSelectorFromString(TGPN__setHostsLayoutEngine_());
     [IDPrivateUIKit requireObject:view
               respondsToSelector:selector
                            stage:@"Layout-engine hosting view contract"];
@@ -277,7 +279,7 @@ void IDPrivateCanvasSetHostsLayoutEngine(UIView *view, BOOL hostsLayoutEngine) {
 
 CGRect IDPrivateCanvasParagraphAnchoredBounds(NSTextLayoutFragment *fragment,
                                                id attachment) {
-    SEL selector = NSSelectorFromString(@"boundsForTextParagraphAnchoredAttachment:");
+    SEL selector = NSSelectorFromString(TGPN_boundsForTextParagraphAnchoredAttachment_());
     [IDPrivateUIKit requireObject:fragment
               respondsToSelector:selector
                            stage:@"Paragraph-anchored attachment bounds contract"];
@@ -287,7 +289,7 @@ CGRect IDPrivateCanvasParagraphAnchoredBounds(NSTextLayoutFragment *fragment,
 id IDPrivateCanvasParagraphAnchoredProvider(NSTextLayoutFragment *fragment,
                                             id attachment) {
     SEL selector =
-        NSSelectorFromString(@"textAttachmentViewProviderForTextParagraphAnchoredAttachment:");
+        NSSelectorFromString(TGPN_textAttachmentViewProviderForTextParagraphAnchoredAttachment_());
     [IDPrivateUIKit requireObject:fragment
               respondsToSelector:selector
                            stage:@"Paragraph-anchored attachment provider contract"];
@@ -314,7 +316,7 @@ void IDPrivateCanvasDrawParagraphAnchoredAttachment(NSTextLayoutFragment *fragme
                                                      id attachment,
                                                      CGRect bounds,
                                                      CGContextRef context) {
-    SEL selector = NSSelectorFromString(@"drawTextParagraphAnchoredAttachment:bounds:context:");
+    SEL selector = NSSelectorFromString(TGPN_drawTextParagraphAnchoredAttachment_bounds_context_());
     [IDPrivateUIKit requireObject:fragment
               respondsToSelector:selector
                            stage:@"Paragraph-anchored attachment drawing contract"];
@@ -328,8 +330,8 @@ void IDPrivateCanvasDrawParagraphAnchoredAttachment(NSTextLayoutFragment *fragme
 BOOL IDPrivateCanvasInstallPlatformSurfaceUpdaterIfAvailable(
     NSTextViewportLayoutController *controller,
     IDPrivateCanvasPlatformSurfaceUpdater updater) {
-    SEL getter = NSSelectorFromString(@"_platformRenderingSurfaceUpdater");
-    SEL setter = NSSelectorFromString(@"set_platformRenderingSurfaceUpdater:");
+    SEL getter = NSSelectorFromString(TGPN__platformRenderingSurfaceUpdater());
+    SEL setter = NSSelectorFromString(TGPN_set_platformRenderingSurfaceUpdater_());
     BOOL hasGetter = [controller respondsToSelector:getter];
     BOOL hasSetter = [controller respondsToSelector:setter];
     if (!hasGetter && !hasSetter) {
@@ -348,8 +350,8 @@ BOOL IDPrivateCanvasInstallPlatformSurfaceUpdaterIfAvailable(
 
 BOOL IDPrivateCanvasClearPlatformSurfaceUpdaterIfAvailable(
     NSTextViewportLayoutController *controller) {
-    SEL getter = NSSelectorFromString(@"_platformRenderingSurfaceUpdater");
-    SEL setter = NSSelectorFromString(@"set_platformRenderingSurfaceUpdater:");
+    SEL getter = NSSelectorFromString(TGPN__platformRenderingSurfaceUpdater());
+    SEL setter = NSSelectorFromString(TGPN_set_platformRenderingSurfaceUpdater_());
     BOOL hasGetter = [controller respondsToSelector:getter];
     BOOL hasSetter = [controller respondsToSelector:setter];
     if (!hasGetter && !hasSetter) {
@@ -367,7 +369,7 @@ void IDPrivateCanvasNotifyContextDidLayout(id context) {
     if (context == nil) {
         return;
     }
-    SEL selector = NSSelectorFromString(@"_textKit2CanvasDidLayout");
+    SEL selector = NSSelectorFromString(TGPN__textKit2CanvasDidLayout());
     [IDPrivateUIKit requireObject:context
               respondsToSelector:selector
                            stage:@"Canvas post-layout context callback"];
@@ -378,7 +380,7 @@ void IDPrivateCanvasUpdateContextInteractionGeometry(id context) {
     if (context == nil) {
         return;
     }
-    SEL selector = NSSelectorFromString(@"_updateInteractionGeometry");
+    SEL selector = NSSelectorFromString(TGPN__updateInteractionGeometry());
     [IDPrivateUIKit requireObject:context
               respondsToSelector:selector
                            stage:@"Canvas post-layout interaction geometry callback"];
@@ -411,7 +413,7 @@ BOOL IDPrivateCanvasSupportsAnchoredTextAttachments(id textContentManager) {
     if (textContentManager == nil) {
         return NO;
     }
-    SEL selector = NSSelectorFromString(@"supportsAnchoredTextAttachments");
+    SEL selector = NSSelectorFromString(TGPN_supportsAnchoredTextAttachments());
     [IDPrivateUIKit requireObject:textContentManager
               respondsToSelector:selector
                            stage:@"Anchored-attachment content-manager contract"];
@@ -419,7 +421,7 @@ BOOL IDPrivateCanvasSupportsAnchoredTextAttachments(id textContentManager) {
 }
 
 NSArray *IDPrivateCanvasAnchoredTextAttachments(NSTextLayoutFragment *fragment) {
-    SEL selector = NSSelectorFromString(@"anchoredTextAttachments");
+    SEL selector = NSSelectorFromString(TGPN_anchoredTextAttachments());
     [IDPrivateUIKit requireObject:fragment
               respondsToSelector:selector
                            stage:@"Anchored-attachment fragment enumeration contract"];

@@ -126,6 +126,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+/// Adds the controller's callbacks UIKit calls under private names
+/// (`IDRichTextLayoutController+PrivateCallbacks.m`). Called from `+initialize`.
+FOUNDATION_EXTERN void IDRichTextLayoutControllerInstallPrivateCallbacks(Class cls);
+/// Adds the selection rect's private mutation callback. Called from `+initialize`.
+FOUNDATION_EXTERN void IDRichTextSelectionRectInstallPrivateCallbacks(Class cls);
+
 NS_ASSUME_NONNULL_END
 
 #endif

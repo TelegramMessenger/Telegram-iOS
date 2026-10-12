@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import <string.h>
@@ -259,8 +260,8 @@ static BOOL TGThunk_textInputShouldChangeCharactersInRangesReplacementText(
 /// (`CanvasCallbackInstallationTests`) does not, and the protocol method is `@optional`).
 static id TGThunk_interactionAssistant(id self, SEL _cmd) {
     id<TGRichTextInputDecClientBridging> bridge = TGRichTextInputDecAttachedBridge(self);
-    if (bridge == nil || ![bridge respondsToSelector:@selector(interactionAssistant)]) { return nil; }
-    return [bridge interactionAssistant];
+    if (bridge == nil || ![bridge respondsToSelector:@selector(canvasInteractionAssistant)]) { return nil; }
+    return [bridge canvasInteractionAssistant];
 }
 
 /// Backs `-_textInputViewForAddingGestureRecognizers`. The canvas ITSELF is the view UIKit's
@@ -415,16 +416,16 @@ BOOL TGRichTextInputDecInstallCanvasCallbacks(
     // resolver-validated `incomingCallbacks` row). Void return, one trailing OBJECT argument: "v@:@".
     // THREE rows, not C6's four: `_deleteBackwardAndNotify:` is deliberately not installed — see the
     // note where its thunk used to be.
-    TGAddThunk(canvasClass, NSSelectorFromString(@"textInputDidChange:"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_textInputDidChange_()),
                (IMP)TGThunk_textInputDidChange, "v@:@", rejected);
-    TGAddThunk(canvasClass, NSSelectorFromString(@"textInputDidChangeSelection:"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_textInputDidChangeSelection_()),
                (IMP)TGThunk_textInputDidChangeSelection, "v@:@", rejected);
-    TGAddThunk(canvasClass, NSSelectorFromString(@"keyboardInputChangedSelection:"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_keyboardInputChangedSelection_()),
                (IMP)TGThunk_keyboardInputChangedSelection, "v@:@", rejected);
     // TASK C7 — the two pre-mutation thunks (Family 4), unconditional like C6's above (neither
     // is a resolver-validated `incomingCallbacks` row). Both return BOOL; three trailing arguments
     // each (matching each selector's three colons): "B@:@@B" / "B@:@@@".
-    TGAddThunk(canvasClass, NSSelectorFromString(@"keyboardInput:shouldInsertText:isMarkedText:"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_keyboardInput_shouldInsertText_isMarkedText_()),
                (IMP)TGThunk_keyboardInputShouldInsertTextIsMarkedText, "B@:@@B", rejected);
     TGAddThunk(canvasClass,
                NSSelectorFromString(@"textInput:shouldChangeCharactersInRanges:replacementText:"),
@@ -432,25 +433,25 @@ BOOL TGRichTextInputDecInstallCanvasCallbacks(
     // TASK C12 — the three interaction-host thunks (Family 9), unconditional like every thunk
     // above (none is a resolver-validated `incomingCallbacks` row — see this file's own note on
     // this group). Zero arguments, `id` return each: "@@:".
-    TGAddThunk(canvasClass, NSSelectorFromString(@"interactionAssistant"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_interactionAssistant()),
                (IMP)TGThunk_interactionAssistant, "@@:", rejected);
-    TGAddThunk(canvasClass, NSSelectorFromString(@"_textInputViewForAddingGestureRecognizers"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN__textInputViewForAddingGestureRecognizers()),
                (IMP)TGThunk_textInputViewForAddingGestureRecognizers, "@@:", rejected);
-    TGAddThunk(canvasClass, NSSelectorFromString(@"selectionContainerView"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_selectionContainerView()),
                (IMP)TGThunk_selectionContainerView, "@@:", rejected);
     // TASK C14 — the two spellchecking thunks (Family 11), unconditional like every thunk above
     // (neither is a resolver-validated `incomingCallbacks` row — see this file's own note on this
     // pair). One BOOL argument / void return ("v@:B"); zero arguments / BOOL return ("B@:").
-    TGAddThunk(canvasClass, NSSelectorFromString(@"setContinuousSpellCheckingEnabled:"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_setContinuousSpellCheckingEnabled_()),
                (IMP)TGThunk_setContinuousSpellCheckingEnabled, "v@:B", rejected);
-    TGAddThunk(canvasClass, NSSelectorFromString(@"isContinuousSpellCheckingEnabled"),
+    TGAddThunk(canvasClass, NSSelectorFromString(TGPN_isContinuousSpellCheckingEnabled()),
                (IMP)TGThunk_isContinuousSpellCheckingEnabled, "B@:", rejected);
     // The three ABI-witnessed rows install the very IMPs the resolver validated. They carry the
     // COMPILED encoding of `TGRichTextInputDecCanvasABIWitness`'s own methods rather than a literal,
     // so there is nothing to mistype here — but they go through `TGAddThunk` all the same, so the
     // rule is "every row in this installer is checked", with no exempt path for a future author to
     // reach for.
-    for (NSString *name in @[@"keyboardInputShouldDelete:", @"startAutoscroll:", @"cancelAutoscroll"]) {
+    for (NSString *name in @[TGPN_keyboardInputShouldDelete_(), TGPN_startAutoscroll_(), @"cancelAutoscroll"]) {
         SEL selector = NSSelectorFromString(name);
         Method method = class_getInstanceMethod(TGRichTextInputDecCanvasABIWitness.class, selector);
         if (method == NULL) {

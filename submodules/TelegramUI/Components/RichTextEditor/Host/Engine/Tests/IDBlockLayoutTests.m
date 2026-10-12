@@ -72,12 +72,18 @@
     [self.leftAttachmentBatches addObject:views];
 }
 
-- (void)_textKit2CanvasDidLayout {
+// The canvas forwards to its host under the neutral names it compiles its callbacks under (the
+// private ones exist only at run time, for UIKit).
+- (void)tgpn__textKit2CanvasDidLayout {
     self.didLayoutCount += 1;
 }
 
-- (void)_updateInteractionGeometry {
+- (void)tgpn__updateInteractionGeometry {
     self.interactionGeometryUpdateCount += 1;
+}
+
+- (id)tgpn_customRenderController {
+    return self.customRenderController;
 }
 
 @end

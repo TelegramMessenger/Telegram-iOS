@@ -105,3 +105,37 @@ BOOL IDIsUpstreamRunArtifactPath(NSString *path) {
     return [path isKindOfClass:NSString.class] && path.length > 0 &&
         [path.pathExtension isEqualToString:@"xcresult"];
 }
+
+NSDictionary<NSString *, NSString *> *IDPrivateRuntimeNamesByFunction(void) {
+    static NSDictionary<NSString *, NSString *> *names;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSString *header = [[[IDEngineSourceRoot() stringByDeletingLastPathComponent]
+            stringByAppendingPathComponent:@"RichTextInputDecObjC/include"]
+            stringByAppendingPathComponent:@"TGPrivateRuntimeNames.h"];
+        NSString *source = [NSString stringWithContentsOfFile:header encoding:NSUTF8StringEncoding error:nil] ?: @"";
+        NSRegularExpression *entry = [NSRegularExpression
+            regularExpressionWithPattern:@"(?m)^TG_PRIVATE_RUNTIME_NAME\\((\\w+), ([^)]*)\\)$" options:0 error:nil];
+        NSMutableDictionary<NSString *, NSString *> *result = [NSMutableDictionary dictionary];
+        for (NSTextCheckingResult *match in [entry matchesInString:source options:0
+                                                             range:NSMakeRange(0, source.length)]) {
+            NSString *function = [source substringWithRange:[match rangeAtIndex:1]];
+            NSMutableData *bytes = [NSMutableData data];
+            for (NSString *token in [[source substringWithRange:[match rangeAtIndex:2]]
+                     componentsSeparatedByString:@","]) {
+                unsigned int value = 0;
+                [[NSScanner scannerWithString:[token stringByTrimmingCharactersInSet:
+                    NSCharacterSet.whitespaceCharacterSet]] scanHexInt:&value];
+                uint8_t byte = (uint8_t)(value ^ 0x5A);
+                [bytes appendBytes:&byte length:1];
+            }
+            result[function] = [[NSString alloc] initWithData:bytes encoding:NSUTF8StringEncoding];
+        }
+        names = result.copy;
+    });
+    return names;
+}
+
+NSString *IDNeutralSelectorName(NSString *privateSelectorName) {
+    return [@"tgpn_" stringByAppendingString:privateSelectorName];
+}

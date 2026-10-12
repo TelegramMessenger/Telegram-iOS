@@ -138,6 +138,15 @@ API_AVAILABLE(ios(18.4))
                                       duration:(NSTimeInterval)duration;
 @end
 
+/// Adds the text view's callbacks UIKit sends under private names (`IDBlockTextView+PrivateCallbacks.m`).
+/// Called from `+initialize` for the class and for every subclass.
+FOUNDATION_EXTERN void IDBlockTextViewInstallPrivateCallbacks(Class cls);
+/// The input-delegate and interaction callbacks' halves of it, each in its own category file.
+FOUNDATION_EXTERN void IDBlockTextViewInstallPrivateInputDelegateCallbacks(Class cls);
+FOUNDATION_EXTERN void IDBlockTextViewInstallPrivateInteractionCallbacks(Class cls);
+/// The same for the block stack canvas's `textContainerOrigin`.
+FOUNDATION_EXTERN void IDBlockStackCanvasViewInstallPrivateCallbacks(Class cls);
+
 NS_ASSUME_NONNULL_END
 
 #endif

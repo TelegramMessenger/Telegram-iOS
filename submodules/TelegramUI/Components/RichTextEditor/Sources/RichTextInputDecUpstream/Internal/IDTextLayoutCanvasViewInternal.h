@@ -75,7 +75,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface IDTextLayoutCanvasView (IDTemporaryAttributeInvalidation)
 - (void)setNeedsDisplayInRect:(CGRect)rect;
-- (void)invalidateTemporaryAttributesInRange:(id)range;
+- (void)tgpn_invalidateTemporaryAttributesInRange:(id)range;
 @end
 
 NS_ASSUME_NONNULL_END

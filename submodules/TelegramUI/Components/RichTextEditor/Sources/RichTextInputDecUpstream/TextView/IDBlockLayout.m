@@ -43,7 +43,15 @@
 
 @end
 
+// `IDBlockLayout+PrivateCanvasCallbacks.m`: adds the canvas context's callbacks, which TextKit's
+// private rendering path sends under private names.
+FOUNDATION_EXTERN void IDBlockLayoutInstallPrivateCallbacks(Class cls);
+
 @implementation IDBlockLayout
+
++ (void)initialize {
+    IDBlockLayoutInstallPrivateCallbacks(self);
+}
 
 @dynamic layoutManager;
 

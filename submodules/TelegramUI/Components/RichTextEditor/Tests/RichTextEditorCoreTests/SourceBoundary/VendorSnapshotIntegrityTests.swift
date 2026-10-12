@@ -142,6 +142,43 @@ final class VendorSnapshotIntegrityTests: XCTestCase {
                        + "and either way re-record the digest in VENDOR.md in the same commit")
     }
 
+    /// The bytes a generated blob's array holds, decoded (every byte XOR 0x5A, the encoding that
+    /// keeps the manifest's private UIKit names out of the binary as text).
+    private func decodedBlob(at url: URL, array: String) throws -> Data {
+        let source = try String(contentsOf: url)
+        let start = try XCTUnwrap(source.range(of: "static const unsigned char \(array)[] = {"),
+                                  "\(url.lastPathComponent) has no array named \(array)")
+        let end = try XCTUnwrap(source.range(of: "};", range: start.upperBound..<source.endIndex))
+        let body = source[start.upperBound..<end.lowerBound]
+        let bytes = body.split(separator: ",").compactMap { token -> UInt8? in
+            let hex = token.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard hex.hasPrefix("0x") else { return nil }
+            return UInt8(hex.dropFirst(2), radix: 16)
+        }
+        return Data(bytes.map { $0 ^ 0x5A })
+    }
+
+    private func sha256(of data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Encoding changed the generated file and must not have changed what it holds.
+    func test_generatedContractDataDecodesToTheRecordedContent() throws {
+        RepoLayout.assertResolved()
+        let decoded = try decodedBlob(at: generatedContractDataURL, array: "TGRichTextInputDecContractBytes")
+        XCTAssertEqual(sha256(of: decoded), try recordedSHA("generated contract data decoded SHA-256"))
+        XCTAssertNotNil(try JSONSerialization.jsonObject(with: decoded), "the decoded blob is not JSON")
+    }
+
+    /// The engine's pristine blob is the vendored manifest, byte for byte, once decoded.
+    func test_thePristineBlobDecodesToThePristineManifest() throws {
+        RepoLayout.assertResolved()
+        let url = RepoLayout.packageRoot.appendingPathComponent(
+            "Sources/RichTextInputDecUpstream/Generated/RichTextInputDecUpstreamPristineManifest.m")
+        let decoded = try decodedBlob(at: url, array: "TGRichTextInputDecUpstreamPristineContractBytes")
+        XCTAssertEqual(sha256(of: decoded), try recordedSHA("pristine manifest SHA-256"))
+    }
+
     func test_pristineManifestMatchesTheRecordedSHA() throws {
         RepoLayout.assertResolved()
         XCTAssertEqual(try sha256(of: pristineManifestURL),

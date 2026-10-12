@@ -11,7 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly) NSTextContainer *textContainer;
 @property(nonatomic, strong, readonly) NSTextViewportLayoutController *textViewportLayoutController;
 @property(nonatomic, weak, nullable) id context;
-@property(nonatomic, strong, nullable) UIView *selectionContainerView;
+@property(nonatomic, strong, nullable) UIView *id_selectionContainerView;
 @property(nonatomic, copy, nullable) void (^contentSizeDidChange)(CGSize size);
 
 - (instancetype)initWithTextLayoutManager:(NSTextLayoutManager *)layoutManager

@@ -10,11 +10,15 @@
 #import "IDCanonicalTextStorageAdapterInternal.h"
 #import "IDInlineTextStyleResolver.h"
 #import "IDUIKitInputControllerCapability.h"
+#import <objc/runtime.h>
+#import <objc/message.h>
+#import "TGPrivateRuntimeNames.h"
+#import "TGPrivateMethodAliases.h"
 
 /// UIKit's private input-delegate callback, implemented by the engine's `+PrivateInputDelegate`
 /// category; declared here so the override above can call `super`.
 @interface IDBlockTextView (TGIDPrivateInputDelegateForwarding)
-- (void)textInputDidChange:(id)input;
+- (void)tgpn_textInputDidChange:(id)input;
 @end
 
 
@@ -23,10 +27,6 @@
 /// `-[_UIKeyboardTextSelectionController selectPositionAtPoint:granularity:completionHandler:]` —
 /// which is the tap that places a caret; nothing else in the framework references it. Declared here
 /// so the override below can call `super` for the granularities it does not intercept.
-@interface UIResponder (TGIDTapCaretPlacement)
-- (nullable UITextPosition *)_findBoundaryPositionClosestToPosition:(nullable UITextPosition *)position
-                                                    withGranularity:(UITextGranularity)granularity;
-@end
 
 
 /// The engine's line tokenizer, with the one answer it gets wrong corrected: the LINE at a position
@@ -177,6 +177,28 @@ static BOOL TGIDDirectionIsBackward(UITextDirection direction) {
 
 
 @implementation TGIDObservingBlockTextView
+
+// This class's own callbacks UIKit sends under private names, compiled under neutral `tgpn_` names
+// and added under the private ones (`TGPrivateMethodAliases.h`), after the engine's: an override of
+// one of the engine's `tgpn_` callbacks (`tgpn_textInputDidChange:`) is installed for this class too.
+// Not guarded to this class, for the same reason as `+[IDBlockTextView initialize]`.
++ (void)initialize {
+    IDBlockTextViewInstallPrivateCallbacks(self);
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_textInputDidChange_, @selector(tgpn_textInputDidChange:) },
+        { TGPN__accessibilitySelectedTextRange, @selector(tgpn__accessibilitySelectedTextRange) },
+        { TGPN__accessibilitySetSelectedTextRange_, @selector(tgpn__accessibilitySetSelectedTextRange:) },
+        { TGPN__findBoundaryPositionClosestToPosition_withGranularity_, @selector(tgpn__findBoundaryPositionClosestToPosition:withGranularity:) },
+        { TGPN_replaceRange_withAnnotatedString_relativeReplacementRange_, @selector(tgpn_replaceRange:withAnnotatedString:relativeReplacementRange:) },
+        { TGPN_addTextAlternativesDisplayStyle_toRange_, @selector(tgpn_addTextAlternativesDisplayStyle:toRange:) },
+        { TGPN_rangeWithTextAlternatives_atPosition_, @selector(tgpn_rangeWithTextAlternatives:atPosition:) },
+        { TGPN_annotatedSubstringForRange_, @selector(tgpn_annotatedSubstringForRange:) },
+        { TGPN_removeAllTextAlternatives, @selector(tgpn_removeAllTextAlternatives) },
+        { TGPN_removeAlternativesForCurrentWord, @selector(tgpn_removeAlternativesForCurrentWord) },
+        { TGPN_removeEmojiAlternatives, @selector(tgpn_removeEmojiAlternatives) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
 
 /// UIKit asks the view itself for edit-menu contents (see the header). Forwards to the host, and
 /// falls back to the system's own actions when no provider is installed, so the menu can never end
@@ -374,8 +396,8 @@ static BOOL TGIDDirectionIsBackward(UITextDirection direction) {
     [super setContentSize:CGSizeMake(contentSize.width, ceil(MAX(visibleHeight, documentHeight)))];
 }
 
-- (void)textInputDidChange:(id)input {
-    [super textInputDidChange:input];
+- (void)tgpn_textInputDidChange:(id)input {
+    [super tgpn_textInputDidChange:input];
     [self.observationSink engineDidFinishEdit];
 }
 
@@ -532,7 +554,7 @@ static BOOL TGIDDirectionIsBackward(UITextDirection direction) {
 /// accessibility support for a `UITextInput` responder answers this from `-selectedTextRange` on the
 /// engine's axis; the host's value is on another one once an atom expands, so the host maps it. Only
 /// called while the accessibility runtime is loaded; nothing else in the process asks.
-- (NSRange)_accessibilitySelectedTextRange {
+- (NSRange)tgpn__accessibilitySelectedTextRange {
     NSRange canonical = [self tgid_canonicalSelectedRange];
     NSRange (^map)(NSRange) = self.tgid_accessibilityRangeFromCanonicalRange;
     if (canonical.location == NSNotFound || map == nil) {
@@ -543,7 +565,7 @@ static BOOL TGIDDirectionIsBackward(UITextDirection direction) {
 
 /// VoiceOver moving the cursor (character / word navigation, the rotor): its range is on the value's
 /// axis, mapped back to the engine's, where an offset INSIDE an expanded atom snaps to a boundary.
-- (void)_accessibilitySetSelectedTextRange:(NSRange)range {
+- (void)tgpn__accessibilitySetSelectedTextRange:(NSRange)range {
     if (range.location == NSNotFound) {
         return;
     }
@@ -948,12 +970,18 @@ static BOOL TGIDDirectionIsBackward(UITextDirection direction) {
 /// Intercepting the word granularity makes every tap at a different character move the caret, so the
 /// menu is left to the one gesture that is meant to raise it. Everything else — notably the document
 /// granularity UIKit substitutes for a secure field — is still UIKit's answer.
-- (nullable UITextPosition *)_findBoundaryPositionClosestToPosition:(nullable UITextPosition *)position
+- (nullable UITextPosition *)tgpn__findBoundaryPositionClosestToPosition:(nullable UITextPosition *)position
                                                     withGranularity:(UITextGranularity)granularity {
     if (granularity == UITextGranularityWord) {
         return position;
     }
-    return [super _findBoundaryPositionClosestToPosition:position withGranularity:granularity];
+    // `super` by a runtime selector: the method is UIKit's, under a private name.
+    struct objc_super superclassInfo = { self, class_getSuperclass(TGIDObservingBlockTextView.class) };
+    return ((UITextPosition *(*)(struct objc_super *, SEL, UITextPosition *, UITextGranularity))objc_msgSendSuper)(
+        &superclassInfo,
+        NSSelectorFromString(TGPN__findBoundaryPositionClosestToPosition_withGranularity_()),
+        position,
+        granularity);
 }
 
 - (void)deleteBackward {

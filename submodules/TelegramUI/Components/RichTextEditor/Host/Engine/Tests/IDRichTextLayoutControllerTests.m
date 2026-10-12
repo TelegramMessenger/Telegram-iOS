@@ -133,7 +133,7 @@ typedef NS_ENUM(NSInteger, IDCrossBlockMutation) {
     return NSMakeRange(0, self.utf16Length);
 }
 
-- (IDBlockWritingDirection)baseWritingDirectionAtPosition:
+- (IDBlockWritingDirection)id_snapshotBaseWritingDirectionAtPosition:
     (IDBlockTextPosition)position {
     (void)position;
     return self.baseWritingDirection;

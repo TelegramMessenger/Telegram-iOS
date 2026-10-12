@@ -363,7 +363,7 @@ final class IDTextEditorBackendClientBridge: NSObject, TGRichTextInputDecClientB
             }
             if result.selectionChanged, !prepared.selectionWillChange {
                 RichTextInputContractViolation.report(
-                    "commitPreparedMutation for \(mutation) reported selectionChanged=true, but its " +
+                    "commitPreparedMutation for \(mutation) reported a selection change, but its " +
                     "own preparation's selectionWillChange was false")
             }
             // Task R5 — thread `intent` through so a composing edit publishes with reason
@@ -400,7 +400,7 @@ final class IDTextEditorBackendClientBridge: NSObject, TGRichTextInputDecClientB
     /// seven surviving `@throw` sites — but the guard is a blanket rule ("every reachable entry
     /// point"), not a per-call risk judgment, matching every other property read on `kernelInput`/
     /// `kernelInteraction` elsewhere in this package.
-    func interactionAssistant() -> Any? {
+    func canvasInteractionAssistant() -> Any? {
         var error: NSError?
         let assistant = TGRichTextInputDecPerformReturningObject({
             self.backend.kernelInteraction?.privateAssistant
@@ -505,7 +505,7 @@ final class IDTextEditorBackendClientBridge: NSObject, TGRichTextInputDecClientB
     func setNativeContinuousSpellCheckingEnabled(_ enabled: Bool) {
         var error: NSError?
         _ = TGRichTextInputDecPerform({
-            self.backend.kernelInput?.setContinuousSpellCheckingEnabled(enabled)
+            self.backend.kernelInput?.id_setContinuousSpellCheckingEnabled(enabled)
         }, &error)
         if let error { backend.reportKernelFailure(error, witness: #function) }
         (host?.hostInputView as? DocumentCanvasView)?.isSpellCheckingEnabled = enabled

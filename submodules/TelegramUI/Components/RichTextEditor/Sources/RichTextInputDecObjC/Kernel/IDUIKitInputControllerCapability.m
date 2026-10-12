@@ -1,6 +1,9 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateMethodAliases.h"
+
+#import "TGPrivateRuntimeNames.h"
 #import "IDUIKitInputControllerCapability.h"
 
 #import <objc/message.h>
@@ -83,6 +86,22 @@ IDUIKitInputMemberNamed(
 
 @implementation IDUIKitInputControllerCapability
 
+// Renamed members keep their previous selectors at run time (`TGPrivateMethodAliases.h`): the names are
+// UIKit's private ones, which must not be compiled into the binary, and this object may be reached by
+// them, as the layout controller's connection is.
++ (void)initialize {
+    if (self != IDUIKitInputControllerCapability.class) {
+        return;
+    }
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_textInputTraits, @selector(id_textInputTraits) },
+        { TGPN_isContinuousSpellCheckingEnabled, @selector(id_isContinuousSpellCheckingEnabled) },
+        { TGPN_setContinuousSpellCheckingEnabled_, @selector(id_setContinuousSpellCheckingEnabled:) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
+
 - (instancetype)initWithContract:
     (IDUIKitRuntimeCapabilityContract *)contract
                          resolver:(IDUIKitCapabilityResolver *)resolver
@@ -106,7 +125,7 @@ IDUIKitInputMemberNamed(
 
     IDUIKitRuntimeMemberContract *initializer =
         IDUIKitInputMemberNamed(
-            contract, @"initWithTextLayoutController:");
+            contract, TGPN_initWithTextLayoutController_());
     Class controllerClass = initializer == nil
         ? Nil
         : [resolver classNamed:initializer.className];
@@ -120,7 +139,7 @@ IDUIKitInputMemberNamed(
     }
 
     SEL initializerSelector =
-        NSSelectorFromString(@"initWithTextLayoutController:");
+        NSSelectorFromString(TGPN_initWithTextLayoutController_());
     id allocatedController = [controllerClass alloc];
     __strong id cleanupTarget = allocatedController;
     id controller = nil;
@@ -145,7 +164,7 @@ IDUIKitInputMemberNamed(
             if (cleanupTarget != nil) {
                 ((void (*)(id, SEL))objc_msgSend)(
                     cleanupTarget,
-                    NSSelectorFromString(@"_detachFromLayoutManager"));
+                    NSSelectorFromString(TGPN__detachFromLayoutManager()));
             }
         } @catch (__unused NSException *cleanupException) {
         }
@@ -191,7 +210,7 @@ IDUIKitInputMemberNamed(
     }
     IDUIKitRuntimeMemberContract *initializer =
         IDUIKitInputMemberNamed(
-            contract, @"initWithTextLayoutController:");
+            contract, TGPN_initWithTextLayoutController_());
     Class expectedClass = initializer == nil
         ? Nil
         : [resolver classNamed:initializer.className];
@@ -473,14 +492,14 @@ IDUIKitInputMemberNamed(
         typingAttributes);
 }
 
-- (id)textInputTraits {
+- (id)id_textInputTraits {
     if (![self hasValidatedCapability:
             IDUIKitBehaviorCapabilityTypingAttributes]) {
         return nil;
     }
     id controller = [self activeController];
     return ((id (*)(id, SEL))objc_msgSend)(
-        controller, NSSelectorFromString(@"_textInputTraits"));
+        controller, NSSelectorFromString(TGPN__textInputTraits()));
 }
 
 - (void)setAllowedTypingAttributeNames:
@@ -491,9 +510,9 @@ IDUIKitInputMemberNamed(
     }
     id controller = [self activeController];
     SEL getSelector =
-        NSSelectorFromString(@"_allowedTypingAttributes");
+        NSSelectorFromString(TGPN__allowedTypingAttributes());
     SEL setSelector =
-        NSSelectorFromString(@"_setAllowedTypingAttributes:");
+        NSSelectorFromString(TGPN__setAllowedTypingAttributes_());
     NSSet *current =
         ((id (*)(id, SEL))objc_msgSend)(controller, getSelector);
     NSMutableSet *allowed =
@@ -511,7 +530,7 @@ IDUIKitInputMemberNamed(
     id controller = [self activeController];
     ((void (*)(id, SEL))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_invalidateTypingAttributes"));
+        NSSelectorFromString(TGPN__invalidateTypingAttributes()));
 }
 
 - (void)performWhileSuppressingDelegateNotifications:
@@ -520,7 +539,7 @@ IDUIKitInputMemberNamed(
     ((void (*)(id, SEL, void (^)(void)))objc_msgSend)(
         controller,
         NSSelectorFromString(
-            @"_performWhileSuppressingDelegateNotifications:"),
+            TGPN__performWhileSuppressingDelegateNotifications_()),
         body);
 }
 
@@ -528,12 +547,12 @@ IDUIKitInputMemberNamed(
     id controller = [self activeController];
     id ranges = ((id (*)(id, SEL))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_rangesForBackwardsDelete"));
-    SEL unionSelector = NSSelectorFromString(@"unionRange");
+        NSSelectorFromString(TGPN__rangesForBackwardsDelete()));
+    SEL unionSelector = NSSelectorFromString(TGPN_unionRange());
     if (![ranges respondsToSelector:unionSelector]) {
         @throw [NSException
             exceptionWithName:NSInternalInconsistencyException
-                       reason:@"Backward-delete ranges do not implement unionRange."
+                       reason:@"Backward-delete ranges cannot be unioned."
                      userInfo:nil];
     }
     return ranges;
@@ -546,7 +565,7 @@ IDUIKitInputMemberNamed(
 - (NSRange)backwardDeleteRange {
     return ((NSRange (*)(id, SEL))objc_msgSend)(
         [self validatedBackwardDeleteRanges],
-        NSSelectorFromString(@"unionRange"));
+        NSSelectorFromString(TGPN_unionRange()));
 }
 
 - (BOOL)shouldHandlePasteAction:(SEL)action sender:(id)sender {
@@ -558,13 +577,13 @@ IDUIKitInputMemberNamed(
     id controller = [self activeController];
     BOOL canHandle = ((BOOL (*)(id, SEL, SEL))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_canHandleResponderAction:"),
+        NSSelectorFromString(TGPN__canHandleResponderAction_()),
         action);
     return canHandle &&
         ((BOOL (*)(id, SEL, SEL, id))objc_msgSend)(
             controller,
             NSSelectorFromString(
-                @"_shouldHandleResponderAction:withSender:"),
+                TGPN__shouldHandleResponderAction_withSender_()),
             action,
             sender);
 }
@@ -603,7 +622,7 @@ IDUIKitInputMemberNamed(
         controller, @selector(paste:), sender);
 }
 
-- (void)setContinuousSpellCheckingEnabled:(BOOL)enabled {
+- (void)id_setContinuousSpellCheckingEnabled:(BOOL)enabled {
     if (![self hasValidatedCapability:
             IDUIKitBehaviorCapabilityChecking]) {
         return;
@@ -612,11 +631,11 @@ IDUIKitInputMemberNamed(
     ((void (*)(id, SEL, BOOL))objc_msgSend)(
         controller,
         NSSelectorFromString(
-            @"setContinuousSpellCheckingEnabled:"),
+            TGPN_setContinuousSpellCheckingEnabled_()),
         enabled);
 }
 
-- (BOOL)isContinuousSpellCheckingEnabled {
+- (BOOL)id_isContinuousSpellCheckingEnabled {
     if (![self hasValidatedCapability:
             IDUIKitBehaviorCapabilityChecking]) {
         return NO;
@@ -625,7 +644,7 @@ IDUIKitInputMemberNamed(
     return ((BOOL (*)(id, SEL))objc_msgSend)(
         controller,
         NSSelectorFromString(
-            @"continuousSpellCheckingEnabled"));
+            TGPN_continuousSpellCheckingEnabled()));
 }
 
 - (BOOL)insertDictationResultIfSupported:
@@ -654,7 +673,7 @@ IDUIKitInputMemberNamed(
     self.privateController = nil;
     ((void (*)(id, SEL))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_detachFromLayoutManager"));
+        NSSelectorFromString(TGPN__detachFromLayoutManager()));
 }
 
 @end

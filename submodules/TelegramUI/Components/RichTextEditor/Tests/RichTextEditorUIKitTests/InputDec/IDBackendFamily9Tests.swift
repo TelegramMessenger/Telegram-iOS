@@ -119,7 +119,7 @@ final class IDBackendFamily9Tests: XCTestCase {
     func test_selectWordRoutesThroughTheInteractionCapability() {
         let h = makeIDFakeClientHarness(); defer { h.tearDown() }
         XCTAssertNotNil(h.idBackend.kernelInteraction, "precondition: a live interaction capability must exist")
-        h.idBackend.selectWord()
+        h.idBackend.id_selectWord()
         XCTAssertTrue(h.idBackend.witnessFailures.isEmpty,
                      "selectWord() must reach the kernel's interaction capability cleanly, recording no witness failure: \(h.idBackend.witnessFailures)")
     }

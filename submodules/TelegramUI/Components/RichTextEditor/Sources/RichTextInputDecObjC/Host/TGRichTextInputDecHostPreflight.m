@@ -3,6 +3,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import <objc/runtime.h>
 #import "TGRichTextInputDecHostPreflight.h"
 
@@ -46,9 +47,9 @@ static IDInteractionABISpec *IDInteractionABISpecMake(
 
 static NSArray<IDInteractionABISpec *> *IDInteractionHostABISpecs(void) {
     return @[
-        IDInteractionABISpecMake(@"interactionAssistant", @encode(id), @[]),
-        IDInteractionABISpecMake(@"_textInputViewForAddingGestureRecognizers", @encode(id), @[]),
-        IDInteractionABISpecMake(@"selectionContainerView", @encode(id), @[]),
+        IDInteractionABISpecMake(TGPN_interactionAssistant(), @encode(id), @[]),
+        IDInteractionABISpecMake(TGPN__textInputViewForAddingGestureRecognizers(), @encode(id), @[]),
+        IDInteractionABISpecMake(TGPN_selectionContainerView(), @encode(id), @[]),
     ];
 }
 

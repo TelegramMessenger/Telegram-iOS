@@ -1,6 +1,10 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
+
+#import "TGPrivateMethodAliases.h"
+
 #import "IDBlockTextViewInternal.h"
 #import "IDBlockStackCanvasView.h"
 
@@ -47,26 +51,26 @@ static CGFloat IDBlockTextViewAutoscrollPointDistance(
 
 @implementation IDBlockTextView (PrivateInteractionCallbacks)
 
-- (id)interactionAssistant {
+- (id)tgpn_interactionAssistant {
     return self.id_interactionCapability.privateAssistant;
 }
 
-- (UIView *)_textInputViewForAddingGestureRecognizers {
+- (UIView *)tgpn__textInputViewForAddingGestureRecognizers {
     return self;
 }
 
-- (UIView *)selectionContainerView {
-    return [self.id_selectionPresentationBackend selectionContainerView];
+- (UIView *)tgpn_selectionContainerView {
+    return [self.id_selectionPresentationBackend id_selectionContainerView];
 }
 
 - (CGPoint)id_scrollHostAutoscrollPointForAssistantPoint:(CGPoint)point {
     return [self convertPoint:point fromView:self.id_blockStack];
 }
 
-- (void)startAutoscroll:(CGPoint)point {
+- (void)tgpn_startAutoscroll:(CGPoint)point {
     if (!IDBlockTextViewHasActiveBehaviorCapability(
             self, @"autoscrollEntry")) {
-        [self.id_interactionCapability autoscrollWillNotStart];
+        [self.id_interactionCapability id_autoscrollWillNotStart];
         [self cancelAutoscroll];
         return;
     }
@@ -119,7 +123,7 @@ static CGFloat IDBlockTextViewAutoscrollPointDistance(
         //
         // The "will not start" notice still goes first, exactly as before: it is what releases the
         // magnifiers, and it leaves the bit alone, so the tick reported after it survives.
-        [self.id_interactionCapability autoscrollWillNotStart];
+        [self.id_interactionCapability id_autoscrollWillNotStart];
         if (IDVerticalAutoscrollStockSessionWouldStart(
                 scrollPoint, self.bounds, adjustedInsets,
                 self.textContainerInset, self.contentSize.height)) {
@@ -144,7 +148,7 @@ static CGFloat IDBlockTextViewAutoscrollPointDistance(
     }
     BOOL coalesces =
         self.id_verticalAutoscroll.isActive &&
-        self.id_verticalAutoscroll.scrollContainer == self &&
+        self.id_verticalAutoscroll.id_scrollContainer == self &&
         self.id_verticalAutoscroll.directions == directions &&
         self.id_verticalAutoscroll.repeatInterval == 0.075 &&
         IDBlockTextViewAutoscrollPointDistance(
@@ -228,7 +232,7 @@ static CGFloat IDBlockTextViewAutoscrollPointDistance(
     (IDVerticalAutoscroll *)autoscroll {
     if (autoscroll == nil ||
         autoscroll != self.id_verticalAutoscroll ||
-        autoscroll.scrollContainer != self) {
+        autoscroll.id_scrollContainer != self) {
         return;
     }
     // Every tick of the stock session reports itself before deciding whether to scroll; see
@@ -339,5 +343,16 @@ static CGFloat IDBlockTextViewAutoscrollPointDistance(
 }
 
 @end
+
+// This file's callbacks, added under their private names (`IDBlockTextViewInstallPrivateCallbacks`).
+void IDBlockTextViewInstallPrivateInteractionCallbacks(Class cls) {
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_interactionAssistant, @selector(tgpn_interactionAssistant) },
+        { TGPN__textInputViewForAddingGestureRecognizers, @selector(tgpn__textInputViewForAddingGestureRecognizers) },
+        { TGPN_selectionContainerView, @selector(tgpn_selectionContainerView) },
+        { TGPN_startAutoscroll_, @selector(tgpn_startAutoscroll:) },
+    };
+    TGPrivateInstallMethodAliases(cls, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
 
 #endif

@@ -39,24 +39,14 @@ NS_ASSUME_NONNULL_BEGIN
       alternatives:(NSArray<NSString *> *)alternatives;
 
 /// A replacement whose attributed string carries the annotations itself (dictation, the checker).
-- (void)replaceRange:(UITextRange *)range
-    withAnnotatedString:(NSAttributedString *)annotatedString
-    relativeReplacementRange:(NSRange)relativeReplacementRange;
 
 /// Annotates the primary string's occurrence that ends at the selection, as the controller does.
 - (void)addTextAlternatives:(id)alternatives;
-- (void)addTextAlternativesDisplayStyle:(NSInteger)style toRange:(UITextRange *)range;
 
 /// The tap's question: the alternatives at `position` — or one before it, where a tap on a word's
 /// last letter parks the caret — and their range, or nil.
-- (nullable UITextRange *)rangeWithTextAlternatives:(id _Nullable * _Nullable)alternatives
-                                          atPosition:(UITextPosition *)position;
 
-- (NSAttributedString *)annotatedSubstringForRange:(UITextRange *)range;
 - (void)removeAnnotation:(id)annotation forRange:(UITextRange *)range;
-- (void)removeAllTextAlternatives;
-- (void)removeAlternativesForCurrentWord;
-- (void)removeEmojiAlternatives;
 
 /// The two attribute keys, spelled once. Read by tests; the keyboard never asks.
 + (NSAttributedStringKey)tgid_textAlternativesKey;

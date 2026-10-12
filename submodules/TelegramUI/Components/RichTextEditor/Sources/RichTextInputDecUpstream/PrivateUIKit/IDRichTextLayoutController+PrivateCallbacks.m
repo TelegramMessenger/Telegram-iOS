@@ -4,18 +4,20 @@
 #import "IDRichTextLayoutController.h"
 #import "IDRichTextLayoutControllerInternal.h"
 #import "IDRichTextSelectionRect.h"
+#import "TGPrivateMethodAliases.h"
+#import "TGPrivateRuntimeNames.h"
 
 #include <math.h>
 
 @interface IDRichTextSelectionRect (PrivateMutationCallbacks)
-- (void)setRect:(CGRect)rect fromView:(nullable UIView *)view;
-- (void)setContainsStart:(BOOL)containsStart;
-- (void)setContainsEnd:(BOOL)containsEnd;
+- (void)tgpn_setRect:(CGRect)rect fromView:(nullable UIView *)view;
+- (void)tgpn_setContainsStart:(BOOL)containsStart;
+- (void)tgpn_setContainsEnd:(BOOL)containsEnd;
 @end
 
 @implementation IDRichTextSelectionRect (PrivateMutationCallbacks)
 
-- (void)setRect:(CGRect)rect fromView:(UIView *)view {
+- (void)tgpn_setRect:(CGRect)rect fromView:(UIView *)view {
     if (!isfinite(rect.origin.x) || !isfinite(rect.origin.y) ||
         !isfinite(rect.size.width) || !isfinite(rect.size.height)) return;
     CGFloat scale = view.contentScaleFactor;
@@ -33,29 +35,33 @@
     [self setValue:[NSValue valueWithCGRect:rounded] forKey:@"storedRect"];
 }
 
-- (void)setContainsStart:(BOOL)containsStart {
+- (void)tgpn_setContainsStart:(BOOL)containsStart {
     [self setValue:@(containsStart) forKey:@"storedContainsStart"];
 }
 
-- (void)setContainsEnd:(BOOL)containsEnd {
+- (void)tgpn_setContainsEnd:(BOOL)containsEnd {
     [self setValue:@(containsEnd) forKey:@"storedContainsEnd"];
 }
 
 @end
 
+// UIKit calls this on a selection rect it was handed; it is compiled under a neutral name and added
+// under the private one (`TGPrivateMethodAliases.h`).
+void IDRichTextSelectionRectInstallPrivateCallbacks(Class cls) {
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_setRect_fromView_, @selector(tgpn_setRect:fromView:) },
+        { TGPN_setContainsStart_, @selector(tgpn_setContainsStart:) },
+        { TGPN_setContainsEnd_, @selector(tgpn_setContainsEnd:) },
+    };
+    TGPrivateInstallMethodAliases(cls, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
 @interface IDRichTextLayoutController (PrivateCallbacks)
 - (NSTextStorage *)textStorage;
 - (NSArray<NSTextContainer *> *)textContainers;
-- (nullable NSTextContainer *)firstTextContainer;
-- (nullable NSTextContainer *)textContainerForPosition:(UITextPosition *)position;
-- (BOOL)canAccessLayoutManager;
 - (nullable id)layoutManager;
-- (nullable id)textInputController;
-- (void)adoptTextInputController:(id)controller;
-- (void)detachFromTextInputController;
 - (UITextPosition *)beginningOfDocument;
 - (UITextPosition *)endOfDocument;
-- (UITextRange *)emptyTextRangeAtPosition:(UITextPosition *)position;
 - (UITextRange *)textRangeFromPosition:(UITextPosition *)from
                             toPosition:(UITextPosition *)to;
 - (nullable UITextPosition *)positionFromPosition:(UITextPosition *)position offset:(NSInteger)offset;
@@ -67,87 +73,23 @@
                                            offset:(NSInteger)offset
                                          affinity:(UITextStorageDirection)affinity
                              anchorPositionOffset:(CGFloat)anchorPositionOffset;
-- (nullable UITextRange *)textRangeForLineEnclosingPosition:(UITextPosition *)position;
-- (nullable UITextRange *)textRangeForLineEnclosingPosition:(UITextPosition *)position
-                                           effectiveAffinity:(UITextStorageDirection)affinity;
-- (NSDictionary<NSAttributedStringKey, id> *)attributesAtPosition:(UITextPosition *)position
-                                                       inDirection:(UITextStorageDirection)direction;
-- (NSWritingDirection)baseWritingDirectionAtPosition:(UITextPosition *)position;
 - (NSComparisonResult)comparePosition:(UITextPosition *)first
                             toPosition:(UITextPosition *)second;
 - (NSInteger)offsetFromPosition:(UITextPosition *)first toPosition:(UITextPosition *)second;
-- (UITextStorageDirection)affinityForPosition:(UITextPosition *)position;
-- (NSRange)characterRangeForTextRange:(nullable UITextRange *)range;
-- (CGRect)boundingRectForCharacterRange:(NSRange)range;
-- (NSRange)characterRangeForTextRange:(nullable UITextRange *)range
-                    clippedToDocument:(BOOL)clipped;
-- (NSArray<NSValue *> *)characterRangesForTextRange:(UITextRange *)range
-                                 clippedToDocument:(BOOL)clipped;
-- (UITextRange *)textRangeForCharacterRange:(NSRange)range;
-- (UITextRange *)textRangeForCharacterRanges:(NSArray<NSValue *> *)ranges;
-- (UITextPosition *)positionWithOffset:(NSInteger)offset
-                               affinity:(UITextStorageDirection)affinity;
 - (void)invalidateDisplayForCharacterRange:(NSRange)range;
-- (NSRange)rangeOfCharacterClusterAtIndex:(NSUInteger)index type:(NSInteger)type;
-- (NSArray *)selectionRectsForRange:(UITextRange *)range
-                           fromView:(UIView *)view
-            forContainerPassingTest:(BOOL (^)(id container))predicate;
-- (void)requestTextGeometryAtPosition:(UITextPosition *)position
-                     typingAttributes:(NSDictionary<NSAttributedStringKey, id> *)attributes
-                          resultBlock:(void (^)(NSTextContainer *container,
-                                                    CGRect rect,
-                                                    CGFloat baselineOffset,
-                                                    UITextPosition *position))resultBlock;
-- (CGRect)insertionRectForPosition:(UITextPosition *)position
-                   typingAttributes:(NSDictionary<NSAttributedStringKey, id> *)attributes
-              placeholderAttachment:(nullable id)attachment
-                      textContainer:(NSTextContainer * _Nullable * _Nullable)textContainer;
-- (nullable UITextPosition *)cursorPositionAtPoint:(CGPoint)point
-                                        inContainer:(nullable NSTextContainer *)container;
-- (nullable UITextPosition *)nearestPositionAtPoint:(CGPoint)point
-                                         inContainer:(nullable NSTextContainer *)container;
-- (nullable UITextRange *)_visualSelectionRangeForExtent:(UITextPosition *)extent
-                                                forPoint:(CGPoint)point
-                                            fromPosition:(UITextPosition *)position
-                                             inDirection:(UITextStorageDirection)direction;
 - (void)ensureLayoutForRange:(UITextRange *)range;
 - (void)invalidateLayoutForRange:(UITextRange *)range;
 - (NSAttributedString *)attributedTextInRange:(UITextRange *)range;
-- (nullable id)annotationAttribute:(id)attribute
-                        atPosition:(UITextPosition *)position;
-- (NSAttributedString *)annotatedSubstringForRange:(UITextRange *)range;
-- (void)addAnnotationAttribute:(id)attribute
-                         value:(id)value
-                      forRange:(UITextRange *)range;
-- (void)removeAnnotationAttribute:(id)attribute
-                          forRange:(UITextRange *)range;
-- (void)addRenderingAttributes:(NSDictionary *)attributes
-                       forRange:(UITextRange *)range;
-- (void)removeRenderingAttributes:(id<NSFastEnumeration>)attributes
-                          forRange:(UITextRange *)range;
-- (void)_invalidateTemporaryAttributesInRange:(UITextRange *)range;
+- (NSRange)tgpn_characterRangeForTextRange:(nullable UITextRange *)range;
 @end
 
 @implementation IDRichTextLayoutController (PrivateCallbacks)
 
 - (NSTextStorage *)textStorage { return [self id_textStorage]; }
 - (NSArray<NSTextContainer *> *)textContainers { return [self id_textContainers]; }
-- (NSTextContainer *)firstTextContainer { return [self id_firstTextContainer]; }
-- (NSTextContainer *)textContainerForPosition:(UITextPosition *)position {
-    return [self id_textContainerForPosition:position];
-}
-- (BOOL)canAccessLayoutManager { return [self id_canAccessLayoutManager]; }
 - (id)layoutManager { return [self id_layoutManager]; }
-- (id)textInputController { return self.inputController; }
-- (void)adoptTextInputController:(id)controller {
-    [self id_adoptTextInputController:controller];
-}
-- (void)detachFromTextInputController { [self id_detachFromTextInputController]; }
 - (UITextPosition *)beginningOfDocument { return [self id_beginningOfDocument]; }
 - (UITextPosition *)endOfDocument { return [self id_endOfDocument]; }
-- (UITextRange *)emptyTextRangeAtPosition:(UITextPosition *)position {
-    return [self id_emptyTextRangeAtPosition:position];
-}
 - (UITextRange *)textRangeFromPosition:(UITextPosition *)from
                             toPosition:(UITextPosition *)to {
     return [self id_textRangeFromPosition:from toPosition:to];
@@ -171,21 +113,6 @@
                                 affinity:affinity
                     anchorPositionOffset:anchorPositionOffset];
 }
-- (UITextRange *)textRangeForLineEnclosingPosition:(UITextPosition *)position {
-    return [self id_textRangeForLineEnclosingPosition:position];
-}
-- (UITextRange *)textRangeForLineEnclosingPosition:(UITextPosition *)position
-                                  effectiveAffinity:(UITextStorageDirection)affinity {
-    return [self id_textRangeForLineEnclosingPosition:position
-                                     effectiveAffinity:affinity];
-}
-- (NSDictionary<NSAttributedStringKey, id> *)attributesAtPosition:(UITextPosition *)position
-                                                       inDirection:(UITextStorageDirection)direction {
-    return [self id_attributesAtPosition:position inDirection:direction];
-}
-- (NSWritingDirection)baseWritingDirectionAtPosition:(UITextPosition *)position {
-    return [self id_baseWritingDirectionAtPosition:position];
-}
 - (NSComparisonResult)comparePosition:(UITextPosition *)first
                             toPosition:(UITextPosition *)second {
     return [self id_comparePosition:first toPosition:second];
@@ -193,79 +120,8 @@
 - (NSInteger)offsetFromPosition:(UITextPosition *)first toPosition:(UITextPosition *)second {
     return [self id_offsetFromPosition:first toPosition:second];
 }
-- (UITextStorageDirection)affinityForPosition:(UITextPosition *)position {
-    return [self id_affinityForPosition:position];
-}
-- (NSRange)characterRangeForTextRange:(nullable UITextRange *)range {
-    return [self id_characterRangeForTextRange:range clipped:NO];
-}
-- (CGRect)boundingRectForCharacterRange:(NSRange)range {
-    return [self id_boundingRectForCharacterRange:range];
-}
-- (NSRange)characterRangeForTextRange:(nullable UITextRange *)range
-                    clippedToDocument:(BOOL)clipped {
-    return [self id_characterRangeForTextRange:range clipped:clipped];
-}
-- (NSArray<NSValue *> *)characterRangesForTextRange:(UITextRange *)range
-                                 clippedToDocument:(BOOL)clipped {
-    return [self id_characterRangesForTextRange:range clipped:clipped];
-}
-- (UITextRange *)textRangeForCharacterRange:(NSRange)range {
-    return [self id_textRangeForCharacterRange:range];
-}
-- (UITextRange *)textRangeForCharacterRanges:(NSArray<NSValue *> *)ranges {
-    return [self id_textRangeForCharacterRanges:ranges];
-}
-- (UITextPosition *)positionWithOffset:(NSInteger)offset
-                               affinity:(UITextStorageDirection)affinity {
-    return [self id_positionWithOffset:offset affinity:affinity];
-}
 - (void)invalidateDisplayForCharacterRange:(NSRange)range {
     [self id_invalidateDisplayForCharacterRange:range];
-}
-- (NSRange)rangeOfCharacterClusterAtIndex:(NSUInteger)index type:(NSInteger)type {
-    return [self id_rangeOfCharacterClusterAtIndex:index type:type];
-}
-- (NSArray *)selectionRectsForRange:(UITextRange *)range
-                           fromView:(UIView *)view
-            forContainerPassingTest:(BOOL (^)(id container))predicate {
-    return [self id_selectionRectsForRange:range
-                                  fromView:view
-                   forContainerPassingTest:predicate];
-}
-- (void)requestTextGeometryAtPosition:(UITextPosition *)position
-                     typingAttributes:(NSDictionary<NSAttributedStringKey, id> *)attributes
-                          resultBlock:(void (^)(NSTextContainer *container,
-                                                    CGRect rect,
-                                                    CGFloat baselineOffset,
-                                                    UITextPosition *position))resultBlock {
-    [self id_requestTextGeometryAtPosition:position
-                          typingAttributes:attributes
-                               resultBlock:resultBlock];
-}
-- (CGRect)insertionRectForPosition:(UITextPosition *)position
-                   typingAttributes:(NSDictionary<NSAttributedStringKey, id> *)attributes
-              placeholderAttachment:(id)attachment
-                      textContainer:(NSTextContainer * _Nullable * _Nullable)textContainer {
-    return [self id_insertionRectForPosition:position
-                             typingAttributes:attributes
-                        placeholderAttachment:attachment
-                                textContainer:textContainer];
-}
-- (UITextPosition *)cursorPositionAtPoint:(CGPoint)point
-                                inContainer:(NSTextContainer *)container {
-    return [self id_cursorPositionAtPoint:point inContainer:container];
-}
-- (UITextPosition *)nearestPositionAtPoint:(CGPoint)point
-                                 inContainer:(NSTextContainer *)container {
-    return [self id_nearestPositionAtPoint:point inContainer:container];
-}
-- (UITextRange *)_visualSelectionRangeForExtent:(UITextPosition *)extent
-                                       forPoint:(CGPoint)point
-                                   fromPosition:(UITextPosition *)position
-                                    inDirection:(UITextStorageDirection)direction {
-    return [self id_visualSelectionRangeForExtent:extent forPoint:point
-                                     fromPosition:position inDirection:direction];
 }
 - (void)ensureLayoutForRange:(UITextRange *)range {
     [self id_ensureLayoutForRange:range];
@@ -276,34 +132,58 @@
 - (NSAttributedString *)attributedTextInRange:(UITextRange *)range {
     return [self id_attributedTextInRange:range];
 }
-- (nullable id)annotationAttribute:(id)attribute
-                        atPosition:(UITextPosition *)position {
-    return [self id_annotationAttribute:attribute atPosition:position];
-}
-- (NSAttributedString *)annotatedSubstringForRange:(UITextRange *)range {
-    return [self id_annotatedSubstringForRange:range];
-}
-- (void)addAnnotationAttribute:(id)attribute
-                         value:(id)value
-                      forRange:(UITextRange *)range {
-    [self id_addAnnotationAttribute:attribute value:value forRange:range];
-}
-- (void)removeAnnotationAttribute:(id)attribute
-                          forRange:(UITextRange *)range {
-    [self id_removeAnnotationAttribute:attribute forRange:range];
-}
-- (void)addRenderingAttributes:(NSDictionary *)attributes
-                       forRange:(UITextRange *)range {
-    [self id_addRenderingAttributes:attributes forRange:range];
-}
-- (void)removeRenderingAttributes:(id<NSFastEnumeration>)attributes
-                          forRange:(UITextRange *)range {
-    [self id_removeRenderingAttributes:attributes forRange:range];
-}
-- (void)_invalidateTemporaryAttributesInRange:(UITextRange *)range {
-    [self id_invalidateTemporaryAttributesInRange:range];
+- (NSRange)tgpn_characterRangeForTextRange:(nullable UITextRange *)range {
+    return [self id_characterRangeForTextRange:range clipped:NO];
 }
 
 @end
+
+// The layout controller's callbacks that UIKit calls under PRIVATE names. Each is an `id_` method
+// with the same arguments, so it is added under the private name directly instead of through a
+// forwarder compiled under that name (`TGPrivateMethodAliases.h`). The one exception is
+// `characterRangeForTextRange:`, whose `id_` counterpart takes one more argument.
+void IDRichTextLayoutControllerInstallPrivateCallbacks(Class cls) {
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_firstTextContainer, @selector(id_firstTextContainer) },
+        { TGPN_textContainerForPosition_, @selector(id_textContainerForPosition:) },
+        { TGPN_canAccessLayoutManager, @selector(id_canAccessLayoutManager) },
+        { TGPN_textInputController, @selector(inputController) },
+        { TGPN_adoptTextInputController_, @selector(id_adoptTextInputController:) },
+        { TGPN_detachFromTextInputController, @selector(id_detachFromTextInputController) },
+        { TGPN_emptyTextRangeAtPosition_, @selector(id_emptyTextRangeAtPosition:) },
+        { TGPN_textRangeForLineEnclosingPosition_, @selector(id_textRangeForLineEnclosingPosition:) },
+        { TGPN_textRangeForLineEnclosingPosition_effectiveAffinity_,
+          @selector(id_textRangeForLineEnclosingPosition:effectiveAffinity:) },
+        { TGPN_attributesAtPosition_inDirection_, @selector(id_attributesAtPosition:inDirection:) },
+        { TGPN_baseWritingDirectionAtPosition_, @selector(id_baseWritingDirectionAtPosition:) },
+        { TGPN_affinityForPosition_, @selector(id_affinityForPosition:) },
+        { TGPN_characterRangeForTextRange_, @selector(tgpn_characterRangeForTextRange:) },
+        { TGPN_boundingRectForCharacterRange_, @selector(id_boundingRectForCharacterRange:) },
+        { TGPN_characterRangeForTextRange_clippedToDocument_, @selector(id_characterRangeForTextRange:clipped:) },
+        { TGPN_characterRangesForTextRange_clippedToDocument_, @selector(id_characterRangesForTextRange:clipped:) },
+        { TGPN_textRangeForCharacterRange_, @selector(id_textRangeForCharacterRange:) },
+        { TGPN_textRangeForCharacterRanges_, @selector(id_textRangeForCharacterRanges:) },
+        { TGPN_positionWithOffset_affinity_, @selector(id_positionWithOffset:affinity:) },
+        { TGPN_rangeOfCharacterClusterAtIndex_type_, @selector(id_rangeOfCharacterClusterAtIndex:type:) },
+        { TGPN_selectionRectsForRange_fromView_forContainerPassingTest_,
+          @selector(id_selectionRectsForRange:fromView:forContainerPassingTest:) },
+        { TGPN_requestTextGeometryAtPosition_typingAttributes_resultBlock_,
+          @selector(id_requestTextGeometryAtPosition:typingAttributes:resultBlock:) },
+        { TGPN_insertionRectForPosition_typingAttributes_placeholderAttachment_textContainer_,
+          @selector(id_insertionRectForPosition:typingAttributes:placeholderAttachment:textContainer:) },
+        { TGPN_cursorPositionAtPoint_inContainer_, @selector(id_cursorPositionAtPoint:inContainer:) },
+        { TGPN_nearestPositionAtPoint_inContainer_, @selector(id_nearestPositionAtPoint:inContainer:) },
+        { TGPN__visualSelectionRangeForExtent_forPoint_fromPosition_inDirection_,
+          @selector(id_visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:) },
+        { TGPN_annotationAttribute_atPosition_, @selector(id_annotationAttribute:atPosition:) },
+        { TGPN_annotatedSubstringForRange_, @selector(id_annotatedSubstringForRange:) },
+        { TGPN_addAnnotationAttribute_value_forRange_, @selector(id_addAnnotationAttribute:value:forRange:) },
+        { TGPN_removeAnnotationAttribute_forRange_, @selector(id_removeAnnotationAttribute:forRange:) },
+        { TGPN_addRenderingAttributes_forRange_, @selector(id_addRenderingAttributes:forRange:) },
+        { TGPN_removeRenderingAttributes_forRange_, @selector(id_removeRenderingAttributes:forRange:) },
+        { TGPN__invalidateTemporaryAttributesInRange_, @selector(id_invalidateTemporaryAttributesInRange:) },
+    };
+    TGPrivateInstallMethodAliases(cls, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
 
 #endif

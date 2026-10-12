@@ -700,10 +700,18 @@ extension RichTextEngineEditorView {
         // In place at any depth: a code block, pull quote or table inside a quote dissolves into a
         // paragraph of THAT quote. A top-level lookup found no such container at all and the rule
         // simply did not fire (an empty nested code block could not be un-coded).
+        //
+        // The set only moves the undo BASELINE, so the step is registered here, restoring the caret
+        // at the container's start for both doors — `applyBackspaceAtStartOfPullQuote`'s rule.
+        // Without it the dissolve had no step of its own: one ⌘Z took it back together with the
+        // edit before it, and with nothing before it the dissolve could not be undone at all
+        // (`EngineEmptyContainerDissolveUndoTests`).
+        let documentBefore = document
         document = document.replacingBlock(withID: container.id, with: replacement)
         if let landing = flatOffsetOfPrimaryRegion(ofContainerWithID: replacement.id) {
             engineSelectedRange = NSRange(location: landing, length: 0)
         }
+        recordUndoStepForStructuralChange(restoring: documentBefore, selection: selection)
         return true
     }
 

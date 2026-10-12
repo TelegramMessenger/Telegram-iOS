@@ -1,6 +1,10 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
+
+#import "TGPrivateMethodAliases.h"
+
 #import "IDBlockTextView.h"
 #import "IDBlockTextViewInternal.h"
 #import "IDPrivateUIKit.h"
@@ -13,12 +17,12 @@ static BOOL IDBlockAllowsKeyboardReplacement(IDBlockTextView *view) {
 
 @implementation IDBlockTextView (PrivateInputDelegate)
 
-- (void)setContinuousSpellCheckingEnabled:(BOOL)enabled {
-    [self.id_behaviorInput setContinuousSpellCheckingEnabled:enabled];
+- (void)tgpn_setContinuousSpellCheckingEnabled:(BOOL)enabled {
+    [self.id_behaviorInput id_setContinuousSpellCheckingEnabled:enabled];
 }
 
-- (BOOL)isContinuousSpellCheckingEnabled {
-    return self.id_behaviorInput.isContinuousSpellCheckingEnabled;
+- (BOOL)tgpn_isContinuousSpellCheckingEnabled {
+    return self.id_behaviorInput.id_isContinuousSpellCheckingEnabled;
 }
 
 - (BOOL)textInput:(id)input
@@ -27,7 +31,7 @@ static BOOL IDBlockAllowsKeyboardReplacement(IDBlockTextView *view) {
     return self.isEditable;
 }
 
-- (BOOL)keyboardInput:(id)input
+- (BOOL)tgpn_keyboardInput:(id)input
     shouldReplaceTextInRange:(NSRange)range
              replacementText:(NSString *)text {
     (void)input;
@@ -36,36 +40,36 @@ static BOOL IDBlockAllowsKeyboardReplacement(IDBlockTextView *view) {
     return IDBlockAllowsKeyboardReplacement(self);
 }
 
-- (void)textInputDidChange:(id)input {
+- (void)tgpn_textInputDidChange:(id)input {
     IDRecordAutocorrectionTraceForUITesting(@"textDidChange");
     [self id_reconcileDerivedState];
     [self id_scrollCaretToVisibleIfNeeded];
 }
 
-- (void)textInputDidChangeSelection:(id)input {
+- (void)tgpn_textInputDidChangeSelection:(id)input {
     IDRecordAutocorrectionTraceForUITesting(@"selectionDidChange");
     [self id_selectionStateDidChange];
 }
 
-- (void)keyboardInputChangedSelection:(id)input {
+- (void)tgpn_keyboardInputChangedSelection:(id)input {
     id delegate = self.delegate;
     if (delegate != self) {
         IDPrivateKeyboardInputChangedSelection(delegate, input);
     }
 }
 
-- (BOOL)keyboardInput:(id)input
+- (BOOL)tgpn_keyboardInput:(id)input
       shouldInsertText:(NSString *)text
           isMarkedText:(BOOL)marked {
     return self.isEditable;
 }
 
-- (BOOL)keyboardInputShouldDelete:(id)input {
+- (BOOL)tgpn_keyboardInputShouldDelete:(id)input {
     (void)self.id_behaviorInput.backwardDeleteRange;
     return self.isEditable;
 }
 
-- (void)_deleteBackwardAndNotify:(BOOL)notify {
+- (void)tgpn__deleteBackwardAndNotify:(BOOL)notify {
     if (notify) {
         [self deleteBackward];
         return;
@@ -77,5 +81,21 @@ static BOOL IDBlockAllowsKeyboardReplacement(IDBlockTextView *view) {
 }
 
 @end
+
+// This file's callbacks, added under their private names (`IDBlockTextViewInstallPrivateCallbacks`).
+void IDBlockTextViewInstallPrivateInputDelegateCallbacks(Class cls) {
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_setContinuousSpellCheckingEnabled_, @selector(tgpn_setContinuousSpellCheckingEnabled:) },
+        { TGPN_isContinuousSpellCheckingEnabled, @selector(tgpn_isContinuousSpellCheckingEnabled) },
+        { TGPN_keyboardInput_shouldReplaceTextInRange_replacementText_, @selector(tgpn_keyboardInput:shouldReplaceTextInRange:replacementText:) },
+        { TGPN_textInputDidChange_, @selector(tgpn_textInputDidChange:) },
+        { TGPN_textInputDidChangeSelection_, @selector(tgpn_textInputDidChangeSelection:) },
+        { TGPN_keyboardInputChangedSelection_, @selector(tgpn_keyboardInputChangedSelection:) },
+        { TGPN_keyboardInput_shouldInsertText_isMarkedText_, @selector(tgpn_keyboardInput:shouldInsertText:isMarkedText:) },
+        { TGPN_keyboardInputShouldDelete_, @selector(tgpn_keyboardInputShouldDelete:) },
+        { TGPN__deleteBackwardAndNotify_, @selector(tgpn__deleteBackwardAndNotify:) },
+    };
+    TGPrivateInstallMethodAliases(cls, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
 
 #endif

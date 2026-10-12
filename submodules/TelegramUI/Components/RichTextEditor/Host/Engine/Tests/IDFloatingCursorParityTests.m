@@ -193,8 +193,8 @@ static BOOL IDFloatingCursorIsComposedCharacterBoundary(NSString *text,
                                                toPosition:stockPosition];
         XCTAssertEqual(customOffset, stockOffset, @"point=%@", value);
     }
-    UIView *firstContainer = [custom.id_selectionPresentationBackend selectionContainerView];
-    UIView *secondContainer = [custom.id_selectionPresentationBackend selectionContainerView];
+    UIView *firstContainer = [custom.id_selectionPresentationBackend id_selectionContainerView];
+    UIView *secondContainer = [custom.id_selectionPresentationBackend id_selectionContainerView];
     XCTAssertEqual(firstContainer, secondContainer);
     XCTAssertEqual(custom.id_selectionPresentationBackend.selectionContainerCreationCount, 1U);
 }

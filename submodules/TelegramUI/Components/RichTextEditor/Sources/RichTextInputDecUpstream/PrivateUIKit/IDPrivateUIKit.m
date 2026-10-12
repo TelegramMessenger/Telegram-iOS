@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import "IDPrivateUIKit.h"
 #import "IDPrivateUIKit+Testing.h"
 // telegram-ios DEVIATION 5 (see PROVENANCE.md) — for the pristine contract manifest.
@@ -62,7 +63,7 @@ static BOOL IDPrivateMethodHasNoExplicitArgumentsAndReturnType(
 BOOL IDPrivateTestingDismissInlineTextCompletionWithKeyboardClass(
     Class keyboardClass) {
     if (keyboardClass == Nil) return NO;
-    SEL activeSelector = NSSelectorFromString(@"activeInstance");
+    SEL activeSelector = NSSelectorFromString(TGPN_activeInstance());
     Method activeMethod = class_getClassMethod(keyboardClass, activeSelector);
     if (!IDPrivateMethodHasNoExplicitArgumentsAndReturnType(
             activeMethod, @encode(id))) {
@@ -70,7 +71,7 @@ BOOL IDPrivateTestingDismissInlineTextCompletionWithKeyboardClass(
     }
     id keyboard = IDPrivateObject0(keyboardClass, activeSelector);
     SEL removeSelector =
-        NSSelectorFromString(@"removeInlineTextCompletionPrompt");
+        NSSelectorFromString(TGPN_removeInlineTextCompletionPrompt());
     if (keyboard == nil) return NO;
     Method removeMethod =
         class_getInstanceMethod([keyboard class], removeSelector);
@@ -84,7 +85,7 @@ BOOL IDPrivateTestingDismissInlineTextCompletionWithKeyboardClass(
 
 BOOL IDPrivateDismissInlineTextCompletionForUITesting(void) {
     return IDPrivateTestingDismissInlineTextCompletionWithKeyboardClass(
-        NSClassFromString(@"UIKeyboardImpl"));
+        NSClassFromString(TGPN_UIKeyboardImpl()));
 }
 
 static NSArray<NSString *> *IDPrivateRecognizerIdentities(UIView *view) {
@@ -397,14 +398,14 @@ void IDPrivateResetInteractionHostTopologyBaselineForUITesting(
 }
 
 static __attribute__((unused)) void IDPrivateStockOracleSelectorInventory(void) {
-    (void)NSSelectorFromString(@"interactionAssistant");
-    (void)NSSelectorFromString(@"selectionContainerView");
+    (void)NSSelectorFromString(TGPN_interactionAssistant());
+    (void)NSSelectorFromString(TGPN_selectionContainerView());
     (void)NSSelectorFromString(@"id_selectionPresentationBackend");
     (void)NSSelectorFromString(@"existingSelectionContainerView");
     (void)NSSelectorFromString(@"selectionContainerCreationCount");
-    (void)NSSelectorFromString(@"activeInstance");
-    (void)NSSelectorFromString(@"keyboardStateManager");
-    (void)NSSelectorFromString(@"inputDelegateManager");
+    (void)NSSelectorFromString(TGPN_activeInstance());
+    (void)NSSelectorFromString(TGPN_keyboardStateManager());
+    (void)NSSelectorFromString(TGPN_inputDelegateManager());
 }
 
 static IMP IDPrivateStockOriginalCursorPositionIMP;
@@ -475,7 +476,7 @@ static UITextPosition *IDPrivateStockTracedCursorPosition(
         (UITextPosition *(*)(id, SEL, CGPoint, id))IDPrivateStockOriginalCursorPositionIMP;
     UITextPosition *result = original(controller, selector, point, container);
     id first = ((id (*)(id, SEL))objc_msgSend)(
-        controller, NSSelectorFromString(@"firstTextContainer"));
+        controller, NSSelectorFromString(TGPN_firstTextContainer()));
     @synchronized (controller) {
         UIView *editor = IDPrivateStockCursorEditor;
         id<UITextInput> input = (id<UITextInput>)editor;
@@ -483,7 +484,7 @@ static UITextPosition *IDPrivateStockTracedCursorPosition(
             [input offsetFromPosition:input.beginningOfDocument toPosition:result];
         NSInteger affinity = result == nil ? UITextStorageDirectionForward :
             ((NSInteger (*)(id, SEL, id))objc_msgSend)(controller,
-                NSSelectorFromString(@"affinityForPosition:"), result);
+                NSSelectorFromString(TGPN_affinityForPosition_()), result);
         IDPrivateStockCursorSequence += 1;
         IDPrivateStockCursorPoint = point;
         IDPrivateStockCursorOutputOffset = offset;
@@ -501,7 +502,7 @@ UIView *IDPrivateNewStockOracleTextView(Class baseClass, CGRect frame) {
         NSCAssert(baseClass != Nil, @"Stock oracle base class is required");
         stockClass = objc_allocateClassPair(baseClass, "IDPrivateStockOracleTextView", 0);
         NSDictionary<NSString *, NSValue *> *methods = @{
-            @"startAutoscroll:": [NSValue valueWithPointer:IDPrivateStockStartAutoscroll],
+            TGPN_startAutoscroll_(): [NSValue valueWithPointer:IDPrivateStockStartAutoscroll],
             @"cancelAutoscroll": [NSValue valueWithPointer:IDPrivateStockCancelAutoscroll],
             @"endFloatingCursor": [NSValue valueWithPointer:IDPrivateStockEndFloatingCursor],
             @"resignFirstResponder": [NSValue valueWithPointer:IDPrivateStockResignFirstResponder],
@@ -535,7 +536,7 @@ void IDPrivateInstallStockCursorTraceForUITesting(UIView *editor) {
     IDPrivateStockCursorOutputValid = NO;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        SEL selector = NSSelectorFromString(@"cursorPositionAtPoint:inContainer:");
+        SEL selector = NSSelectorFromString(TGPN_cursorPositionAtPoint_inContainer_());
         Method method = class_getInstanceMethod(object_getClass(controller), selector);
         if (method == NULL) {
             @throw [NSException exceptionWithName:NSInternalInconsistencyException
@@ -707,8 +708,8 @@ UIScrollView *IDPrivateTestingNewTextAutoscrollHostWithIncompatibleIvar(
         hostClass = objc_allocateClassPair(UIScrollView.class, className.UTF8String, 0);
         const char *ivarName = incompatibleIvar ==
             IDPrivateTestingIncompatibleAutoscrollIvarTextContainerInsetAdjustment
-            ? "_textContainerInsetAdjustment"
-            : "_horizontalTextContainerGeometryAdjustment";
+            ? TGPN__textContainerInsetAdjustment().UTF8String
+            : TGPN__horizontalTextContainerGeometryAdjustment().UTF8String;
         BOOL added = class_addIvar(hostClass, ivarName, sizeof(uint8_t), 0,
                                    @encode(uint8_t));
         if (!added) {
@@ -785,14 +786,14 @@ static void IDPrivateRequireIvarABI(Ivar ivar, const char *expectedEncoding,
 UITextPosition *IDPrivateTestingCursorPositionAtPoint(
     UIView *textInput, id layoutController, CGPoint point, id *textContainer) {
     if (layoutController == nil) {
-        SEL controllerSelector = NSSelectorFromString(@"_internalTextLayoutController");
+        SEL controllerSelector = NSSelectorFromString(TGPN__internalTextLayoutController());
         IDPrivateRequireSignature(textInput, controllerSelector, @encode(id), 2, NULL);
         layoutController = ((id (*)(id, SEL))objc_msgSend)(textInput, controllerSelector);
     }
-    SEL containerSelector = NSSelectorFromString(@"firstTextContainer");
+    SEL containerSelector = NSSelectorFromString(TGPN_firstTextContainer());
     IDPrivateRequireSignature(layoutController, containerSelector, @encode(id), 2, NULL);
     id container = ((id (*)(id, SEL))objc_msgSend)(layoutController, containerSelector);
-    SEL cursorSelector = NSSelectorFromString(@"cursorPositionAtPoint:inContainer:");
+    SEL cursorSelector = NSSelectorFromString(TGPN_cursorPositionAtPoint_inContainer_());
     NSMethodSignature *signature = [layoutController methodSignatureForSelector:cursorSelector];
     BOOL valid = signature != nil && signature.numberOfArguments == 4 &&
         strcmp(signature.methodReturnType, @encode(id)) == 0 &&
@@ -808,25 +809,25 @@ UITextPosition *IDPrivateTestingCursorPositionAtPoint(
 }
 
 id IDPrivateTestingInternalTextLayoutController(UIView *textInput) {
-    SEL selector = NSSelectorFromString(@"_internalTextLayoutController");
+    SEL selector = NSSelectorFromString(TGPN__internalTextLayoutController());
     IDPrivateRequireSignature(textInput, selector, @encode(id), 2, NULL);
     return ((id (*)(id, SEL))objc_msgSend)(textInput, selector);
 }
 
 id IDPrivateTestingCustomRenderController(UIView *textInput) {
-    SEL selector = NSSelectorFromString(@"customRenderController");
+    SEL selector = NSSelectorFromString(TGPN_customRenderController());
     IDPrivateRequireSignature(textInput, selector, @encode(id), 2, NULL);
     return ((id (*)(id, SEL))objc_msgSend)(textInput, selector);
 }
 
 CGPoint IDPrivateTestingConvertPointFromRenderSpace(UIView *textInput, CGPoint point) {
-    SEL selector = NSSelectorFromString(@"_convertPointFromRenderSpace:");
+    SEL selector = NSSelectorFromString(TGPN__convertPointFromRenderSpace_());
     IDPrivateRequireSignature(textInput, selector, @encode(CGPoint), 3, @encode(CGPoint));
     return ((CGPoint (*)(id, SEL, CGPoint))objc_msgSend)(textInput, selector, point);
 }
 
 CGPoint IDPrivateTestingTextContainerOrigin(UIView *containerView) {
-    SEL selector = NSSelectorFromString(@"textContainerOrigin");
+    SEL selector = NSSelectorFromString(TGPN_textContainerOrigin());
     IDPrivateRequireSignature(containerView, selector, @encode(CGPoint), 2, NULL);
     return ((CGPoint (*)(id, SEL))objc_msgSend)(containerView, selector);
 }
@@ -835,7 +836,7 @@ void IDPrivateTestingWithTextContainerInsetAdjustment(
     UIScrollView *scrollContainer, UIEdgeInsets adjustment,
     void (NS_NOESCAPE ^body)(void)) {
     Ivar ivar = class_getInstanceVariable(scrollContainer.class,
-        "_textContainerInsetAdjustment");
+        TGPN__textContainerInsetAdjustment().UTF8String);
     if (ivar == NULL) {
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
             reason:@"Private inset-adjustment testing ABI is unavailable" userInfo:nil];
@@ -857,7 +858,7 @@ CGRect IDPrivateTextAutoscrollSafeRect(UIScrollView *scrollContainer,
                                        UIEdgeInsets textInsets,
                                        CGFloat edgeInset) {
     SEL visibleSelector = NSSelectorFromString(@"visibleBounds");
-    SEL effectiveInsetSelector = NSSelectorFromString(@"_effectiveContentInset");
+    SEL effectiveInsetSelector = NSSelectorFromString(TGPN__effectiveContentInset());
     NSMethodSignature *visibleSignature =
         [scrollContainer methodSignatureForSelector:visibleSelector];
     NSMethodSignature *effectiveSignature =
@@ -875,7 +876,7 @@ CGRect IDPrivateTextAutoscrollSafeRect(UIScrollView *scrollContainer,
                                                          visibleSelector);
     UIEdgeInsets adjustment = UIEdgeInsetsZero;
     Ivar adjustmentIvar = class_getInstanceVariable(scrollContainer.class,
-        "_textContainerInsetAdjustment");
+        TGPN__textContainerInsetAdjustment().UTF8String);
     if (adjustmentIvar != NULL) {
         IDPrivateRequireIvarABI(adjustmentIvar, @encode(UIEdgeInsets),
                                @"text-container inset adjustment");
@@ -885,7 +886,7 @@ CGRect IDPrivateTextAutoscrollSafeRect(UIScrollView *scrollContainer,
     }
     CGFloat horizontalAdjustment = 0;
     Ivar horizontalIvar = class_getInstanceVariable(scrollContainer.class,
-        "_horizontalTextContainerGeometryAdjustment");
+        TGPN__horizontalTextContainerGeometryAdjustment().UTF8String);
     if (horizontalIvar != NULL) {
         IDPrivateRequireIvarABI(horizontalIvar, @encode(CGFloat),
                                @"horizontal text-container geometry adjustment");
@@ -927,7 +928,7 @@ NSArray<NSValue *> *IDPrivateVisibleSelectionHandleRects(UIView *root) {
         UIView *view = pending.lastObject;
         [pending removeLastObject];
         [pending addObjectsFromArray:view.subviews];
-        if (![NSStringFromClass(view.class) containsString:@"_UITextSelectionLollipopView"] ||
+        if (![NSStringFromClass(view.class) containsString:TGPN__UITextSelectionLollipopView()] ||
             view.hidden || view.alpha <= 0.01) continue;
         CGRect rect = IDPrivateVisibleDescendantBoundsInView(view, root);
         if (!CGRectIsNull(rect) && !CGRectIsEmpty(rect))
@@ -991,9 +992,9 @@ static NSString *IDInteractionTypeEncoding(const char *encoding) {
 
 static NSArray<IDInteractionABISpec *> *IDInteractionHostABISpecs(void) {
     return @[
-        IDInteractionABISpecMake(@"interactionAssistant", @encode(id), @[]),
-        IDInteractionABISpecMake(@"_textInputViewForAddingGestureRecognizers", @encode(id), @[]),
-        IDInteractionABISpecMake(@"selectionContainerView", @encode(id), @[]),
+        IDInteractionABISpecMake(TGPN_interactionAssistant(), @encode(id), @[]),
+        IDInteractionABISpecMake(TGPN__textInputViewForAddingGestureRecognizers(), @encode(id), @[]),
+        IDInteractionABISpecMake(TGPN_selectionContainerView(), @encode(id), @[]),
     ];
 }
 
@@ -1060,6 +1061,9 @@ static NSArray<NSString *> *IDInteractionInstanceABIMismatches(
     Class cls,
     NSArray<IDInteractionABISpec *> *specs) {
     NSMutableArray<NSString *> *mismatches = [NSMutableArray array];
+    // Run `+initialize` first: it adds the callbacks UIKit calls under private names, and
+    // `class_getInstanceMethod` does not run it (`TGPrivateMethodAliases.h`).
+    (void)[cls class];
     for (IDInteractionABISpec *spec in specs) {
         Method method = class_getInstanceMethod(cls, NSSelectorFromString(spec.selectorName));
         NSMethodSignature *signature = method == NULL ? nil :
@@ -1223,8 +1227,8 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
 
 + (NSArray<NSString *> *)missingContracts {
     NSMutableArray *missing = [NSMutableArray array];
-    if (NSProtocolFromString(@"UITextPasteConfigurationSupporting_Internal") == nil) {
-        [missing addObject:@"protocol UITextPasteConfigurationSupporting_Internal"];
+    if (NSProtocolFromString(TGPN_UITextPasteConfigurationSupporting_Internal()) == nil) {
+        [missing addObject:[@"protocol " stringByAppendingString:TGPN_UITextPasteConfigurationSupporting_Internal()]];
     }
     for (NSString *protocolName in IDRequiredProtocolNames()) {
         if (NSProtocolFromString(protocolName) == nil) {
@@ -1236,6 +1240,7 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
         IDContract contract;
         [value getValue:&contract];
         Class cls = NSClassFromString(contract.className);
+        (void)[cls class]; // runs `+initialize`, which adds callbacks under private names
         BOOL present = cls && (contract.classMethod
             ? [cls respondsToSelector:contract.selector]
             : class_getInstanceMethod(cls, contract.selector) != NULL);
@@ -1261,40 +1266,61 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
         [value getValue:&contract];
         if (contract.required) requiredContractCount += 1;
     }
-    Class baseClass = NSClassFromString(@"_UITextLayoutControllerBase");
-    SEL factory = NSSelectorFromString(@"layoutControllerWithTextView:textContainer:");
+    Class baseClass = NSClassFromString(TGPN__UITextLayoutControllerBase());
+    SEL factory = NSSelectorFromString(TGPN_layoutControllerWithTextView_textContainer_());
     NSString *layoutPath = [baseClass respondsToSelector:factory]
-        ? @"_UITextLayoutControllerBase factory"
-        : @"direct _UITextKit2LayoutController initializer (factory unavailable)";
-    return [NSString stringWithFormat:@"iOS %@\n_UITextLayoutControllerBase / _UITextKit2LayoutController\nUITextInputController\nUITextInteractionAssistant\nUITextPasteConfigurationSupporting_Internal\nLayout construction: %@\nCanvas map: _UITextKit2LayoutController._textCanvasViews (by name, not by offset)\nViewport contract: NSTextViewportLayoutController layoutViewport\nNative fragment drawing path: NSTextLayoutFragment drawAtPoint:inContext:\nContinuous-spelling bridge: UITextInputController setContinuousSpellCheckingEnabled:\nText-input traits bridge: controller-owned UITextInputTraits with full-family forwarding\nRequired selector contracts preflighted: %lu\nOptional/fallback: base layout factory, insertDictationResult:, keyboardInputChangedSelection:, custom renderer presence\nConstruction result preflight: _rangesForBackwardsDelete -> unionRange\nAction-time contract validation: unionRange, textKit2Ranges, custom renderer setNeedsDisplay\n%@",
-        UIDevice.currentDevice.systemVersion,
-        layoutPath,
-        (unsigned long)requiredContractCount,
+        ? [TGPN__UITextLayoutControllerBase() stringByAppendingString:@" factory"]
+        : [NSString stringWithFormat:@"direct %@ initializer (factory unavailable)", TGPN__UITextKit2LayoutController()];
+    // Assembled from parts: the private names are decoded at run time (`TGPrivateRuntimeNames.h`),
+    // so the report reads as it always did and no private name is compiled in as text.
+    NSArray<NSString *> *lines = @[
+        [@"iOS " stringByAppendingString:UIDevice.currentDevice.systemVersion],
+        [NSString stringWithFormat:@"%@ / %@", TGPN__UITextLayoutControllerBase(), TGPN__UITextKit2LayoutController()],
+        TGPN_UITextInputController(),
+        TGPN_UITextInteractionAssistant(),
+        TGPN_UITextPasteConfigurationSupporting_Internal(),
+        [@"Layout construction: " stringByAppendingString:layoutPath],
+        [NSString stringWithFormat:@"Canvas map: %@.%@ (by name, not by offset)",
+            TGPN__UITextKit2LayoutController(), TGPN__textCanvasViews()],
+        @"Viewport contract: NSTextViewportLayoutController layoutViewport",
+        @"Native fragment drawing path: NSTextLayoutFragment drawAtPoint:inContext:",
+        [NSString stringWithFormat:@"Continuous-spelling bridge: %@ %@",
+            TGPN_UITextInputController(), TGPN_setContinuousSpellCheckingEnabled_()],
+        @"Text-input traits bridge: controller-owned UITextInputTraits with full-family forwarding",
+        [NSString stringWithFormat:@"Required selector contracts preflighted: %lu", (unsigned long)requiredContractCount],
+        [NSString stringWithFormat:@"Optional/fallback: base layout factory, insertDictationResult:, %@, custom renderer presence",
+            TGPN_keyboardInputChangedSelection_()],
+        [NSString stringWithFormat:@"Construction result preflight: %@ -> %@",
+            TGPN__rangesForBackwardsDelete(), TGPN_unionRange()],
+        [NSString stringWithFormat:@"Action-time contract validation: %@, %@, custom renderer setNeedsDisplay",
+            TGPN_unionRange(), TGPN_textKit2Ranges()],
         missing.count
             ? [@"Missing:\n" stringByAppendingString:[missing componentsJoinedByString:@"\n"]]
-            : @"All required contracts present"];
+            : @"All required contracts present",
+    ];
+    return [lines componentsJoinedByString:@"\n"];
 }
 
 + (id)newLayoutControllerWithTextView:(UIView *)view textContainer:(NSTextContainer *)container {
-    Class baseClass = NSClassFromString(@"_UITextLayoutControllerBase");
-    SEL factory = NSSelectorFromString(@"layoutControllerWithTextView:textContainer:");
+    Class baseClass = NSClassFromString(TGPN__UITextLayoutControllerBase());
+    SEL factory = NSSelectorFromString(TGPN_layoutControllerWithTextView_textContainer_());
     if ([baseClass respondsToSelector:factory]) {
         return ((id (*)(id, SEL, id, id))objc_msgSend)(baseClass, factory, view, container);
     }
 
-    Class concreteClass = NSClassFromString(@"_UITextKit2LayoutController");
+    Class concreteClass = NSClassFromString(TGPN__UITextKit2LayoutController());
     return ((id (*)(id, SEL, id, id))objc_msgSend)(
         [concreteClass alloc],
-        NSSelectorFromString(@"initWithTextView:textContainer:"),
+        NSSelectorFromString(TGPN_initWithTextView_textContainer_()),
         view,
         container);
 }
 
 + (id)newInputControllerWithLayoutController:(id)layoutController delegate:(id)delegate {
-    Class cls = NSClassFromString(@"UITextInputController");
+    Class cls = NSClassFromString(TGPN_UITextInputController());
     id controller = ((id (*)(id, SEL, id))objc_msgSend)(
         [cls alloc],
-        NSSelectorFromString(@"initWithTextLayoutController:"),
+        NSSelectorFromString(TGPN_initWithTextLayoutController_()),
         layoutController);
     ((void (*)(id, SEL, id))objc_msgSend)(
         controller,
@@ -1305,7 +1331,7 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
 
 + (id)newInteractionAssistantWithView:(UIView *)view {
     return [self newInteractionAssistantWithView:view
-                                 assistantClass:NSClassFromString(@"UITextInteractionAssistant")];
+                                 assistantClass:NSClassFromString(TGPN_UITextInteractionAssistant())];
 }
 
 + (id)newInteractionAssistantWithView:(UIView *)view assistantClass:(Class)assistantClass {
@@ -1334,7 +1360,7 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
         return assistant;
     } @catch (NSException *exception) {
         IDInteractionABISpec *clearRecognizers = IDInteractionABISpecMake(
-            @"clearGestureRecognizers:",
+            TGPN_clearGestureRecognizers_(),
             @encode(void),
             @[IDInteractionTypeEncoding(@encode(BOOL))]);
         NSException *cleanupException = nil;
@@ -1343,7 +1369,7 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
             @try {
                 ((void (*)(id, SEL, BOOL))objc_msgSend)(
                     assistant,
-                    NSSelectorFromString(@"clearGestureRecognizers:"),
+                    NSSelectorFromString(TGPN_clearGestureRecognizers_()),
                     YES);
             } @catch (NSException *caughtCleanupException) {
                 cleanupException = caughtCleanupException;
@@ -1384,14 +1410,14 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
 
 + (void)requireInteractionAssistant:(id)assistant stage:(NSString *)stage {
     NSArray<IDInteractionABISpec *> *specs = @[
-        IDInteractionABISpecMake(@"selectionChanged", @encode(void), @[]),
-        IDInteractionABISpecMake(@"activateSelection", @encode(void), @[]),
-        IDInteractionABISpecMake(@"deactivateSelection", @encode(void), @[]),
-        IDInteractionABISpecMake(@"setSelectionDisplayVisible:", @encode(void),
+        IDInteractionABISpecMake(TGPN_selectionChanged(), @encode(void), @[]),
+        IDInteractionABISpecMake(TGPN_activateSelection(), @encode(void), @[]),
+        IDInteractionABISpecMake(TGPN_deactivateSelection(), @encode(void), @[]),
+        IDInteractionABISpecMake(TGPN_setSelectionDisplayVisible_(), @encode(void),
             @[IDInteractionTypeEncoding(@encode(BOOL))]),
-        IDInteractionABISpecMake(@"setNeedsSelectionDisplayUpdate", @encode(void), @[]),
-        IDInteractionABISpecMake(@"setGestureRecognizers", @encode(void), @[]),
-        IDInteractionABISpecMake(@"clearGestureRecognizers:", @encode(void),
+        IDInteractionABISpecMake(TGPN_setNeedsSelectionDisplayUpdate(), @encode(void), @[]),
+        IDInteractionABISpecMake(TGPN_setGestureRecognizers(), @encode(void), @[]),
+        IDInteractionABISpecMake(TGPN_clearGestureRecognizers_(), @encode(void),
             @[IDInteractionTypeEncoding(@encode(BOOL))]),
         IDInteractionABISpecMake(@"beginFloatingCursorAtPoint:", @encode(void),
             @[IDInteractionTypeEncoding(@encode(CGPoint))]),
@@ -1400,7 +1426,7 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
             IDInteractionTypeEncoding(@encode(BOOL)),
         ]),
         IDInteractionABISpecMake(@"endFloatingCursor", @encode(void), @[]),
-        IDInteractionABISpecMake(@"resignedFirstResponder", @encode(void), @[]),
+        IDInteractionABISpecMake(TGPN_resignedFirstResponder(), @encode(void), @[]),
         IDInteractionABISpecMake(@"detach:", @encode(void), @[
             IDInteractionTypeEncoding(@encode(BOOL)),
         ]),
@@ -1420,22 +1446,22 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
 }
 
 + (void)installKeyboardInputSupportOnClass:(Class)viewClass {
-    Protocol *protocol = NSProtocolFromString(@"UIKeyboardInput");
+    Protocol *protocol = NSProtocolFromString(TGPN_UIKeyboardInput());
     if (protocol == nil) {
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
-                                       reason:@"UIKeyboardInput protocol is unavailable"
+                                       reason:[TGPN_UIKeyboardInput() stringByAppendingString:@" protocol is unavailable"]
                                      userInfo:nil];
     }
     if (!class_conformsToProtocol(viewClass, protocol) &&
         !class_addProtocol(viewClass, protocol)) {
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
-                                       reason:@"Could not install iOS 26 UIKeyboardInput support"
+                                       reason:[NSString stringWithFormat:@"Could not install iOS 26 %@ support", TGPN_UIKeyboardInput()]
                                      userInfo:nil];
     }
 }
 
 + (void)installTextPasteSupportOnClass:(Class)viewClass {
-    Protocol *protocol = NSProtocolFromString(@"UITextPasteConfigurationSupporting_Internal");
+    Protocol *protocol = NSProtocolFromString(TGPN_UITextPasteConfigurationSupporting_Internal());
     if (class_conformsToProtocol(viewClass, protocol)) {
         return;
     }
@@ -1447,21 +1473,21 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
 }
 
 + (void)installTextAutoscrollingSupportOnClass:(Class)viewClass {
-    Protocol *protocol = NSProtocolFromString(@"UITextAutoscrolling");
+    Protocol *protocol = NSProtocolFromString(TGPN_UITextAutoscrolling());
     if (protocol == nil) {
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
-                                       reason:@"UITextAutoscrolling protocol is unavailable"
+                                       reason:[TGPN_UITextAutoscrolling() stringByAppendingString:@" protocol is unavailable"]
                                      userInfo:nil];
     }
     NSArray<IDInteractionABISpec *> *specs = @[
-        IDInteractionABISpecMake(@"startAutoscroll:", @encode(void),
+        IDInteractionABISpecMake(TGPN_startAutoscroll_(), @encode(void),
             @[IDInteractionTypeEncoding(@encode(CGPoint))]),
         IDInteractionABISpecMake(@"cancelAutoscroll", @encode(void), @[]),
     ];
     NSArray<NSString *> *mismatches = IDInteractionInstanceABIMismatches(viewClass, specs);
     if (mismatches.count != 0) {
         NSString *reason = [NSString stringWithFormat:
-            @"UITextAutoscrolling host ABI mismatch:\n%@",
+            @"%@ host ABI mismatch:\n%@", TGPN_UITextAutoscrolling(),
             [mismatches componentsJoinedByString:@"\n"]];
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
                                        reason:reason
@@ -1470,7 +1496,7 @@ static NSArray<NSString *> *IDRequiredProtocolNames(void) {
     if (!class_conformsToProtocol(viewClass, protocol) &&
         !class_addProtocol(viewClass, protocol)) {
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
-                                       reason:@"Could not install iOS 26 UITextAutoscrolling support"
+                                       reason:[NSString stringWithFormat:@"Could not install iOS 26 %@ support", TGPN_UITextAutoscrolling()]
                                      userInfo:nil];
     }
 }
@@ -1511,7 +1537,7 @@ static void IDPrivateRequireTextInputTraitsSignature(
 
 id IDPrivateDefaultTextInputTraits(void) {
     Class traitsClass = NSClassFromString(@"UITextInputTraits");
-    SEL selector = NSSelectorFromString(@"defaultTextInputTraits");
+    SEL selector = NSSelectorFromString(TGPN_defaultTextInputTraits());
     Method method = class_getClassMethod(traitsClass, selector);
     NSMethodSignature *signature = method == NULL ? nil :
         [NSMethodSignature signatureWithObjCTypes:method_getTypeEncoding(method)];
@@ -1530,7 +1556,7 @@ id IDPrivateDefaultTextInputTraits(void) {
 }
 
 id IDPrivateInputTextInputTraits(id inputController) {
-    SEL selector = NSSelectorFromString(@"_textInputTraits");
+    SEL selector = NSSelectorFromString(TGPN__textInputTraits());
     IDPrivateRequireTextInputTraitsSignature(
         inputController, NSStringFromSelector(selector), @encode(id), @[]);
     id traits = ((id (*)(id, SEL))objc_msgSend)(inputController, selector);
@@ -1627,29 +1653,29 @@ void IDPrivateSynchronizeTextInputTraits(
 }
 
 void IDPrivateInteractionSelectionChanged(id assistant) {
-    if ([assistant respondsToSelector:NSSelectorFromString(@"selectionChanged")]) {
-        ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(@"selectionChanged"));
+    if ([assistant respondsToSelector:NSSelectorFromString(TGPN_selectionChanged())]) {
+        ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(TGPN_selectionChanged()));
     }
 }
 
 void IDPrivateInteractionActivateSelection(id assistant) {
-    if ([assistant respondsToSelector:NSSelectorFromString(@"activateSelection")]) {
-        ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(@"activateSelection"));
+    if ([assistant respondsToSelector:NSSelectorFromString(TGPN_activateSelection())]) {
+        ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(TGPN_activateSelection()));
     }
 }
 
 void IDPrivateInteractionDeactivateSelection(id assistant) {
-    if ([assistant respondsToSelector:NSSelectorFromString(@"deactivateSelection")]) {
-        ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(@"deactivateSelection"));
+    if ([assistant respondsToSelector:NSSelectorFromString(TGPN_deactivateSelection())]) {
+        ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(TGPN_deactivateSelection()));
     }
 }
 
 
 void IDPrivateInteractionSetSelectionVisible(id assistant, BOOL visible) {
-    if ([assistant respondsToSelector:NSSelectorFromString(@"setSelectionDisplayVisible:")]) {
+    if ([assistant respondsToSelector:NSSelectorFromString(TGPN_setSelectionDisplayVisible_())]) {
         ((void (*)(id, SEL, BOOL))objc_msgSend)(
             assistant,
-            NSSelectorFromString(@"setSelectionDisplayVisible:"),
+            NSSelectorFromString(TGPN_setSelectionDisplayVisible_()),
             visible);
     }
 }
@@ -1657,30 +1683,30 @@ void IDPrivateInteractionSetSelectionVisible(id assistant, BOOL visible) {
 void IDPrivateInteractionSetNeedsSelectionDisplayUpdate(id assistant) {
     ((void (*)(id, SEL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"setNeedsSelectionDisplayUpdate"));
+        NSSelectorFromString(TGPN_setNeedsSelectionDisplayUpdate()));
 }
 
 void IDPrivateInteractionSetGestureRecognizers(id assistant) {
-    ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(@"setGestureRecognizers"));
+    ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(TGPN_setGestureRecognizers()));
 }
 
 void IDPrivateInteractionClearGestureRecognizers(id assistant) {
     ((void (*)(id, SEL, BOOL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"clearGestureRecognizers:"),
+        NSSelectorFromString(TGPN_clearGestureRecognizers_()),
         YES);
 }
 
 void IDPrivateInteractionClearGestureRecognizersNonforced(id assistant) {
     ((void (*)(id, SEL, BOOL))objc_msgSend)(
         assistant,
-        NSSelectorFromString(@"clearGestureRecognizers:"),
+        NSSelectorFromString(TGPN_clearGestureRecognizers_()),
         NO);
 }
 
 void IDPrivateInteractionResignedFirstResponder(id assistant) {
     ((void (*)(id, SEL))objc_msgSend)(
-        assistant, NSSelectorFromString(@"resignedFirstResponder"));
+        assistant, NSSelectorFromString(TGPN_resignedFirstResponder()));
 }
 
 void IDPrivateInteractionDetach(id assistant, BOOL force) {
@@ -1753,21 +1779,21 @@ static NSString *IDPrivateTestingDelegateTarget(id owner, UIView *editor,
 NSDictionary<NSString *, id> *
 IDPrivateCopyKeyboardInputDelegateOwnershipForUITesting(
     UIView *editor, UIView *handoff) {
-    Class implementationClass = NSClassFromString(@"UIKeyboardImpl");
+    Class implementationClass = NSClassFromString(TGPN_UIKeyboardImpl());
     id implementation = IDPrivateTestingZeroArgumentObjectCall(
-        implementationClass, NSSelectorFromString(@"activeInstance"), YES);
+        implementationClass, NSSelectorFromString(TGPN_activeInstance()), YES);
     id stateManager = IDPrivateTestingZeroArgumentObjectCall(
-        implementation, NSSelectorFromString(@"keyboardStateManager"), NO);
+        implementation, NSSelectorFromString(TGPN_keyboardStateManager()), NO);
     id delegateManager = IDPrivateTestingZeroArgumentObjectCall(
-        stateManager, NSSelectorFromString(@"inputDelegateManager"), NO);
+        stateManager, NSSelectorFromString(TGPN_inputDelegateManager()), NO);
     BOOL valid = implementation != nil &&
-        [stateManager class] == NSClassFromString(@"_UIKeyboardStateManager") &&
-        [delegateManager class] == NSClassFromString(@"UIKBInputDelegateManager");
-    id key = valid ? IDPrivateTestingObjectIvar(delegateManager, "_keyInputDelegate") : nil;
+        [stateManager class] == NSClassFromString(TGPN__UIKeyboardStateManager()) &&
+        [delegateManager class] == NSClassFromString(TGPN_UIKBInputDelegateManager());
+    id key = valid ? IDPrivateTestingObjectIvar(delegateManager, TGPN__keyInputDelegate().UTF8String) : nil;
     id selectable = valid ?
-        IDPrivateTestingObjectIvar(delegateManager, "_selectableDelegate") : nil;
+        IDPrivateTestingObjectIvar(delegateManager, TGPN__selectableDelegate().UTF8String) : nil;
     id async = valid ?
-        IDPrivateTestingObjectIvar(delegateManager, "_asyncInputDelegate") : nil;
+        IDPrivateTestingObjectIvar(delegateManager, TGPN__asyncInputDelegate().UTF8String) : nil;
     return @{
         @"valid": @(valid),
         @"keyInputTarget": IDPrivateTestingDelegateTarget(key, editor, handoff),
@@ -1797,21 +1823,21 @@ static BOOL IDPrivateTestingObjectHasLiveTimer(id object) {
 NSDictionary<NSString *, id> *
 IDPrivateTestingFloatingCursorLifecycleSnapshot(UIView *textInput) {
     id assistant = nil;
-    SEL assistantSelector = NSSelectorFromString(@"interactionAssistant");
+    SEL assistantSelector = NSSelectorFromString(TGPN_interactionAssistant());
     if ([textInput respondsToSelector:assistantSelector]) {
         assistant = ((id (*)(id, SEL))objc_msgSend)(textInput, assistantSelector);
     }
     id display = nil;
-    SEL displaySelector = NSSelectorFromString(@"_selectionViewManager");
+    SEL displaySelector = NSSelectorFromString(TGPN__selectionViewManager());
     if ([assistant respondsToSelector:displaySelector]) {
         display = ((id (*)(id, SEL))objc_msgSend)(assistant, displaySelector);
     }
     id assistantSession = IDPrivateTestingObjectIvarOfExactClass(
-        assistant, "_floatingCursorSession", @"_UITextFloatingCursorSession");
+        assistant, TGPN__floatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession());
     id displaySession = IDPrivateTestingObjectIvarOfExactClass(
-        display, "_activeFloatingCursorSession", @"_UITextFloatingCursorSession");
+        display, TGPN__activeFloatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession());
     id session = assistantSession ?: displaySession;
-    id autoscroll = IDPrivateTestingObjectIvar(textInput, "_autoscroll");
+    id autoscroll = IDPrivateTestingObjectIvar(textInput, TGPN__autoscroll().UTF8String);
     if (autoscroll == nil) {
         autoscroll = IDPrivateTestingObjectIvar(textInput, "_id_textAutoscroll");
     }
@@ -1824,7 +1850,7 @@ IDPrivateTestingFloatingCursorLifecycleSnapshot(UIView *textInput) {
             container = ((id (*)(id, SEL))objc_msgSend)(backend, existingSelector);
         }
     } else {
-        SEL containerSelector = NSSelectorFromString(@"selectionContainerView");
+        SEL containerSelector = NSSelectorFromString(TGPN_selectionContainerView());
         if ([textInput respondsToSelector:containerSelector]) {
             container = ((id (*)(id, SEL))objc_msgSend)(textInput, containerSelector);
         }
@@ -1916,7 +1942,7 @@ static BOOL IDPrivateTestingBoolIvar(id object, const char *name, BOOL *value) {
 }
 
 static id IDPrivateStockAssistant(UIView *editor) {
-    SEL selector = NSSelectorFromString(@"interactionAssistant");
+    SEL selector = NSSelectorFromString(TGPN_interactionAssistant());
     return [editor respondsToSelector:selector]
         ? ((id (*)(id, SEL))objc_msgSend)(editor, selector) : nil;
 }
@@ -1924,20 +1950,20 @@ static id IDPrivateStockAssistant(UIView *editor) {
 static id IDPrivateStockFloatingSession(UIView *editor) {
     id assistant = IDPrivateStockAssistant(editor);
     id session = IDPrivateTestingObjectIvarOfExactClass(
-        assistant, "_floatingCursorSession", @"_UITextFloatingCursorSession");
+        assistant, TGPN__floatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession());
     if (session != nil) return session;
-    SEL displaySelector = NSSelectorFromString(@"_selectionViewManager");
+    SEL displaySelector = NSSelectorFromString(TGPN__selectionViewManager());
     id display = [assistant respondsToSelector:displaySelector]
         ? ((id (*)(id, SEL))objc_msgSend)(assistant, displaySelector) : nil;
     return IDPrivateTestingObjectIvarOfExactClass(
-        display, "_activeFloatingCursorSession", @"_UITextFloatingCursorSession");
+        display, TGPN__activeFloatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession());
 }
 
 static id IDPrivateStockAutoscroll(UIView *editor) {
     id assistant = IDPrivateStockAssistant(editor);
     for (id owner in @[editor, assistant ?: NSNull.null]) {
         if (owner == NSNull.null) continue;
-        id value = IDPrivateTestingObjectIvar(owner, "_autoscroll");
+        id value = IDPrivateTestingObjectIvar(owner, TGPN__autoscroll().UTF8String);
         if (value == nil) value = IDPrivateTestingObjectIvar(owner, "_textAutoscroll");
         if (value == nil) value = IDPrivateTestingObjectIvar(owner, "_id_textAutoscroll");
         if (value != nil) return value;
@@ -1960,7 +1986,7 @@ static id IDPrivateStockAutoscroll(UIView *editor) {
 }
 
 static UIView *IDPrivateStockSelectionContainer(UIView *editor) {
-    SEL selector = NSSelectorFromString(@"selectionContainerView");
+    SEL selector = NSSelectorFromString(TGPN_selectionContainerView());
     return [editor respondsToSelector:selector]
         ? ((UIView *(*)(id, SEL))objc_msgSend)(editor, selector) : nil;
 }
@@ -2029,7 +2055,7 @@ NSUInteger IDPrivateFloatingContainerCreationCountForUITesting(UIView *textInput
         return ((NSUInteger (*)(id, SEL))objc_msgSend)(backend, countSelector);
     }
 
-    SEL containerSelector = NSSelectorFromString(@"selectionContainerView");
+    SEL containerSelector = NSSelectorFromString(TGPN_selectionContainerView());
     if (![textInput respondsToSelector:containerSelector]) return 0;
     if (!IDPrivateNoArgumentSelectorHasReturnType(
             textInput, containerSelector, @encode(id))) {
@@ -2078,6 +2104,10 @@ NSUInteger IDPrivateFloatingContainerCreationCountForUITesting(UIView *textInput
 @end
 
 @implementation IDPrivateFloatingLifecycleWeakReferences
+
+// Not the default `_autoscroll`: that is a private UIKit ivar name read above, and it must not reach
+// the binary as text (`TGPrivateRuntimeNames.h`).
+@synthesize autoscroll = _id_autoscroll;
 
 - (instancetype)initWithEditor:(UIView *)editor {
     return [self initWithEditor:editor
@@ -2321,16 +2351,16 @@ IDPrivateCopyFloatingLifecycleStateWithController(UIView *editor,
     UIView *firstContainer = IDPrivateStockSelectionContainer(editor);
     UIView *secondContainer = IDPrivateStockSelectionContainer(editor);
     id assistant = IDPrivateStockAssistant(editor);
-    SEL displaySelector = NSSelectorFromString(@"_selectionViewManager");
+    SEL displaySelector = NSSelectorFromString(TGPN__selectionViewManager());
     id display = [assistant respondsToSelector:displaySelector]
         ? ((id (*)(id, SEL))objc_msgSend)(assistant, displaySelector) : nil;
     id assistantSession = IDPrivateTestingObjectIvarOfExactClass(
-        assistant, "_floatingCursorSession", @"_UITextFloatingCursorSession");
+        assistant, TGPN__floatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession());
     id displaySession = IDPrivateTestingObjectIvarOfExactClass(
-        display, "_activeFloatingCursorSession", @"_UITextFloatingCursorSession");
+        display, TGPN__activeFloatingCursorSession().UTF8String, TGPN__UITextFloatingCursorSession());
     id session = assistantSession ?: displaySession;
     BOOL sessionActive = NO;
-    (void)IDPrivateTestingBoolIvar(session, "_isValid", &sessionActive);
+    (void)IDPrivateTestingBoolIvar(session, TGPN__isValid().UTF8String, &sessionActive);
     id autoscroll = IDPrivateStockAutoscroll(editor);
     NSDictionary<NSString *, id> *recognizerState = IDPrivateRecognizerState(editor);
     NSMutableDictionary *trace = [editor isKindOfClass:UIScrollView.class]
@@ -2340,7 +2370,7 @@ IDPrivateCopyFloatingLifecycleStateWithController(UIView *editor,
     UITextRange *range = input.selectedTextRange;
     NSInteger startAffinity = UITextStorageDirectionForward;
     NSInteger endAffinity = UITextStorageDirectionForward;
-    SEL affinitySelector = NSSelectorFromString(@"affinityForPosition:");
+    SEL affinitySelector = NSSelectorFromString(TGPN_affinityForPosition_());
     if (range != nil && [controller respondsToSelector:affinitySelector]) {
         startAffinity = ((NSInteger (*)(id, SEL, id))objc_msgSend)(
             controller, affinitySelector, range.start);
@@ -2478,7 +2508,7 @@ IDPrivateCopyStockVisibleSelectionHandlesForUITesting(UIView *root) {
         UIView *view = pending.lastObject;
         [pending removeLastObject];
         [pending addObjectsFromArray:view.subviews];
-        if (![NSStringFromClass(view.class) containsString:@"_UITextSelectionLollipopView"] ||
+        if (![NSStringFromClass(view.class) containsString:TGPN__UITextSelectionLollipopView()] ||
             view.hidden || view.alpha <= 0.01) continue;
         CGRect rect = IDPrivateVisibleDescendantBoundsInView(view, root);
         if (CGRectIsNull(rect) || CGRectIsEmpty(rect)) continue;
@@ -2509,7 +2539,7 @@ void IDPrivateInteractionEndFloatingCursor(id assistant) {
 }
 
 void IDPrivateInteractionSelectWord(id assistant) {
-    ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(@"selectWord"));
+    ((void (*)(id, SEL))objc_msgSend)(assistant, NSSelectorFromString(TGPN_selectWord()));
 }
 
 void IDPrivateInteractionSelectAll(id assistant, id sender) {
@@ -2520,23 +2550,23 @@ void IDPrivateInteractionSelectAll(id assistant, id sender) {
 }
 
 void IDPrivateInteractionAutoscrollWillNotStart(id assistant) {
-    SEL selector = NSSelectorFromString(@"autoscrollWillNotStart");
+    SEL selector = NSSelectorFromString(TGPN_autoscrollWillNotStart());
     if ([assistant respondsToSelector:selector]) {
         ((void (*)(id, SEL))objc_msgSend)(assistant, selector);
     }
 }
 
 id IDPrivateNewTextAutoscroll(void) {
-    Class cls = NSClassFromString(@"UIAutoscroll");
+    Class cls = NSClassFromString(TGPN_UIAutoscroll());
     if (cls == Nil) {
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
-                                       reason:@"UIAutoscroll is unavailable"
+                                       reason:[TGPN_UIAutoscroll() stringByAppendingString:@" is unavailable"]
                                      userInfo:nil];
     }
     id autoscroll = [cls new];
     NSArray<IDInteractionABISpec *> *specs = @[
         IDInteractionABISpecMake(
-            @"startAutoscroll:scrollContainer:point:directions:repeatInterval:",
+            TGPN_startAutoscroll_scrollContainer_point_directions_repeatInterval_(),
             @encode(BOOL),
             @[IDInteractionTypeEncoding(@encode(id)),
               IDInteractionTypeEncoding(@encode(id)),
@@ -2548,7 +2578,7 @@ id IDPrivateNewTextAutoscroll(void) {
     NSArray<NSString *> *mismatches = IDInteractionABIMismatches(autoscroll, specs);
     if (mismatches.count != 0) {
         NSString *reason = [NSString stringWithFormat:
-            @"UIAutoscroll ABI mismatch:\n%@",
+            @"%@ ABI mismatch:\n%@", TGPN_UIAutoscroll(),
             [mismatches componentsJoinedByString:@"\n"]];
         @throw [NSException exceptionWithName:NSInternalInconsistencyException
                                        reason:reason
@@ -2566,7 +2596,7 @@ BOOL IDPrivateTextAutoscrollStart(id autoscroll,
     return ((BOOL (*)(id, SEL, id, id, CGPoint, int, double))objc_msgSend)(
         autoscroll,
         NSSelectorFromString(
-            @"startAutoscroll:scrollContainer:point:directions:repeatInterval:"),
+            TGPN_startAutoscroll_scrollContainer_point_directions_repeatInterval_()),
         target,
         scrollContainer,
         point,
@@ -2641,7 +2671,7 @@ IDPrivateTestingCopyUIKitAutoscrollSnapshot(id autoscroll) {
     IDPrivateTestingRequireUIKitAutoscrollGetter(
         autoscroll, @"target", @encode(id));
     IDPrivateTestingRequireUIKitAutoscrollGetter(
-        autoscroll, @"scrollContainer", @encode(id));
+        autoscroll, TGPN_scrollContainer(), @encode(id));
     IDPrivateTestingRequireUIKitAutoscrollGetter(
         autoscroll, @"point", @encode(CGPoint));
     IDPrivateTestingRequireUIKitAutoscrollGetter(
@@ -2658,7 +2688,7 @@ IDPrivateTestingCopyUIKitAutoscrollSnapshot(id autoscroll) {
     id target = ((id (*)(id, SEL))objc_msgSend)(
         autoscroll, NSSelectorFromString(@"target"));
     id scrollContainer = ((id (*)(id, SEL))objc_msgSend)(
-        autoscroll, NSSelectorFromString(@"scrollContainer"));
+        autoscroll, NSSelectorFromString(TGPN_scrollContainer()));
     CGPoint point = ((CGPoint (*)(id, SEL))objc_msgSend)(
         autoscroll, NSSelectorFromString(@"point"));
     int directions = ((int (*)(id, SEL))objc_msgSend)(
@@ -2743,7 +2773,7 @@ void IDPrivateTestingInvalidateUIKitAutoscroll(id autoscroll) {
 }
 
 void IDPrivateKeyboardInputChangedSelection(id delegate, id input) {
-    SEL selector = NSSelectorFromString(@"keyboardInputChangedSelection:");
+    SEL selector = NSSelectorFromString(TGPN_keyboardInputChangedSelection_());
     if ([delegate respondsToSelector:selector]) {
         ((void (*)(id, SEL, id))objc_msgSend)(delegate, selector, input);
     }
@@ -2770,21 +2800,21 @@ void IDPrivateInputPaste(id controller, id sender) {
 void IDPrivateInputDetachFromLayoutManager(id controller) {
     ((void (*)(id, SEL))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_detachFromLayoutManager"));
+        NSSelectorFromString(TGPN__detachFromLayoutManager()));
 }
 
 BOOL IDPrivateInputShouldHandlePaste(id controller, id sender) {
     SEL action = @selector(paste:);
     BOOL canHandle = ((BOOL (*)(id, SEL, SEL))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_canHandleResponderAction:"),
+        NSSelectorFromString(TGPN__canHandleResponderAction_()),
         action);
     if (!canHandle) {
         return NO;
     }
     return ((BOOL (*)(id, SEL, SEL, id))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_shouldHandleResponderAction:withSender:"),
+        NSSelectorFromString(TGPN__shouldHandleResponderAction_withSender_()),
         action,
         sender);
 }
@@ -2814,8 +2844,8 @@ void IDPrivateInputSetTypingAttributes(
 void IDPrivateInputAllowTypingAttributeNames(
     id controller,
     NSSet<NSAttributedStringKey> *attributeNames) {
-    SEL getSelector = NSSelectorFromString(@"_allowedTypingAttributes");
-    SEL setSelector = NSSelectorFromString(@"_setAllowedTypingAttributes:");
+    SEL getSelector = NSSelectorFromString(TGPN__allowedTypingAttributes());
+    SEL setSelector = NSSelectorFromString(TGPN__setAllowedTypingAttributes_());
     IDPrivateRequireSignature(controller, getSelector, @encode(id), 2, NULL);
     IDPrivateRequireSignature(controller, setSelector, @encode(void), 3,
                               @encode(id));
@@ -2829,14 +2859,14 @@ void IDPrivateInputAllowTypingAttributeNames(
 }
 
 void IDPrivateInputInvalidateTypingAttributes(id controller) {
-    SEL selector = NSSelectorFromString(@"_invalidateTypingAttributes");
+    SEL selector = NSSelectorFromString(TGPN__invalidateTypingAttributes());
     IDPrivateRequireSignature(controller, selector, @encode(void), 2, NULL);
     ((void (*)(id, SEL))objc_msgSend)(controller, selector);
 }
 
 void IDPrivateInputPerformWhileSuppressingDelegateNotifications(
     id controller, void (NS_NOESCAPE ^body)(void)) {
-    SEL selector = NSSelectorFromString(@"_performWhileSuppressingDelegateNotifications:");
+    SEL selector = NSSelectorFromString(TGPN__performWhileSuppressingDelegateNotifications_());
     [IDPrivateUIKit requireObject:controller
               respondsToSelector:selector
                            stage:@"Suppressed input-delegate notification transaction"];
@@ -2848,9 +2878,9 @@ void IDPrivateInputPerformWhileSuppressingDelegateNotifications(
 static id IDPrivateValidatedBackwardDeleteRanges(id controller, NSString *stage) {
     id ranges = ((id (*)(id, SEL))objc_msgSend)(
         controller,
-        NSSelectorFromString(@"_rangesForBackwardsDelete"));
+        NSSelectorFromString(TGPN__rangesForBackwardsDelete()));
     [IDPrivateUIKit requireObject:ranges
-              respondsToSelector:NSSelectorFromString(@"unionRange")
+              respondsToSelector:NSSelectorFromString(TGPN_unionRange())
                            stage:stage];
     return ranges;
 }
@@ -2867,23 +2897,23 @@ NSRange IDPrivateInputBackwardDeleteRange(id controller) {
         @"Backward-delete ranges action aggregate");
     return ((NSRange (*)(id, SEL))objc_msgSend)(
         ranges,
-        NSSelectorFromString(@"unionRange"));
+        NSSelectorFromString(TGPN_unionRange()));
 }
 
 BOOL IDPrivateTextViewShouldDelete(id textView, id input) {
     return ((BOOL (*)(id, SEL, id))objc_msgSend)(
         textView,
-        NSSelectorFromString(@"keyboardInputShouldDelete:"),
+        NSSelectorFromString(TGPN_keyboardInputShouldDelete_()),
         input);
 }
 
 NSUInteger IDPrivateTextKit2RangeCount(id range) {
     [IDPrivateUIKit requireObject:range
-              respondsToSelector:NSSelectorFromString(@"textKit2Ranges")
+              respondsToSelector:NSSelectorFromString(TGPN_textKit2Ranges())
                            stage:@"TextKit 2 range adapter"];
     NSArray *ranges = ((id (*)(id, SEL))objc_msgSend)(
         range,
-        NSSelectorFromString(@"textKit2Ranges"));
+        NSSelectorFromString(TGPN_textKit2Ranges()));
     return ranges.count;
 }
 
@@ -2891,7 +2921,7 @@ NSArray *IDPrivateLayoutSelectionRects(id layoutController, id range, UIView *fr
     BOOL (^allContainers)(id) = ^BOOL(id container) { return YES; };
     return ((id (*)(id, SEL, id, id, id))objc_msgSend)(
         layoutController,
-        NSSelectorFromString(@"selectionRectsForRange:fromView:forContainerPassingTest:"),
+        NSSelectorFromString(TGPN_selectionRectsForRange_fromView_forContainerPassingTest_()),
         range,
         fromView,
         allContainers);
@@ -2916,7 +2946,7 @@ void IDPrivateRequireTextContainerHost(id host, NSString *stage) {
         IDInteractionABISpecMake(@"textContainer", @encode(id), @[]),
         IDInteractionABISpecMake(@"setTextContainer:", @encode(void),
             @[IDInteractionTypeEncoding(@encode(id))]),
-        IDInteractionABISpecMake(@"textContainerOrigin", @encode(CGPoint), @[]),
+        IDInteractionABISpecMake(TGPN_textContainerOrigin(), @encode(CGPoint), @[]),
     ];
     NSArray<NSString *> *mismatches = IDInteractionABIMismatches(host, specs);
     if (mismatches.count == 0) return;

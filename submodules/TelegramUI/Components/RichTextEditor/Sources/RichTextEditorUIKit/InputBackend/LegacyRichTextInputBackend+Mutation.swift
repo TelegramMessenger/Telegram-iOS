@@ -385,7 +385,7 @@ extension LegacyRichTextInputBackend {
                 }
                 if result.selectionChanged, !prepared.selectionWillChange {
                     RichTextInputContractViolation.report(
-                        "commitPreparedMutation for \(mutation) reported selectionChanged=true, but its " +
+                        "commitPreparedMutation for \(mutation) reported a selection change, but its " +
                         "own preparation's selectionWillChange was false")
                 }
 

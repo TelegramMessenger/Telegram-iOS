@@ -153,7 +153,7 @@
 
     XCTAssertTrue(self.autoscroll.isActive);
     XCTAssertIdentical(self.autoscroll.target, self.target);
-    XCTAssertIdentical(self.autoscroll.scrollContainer, self.container);
+    XCTAssertIdentical(self.autoscroll.id_scrollContainer, self.container);
     XCTAssertTrue(CGPointEqualToPoint(
         self.autoscroll.point, CGPointMake(12, 88)));
     XCTAssertEqual(
@@ -250,7 +250,7 @@
         XCTAssertTrue(timer.invalidated);
         XCTAssertFalse(self.autoscroll.isActive);
         XCTAssertNil(self.autoscroll.target);
-        XCTAssertNil(self.autoscroll.scrollContainer);
+        XCTAssertNil(self.autoscroll.id_scrollContainer);
     }
 }
 
@@ -356,7 +356,7 @@
              directions:IDVerticalAutoscrollDirectionDown
          repeatInterval:0.075]);
     XCTAssertEqual(timer.fireDates.count, 2U);
-    XCTAssertIdentical(self.autoscroll.scrollContainer, otherContainer);
+    XCTAssertIdentical(self.autoscroll.id_scrollContainer, otherContainer);
 }
 
 - (void)testFireIncrementsCountBeforeCallback {
@@ -404,7 +404,7 @@
     XCTAssertTrue(timer.invalidated);
     XCTAssertFalse(self.autoscroll.isActive);
     XCTAssertNil(self.autoscroll.target);
-    XCTAssertNil(self.autoscroll.scrollContainer);
+    XCTAssertNil(self.autoscroll.id_scrollContainer);
     XCTAssertTrue(CGPointEqualToPoint(
         self.autoscroll.point, CGPointZero));
     XCTAssertEqual(self.autoscroll.directions, 0U);

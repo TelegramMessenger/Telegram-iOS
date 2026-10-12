@@ -3,6 +3,8 @@
 
 #import "TGRichTextInputDecCanvasABIWitness.h"
 #import "TGRichTextInputDecCanvasCallbacks.h"
+#import "TGPrivateMethodAliases.h"
+#import "TGPrivateRuntimeNames.h"
 
 // The method SIGNATURES here are NOT copied from the Task B4 brief's literal Step-4 snippet
 // verbatim: the controller supplement decoded the compiled-in contract manifest and found
@@ -22,7 +24,21 @@
 
 @implementation TGRichTextInputDecCanvasABIWitness
 
-- (BOOL)keyboardInputShouldDelete:(id)textInput {
+// Two of the witnessed selectors are private UIKit names; they are compiled under neutral names and
+// added under the private ones here (`TGPrivateMethodAliases.h`), so the resolver and the canvas
+// installer find them by selector exactly as before.
++ (void)initialize {
+    if (self != TGRichTextInputDecCanvasABIWitness.class) {
+        return;
+    }
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_keyboardInputShouldDelete_, @selector(tgpn_keyboardInputShouldDelete:) },
+        { TGPN_startAutoscroll_, @selector(tgpn_startAutoscroll:) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
+- (BOOL)tgpn_keyboardInputShouldDelete:(id)textInput {
     id<TGRichTextInputDecClientBridging> bridge = TGRichTextInputDecAttachedBridge(self);
     if (bridge == nil) {
         // No bridge attached (canvas not yet wired to a backend, or the backend detached) — the
@@ -39,7 +55,7 @@
     return [bridge canvasKeyboardInputShouldDelete];
 }
 
-- (void)startAutoscroll:(CGPoint)point {
+- (void)tgpn_startAutoscroll:(CGPoint)point {
     // The `autoscrollEntry` capability is never requested (Telegram's canvas is a UIView inside
     // a separate scroll view, not the scroll view itself), so this exists only to give the
     // manifest row a real ABI to validate against.

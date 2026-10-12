@@ -61,8 +61,8 @@ static NSString *IDProbeBlockUIScenario(void) {
 
     id<IDSelectionPresentationBackend> backend =
         editor.id_selectionPresentationBackend;
-    UIView *firstContainer = [backend selectionContainerView];
-    UIView *secondContainer = [backend selectionContainerView];
+    UIView *firstContainer = [backend id_selectionContainerView];
+    UIView *secondContainer = [backend id_selectionContainerView];
     UIView *existingContainer = backend.existingSelectionContainerView;
     UIView *superview = existingContainer.superview;
     NSString *superviewRole = @"none";

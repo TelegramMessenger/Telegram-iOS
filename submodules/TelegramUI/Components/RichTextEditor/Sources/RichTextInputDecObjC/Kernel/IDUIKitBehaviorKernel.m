@@ -1,6 +1,7 @@
 #import <TargetConditionals.h>
 #if TARGET_OS_IOS
 
+#import "TGPrivateRuntimeNames.h"
 #import "IDUIKitBehaviorKernel.h"
 #import "TGRichTextInputDecContract.h"
 
@@ -103,6 +104,10 @@ static BOOL IDUIKitKernelAllMembersObserved(
 
 @implementation IDUIKitBehaviorKernel
 
+// Not the default `_inputController`: that is a private UIKit ivar name the engine looks up, and it
+// must not reach the binary as text (`TGPrivateRuntimeNames.h`).
+@synthesize inputController = _id_inputController;
+
 - (instancetype)initWithManifest:(IDUIKitRuntimeManifest *)manifest
                          resolver:(IDUIKitCapabilityResolver *)resolver
                  layoutController:(id)layoutController
@@ -148,7 +153,7 @@ static BOOL IDUIKitKernelAllMembersObserved(
         }
         return nil;
     }
-    _inputController = input;
+    _id_inputController = input;
 
     NSMutableArray<IDUIKitCapabilityReport *> *reports =
         [NSMutableArray arrayWithObject:input.report];

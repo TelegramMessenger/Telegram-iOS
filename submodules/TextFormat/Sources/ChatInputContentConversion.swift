@@ -444,7 +444,18 @@ public func chatInputContent(from attributedText: NSAttributedString) -> ChatInp
                 collapsed: true)))
         }
         cursor = carve.range.location + carve.range.length
-        if cursor < full.length && full.character(at: cursor) == 0x0A { cursor += 1 }
+        if cursor < full.length && full.character(at: cursor) == 0x0A {
+            cursor += 1
+            if cursor == full.length {
+                // The separator after the block is the text's LAST character, so an empty line
+                // follows it: `"abc\n"` is `[code "abc"] [p ""]`, which `attributedString(from:)`
+                // encodes exactly so. Emitting nothing dropped the line, and the legacy composer,
+                // which writes the model back into its text view, then removed the line break
+                // outside UIKit's undo stack — the next Undo raised `NSRangeException`
+                // (`HarnessLegacyDeleteLineAfterBlockUndoTests`).
+                blocks.append(.paragraph(ChatInputParagraph(style: .body, runs: [])))
+            }
+        }
     }
     if cursor < full.length { blocks.append(contentsOf: paragraphBlocks(in: NSRange(location: cursor, length: full.length - cursor))) }
 

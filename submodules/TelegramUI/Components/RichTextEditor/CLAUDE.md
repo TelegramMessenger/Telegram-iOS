@@ -30,8 +30,9 @@ anything, because the deviations they list are facts about the code. See the roo
 certified-build-vs-selection-floor decision, what remains generated-and-pinned, and the
 exception-guard rule (`TGRichTextInputDecPerform` / `TGRichTextInputDecPerformReturningObject` are
 the only sanctioned way for Swift to call into the kernel — it still raises `NSException` on a
-contract mismatch). Full design:
-`docs/superpowers/plans/2026-08-16-inputdec-backend-introduction.md`.
+contract mismatch). The design plan,
+`docs/superpowers/plans/2026-08-16-inputdec-backend-introduction.md`, left the tree on 2026-10-12 and
+is in git history.
 
 **What is NOT here yet is the engine's PROOF**, and it is the reason `~/Documents/InputDec` must not
 be deleted: 1,078 unit and 196 UI test cases, the stock-`UITextView` oracle host they compare
@@ -1366,7 +1367,12 @@ Load-bearing:
   and the consumer is never told (measured: 0 deliveries). The DELIVERY is each door's own — the caret
   door delivers in `dissolveEmptyContainerAtCaret`, the gate's veto path delivers for the range door —
   because a delivery left inside the shared rule lands beside the veto path's and fires `onChange`
-  twice.
+  twice. The dissolve's LEAF arm (an empty code block, pull quote or 1x1 table becoming a paragraph)
+  rebuilds through the `document` setter, which only moves the undo baseline, so it registers its own
+  step (`recordUndoStepForStructuralChange`, caret at the container's start for both doors). Without
+  it one ⌘Z took back the dissolve together with the edit before it (2026-10-12,
+  `EngineEmptyContainerDissolveUndoTests`; the CONTAINER arm edits through the funnel and was
+  already right).
 - **Quote toggles**: the deepest quote every touched block shares is dissolved; otherwise the touched
   TOP-LEVEL units are wrapped (a selection across a quote and a neighbour nests it); refused from a
   cell. `touchedBlockIndices` includes an author line's own role, so tapping Quote with the caret ON a
@@ -3148,6 +3154,14 @@ package or this repo, and each produced a **green result that meant nothing** un
   `includes` attribute lists both `include` and `include/Kernel`, so it accepts either spelling —
   "simplifying" those two imports back to bare names would regress SwiftPM while Bazel stayed green,
   silently, and in the opposite direction from where you'd look.
+- **A header ADDED to an `include/` umbrella directory is invisible to the other targets' Xcode build
+  until their explicit module PCMs are deleted.** SwiftPM gives each C-family target an
+  umbrella-DIRECTORY module, and Xcode's explicit-modules build keeps the PCM it built before the
+  header existed (`DerivedData/<pkg>/Build/Intermediates.noindex/{,Swift}ExplicitPrecompiledModules/<Module>-*.pcm`).
+  The symptom does not look like a module problem: the `#import` resolves (no "file not found"), the
+  file's own target compiles, and every OTHER target reports "call to undeclared function" for what
+  the header declares. Clearing `ModuleCache.noindex` does not help; deleting those PCMs does
+  (2026-10-12, adding `TGPrivateRuntimeNames.h`; three builds).
 - **A DerivedData directory's mtime is not its birth time.** `%Sm` moves every time anything inside the
   directory is touched, so a directory created well before your run can still read as "created just
   now" if you check it late. Task A7 concluded a DerivedData directory "did not exist before this run"
@@ -5964,3 +5978,75 @@ reproduced range / verb and not its neighbours. The fixes below sit where every 
   block quote after its author). Zipped positionally, a split shifted every later role and "by identity"
   rebuilt the shift. Test hooks force the state no shipping path reaches: `EngineDocumentBridge.testHookRenderedBlocks`
   and `RichTextEngineEditorView.testHookExpectsRoleCountMismatch` (`HarnessRoleRecoveryByIdentityTests`).
+
+## Private UIKit names are not in the binary (2026-10-12)
+
+The InputDec engine is compiled into every build, flag or not, and it reaches private UIKit by name:
+it looks classes, protocols and ivars up, sends private selectors, and answers callbacks UIKit sends
+to its objects under private names. App Store review scans a binary's strings, so **no private UIKit
+name the engine crosses with may appear in the binary as text.**
+
+- **One table.** Every such name is a line of `Scripts/private-runtime-names.txt` (161 today).
+  `Scripts/generate-private-runtime-names.py` turns it into `RichTextInputDecObjC/include/TGPrivateRuntimeNames.h`,
+  which stores each name with every byte XOR 0x5A (`ObfuscatedStrings`' encoding) and exposes it as
+  `TGPN_<name>()`, every `:` spelled `_` (`_canHandleResponderAction:` is
+  `TGPN__canHandleResponderAction_()`), decoded once. Never hand-edit the header: add the name to
+  the list and regenerate. A selector is `NSSelectorFromString(TGPN_x())`, a C string `TGPN_x().UTF8String`.
+- **A callback is compiled under a neutral name and ADDED under the private one.** The method is
+  `tgpn_<name>` (or an existing `id_` method), and the class's `+initialize` calls
+  `TGPrivateInstallMethodAliases` with a table of `{TGPN_x, @selector(tgpn_x)}` rows
+  (`TGPrivateMethodAliases.h`; the precedent is `_canAffectStatusBarAppearance` in
+  `UIViewController+Navigation.m`). It uses `class_addMethod`, never `class_replaceMethod`:
+  replacing clobbered every subclass that defines the private name itself, including the engine's
+  own test subclasses. A SUBCLASS that overrides a neutral method installs the table again from its
+  own `+initialize` (`TGIDObservingBlockTextView`), or UIKit reaches the superclass's version.
+- **`class_getInstanceMethod` does not run `+initialize`**, so asking whether a class answers a
+  private selector before anything has messaged it reads "no". The capability resolver and
+  `IDPrivateUIKit`'s ABI checks send `[cls class]` first. Any new introspection must too.
+- **The table holds names that CROSS the boundary, not every name that matches one.** A name is in
+  it when UIKit calls it on our object, we send it to UIKit, or we look it up. One of the engine's
+  OWN members that merely shares a private name stays out of the table, renamed `id_…` so it cannot
+  be mistaken for one (`id_textInputController`, `id_selectionContainerView`, `id_scrollContainer`,
+  `id_textInputTraits`, `id_snapshotBaseWritingDirectionAtPosition:` …). Check before deciding a name
+  is "only ours": UIKit's `-[_UITextLayoutControllerBase textInputController]` SENDS
+  `textInputController` to the engine's connection object, so the renamed property is aliased back
+  under that name (measured: 84 Host failures without it).
+- **The embedded contract tables are encoded too.** `Generated/TGRichTextInputDecContractData.m` and
+  `RichTextInputDecUpstream/Generated/RichTextInputDecUpstreamPristineManifest.m` hold their JSON as
+  XOR-encoded byte arrays, decoded by `TGPrivateRuntimeDataDecode`; regenerate one with
+  `Scripts/generate-private-runtime-names.py --encode-bytes <plain file>`. `VENDOR.md` pins both the
+  file's digest and the decoded digest, and `VendorSnapshotIntegrityTests` checks the decoded bytes.
+- **Two guards.** `PrivateRuntimeNamesTests` (Core, `swift test`) fails when the header and the list
+  disagree, and when a shipping source spells a listed name as a string literal, inside a longer
+  literal (names of 8+ characters), as `@selector(…)`, as a Swift `@objc(…)` name, as an Objective-C
+  method declaration or definition, or as a property accessor, and when a Swift file that spells
+  `#function` declares a function whose base name is a listed name (`#function` inside
+  `func selectWord()` is the literal "selectWord()": two InputDec backend wrappers leaked exactly
+  that way, found by the archive scan, and are `id_selectWord()` / `id_setNeedsSelectionDisplayUpdate()`
+  now). Comments are ignored, so prose may name anything. The binary check is
+  `Scripts/scan-private-runtime-names.py` on the RELEASE
+  `TelegramUIFramework` unzipped from the `.ipa` (usage in its docstring).
+- **Known residual: the legacy canvas's text-checking client.** `DocumentCanvasView+NativeTextCheckingClient.swift`
+  answers `UITextCheckingController`'s callbacks as Swift `@objc` members under their real names,
+  so they are in the binary. Two are also crossed by the engine and are therefore in the table
+  (`replaceRange:withAnnotatedString:relativeReplacementRange:`, `annotatedSubstringForRange:`): the
+  guard test allowlists exactly those two in that one file and fails if the allowance goes stale.
+  The other two (`removeAnnotation:forRange:`, `validAnnotations`) are legacy-only and NOT in the
+  table, so neither guard looks for them. The "Text checking" section above records why that client
+  vends real names; converting it to the alias mechanism is the way to close this.
+- **The release scan, measured 2026-10-12** (`release_sim_arm64`, `TelegramUIFramework` from the
+  `.ipa`): 8 hits, each attributed to an archive and a section. The four InputDec archives
+  (`RichTextInputDecObjC`, `RichTextInputDecUpstream`, `RichTextInputDecHost`, `RichTextEngineEditor`)
+  have NONE, embedded contract tables included. In `RichTextEditorUIKit`: the two legacy selectors
+  above (`__objc_methname`), plus `selectWord` and `selectionChanged` in `__swift5_reflstr`. Those two
+  are the shared input-backend types' own enum cases and a Bool field (`RichTextInputCommand.selectWord`,
+  `RichTextInputEditMenuDismissReason.selectionChanged`, `…CommandResult.selectionChanged`), not
+  selectors. The other four (`_textInputTraits`, `textInputTraits`, `activateSelection`,
+  `selectionContainerView`) are other modules' own names (AsyncDisplayKit, PassportUI, DrawingUI,
+  LegacyMediaPickerUI, MediaEditorScreen) that predate this work; `selectionChanged` is also in
+  DrawingUI, ContactListUI, AttachmentUI and ShareWithPeersScreen. The main binary and the other
+  frameworks have none.
+- **Xcode trap when the header is new or changed:** the explicit-module PCMs of every target that
+  imports `RichTextInputDecObjC` keep the old header, and the symptom is "call to undeclared function
+  TGPN_…" with no "file not found". Delete `RichTextInputDec*.pcm` under
+  `{,Swift}ExplicitPrecompiledModules` in that DerivedData (see "Verification traps").

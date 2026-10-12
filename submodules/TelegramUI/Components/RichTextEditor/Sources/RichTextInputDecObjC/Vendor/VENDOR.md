@@ -19,7 +19,16 @@ regenerating over editing.
 - exported: 2026-08-24T19:50:23Z
 - certified OS band: 26.5 (build 23F73) — the only combination this kernel has been run on
 - pristine manifest SHA-256: a60bb026db345de4c487b45661f97f41e05c1270d1d2c7f5f58d5d92b5440e43
-- generated contract data SHA-256: af87291249fbc474ac908b885527d935265df22514732f815638b68648aaadf0
+- generated contract data SHA-256: 9e4a5ec1c1f0aa213ed94159b8bd6be8037a06f83f91513458733480710c4761
+- generated contract data decoded SHA-256: 68bc058fb91f8ea924ea96d196afeee6855d2e2d299b6c548a699d02d933699a
+
+Both generated blobs store every byte XOR 0x5A (2026-10-12), so the private UIKit names in the
+manifest do not reach the binary as text; each is decoded once when loaded. Encoding changed the
+FILE's digest (it was af87291249fbc474ac908b885527d935265df22514732f815638b68648aaadf0) and not
+its content: the decoded digest above is the one the bytes had before, and the pristine blob in
+`RichTextInputDecUpstream/Generated/` decodes to the pristine manifest's digest. A regeneration
+must encode again: `Scripts/generate-private-runtime-names.py --encode-bytes <plain file>` prints the
+array's rows (verified to reproduce both checked-in arrays byte for byte).
 
 ## Exact revision of every input that is not copied verbatim
 `upstream commit` alone cannot answer "which one did this reproduce?" for the three inputs whose

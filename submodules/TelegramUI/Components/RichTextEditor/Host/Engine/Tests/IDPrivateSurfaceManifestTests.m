@@ -76,6 +76,13 @@
                               range:NSMakeRange(0, body.length)] != nil) {
         return YES;
     }
+    // A private UIKit name is spelled in the source only through its encoded table entry
+    // (`TGPN_<name>()`, every ':' as '_'), or as the neutral `tgpn_` method a callback is compiled
+    // under (`TGPrivateRuntimeNames.h`, `TGPrivateMethodAliases.h`). Either is a live occurrence.
+    NSString *mangled = [symbol stringByReplacingOccurrencesOfString:@":" withString:@"_"];
+    if ([body containsString:[@"TGPN_" stringByAppendingString:mangled]]) return YES;
+    NSString *firstKeyword = [symbol componentsSeparatedByString:@":"].firstObject;
+    if ([body containsString:[@"tgpn_" stringByAppendingString:firstKeyword]]) return YES;
     if (![symbol containsString:@":"]) return NO;
 
     NSMutableArray<NSString *> *keywords =

@@ -1148,7 +1148,7 @@ static BOOL IDCoordinatorWritingDirectionIsValid(
         }
         if (!localIsDestination && horizontal) {
             IDBlockWritingDirection writingDirection = [snapshot
-                baseWritingDirectionAtPosition:
+                id_snapshotBaseWritingDirectionAtPosition:
                     IDBlockTextPositionMake(location.localOffset, affinity)];
             if (self.document.documentRevision != revision) {
                 continue;

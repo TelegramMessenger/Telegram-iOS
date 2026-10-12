@@ -3,6 +3,8 @@
 #if TARGET_OS_IOS
 
 #import "TGRichTextInputDecLayoutControllerInternal.h"
+#import "TGPrivateMethodAliases.h"
+#import "TGPrivateRuntimeNames.h"
 
 // MARK: - Family 1 helpers (Task C4)
 //
@@ -168,6 +170,51 @@ static NSRange TGRawCharacterRangeForRange(TGRichTextInputDecRange *range, uint6
 
 @implementation TGRichTextInputDecLayoutController
 
+// The callbacks UIKit's private text-input machinery sends by name. Each is an `id_` method with
+// the same arguments, added under the private name at run time rather than compiled under it, so
+// the private names do not reach the binary as text (`TGPrivateMethodAliases.h`).
++ (void)initialize {
+    if (self != TGRichTextInputDecLayoutController.class) {
+        return;
+    }
+    const TGPrivateMethodAlias aliases[] = {
+        { TGPN_textInputController, @selector(id_textInputController) },
+        { TGPN_adoptTextInputController_, @selector(id_adoptTextInputController:) },
+        { TGPN_detachFromTextInputController, @selector(id_detachFromTextInputController) },
+        { TGPN_canAccessLayoutManager, @selector(id_canAccessLayoutManager) },
+        { TGPN_emptyTextRangeAtPosition_, @selector(id_emptyTextRangeAtPosition:) },
+        { TGPN_textRangeForLineEnclosingPosition_, @selector(id_textRangeForLineEnclosingPosition:) },
+        { TGPN_textRangeForLineEnclosingPosition_effectiveAffinity_, @selector(id_textRangeForLineEnclosingPosition:effectiveAffinity:) },
+        { TGPN_attributesAtPosition_inDirection_, @selector(id_attributesAtPosition:inDirection:) },
+        { TGPN_affinityForPosition_, @selector(id_affinityForPosition:) },
+        { TGPN_characterRangeForTextRange_, @selector(id_characterRangeForTextRange:) },
+        { TGPN_characterRangeForTextRange_clippedToDocument_, @selector(id_characterRangeForTextRange:clippedToDocument:) },
+        { TGPN_characterRangesForTextRange_clippedToDocument_, @selector(id_characterRangesForTextRange:clippedToDocument:) },
+        { TGPN_textRangeForCharacterRange_, @selector(id_textRangeForCharacterRange:) },
+        { TGPN_textRangeForCharacterRanges_, @selector(id_textRangeForCharacterRanges:) },
+        { TGPN_positionWithOffset_affinity_, @selector(id_positionWithOffset:affinity:) },
+        { TGPN_rangeOfCharacterClusterAtIndex_type_, @selector(id_rangeOfCharacterClusterAtIndex:type:) },
+        { TGPN_firstTextContainer, @selector(id_firstTextContainer) },
+        { TGPN_textContainerForPosition_, @selector(id_textContainerForPosition:) },
+        { TGPN_baseWritingDirectionAtPosition_, @selector(id_baseWritingDirectionAtPosition:) },
+        { TGPN_boundingRectForCharacterRange_, @selector(id_boundingRectForCharacterRange:) },
+        { TGPN_selectionRectsForRange_fromView_forContainerPassingTest_, @selector(id_selectionRectsForRange:fromView:forContainerPassingTest:) },
+        { TGPN_requestTextGeometryAtPosition_typingAttributes_resultBlock_, @selector(id_requestTextGeometryAtPosition:typingAttributes:resultBlock:) },
+        { TGPN_insertionRectForPosition_typingAttributes_placeholderAttachment_textContainer_, @selector(id_insertionRectForPosition:typingAttributes:placeholderAttachment:textContainer:) },
+        { TGPN_cursorPositionAtPoint_inContainer_, @selector(id_cursorPositionAtPoint:inContainer:) },
+        { TGPN_nearestPositionAtPoint_inContainer_, @selector(id_nearestPositionAtPoint:inContainer:) },
+        { TGPN__visualSelectionRangeForExtent_forPoint_fromPosition_inDirection_, @selector(tgpn__visualSelectionRangeForExtent:forPoint:fromPosition:inDirection:) },
+        { TGPN_annotatedSubstringForRange_, @selector(id_annotatedSubstringForRange:) },
+        { TGPN_addAnnotationAttribute_value_forRange_, @selector(id_addAnnotationAttribute:value:forRange:) },
+        { TGPN_annotationAttribute_atPosition_, @selector(id_annotationAttribute:atPosition:) },
+        { TGPN_removeAnnotationAttribute_forRange_, @selector(id_removeAnnotationAttribute:forRange:) },
+        { TGPN_addRenderingAttributes_forRange_, @selector(id_addRenderingAttributes:forRange:) },
+        { TGPN_removeRenderingAttributes_forRange_, @selector(id_removeRenderingAttributes:forRange:) },
+        { TGPN__invalidateTemporaryAttributesInRange_, @selector(id_invalidateTemporaryAttributesInRange:) },
+    };
+    TGPrivateInstallMethodAliases(self, aliases, sizeof(aliases) / sizeof(aliases[0]));
+}
+
 - (instancetype)initWithBridge:(id<TGRichTextInputDecClientBridging>)bridge {
     NSParameterAssert(bridge != nil);
     self = [super init];
@@ -193,21 +240,9 @@ static NSRange TGRawCharacterRangeForRange(TGRichTextInputDecRange *range, uint6
     return [self id_textStorage];
 }
 
-- (nullable id)textInputController {
-    return [self id_textInputController];
-}
 
-- (void)adoptTextInputController:(id)controller {
-    [self id_adoptTextInputController:controller];
-}
 
-- (void)detachFromTextInputController {
-    [self id_detachFromTextInputController];
-}
 
-- (BOOL)canAccessLayoutManager {
-    return [self id_canAccessLayoutManager];
-}
 
 /// Not a certified manifest row (see the Internal header's doc comment on
 /// `id_layoutManager`) — implemented anyway as a defensive forward, matching upstream.
@@ -257,9 +292,6 @@ static NSRange TGRawCharacterRangeForRange(TGRichTextInputDecRange *range, uint6
     return [self id_endOfDocument];
 }
 
-- (nullable UITextRange *)emptyTextRangeAtPosition:(UITextPosition *)position {
-    return [self id_emptyTextRangeAtPosition:(TGRichTextInputDecPosition *)position];
-}
 
 - (nullable UITextRange *)textRangeFromPosition:(UITextPosition *)fromPosition
                                       toPosition:(UITextPosition *)toPosition {
@@ -292,20 +324,8 @@ static NSRange TGRawCharacterRangeForRange(TGRichTextInputDecRange *range, uint6
                      anchorPositionOffset:anchorPositionOffset];
 }
 
-- (nullable UITextRange *)textRangeForLineEnclosingPosition:(UITextPosition *)position {
-    return [self id_textRangeForLineEnclosingPosition:(TGRichTextInputDecPosition *)position];
-}
 
-- (nullable UITextRange *)textRangeForLineEnclosingPosition:(UITextPosition *)position
-                                            effectiveAffinity:(UITextStorageDirection)affinity {
-    return [self id_textRangeForLineEnclosingPosition:(TGRichTextInputDecPosition *)position
-                                     effectiveAffinity:affinity];
-}
 
-- (nullable NSDictionary<NSAttributedStringKey, id> *)attributesAtPosition:(UITextPosition *)position
-                                                                 inDirection:(UITextStorageDirection)direction {
-    return [self id_attributesAtPosition:(TGRichTextInputDecPosition *)position inDirection:direction];
-}
 
 - (NSComparisonResult)comparePosition:(UITextPosition *)position
                             toPosition:(UITextPosition *)other {
@@ -319,42 +339,13 @@ static NSRange TGRawCharacterRangeForRange(TGRichTextInputDecRange *range, uint6
                              toPosition:(TGRichTextInputDecPosition *)toPosition];
 }
 
-- (UITextStorageDirection)affinityForPosition:(UITextPosition *)position {
-    return [self id_affinityForPosition:(TGRichTextInputDecPosition *)position];
-}
 
-- (NSRange)characterRangeForTextRange:(UITextRange *)range {
-    return [self id_characterRangeForTextRange:(TGRichTextInputDecRange *)range];
-}
 
-- (NSRange)characterRangeForTextRange:(UITextRange *)range
-                    clippedToDocument:(BOOL)clippedToDocument {
-    return [self id_characterRangeForTextRange:(TGRichTextInputDecRange *)range
-                             clippedToDocument:clippedToDocument];
-}
 
-- (NSArray<NSValue *> *)characterRangesForTextRange:(UITextRange *)range
-                                  clippedToDocument:(BOOL)clippedToDocument {
-    return [self id_characterRangesForTextRange:(TGRichTextInputDecRange *)range
-                              clippedToDocument:clippedToDocument];
-}
 
-- (nullable UITextRange *)textRangeForCharacterRange:(NSRange)range {
-    return [self id_textRangeForCharacterRange:range];
-}
 
-- (nullable UITextRange *)textRangeForCharacterRanges:(NSArray<NSValue *> *)ranges {
-    return [self id_textRangeForCharacterRanges:ranges];
-}
 
-- (nullable UITextPosition *)positionWithOffset:(NSInteger)offset
-                                        affinity:(UITextStorageDirection)affinity {
-    return [self id_positionWithOffset:offset affinity:affinity];
-}
 
-- (NSRange)rangeOfCharacterClusterAtIndex:(NSUInteger)index type:(NSInteger)type {
-    return [self id_rangeOfCharacterClusterAtIndex:index type:type];
-}
 
 - (nullable NSAttributedString *)attributedTextInRange:(UITextRange *)range {
     return [self id_attributedTextInRange:(TGRichTextInputDecRange *)range];
@@ -858,58 +849,14 @@ static NSInteger TGSnapToRenderableOffset(
     return [self id_textContainers];
 }
 
-- (nullable NSTextContainer *)firstTextContainer {
-    return [self id_firstTextContainer];
-}
 
-- (nullable NSTextContainer *)textContainerForPosition:(UITextPosition *)position {
-    return [self id_textContainerForPosition:(TGRichTextInputDecPosition *)position];
-}
 
-- (NSWritingDirection)baseWritingDirectionAtPosition:(UITextPosition *)position {
-    return [self id_baseWritingDirectionAtPosition:(TGRichTextInputDecPosition *)position];
-}
 
-- (CGRect)boundingRectForCharacterRange:(NSRange)range {
-    return [self id_boundingRectForCharacterRange:range];
-}
 
-- (NSArray<TGRichTextInputDecSelectionRect *> *)selectionRectsForRange:(UITextRange *)range
-                                                                fromView:(nullable UIView *)fromView
-                                                  forContainerPassingTest:
-    (nullable BOOL (^)(NSTextContainer *container))test {
-    return [self id_selectionRectsForRange:(TGRichTextInputDecRange *)range
-                                    fromView:fromView
-                      forContainerPassingTest:test];
-}
 
-- (void)requestTextGeometryAtPosition:(UITextPosition *)position
-                     typingAttributes:(nullable NSDictionary<NSAttributedStringKey, id> *)attributes
-                          resultBlock:(void (^)(CGRect rect, NSWritingDirection writingDirection))resultBlock {
-    [self id_requestTextGeometryAtPosition:(TGRichTextInputDecPosition *)position
-                          typingAttributes:attributes
-                               resultBlock:resultBlock];
-}
 
-- (CGRect)insertionRectForPosition:(UITextPosition *)position
-                   typingAttributes:(nullable NSDictionary<NSAttributedStringKey, id> *)attributes
-              placeholderAttachment:(nullable id)attachment
-                      textContainer:(NSTextContainer * _Nullable * _Nullable)textContainer {
-    return [self id_insertionRectForPosition:position
-                             typingAttributes:attributes
-                        placeholderAttachment:attachment
-                                textContainer:textContainer];
-}
 
-- (nullable UITextPosition *)cursorPositionAtPoint:(CGPoint)point
-                                        inContainer:(nullable NSTextContainer *)container {
-    return [self id_cursorPositionAtPoint:point inContainer:container];
-}
 
-- (nullable UITextPosition *)nearestPositionAtPoint:(CGPoint)point
-                                         inContainer:(nullable NSTextContainer *)container {
-    return [self id_nearestPositionAtPoint:point inContainer:container];
-}
 
 // TASK C14 FIX — rows 38/39's argument type was `(NSRange)range`, but the manifest's own
 // `argumentTypes` for BOTH rows is `@` (an object — `UITextRange *`), not `{_NSRange=QQ}` (a raw
@@ -956,7 +903,7 @@ static NSInteger TGSnapToRenderableOffset(
 /// DIVERGENCES.md entry 14). `extent` is UNUSED by `id_visualSelectionRangeForExtent:...`'s body
 /// (`(void)extent;`), so accepting it as `id` and best-effort-unboxing changes NO observable
 /// behavior — the value was never read either way.
-- (nullable UITextRange *)_visualSelectionRangeForExtent:(id)extent
+- (nullable UITextRange *)tgpn__visualSelectionRangeForExtent:(id)extent
                                                   forPoint:(CGPoint)point
                                               fromPosition:(UITextPosition *)position
                                                 inDirection:(UITextLayoutDirection)direction {
@@ -977,35 +924,12 @@ static NSInteger TGSnapToRenderableOffset(
 // `key`/`attributes`/`keys` arguments arrive as plain `id`/`NSDictionary *`/`NSArray *` — the
 // manifest's own `@encode` column carries no more information than that.
 
-- (nullable NSAttributedString *)annotatedSubstringForRange:(UITextRange *)range {
-    return [self id_annotatedSubstringForRange:(TGRichTextInputDecRange *)range];
-}
 
-- (void)addAnnotationAttribute:(id)key value:(id)value forRange:(UITextRange *)range {
-    [self id_addAnnotationAttribute:key value:value forRange:(TGRichTextInputDecRange *)range];
-}
 
-- (nullable id)annotationAttribute:(id)key atPosition:(UITextPosition *)position {
-    return [self id_annotationAttribute:key atPosition:(TGRichTextInputDecPosition *)position];
-}
 
-- (void)removeAnnotationAttribute:(id)key forRange:(UITextRange *)range {
-    [self id_removeAnnotationAttribute:key forRange:(TGRichTextInputDecRange *)range];
-}
 
-- (void)addRenderingAttributes:(NSDictionary<NSAttributedStringKey, id> *)attributes
-                       forRange:(UITextRange *)range {
-    [self id_addRenderingAttributes:attributes forRange:(TGRichTextInputDecRange *)range];
-}
 
-- (void)removeRenderingAttributes:(NSArray<NSAttributedStringKey> *)keys
-                          forRange:(UITextRange *)range {
-    [self id_removeRenderingAttributes:keys forRange:(TGRichTextInputDecRange *)range];
-}
 
-- (void)_invalidateTemporaryAttributesInRange:(UITextRange *)range {
-    [self id_invalidateTemporaryAttributesInRange:(TGRichTextInputDecRange *)range];
-}
 
 #pragma mark - id_ implementations (Family 2, Task C5: geometry)
 

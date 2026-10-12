@@ -28,18 +28,18 @@ FOUNDATION_EXPORT IDUIKitRuntimeCapabilityContract *
 - (instancetype)init NS_UNAVAILABLE;
 
 - (void)setSelectionActive:(BOOL)active visible:(BOOL)visible;
-- (void)selectionChanged;
-- (void)setNeedsSelectionDisplayUpdate;
+- (void)id_selectionChanged;
+- (void)id_setNeedsSelectionDisplayUpdate;
 - (void)setGestureRecognizersEnabled:(BOOL)enabled;
 - (void)clearGestureRecognizersForced:(BOOL)forced;
 - (void)beginFloatingCursorAtPoint:(CGPoint)point;
 - (void)updateFloatingCursorAtPoint:(CGPoint)point
                            animated:(BOOL)animated;
 - (void)endFloatingCursor;
-- (void)resignedFirstResponder;
-- (void)selectWord;
+- (void)id_resignedFirstResponder;
+- (void)id_selectWord;
 - (void)selectAll:(nullable id)sender;
-- (void)autoscrollWillNotStart;
+- (void)id_autoscrollWillNotStart;
 /// Tells the assistant an autoscroll session has ticked, which is what the stock session's timer
 /// does on every tick, whether or not it then scrolls anything (the assistant's `autoscrolled` bit).
 /// The text interaction reads that bit when a loupe ends: while it is clear, a loupe that began within

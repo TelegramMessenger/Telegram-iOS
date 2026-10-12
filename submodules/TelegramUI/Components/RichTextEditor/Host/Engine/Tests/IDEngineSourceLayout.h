@@ -26,6 +26,16 @@ NSString *IDEngineSourceRoot(void);
 /// `TextView/Bad.m` while building temporary fixture trees; those must not be redirected anywhere.
 NSString *IDEngineSourceFile(NSString *upstreamRelativePath);
 
+/// The engine spells a private UIKit name only through its encoded entry in the generated
+/// `TGPrivateRuntimeNames.h` (`TGPN_<name>()`), and compiles a callback UIKit sends under a private
+/// name as a neutral `tgpn_` method. This maps each entry's function name (`TGPN_…`) to the name
+/// it decodes to, read from the header itself, so a source scanner can recognise both spellings.
+NSDictionary<NSString *, NSString *> *IDPrivateRuntimeNamesByFunction(void);
+
+/// The neutral selector a private-named callback is compiled under: its first keyword prefixed with
+/// `tgpn_` (`characterRangeForTextRange:` -> `tgpn_characterRangeForTextRange:`).
+NSString *IDNeutralSelectorName(NSString *privateSelectorName);
+
 /// YES when `path` names an upstream RUN RECORD — an `.xcresult` bundle written by one of upstream's
 /// own test runs — rather than source this repo owns.
 ///
