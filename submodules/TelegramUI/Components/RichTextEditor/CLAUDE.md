@@ -5636,7 +5636,11 @@ So on legacy a long press always leaves the caret at the finger.
   stops short of them; a copy that stopped there carried an empty author, so Cut + Paste of a quote's
   body lost the author (`HarnessQuoteAuthorCutMoveTests`). Core's `extractFragment` carries a quote's
   or pull quote's COVERED author slice (the author IS on the editor's axis), and `blockInlineRuns` keeps
-  it as a line of its own when a quote fragment is degraded to runs. A range covering a code block's
+  it as a line of its own when a quote fragment is degraded to runs. A range covering ALL of a block
+  quote's children's primary text (or all of a pull quote's body) carries the WHOLE author, and
+  `replacingRange`'s complement then keeps none of it: for a block quote the complement used to keep
+  the author as a body paragraph, so an AI edit answered unchanged gave `[quote … by ""] [p "Auth"]`
+  (2026-10-12, `DocumentSecondaryLineReplaceTests`). A range covering a code block's
   language but none of its text copies the language slice as text; a move carrying a code block WITH a
   language into a runs-only destination is refused (the language has no inline form).
 - **An endpoint on a unit's EDGE is the unit block's edge on the global axis**
