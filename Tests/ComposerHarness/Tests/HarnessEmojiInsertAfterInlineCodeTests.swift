@@ -47,6 +47,44 @@ final class HarnessEmojiInsertAfterInlineCodeTests: XCTestCase {
                        "Code and CustomEmoji overlap: \(entities)")
     }
 
+    /// **A pin, not a regression.** The same question for a CODE BLOCK, the other half of
+    /// `Pre`/`Code`: the insert inherits the block at the caret, and the review of the fix wave
+    /// (2026-10-12) predicted a `CustomEmoji` sent inside a `Pre`. It does not happen: the returned
+    /// `ChatTextInputState` stores a `ChatInputContent`, whose code block holds plain runs, so the emoji
+    /// arrives as its alt text and the block stays whole — the engine editor's rule for a code body
+    /// (`plainCodeRuns`) reached by another route. Kept so a change to either half is seen.
+    func testACustomEmojiInsideACodeBlockGoesInAsItsTextAndKeepsTheBlockWhole() {
+        let block = ChatTextInputTextQuoteAttribute(kind: .code(language: "swift"), isCollapsed: false)
+        let code = NSAttributedString(string: "let x", attributes: [ChatTextInputAttributes.block: block])
+        let state = ChatTextInputState(inputText: code, selectionRange: 3 ..< 3)
+        let result = chatTextInputStateInsertingText(state, text: customEmoji()).inputText
+
+        XCTAssertEqual(result.string, "let😀 x")
+        XCTAssertNil(result.attributes(at: 3, effectiveRange: nil)[ChatTextInputAttributes.customEmoji],
+                     "the model's code block held a custom emoji")
+        var blockRanges: [NSRange] = []
+        result.enumerateAttribute(ChatTextInputAttributes.block, in: NSRange(location: 0, length: result.length), options: []) { value, range, _ in
+            if value != nil { blockRanges.append(range) }
+        }
+        XCTAssertEqual(blockRanges, [NSRange(location: 0, length: result.length)], "the code block did not stay one block")
+
+        let entities = generateChatInputTextEntities(result)
+        XCTAssertFalse(entities.contains { if case .CustomEmoji = $0.type { return true } else { return false } },
+                       "a custom emoji was sent inside a Pre: \(entities)")
+        XCTAssertTrue(entities.contains { if case .Pre = $0.type { return true } else { return false } }, "precondition: a Pre is sent")
+    }
+
+    /// Control: inside a QUOTE block a custom emoji stays a custom emoji and continues the quote.
+    func testACustomEmojiInsideAQuoteStaysACustomEmojiInTheQuote() {
+        let block = ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false)
+        let quote = NSAttributedString(string: "quoted", attributes: [ChatTextInputAttributes.block: block])
+        let state = ChatTextInputState(inputText: quote, selectionRange: 3 ..< 3)
+        let result = chatTextInputStateInsertingText(state, text: customEmoji()).inputText
+        let inserted = result.attributes(at: 3, effectiveRange: nil)
+        XCTAssertNotNil(inserted[ChatTextInputAttributes.customEmoji])
+        XCTAssertNotNil(inserted[ChatTextInputAttributes.block])
+    }
+
     /// Control: plain text typed after inline code still continues it — only the atom is kept out.
     func testPlainTextAfterInlineCodeStaysCode() {
         let code = NSAttributedString(string: "let", attributes: [ChatTextInputAttributes.monospace: true as NSNumber])
