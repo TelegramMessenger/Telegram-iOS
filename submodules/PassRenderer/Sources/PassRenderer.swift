@@ -4,7 +4,7 @@ import ImageIO
 
 public let passRenderDesignSize = CGSize(width: 320.0, height: 252.0)
 
-public let passRenderLayoutVersion: Int = 3
+public let passRenderLayoutVersion: Int = 4
 
 public struct PassRenderOptions {
     public var language: String

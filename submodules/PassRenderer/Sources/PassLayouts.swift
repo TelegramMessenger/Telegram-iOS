@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import CoreText
 import Accelerate
 
 private let margin: CGFloat = 12.0
@@ -87,7 +88,14 @@ private func drawBoardingPass(_ input: PassDrawingInput, in context: CGContext) 
     }
     if let glyph = input.transitGlyph {
         let size = passAspectFit(CGSize(width: glyph.width, height: glyph.height), in: CGSize(width: glyphSize, height: glyphSize))
-        passDrawTinted(glyph, color: pass.labelColor.cgColor, in: context, rect: CGRect(x: floor((input.size.width - size.width) / 2.0), y: primaryTop + 14.0 + floor((50.0 - size.height) / 2.0), width: size.width, height: size.height))
+        var valueTop = primaryTop
+        if input.primary.prefix(2).contains(where: { !($0.label ?? "").isEmpty }) {
+            let labelFont = passFont(size: primaryLabelSize, weight: 0.3)
+            valueTop += ceil(CTFontGetAscent(labelFont) + CTFontGetDescent(labelFont)) + 1.0
+        }
+        let valueFont = passFont(size: primaryValueSize, weight: primaryValueWeight)
+        let valueCenter = valueTop + CTFontGetAscent(valueFont) - CTFontGetCapHeight(valueFont) / 2.0
+        passDrawTinted(glyph, color: pass.labelColor.cgColor, in: context, rect: CGRect(x: floor((input.size.width - size.width) / 2.0), y: floor(valueCenter - size.height / 2.0), width: size.width, height: size.height))
     }
     passDrawFieldRow(input.auxiliary, in: context, x: margin, top: 136.0, width: width, style: smallRow, valueColor: pass.foregroundColor.cgColor, labelColor: pass.labelColor.cgColor)
     passDrawFieldRow(input.secondary, in: context, x: margin, top: 184.0, width: width, style: smallRow, valueColor: pass.foregroundColor.cgColor, labelColor: pass.labelColor.cgColor)

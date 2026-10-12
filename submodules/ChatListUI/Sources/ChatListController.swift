@@ -6353,8 +6353,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })))
             
             if strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter != nil {
+                items.append(.separator)
+                
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_FolderAllChats, icon: { theme in
-                    return nil
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Chats"), color: theme.contextMenu.primaryColor)
                 }, action: { c, f in
                     f(.dismissWithoutContent)
                     guard let strongSelf = self else {
@@ -6365,9 +6367,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             if !presetList.isEmpty {
-                if presetList.count > 1 {
+                if strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter == nil {
                     items.append(.separator)
                 }
+                
                 var filterCount = 0
                 for case let .filter(id, title, _, data) in presetList {
                     let filterType = chatListFilterType(data)
