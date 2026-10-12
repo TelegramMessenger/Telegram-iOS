@@ -320,6 +320,12 @@ public extension WalletContext {
         }
     }
 
+    func walletBalance(address: String) -> Signal<Int64, WalletError> {
+        self.signal(name: "loading_address_balance") { impl, _ in
+            try await impl.walletBalance(address: address)
+        }
+    }
+
     func previousWallets(refreshBalances: Bool = false) -> Signal<[PreviousWallet], WalletError> {
         let cached = self.state
         |> filter { state in
@@ -772,6 +778,10 @@ extension WalletContextImpl {
                 throw error
             }
         }
+    }
+
+    func walletBalance(address: String) async throws -> Int64 {
+        try await self.runtime.walletBalance(address: address)
     }
 
     func previousWallets() async throws -> [WalletContext.PreviousWallet] {

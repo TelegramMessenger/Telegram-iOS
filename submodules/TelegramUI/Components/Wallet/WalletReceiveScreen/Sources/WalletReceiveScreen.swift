@@ -959,6 +959,7 @@ private final class WalletReceiveSheetContent: Component {
 
     let context: AccountContext
     let address: String
+    let isOwnWallet: Bool
     let containerHeight: CGFloat
     let isPurchaseInProgress: Bool
     let isOpeningPurchase: Bool
@@ -969,6 +970,7 @@ private final class WalletReceiveSheetContent: Component {
     init(
         context: AccountContext,
         address: String,
+        isOwnWallet: Bool,
         containerHeight: CGFloat,
         isPurchaseInProgress: Bool,
         isOpeningPurchase: Bool,
@@ -978,6 +980,7 @@ private final class WalletReceiveSheetContent: Component {
     ) {
         self.context = context
         self.address = address
+        self.isOwnWallet = isOwnWallet
         self.containerHeight = containerHeight
         self.isPurchaseInProgress = isPurchaseInProgress
         self.isOpeningPurchase = isOpeningPurchase
@@ -988,6 +991,9 @@ private final class WalletReceiveSheetContent: Component {
 
     static func ==(lhs: WalletReceiveSheetContent, rhs: WalletReceiveSheetContent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.isOwnWallet != rhs.isOwnWallet {
             return false
         }
         if lhs.address != rhs.address {
@@ -1260,7 +1266,7 @@ private final class WalletReceiveSheetContent: Component {
                 copyButtonContent = AnyComponentWithIdentity(
                     id: "showQr",
                     component: AnyComponent(Text(
-                        text: environment.strings.Wallet_Receive_ShowQR,
+                        text: component.isOwnWallet ? environment.strings.Wallet_Receive_ShowQR : environment.strings.Wallet_Receive_PeerShowQR,
                         font: Font.semibold(14.0),
                         color: UIColor(rgb: 0x087cff)
                     ))
@@ -1282,7 +1288,7 @@ private final class WalletReceiveSheetContent: Component {
                         AnyComponentWithIdentity(
                             id: "title",
                             component: AnyComponent(Text(
-                                text: environment.strings.Wallet_Receive_CopyAddress,
+                                text: component.isOwnWallet ? environment.strings.Wallet_Receive_CopyAddress : environment.strings.Wallet_CopyAddress,
                                 font: Font.semibold(14.0),
                                 color: UIColor(rgb: 0x087cff)
                             ))
@@ -1319,7 +1325,7 @@ private final class WalletReceiveSheetContent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: environment.strings.Wallet_Receive_Text,
+                        string: component.isOwnWallet ? environment.strings.Wallet_Receive_Text : environment.strings.Wallet_Receive_PeerText,
                         font: Font.regular(15.0),
                         textColor: .white
                     )),
@@ -1335,47 +1341,50 @@ private final class WalletReceiveSheetContent: Component {
             )
             let explanationTop = ringFrame.maxY + (cardWidth < 230.0 ? 12.0 : 20.0)
 
-            let buyContent = HStack<Empty>([
-                AnyComponentWithIdentity(
-                    id: "icon",
-                    component: AnyComponent(BundleIconComponent(name: "Wallet/ButtonBuy", tintColor: UIColor(rgb: 0x087cff)))
-                ),
-                AnyComponentWithIdentity(
-                    id: "title",
-                    component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(
-                        string: availableWidth < 390.0 ? environment.strings.Wallet_Receive_BuyShort : environment.strings.Wallet_Receive_Buy,
-                        font: Font.semibold(17.0),
-                        textColor: UIColor(rgb: 0x087cff)
-                    ))))
-                )
-            ], spacing: 10.0)
-            // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
-            let buyButtonSideInsets = environment.bottomEdgeSideInsets()
-            let buyButtonHorizontalInset: CGFloat = 30.0 + max(buyButtonSideInsets.left, buyButtonSideInsets.right)
-            let buyButtonSize = self.buyButton.update(
-                transition: .immediate,
-                component: AnyComponent(ButtonComponent(
-                    background: ButtonComponent.Background(
-                        style: .legacy,
-                        color: .white,
-                        foreground: UIColor(rgb: 0x087cff),
-                        pressedColor: UIColor(white: 0.92, alpha: 1.0),
-                        cornerRadius: 26.0
+            var buyButtonSize: CGSize = .zero
+            if component.isOwnWallet {
+                let buyContent = HStack<Empty>([
+                    AnyComponentWithIdentity(
+                        id: "icon",
+                        component: AnyComponent(BundleIconComponent(name: "Wallet/ButtonBuy", tintColor: UIColor(rgb: 0x087cff)))
                     ),
-                    content: AnyComponentWithIdentity(id: "buy", component: AnyComponent(buyContent)),
-                    isEnabled: !component.isPurchaseInProgress,
-                    tintWhenDisabled: false,
-                    displaysProgress: component.isOpeningPurchase,
-                    action: { [weak self] in
-                        self?.component?.buy()
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: max(1.0, availableWidth - buyButtonHorizontalInset * 2.0), height: 52.0)
-            )
+                    AnyComponentWithIdentity(
+                        id: "title",
+                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(
+                            string: availableWidth < 390.0 ? environment.strings.Wallet_Receive_BuyShort : environment.strings.Wallet_Receive_Buy,
+                            font: Font.semibold(17.0),
+                            textColor: UIColor(rgb: 0x087cff)
+                        ))))
+                    )
+                ], spacing: 10.0)
+                // The bottom button spans iPhone Duo's side strip; it keeps clear only of a corner block at the bottom.
+                let buyButtonSideInsets = environment.bottomEdgeSideInsets()
+                let buyButtonHorizontalInset: CGFloat = 30.0 + max(buyButtonSideInsets.left, buyButtonSideInsets.right)
+                buyButtonSize = self.buyButton.update(
+                    transition: .immediate,
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            style: .legacy,
+                            color: .white,
+                            foreground: UIColor(rgb: 0x087cff),
+                            pressedColor: UIColor(white: 0.92, alpha: 1.0),
+                            cornerRadius: 26.0
+                        ),
+                        content: AnyComponentWithIdentity(id: "buy", component: AnyComponent(buyContent)),
+                        isEnabled: !component.isPurchaseInProgress,
+                        tintWhenDisabled: false,
+                        displaysProgress: component.isOpeningPurchase,
+                        action: { [weak self] in
+                            self?.component?.buy()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: max(1.0, availableWidth - buyButtonHorizontalInset * 2.0), height: 52.0)
+                )
+            }
             let buyButtonTop = explanationTop + explanationSize.height + (cardWidth < 230.0 ? 18.0 : 30.0)
 
-            let contentHeight = buyButtonTop + buyButtonSize.height + max(22.0, environment.safeInsets.bottom + 12.0)
+            let contentHeight = (component.isOwnWallet ? buyButtonTop + buyButtonSize.height : explanationTop + explanationSize.height) + max(22.0, environment.safeInsets.bottom + 12.0)
             let backgroundSize = self.background.update(
                 transition: transition,
                 component: AnyComponent(RoundedRectangle(
@@ -1591,7 +1600,9 @@ private final class WalletReceiveSheetContent: Component {
                     )
                 )
             }
-            if let buyButtonView = self.buyButton.view {
+            if !component.isOwnWallet {
+                self.buyButton.view?.removeFromSuperview()
+            } else if let buyButtonView = self.buyButton.view {
                 if buyButtonView.superview !== self {
                     buyButtonView.removeFromSuperview()
                     self.addSubview(buyButtonView)
@@ -1652,14 +1663,19 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
 
     let context: AccountContext
     let address: String
+    let isOwnWallet: Bool
 
-    init(context: AccountContext, address: String) {
+    init(context: AccountContext, address: String, isOwnWallet: Bool) {
         self.context = context
         self.address = address
+        self.isOwnWallet = isOwnWallet
     }
 
     static func ==(lhs: WalletReceiveSheetComponent, rhs: WalletReceiveSheetComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.isOwnWallet != rhs.isOwnWallet {
             return false
         }
         if lhs.address != rhs.address {
@@ -1682,10 +1698,15 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
             return self.isLoadingProviders || self.isOpeningPurchase
         }
 
-        init(context: AccountContext) {
+        init(context: AccountContext, isOwnWallet: Bool) {
             self.context = context
 
             super.init()
+
+            guard isOwnWallet else {
+                self.isLoadingProviders = false
+                return
+            }
 
             self.onrampProvidersDisposable.set((context.engine.payments.getOnrampProviders(cryptoCurrency: "gram")
             |> deliverOnMainQueue).start(next: { [weak self] providers in
@@ -1829,7 +1850,7 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
     }
 
     func makeState() -> State {
-        return State(context: self.context)
+        return State(context: self.context, isOwnWallet: self.isOwnWallet)
     }
 
     static var body: Body {
@@ -1843,18 +1864,21 @@ private final class WalletReceiveSheetComponent: CombinedComponent {
             let componentState = context.state
 
             let address = context.component.address
+            let isOwnWallet = context.component.isOwnWallet
 
             let sheet = sheet.update(
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent(WalletReceiveSheetContent(
                         context: context.component.context,
                         address: address,
+                        isOwnWallet: isOwnWallet,
                         containerHeight: context.availableSize.height,
                         isPurchaseInProgress: componentState.isPurchaseInProgress,
                         isOpeningPurchase: componentState.isOpeningPurchase,
                         animateOut: animateOut,
                         getController: controller,
                         buy: { [weak componentState] in
+                            guard isOwnWallet else { return }
                             componentState?.createOnrampSession(
                                 address: address,
                                 getController: controller
@@ -1951,13 +1975,13 @@ public final class WalletReceiveScreen: ViewControllerComponentContainer {
     private var appeared: (() -> Void)?
     private var animatedDismissCompletion: (() -> Void)?
 
-    public init(context: AccountContext, address: String, appeared: (() -> Void)? = nil) {
+    public init(context: AccountContext, address: String, isOwnWallet: Bool = true, appeared: (() -> Void)? = nil) {
         self.context = context
         self.appeared = appeared
 
         super.init(
             context: context,
-            component: WalletReceiveSheetComponent(context: context, address: address),
+            component: WalletReceiveSheetComponent(context: context, address: address, isOwnWallet: isOwnWallet),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
             theme: .default

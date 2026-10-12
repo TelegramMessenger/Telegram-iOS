@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
+import WalletContext
+import PeerWalletScreen
+import WalletSendScreen
 import TelegramPresentationData
 import TelegramUIPreferences
 import AvatarNode
@@ -291,6 +294,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     let sourceMessageId: MessageId?
     var canDeleteReaction = false
     var dataDisposable: Disposable?
+    private let peerGramBalanceDisposable = MetaDisposable()
     
     let activeActionDisposable = MetaDisposable()
     let logoutConfirmationDisposable = MetaDisposable()
@@ -1466,6 +1470,26 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.headerNode.displaySavedMusic = { [weak self] in
             self?.displaySavedMusic()
         }
+
+        self.headerNode.openWallet = { [weak self] in
+            guard let self, let controller = self.controller, let peer = self.data?.peer else { return }
+            if peer.id == self.context.account.peerId {
+                self.openSettings(section: .wallet)
+            } else {
+                let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, balance: (self.data?.cachedData as? CachedUserData)?.gramBalance, sendMoney: { [weak self] peerWalletScreen in
+                    guard let self, let controller = self.controller, let walletContext = self.context.walletContext else { return }
+                    let sendController = WalletSendScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, useDefaultAccent: false, peer: peer, walletContext: walletContext, allowOpenRecipientChat: false, completed: { [weak self] in
+                        guard let self, let navigationController = self.controller?.navigationController as? NavigationController else { return }
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .default, useExisting: true, completion: { chatController in
+                            chatController.scrollToEndOfHistory()
+                        }))
+                    })
+                    sendController.navigationPresentation = .modal
+                    peerWalletScreen.openSendMoney(sendController)
+                })
+                controller.push(screen)
+            }
+        }
         
         self.headerNode.cancelUpload = { [weak self] in
             guard let strongSelf = self else {
@@ -2436,6 +2460,34 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             reactionSourceMessage = .single(nil)
         }
 
+        if !isSettings, peerId != context.account.peerId, peerId.namespace == Namespaces.Peer.CloudUser,
+           let walletContext = context.walletContext {
+            self.peerGramBalanceDisposable.set((context.engine.wallet.getUserAddresses(userIds: [peerId], force: false)
+            |> `catch` { _ -> Signal<[WalletUserAddress], NoError> in
+                return .complete()
+            }
+            |> mapToSignal { addresses -> Signal<Int64?, NoError> in
+                guard let address = addresses.first(where: { $0.userId == peerId })?.address, !address.isEmpty else {
+                    return .single(nil)
+                }
+                return walletContext.walletBalance(address: address)
+                |> map { balance -> Int64? in
+                    return balance
+                }
+                |> `catch` { _ -> Signal<Int64?, NoError> in
+                    return .complete()
+                }
+            }
+            |> mapToSignal { balance -> Signal<Void, NoError> in
+                return context.account.postbox.transaction { transaction -> Void in
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        let current = current as? CachedUserData ?? CachedUserData()
+                        return current.withUpdatedGramBalance(balance)
+                    })
+                }
+            }).startStrict())
+        }
+
         self.dataDisposable = combineLatest(
             queue: Queue.mainQueue(),
             screenData,
@@ -2591,6 +2643,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     deinit {
         self.dataDisposable?.dispose()
+        self.peerGramBalanceDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
         self.activeActionDisposable.dispose()
         self.logoutConfirmationDisposable.dispose()

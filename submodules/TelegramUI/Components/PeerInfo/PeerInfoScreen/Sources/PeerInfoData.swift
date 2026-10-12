@@ -442,6 +442,7 @@ final class PeerInfoScreenData {
     let personalChannel: PeerInfoPersonalChannelData?
     let starsState: StarsContext.State?
     let tonState: StarsContext.State?
+    let walletBalance: Int64?
     let starsRevenueStatsState: StarsRevenueStats?
     let starsRevenueStatsContext: StarsRevenueStatsContext?
     let revenueStatsState: StarsRevenueStats?
@@ -516,7 +517,8 @@ final class PeerInfoScreenData {
         savedMusicState: ProfileSavedMusicContext.State?,
         managedByBot: EnginePeer?,
         businessConnectedBot: EnginePeer?,
-        sharedMediaPeer: EnginePeer? = nil
+        sharedMediaPeer: EnginePeer? = nil,
+        walletBalance: Int64? = nil
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -552,6 +554,7 @@ final class PeerInfoScreenData {
         self.personalChannel = personalChannel
         self.starsState = starsState
         self.tonState = tonState
+        self.walletBalance = walletBalance
         self.starsRevenueStatsState = starsRevenueStatsState
         self.starsRevenueStatsContext = starsRevenueStatsContext
         self.revenueStatsState = revenueStatsState
@@ -1547,6 +1550,21 @@ func peerInfoScreenData(
                 sharedMediaPeer = .single(nil)
             }
             
+            let walletBalance: Signal<Int64?, NoError>
+            if isMyProfile, peerId == context.account.peerId, let walletContext = context.walletContext {
+                walletBalance = walletContext.state
+                |> map { state -> Int64? in
+                    guard case .wallet = state.phase,
+                          WalletConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isAvailable else {
+                        return nil
+                    }
+                    return state.balance.currentValue
+                }
+                |> distinctUntilChanged
+            } else {
+                walletBalance = .single(nil)
+            }
+
             let forcedLinkedCommunityId = Atomic<PeerId?>(value: nil)
             
             return combineLatest(
@@ -1571,9 +1589,10 @@ func peerInfoScreenData(
                 premiumGiftOptions,
                 webAppPermissions,
                 savedMusicContext.state,
-                businessConnectedBot
+                combineLatest(businessConnectedBot, walletBalance)
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions, savedMusicState, businessConnectedBot -> Signal<PeerInfoScreenData, NoError> in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions, savedMusicState, businessConnectedBotAndWalletBalance -> Signal<PeerInfoScreenData, NoError> in
+                let (businessConnectedBot, walletBalance) = businessConnectedBotAndWalletBalance
                 var availablePanes = availablePanes
                 if isMyProfile {
                     availablePanes?.insert(.stories, at: 0)
@@ -1757,7 +1776,8 @@ func peerInfoScreenData(
                         savedMusicState: savedMusicState,
                         managedByBot: managedByBot,
                         businessConnectedBot: businessConnectedBot,
-                        sharedMediaPeer: sharedMediaPeer
+                        sharedMediaPeer: sharedMediaPeer,
+                        walletBalance: walletBalance
                     )
                 }
             }

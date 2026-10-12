@@ -16851,6 +16851,8 @@ Error: %8$@";
 "Wallet.Recipient.NoResultsText" = "There were no results for “%@”.\nTry another name or address.";
 "Wallet.Recipient.InvalidAddressText" = "This wallet address is invalid.\nCheck it or try another address.";
 "Wallet.Receive.ShowQR" = "Show my QR";
+"Wallet.Receive.PeerShowQR" = "Show QR";
+"Wallet.Receive.PeerText" = "Send GRAM to this address\nor scan this QR code.";
 "Wallet.Receive.CopyAddress" = "Copy my address";
 "Wallet.Receive.Text" = "Share your address or this\nQR code to receive GRAM.";
 "Wallet.Receive.Buy" = "Buy with cash or crypto";
