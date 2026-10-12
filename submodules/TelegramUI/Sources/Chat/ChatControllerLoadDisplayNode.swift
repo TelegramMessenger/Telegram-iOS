@@ -269,6 +269,7 @@ extension ChatControllerImpl {
         }
         
         self.chatDisplayNode.overlayTitle = contentData.overlayTitle
+        self.chatDisplayNode.overlayTitleContent = contentData.state.chatTitleContent
         
         self.chatDisplayNode.historyNode.nextChannelToRead = contentData.state.nextChannelToRead.flatMap { nextChannelToRead -> (peer: EnginePeer, threadData: (id: Int64, data: MessageHistoryThreadData)?, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation)? in
             return (
@@ -5213,18 +5214,20 @@ extension ChatControllerImpl {
                                         return true
                                 }
                             })
+                            let titleActivities = ChatTitleComponent.Activities(
+                                peerId: peerId,
+                                items: displayActivities.map { item -> ChatTitleComponent.Activities.Item in
+                                    return ChatTitleComponent.Activities.Item(
+                                        peer: item.0,
+                                        activity: item.1
+                                    )
+                                }
+                            )
                             strongSelf.chatTitleView?.updateActivities(
-                                activities: ChatTitleComponent.Activities(
-                                    peerId: peerId,
-                                    items: displayActivities.map { item -> ChatTitleComponent.Activities.Item in
-                                        return ChatTitleComponent.Activities.Item(
-                                            peer: item.0,
-                                            activity: item.1
-                                        )
-                                    }
-                                ),
+                                activities: titleActivities,
                                 transition: .spring(duration: 0.4)
                             )
+                            strongSelf.chatDisplayNode.overlayTitleActivities = titleActivities
                             
                             strongSelf.peerInputActivitiesPromise.set(.single(activities))
                             

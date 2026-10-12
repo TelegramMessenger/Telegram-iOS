@@ -441,6 +441,10 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
         if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
             var convertedUrl: String?
             let host = parsedUrl.host?.lowercased() ?? ""
+            if host == "debug", parsedUrl.path == "/crash_reports" {
+                handleResolvedUrl(.settings(.path("debug/crash_reports")))
+                return
+            }
             if host == "sendgrams" {
                 guard parsedUrl.path.isEmpty || parsedUrl.path == "/",
                       let components = URLComponents(url: parsedUrl, resolvingAgainstBaseURL: false) else {
