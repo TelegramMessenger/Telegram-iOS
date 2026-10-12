@@ -409,7 +409,11 @@ extension DocumentCanvasView {
         scheduleSyntaxHighlightPass()   // debounced; a burst of keystrokes fires one pass
         if !suppressHostChangeNotification {
             refreshSelectionUI()   // step 1 of a two-step paste keeps the caret at its prior spot (no caret blink to the raw-text end); step 2 moves it to the final position
+            // The selection report on the next line asks the host for the caret reveal, so the
+            // content-size report must not ask as well (`selectionChangeFollowsContentSizeChange`).
+            selectionChangeFollowsContentSizeChange = true
             notifyContentSizeChanged()
+            selectionChangeFollowsContentSizeChange = false
             onSelectionChange?()   // an edit moves the caret too — ask the host to scroll it into view (like the arrow-key setter)
         }
     }

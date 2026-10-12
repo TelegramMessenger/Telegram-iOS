@@ -2191,6 +2191,11 @@ class DocumentCanvasView: UIView {
     /// layout. The editor convention: a view never `setNeedsLayout()`s itself for a content change — it
     /// notifies its parent, which drives layout explicitly. `intrinsicContentSize` is a pure computed
     /// property, so there is nothing to invalidate; this only fires the callback.
+    /// True only while an edit's epilogue reports its content-size change with its selection change
+    /// about to follow. The façade then lets the selection report ask the host for the caret reveal
+    /// rather than asking twice (`CaretRevealLayoutPassTests`): each ask is a full host layout pass.
+    var selectionChangeFollowsContentSizeChange = false
+
     final func notifyContentSizeChanged() {
         if suppressHostChangeNotification { return }   // step 1 of a two-step paste stays off-screen (no flash)
         onContentSizeChange?()

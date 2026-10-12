@@ -374,9 +374,14 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         // line, a cell grows, undo, …) must re-trigger our layout — otherwise it only updates on the next
         // layout pass (e.g. a rotation).
         canvas.onContentSizeChange = { [weak self] in
-            self?.onChange?()                 // pure relay; the host re-lays-out via update()
-            self?.isCaretRevealOwed = true    // …and that pass is where the caret is revealed
-            self?.onCaretRevealNeeded?()
+            guard let self else { return }
+            self.onChange?()                 // pure relay; the host re-lays-out via update()
+            self.isCaretRevealOwed = true    // …and that pass is where the caret is revealed
+            // An edit reports its selection change right after this, and that report asks for the
+            // reveal; asking here too cost every keystroke a second host reveal pass.
+            if !self.canvas.selectionChangeFollowsContentSizeChange {
+                self.onCaretRevealNeeded?()
+            }
         }
         // The OS moves the caret via arrows through the canvas's selectedTextRange setter, which can land
         // it off-screen (e.g. arrowing up out of a tall image to the block above). Scroll it back into view.
@@ -480,7 +485,7 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         scrollView.verticalScrollIndicatorInsets = scrollIndicatorInsets ?? insets
         canvas.contentMargins = contentMargins
         let contentHeight = performLayout(size: size)
-        if case let .ifNeeded(animation) = caretReveal { revealCaret(animation) }
+        if case let .ifNeeded(animation) = caretReveal { revealCaret(animation, layoutIsCurrent: true) }
         // After `performLayout`, so the new content size is in place (an offset write can be clamped by it).
         // Gated on the top inset actually CHANGING, so an update driven by anything else — a keyboard-driven
         // bottom inset, a re-layout after an edit — never re-seats a scroll the user owns.
@@ -501,6 +506,7 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// (rotation, etc.) never clobbers the parent-applied inset; only `update(size:insets:)` changes them.
     @discardableResult
     private func performLayout(size: CGSize) -> CGFloat {
+        performLayoutCountForTesting += 1
         scrollView.frame = CGRect(origin: .zero, size: size)
         canvas.setParagraphsWidthIfNeeded(size.width)
         let contentHeight = max(canvas.intrinsicContentSize.height, self.minimumContentHeight)
@@ -573,6 +579,8 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     }
     /// Test accessor: the underlying canvas (to set up selection in unit tests).
     var canvasForTesting: DocumentCanvasView { canvas }
+    /// Test seam: how many synchronous layout passes have run (`CaretRevealLayoutPassTests`).
+    var performLayoutCountForTesting = 0
 
     public func toggleBold() { canvas.toggleBold() }
     /// The chat's ⇧⌘N: removes every inline mark from the selection as one undo step (see the canvas's
@@ -967,7 +975,7 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// comment records why an animated one is dangerous — it mutates `contentOffset` mid-flight, so a
     /// rapid second arrow key computes its destination against in-flux state. The parameter exists so
     /// the two editors answer one contract, not so this one grows a motion it does not want.
-    func revealCaret(_ animation: RichTextEditorAnimation) {
+    func revealCaret(_ animation: RichTextEditorAnimation, layoutIsCurrent: Bool = false) {
         _ = animation
         guard isCaretRevealOwed else { return }
         // Cleared whatever the outcome, including when the guards below decline: the host asked, so
@@ -976,8 +984,11 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
         guard canvas.isFirstResponder else { return }
         // Lay the canvas out explicitly so `caretRect` + the scrollable extent reflect the latest edit
         // before we measure/scroll — the editor convention is parent-driven layout, so we don't rely on a
-        // pending self-scheduled pass. Idempotent for arrow nav (content unchanged → same layout).
-        performLayout(size: bounds.size)
+        // pending self-scheduled pass. Idempotent for arrow nav (content unchanged → same layout). Skipped
+        // when `update` has just laid out at this size: a second full pass measured nothing new.
+        if !layoutIsCurrent {
+            performLayout(size: bounds.size)
+        }
         var caret = canvas.caretRect(atGlobal: canvas.head)
         guard caret != .zero, !caret.isNull else { return }
         // An image-gap caret is full-image-height; its whole rect would never fit the visible band (→ always
