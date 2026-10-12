@@ -828,7 +828,10 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         if context.sharedContext.immediateExperimentalUISettings.inputDecTextBackend {
             self.richTextInputBackendPreference = .inputDecIfSupported
         }
-        if context.sharedContext.immediateExperimentalUISettings.useInputDecEngine {
+        // Below iOS 18.4 the engine editor cannot be built (`RichTextEditorChatInputNode` checks the
+        // same availability), so the flag must change nothing there — not even force the composer
+        // native, which is what setting the two flags below without the check did.
+        if context.sharedContext.immediateExperimentalUISettings.useInputDecEngine, #available(iOS 18.4, *) {
             // Rich input must be on for the composer to build a rich node at all; the engine editor
             // is a choice WITHIN that, not an alternative to it.
             self.enableRichTextInput = true
