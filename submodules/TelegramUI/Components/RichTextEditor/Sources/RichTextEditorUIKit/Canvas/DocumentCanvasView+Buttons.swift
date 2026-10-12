@@ -180,6 +180,11 @@ extension DocumentCanvasView {
     /// flow's analogue. The run collapses to a single `U+FFFC`, so the pill is an atom like an emoji.
     func makeSelectionInlineButton() {
         guard selFrom != selTo, let region = leafRegion(containingGlobal: selFrom)?.0 else { return }
+        // A code block (body or language line) holds plain text only; a pill there cannot exist.
+        switch region.ref {
+        case .code, .codeLanguage: return
+        default: break
+        }
         let label: String = {
             guard let range = selectedTextRange else { return "" }
             return text(in: range) ?? ""

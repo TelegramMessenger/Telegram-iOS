@@ -742,6 +742,12 @@ public final class RichTextEditorView: UIView, UIScrollViewDelegate {
     /// costs one. An empty label is typed as a single space, so there is a run to convert; the pill
     /// itself carries the authored (empty) label, as the engine's does.
     public func insertInlineButton(_ button: ButtonRef) {
+        // A code block holds plain text only, so the label goes in as text — `insertFormula`'s rule
+        // (`InlineButtonInCodeTests`). A pill's U+FFFC there was read back as a raw character.
+        if canvas.caretIsInCodeRegion {
+            if !button.labelText.isEmpty { canvas.insertText(button.labelText) }
+            return
+        }
         let label = button.labelText.isEmpty ? " " : button.labelText
         guard let start = canvas.selectedTextRange?.start else { return }
         canvas.insertText(label)
