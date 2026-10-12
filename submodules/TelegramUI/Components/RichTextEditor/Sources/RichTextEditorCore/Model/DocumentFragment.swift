@@ -787,6 +787,10 @@ extension Document {
         case .details(let details) where details.expanded && !details.children.isEmpty:
             return Document(blocks: details.children)
                 .carriedEmptyEndRegionStart(origin: cursor + 2 + details.titleUTF16Count + 1, nested: true)
+        case .details(let details) where !details.expanded && details.titleUTF16Count == 0:
+            // A folded details' empty title is its only text position (`extractFragment`'s
+            // `titleTouched`): a range ending there carries it, folded body and all.
+            return cursor + 2
         default:
             return nil
         }
@@ -877,9 +881,13 @@ extension Document {
             if !quote.author.isEmpty { parts.append(regeneratingRunIdentities(quote.author)) }
             return lines(parts, separator: "\n")
         case .details(let details):
+            // A body holding no text adds nothing, as in `blockPlainText`: the empty body line a copy of
+            // part of a title carries (an expanded details always has one) went into the title it was
+            // pasted back into as a space — replacing "T" in the title "Tit" with its own copy gave "T it".
             let title = regeneratingRunIdentities(details.title)
-            guard !details.children.isEmpty else { return title }
-            return lines([title] + details.children.map(blockInlineRuns), separator: "\n")
+            let body = lines(details.children.map(blockInlineRuns), separator: "\n")
+            guard body.contains(where: { !$0.text.isEmpty }) else { return title }
+            return lines([title, body], separator: "\n")
         case .table(let table):
             return lines(table.rows.map { row in
                 lines(row.cells.map { cell in lines(cell.blocks.map(blockInlineRuns), separator: " ") }, separator: " ")
@@ -1426,38 +1434,55 @@ extension Document {
                     let titleStart = cursor + 2
                     let titleEnd = titleStart + d.titleUTF16Count
                     let ta = max(lo, titleStart), tb = min(hi, titleEnd)
-                    let titleTouched = ta < tb || (d.titleUTF16Count == 0 && lo <= titleStart && hi > titleStart)
+                    // An EMPTY title is covered by the empty region's rule: the bare one for an expanded
+                    // details (its body follows), the document-end admission for a folded one, whose
+                    // title is its only text position — where Select All ends when it ends the document
+                    // (mirrored by `carriedEmptyEndRegionStart`).
+                    let titleTouched = ta < tb || (d.titleUTF16Count == 0
+                        && (d.expanded ? lo <= titleStart && hi > titleStart
+                                       : coversEmptyRegion(at: titleStart, blockEnd: cursor + size)))
                     let childrenStart = titleEnd + 1
-                    var children: [Block]
-                    if d.expanded {
-                        // The body's end is the document's when this details ends it (its close is
-                        // no text position).
-                        children = Document(blocks: d.children)
+                    // The body's end is the document's when this details ends it (its close is no text
+                    // position). Empty when the range covers none of the body.
+                    let coveredChildren: [Block] = d.expanded
+                        ? Document(blocks: d.children)
                             .extractFragment(globalFrom: lo - childrenStart, globalTo: hi - childrenStart,
                                              carryingNonTextBlocks: carryingNonTextBlocks,
                                              endsTheCopiedDocument: endsTheCopiedDocument && cursor + size == documentEnd,
                                              nested: true, languagesAsText: languagesAsText,
                                              complementOf: removedInChildren(at: childrenStart)).blocks
-                        // An expanded details always has a body line: the engine bridge mints an empty
-                        // paragraph for a childless one, so a fragment without it would put a line on
-                        // screen that the model does not have, and every position after it would be one
-                        // short (the caret after pasting `[details "T" [p ""]]` landed in its body).
-                        if children.isEmpty {
-                            children = [.paragraph(ParagraphBlock(id: .generate()))]
+                        : []
+                    // **The range carries a details only when it covers some of its title.** It used to
+                    // be enough to START at or before the title, so a range ENDING at the title's start —
+                    // covering no title text and, the body following the title, no body either — copied
+                    // `[details "" [p ""]]` out of nothing: from "fore" in `[p "before"] [details "Title"
+                    // …]` to the title's start gave `[p "fore"] [details "" [p ""]]` (before 0e12da1b82,
+                    // `[p "fore"]`), and replacing that range with its own copy added a details.
+                    if titleTouched {
+                        var children: [Block]
+                        if d.expanded {
+                            children = coveredChildren
+                            // An expanded details always has a body line: the engine bridge mints an empty
+                            // paragraph for a childless one, so a fragment without it would put a line on
+                            // screen that the model does not have, and every position after it would be one
+                            // short (the caret after pasting `[details "T" [p ""]]` landed in its body).
+                            if children.isEmpty {
+                                children = [.paragraph(ParagraphBlock(id: .generate()))]
+                            }
+                        } else {
+                            // Folded: the body travels with a WHOLLY covered title, never with a partial one.
+                            children = (lo <= titleStart && hi >= titleEnd) ? wholly(d.children) : []
                         }
-                    } else {
-                        // Folded: the body travels with a WHOLLY covered title, never with a partial one.
-                        children = (lo <= titleStart && hi >= titleEnd) ? wholly(d.children) : []
-                    }
-                    if lo <= titleStart || titleTouched {
-                        // Reaching the title, the result is still a details: the covered part of the
-                        // title as its title, the covered children as its body.
-                        let title = titleTouched ? sliceRuns(d.title, fromUTF16: ta - titleStart, toUTF16: tb - titleStart) : []
+                        // The covered part of the title as its title, the covered children as its body.
+                        let title = ta < tb ? sliceRuns(d.title, fromUTF16: ta - titleStart, toUTF16: tb - titleStart) : []
                         out.append(.details(DetailsBlock(id: .generate(), title: title,
                                                          children: children, expanded: d.expanded)))
                     } else {
-                        // Wholly inside the body: the text itself, not a details around it.
-                        out.append(contentsOf: children)
+                        // Wholly inside the body: the text itself, not a details around it — and nothing
+                        // when it covers none of it. The body line minted above is only for a details
+                        // the range carries: minted here, a range from the end of the last body line
+                        // left a stray empty top-level paragraph in `replacingRange`'s complement.
+                        out.append(contentsOf: coveredChildren)
                     }
                 }
             case .media, .table, .buttonRow:
