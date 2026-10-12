@@ -86,5 +86,45 @@ final class ClearInlineFormattingTests: XCTestCase {
         (editor as any RichTextEditor).clearInlineFormatting()
         XCTAssertEqual(runs(editor), before)
     }
+
+    // MARK: Ambient styles are not the user's, and clearing must leave them alone
+
+    private func storageFont(_ editor: RichTextEditorView, boxAt index: Int, offset: Int) -> UIFont? {
+        let storage = editor.canvas.boxes[index].textLayout.attributedString
+        return storage.attribute(.font, at: offset, effectiveRange: nil) as? UIFont
+    }
+
+    /// Removing INLINE CODE must give the run back its paragraph's own face, not a plain system font:
+    /// a heading's text was drawn in the body font after ⇧⌘N until something re-rendered it.
+    func test_clearingInlineCodeInAHeadingGivesBackTheHeadingFace() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
+        editor.document = Document(blocks: [.paragraph(ParagraphBlock(id: BlockID("h"), style: .heading1, runs: [
+            TextRun(text: "Title "),
+            TextRun(text: "code", attributes: CharacterAttributes(inlineCode: true)),
+        ]))])
+        editor.layoutIfNeeded()
+        let headingFace = storageFont(editor, boxAt: 0, offset: 0)
+        editor.selectAll()
+        (editor as any RichTextEditor).clearInlineFormatting()
+        let cleared = storageFont(editor, boxAt: 0, offset: 7)
+        XCTAssertEqual(cleared?.familyName, headingFace?.familyName, "the cleared run lost the heading's face: \(String(describing: cleared))")
+        XCTAssertEqual(cleared?.pointSize ?? 0, headingFace?.pointSize ?? -1, accuracy: 0.01)
+    }
+
+    /// A pull quote's body is italic by its style, not by the user: ⇧⌘N drew it roman.
+    func test_clearingAPullQuoteKeepsItsItalicFace() {
+        let editor = RichTextEditorView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
+        editor.document = Document(blocks: [.pullQuote(PullQuote(id: BlockID("pq"), runs: [
+            TextRun(text: "quoted "),
+            TextRun(text: "bold", attributes: CharacterAttributes(bold: true)),
+        ], author: []))])
+        editor.layoutIfNeeded()
+        XCTAssertTrue(storageFont(editor, boxAt: 0, offset: 0)?.fontDescriptor.symbolicTraits.contains(.traitItalic) ?? false,
+                      "precondition: a pull quote's body is drawn italic")
+        editor.selectAll()
+        (editor as any RichTextEditor).clearInlineFormatting()
+        XCTAssertTrue(storageFont(editor, boxAt: 0, offset: 0)?.fontDescriptor.symbolicTraits.contains(.traitItalic) ?? false,
+                      "⇧⌘N drew a pull quote's body roman")
+    }
 }
 #endif

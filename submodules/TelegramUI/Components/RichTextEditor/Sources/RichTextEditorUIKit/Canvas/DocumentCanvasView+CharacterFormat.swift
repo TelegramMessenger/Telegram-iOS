@@ -261,36 +261,107 @@ extension DocumentCanvasView {
         })
     }
 
-    /// The chat's ⇧⌘N: every inline mark the toggles set — inline code, bold, italic, underline,
-    /// strikethrough, spoiler — leaves the selection, and no block changes. Built from the toggles
-    /// themselves, so each keeps its own region guards (an author line's ambient bold, a code
-    /// language). A toggle over a range only PART of which carries its format SETS it, so such a
-    /// format is pressed twice. Every toggle runs in this one event and the canvas's private undo
-    /// manager groups by event, so the whole command is ONE undo step. A collapsed caret changes
-    /// nothing, as the legacy composer's shortcut does not.
+    /// The chat's ⇧⌘N: every inline mark the USER set — inline code, bold, italic, underline,
+    /// strikethrough, spoiler — leaves the selection, and no block changes. One edit, so one undo
+    /// step. A collapsed caret changes nothing, as the legacy composer's shortcut does not.
+    ///
+    /// It removes marks directly rather than pressing the toggles: a toggle's remove step is not the
+    /// inverse of its set step. Inline code's writes a plain system font over its whole range, so a
+    /// heading came back in the body face, and Italic reads the font trait, which a pull quote's
+    /// body carries by its STYLE, so it drew the body roman (`ClearInlineFormattingTests`). Here bold
+    /// is removed only where the user marker `.rtBold` says the user set it, italic is left alone
+    /// where the style supplies it (a pull quote's body and any quote author), inline code gives its
+    /// run back the paragraph style's own face, and a link keeps the underline it is drawn with.
     func clearInlineFormatting() {
-        guard !characterFormatTargets().isEmpty else { return }
-        let formats: [(isSet: (NSTextStorage, NSRange) -> Bool, toggle: () -> Void)] = [
-            (rangeIsInlineCode, toggleInlineCode),
-            (rangeIsBold, toggleBold),
-            (rangeIsItalic, toggleItalic),
-            (rangeIsUnderline, toggleUnderline),
-            (rangeIsStrikethrough, toggleStrikethrough),
-            (rangeIsSpoiler, toggleSpoiler),
-        ]
-        for format in formats {
-            let targets = characterFormatTargets()
-            let anyCarries = targets.contains { target in
-                var found = false
-                target.storage.enumerateAttributes(in: target.range, options: []) { _, sub, stop in
-                    if format.isSet(target.storage, sub) { found = true; stop.pointee = true }
+        let targets = clearFormattingTargets()
+        guard !targets.isEmpty else { return }
+        synchronizingExternalChange(reason: .formatting, markedTextPolicy: .preserveIfRebasable) {
+            editing {
+                for (region, range) in targets {
+                    guard let storage = region.layout.backingStorage else { continue }
+                    let italicIsAmbient: Bool
+                    switch region.ref {
+                    case .code, .codeLanguage:
+                        continue   // plain text by construction
+                    case .pullQuote, .quoteAuthor:
+                        italicIsAmbient = true
+                    case .paragraph, .caption, .detailsTitle:
+                        italicIsAmbient = false
+                    }
+                    let plainFace = plainFont(forRegion: region)
+                    storage.beginEditing()
+                    storage.enumerateAttribute(.rtInlineCode, in: range, options: []) { value, sub, _ in
+                        guard value != nil else { return }
+                        storage.removeAttribute(.rtInlineCode, range: sub)
+                        storage.removeAttribute(.backgroundColor, range: sub)
+                        storage.enumerateAttribute(.font, in: sub, options: []) { font, piece, _ in
+                            let size = ((font as? UIFont) ?? plainFace).pointSize
+                            storage.addAttribute(.font, value: plainFace.withSize(size), range: piece)
+                        }
+                    }
+                    storage.enumerateAttribute(.rtBold, in: range, options: []) { value, sub, _ in
+                        guard value != nil else { return }
+                        storage.removeAttribute(.rtBold, range: sub)
+                        Self.removeTrait(.traitBold, from: storage, in: sub)
+                    }
+                    if !italicIsAmbient {
+                        Self.removeTrait(.traitItalic, from: storage, in: range)
+                    }
+                    storage.removeAttribute(.strikethroughStyle, range: range)
+                    storage.removeAttribute(.rtSpoiler, range: range)
+                    storage.enumerateAttribute(.link, in: range, options: []) { link, sub, _ in
+                        if link == nil { storage.removeAttribute(.underlineStyle, range: sub) }
+                    }
+                    storage.endEditing()
+                    region.layout.bumpRenderVersion()
                 }
-                return found
+                return .unchanged
             }
-            guard anyCarries else { continue }
-            let allCarry = targets.allSatisfy { format.isSet($0.storage, $0.range) }
-            if !allCarry { format.toggle() }   // mixed → set everywhere first
-            format.toggle()                    // all set → removed everywhere
+        }
+    }
+
+    /// `characterFormatTargets`, keeping each target's region (clearing needs to know what kind of
+    /// text it is in).
+    private func clearFormattingTargets() -> [(region: LeafTextRegion, range: NSRange)] {
+        if let regions = tableStructuralSelectionRegions() {
+            return regions.compactMap { r in
+                r.length > 0 ? (r, NSRange(location: 0, length: r.length)) : nil
+            }
+        }
+        guard selFrom < selTo else { return [] }
+        return allLeafRegions().compactMap { r in
+            let a = max(selFrom, r.globalStart), b = min(selTo, r.globalStart + r.length)
+            guard a < b else { return nil }
+            return (r, NSRange(location: a - r.globalStart, length: b - a))
+        }
+    }
+
+    /// The face a run of `region` has with no inline marks: its paragraph style's plain font, from the
+    /// box's OWN mapper (a table cell renders body text smaller).
+    private func plainFont(forRegion region: LeafTextRegion) -> UIFont {
+        switch region.ref {
+        case .paragraph:
+            if let box = activeStack(at: region.globalStart)?.box as? BlockBox {
+                return box.mapper.styleSheet.font(for: box.style, attributes: .plain)
+            }
+        case .caption:
+            return mapper.styleSheet.font(for: .caption, attributes: .plain)
+        case .pullQuote:
+            return mapper.styleSheet.font(for: .pullQuote, attributes: .plain)
+        case .code, .codeLanguage, .quoteAuthor, .detailsTitle:
+            break
+        }
+        return mapper.styleSheet.font(for: .body, attributes: .plain)
+    }
+
+    private static func removeTrait(_ trait: UIFontDescriptor.SymbolicTraits, from storage: NSTextStorage, in range: NSRange) {
+        storage.enumerateAttribute(.font, in: range, options: []) { value, sub, _ in
+            guard let font = value as? UIFont, font.fontDescriptor.symbolicTraits.contains(trait) else { return }
+            var traits = font.fontDescriptor.symbolicTraits
+            traits.remove(trait)
+            if let descriptor = font.fontDescriptor.withSymbolicTraits(traits) {
+                storage.addAttribute(.font, value: UIFont(descriptor: descriptor, size: font.pointSize), range: sub)
+            }
         }
     }
 
