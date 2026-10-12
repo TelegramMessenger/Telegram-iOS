@@ -179,6 +179,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var musicBackground: UIView?
     var music: ComponentView<Empty>?
     var walletBalance: ComponentView<Empty>?
+    var hasBottomStrip: Bool {
+        return self.music != nil || self.walletBalance != nil
+    }
     
     var performButtonAction: ((PeerInfoHeaderButtonKey, PeerInfoHeaderButtonNode?, ContextGesture?) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
@@ -2643,7 +2646,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if !state.isEditing {
             if !isSettings && !isMyProfile {
                 if self.isAvatarExpanded {
-                    resolvedHeight -= 21.0
+                    resolvedHeight -= (currentSavedMusic != nil || currentWalletBalance != nil) ? 20.0 : 21.0
                 } else {
                     resolvedHeight += 79.0
                     
@@ -2653,7 +2656,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             } else {
                 if self.isAvatarExpanded {
-                    resolvedHeight -= 21.0
+                    resolvedHeight -= (currentSavedMusic != nil || currentWalletBalance != nil) ? 20.0 : 21.0
                 }
             }
         }

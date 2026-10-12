@@ -1,0 +1,23 @@
+{
+  "url": "https://github.com/selfshadow/ltc_code",
+  "revision": "31e5e96b54f98f33098f8503003119ba2231a1c6",
+  "sha256": {
+    "LICENSE": "692a54e97fcadd0f04b14027386e53809c1dcf96de3e15b15af15731b15c1e94",
+    "webgl/shaders/ltc/ltc_disk.fs": "7a11a84db2ec9fd9f4c8d619b8e69530787e525be7fa1926de62e1aca98af6a9",
+    "webgl/shaders/ltc/ltc_quad.fs": "ee7718f16873e21906f2b7b6f0632e0f37e18db34a0a4486777c6b250ffecca5",
+    "fit/results/ltc_1.dds": "6aa389c6c0403a408cf6bb23dcdc543ad3e97f0fdc49e60f034b6a85682ee18d",
+    "fit/results/ltc_2.dds": "2ff4f03b10d73e25985216d73a58aa57375f0c775dee0e1bde075d44e2b07200"
+  },
+  "derived": {
+    "ltc_1.rgba16f": {
+      "source": "ltc_1.dds",
+      "operation": "Remove 128-byte DDS header; preserve 64x64 RGBA16F payload",
+      "sha256": "d8a46ada3b16bf2736d45240d0ded31070adff62b23c34d4d50bdfd44ee42f82"
+    },
+    "ltc_2.rgba16f": {
+      "source": "ltc_2.dds",
+      "operation": "Remove 128-byte DDS header; preserve 64x64 RGBA16F payload",
+      "sha256": "a2a4a3eca0aecdf276f3cf28e43d523961dd8774ad6a69f1f421d71bbb2c6ed6"
+    }
+  }
+}

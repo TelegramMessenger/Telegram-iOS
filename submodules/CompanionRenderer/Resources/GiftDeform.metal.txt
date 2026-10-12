@@ -1,0 +1,44 @@
+// Layouts mirrored and statically checked in Core/GPUDeformation.hpp.
+struct GiftInfluence {uint joint;float weight;};
+struct GiftMorphDelta {float4 position,normal;};
+struct GiftJoint {float4x4 position,normal;};
+struct GiftDeformParams {
+    float4x4 world,normal;
+    float morphWeights[16];
+    uint vertexCount,influenceCount,morphCount,jointOffset;
+    uint skinned,padding0,padding1,padding2;
+};
+struct GiftDeformed {float4 position,normal;};
+static_assert(sizeof(GiftInfluence)==8 && alignof(GiftInfluence)==4);
+static_assert(sizeof(GiftMorphDelta)==32 && alignof(GiftMorphDelta)==16);
+static_assert(sizeof(GiftJoint)==128 && alignof(GiftJoint)==16);
+static_assert(sizeof(GiftDeformParams)==224 && alignof(GiftDeformParams)==16);
+static_assert(__builtin_offsetof(GiftDeformParams,morphWeights)==128);
+static_assert(__builtin_offsetof(GiftDeformParams,vertexCount)==192);
+static_assert(__builtin_offsetof(GiftDeformParams,skinned)==208);
+inline GiftDeformed gift_deform(float3 position,float3 normal,uint vertexID,
+    constant GiftDeformParams& params,device const GiftInfluence* influences,
+    device const GiftMorphDelta* morphs,device const GiftJoint* joints) {
+    for(uint t=0;t<params.morphCount;t++) {
+        GiftMorphDelta delta=morphs[t*params.vertexCount+vertexID];float weight=params.morphWeights[t];
+        position+=delta.position.xyz*weight;normal+=delta.normal.xyz*weight;
+    }
+    float3 resultPosition,resultNormal;
+    if(params.skinned) {
+        resultPosition=0;resultNormal=0;
+        for(uint i=0;i<params.influenceCount;i++) {
+            GiftInfluence influence=influences[vertexID*params.influenceCount+i];
+            if(influence.weight>0) {
+                device const GiftJoint& joint=joints[params.jointOffset+influence.joint];
+                resultPosition+=(joint.position*float4(position,1)).xyz*influence.weight;
+                resultNormal+=(joint.normal*float4(normal,0)).xyz*influence.weight;
+            }
+        }
+    } else {
+        resultPosition=(params.world*float4(position,1)).xyz;
+        resultNormal=(params.normal*float4(normal,0)).xyz;
+    }
+    // Match C++ normalize(), including degenerate morph normals.
+    resultNormal/=max(length(resultNormal),1e-12f);
+    return {float4(resultPosition,1),float4(resultNormal,0)};
+}
