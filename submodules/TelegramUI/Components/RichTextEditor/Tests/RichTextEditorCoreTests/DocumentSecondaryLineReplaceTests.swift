@@ -41,6 +41,52 @@ final class DocumentSecondaryLineReplaceTests: XCTestCase {
         return document.replacingRange(globalFrom: lo, globalTo: hi, with: copy).document
     }
 
+    // MARK: - A block quote's author
+
+    private func blockQuote(_ id: String, _ children: [String], author: String) -> Block {
+        .blockQuote(BlockQuote(id: BlockID(id), children: children.map { para($0) }, collapsed: false,
+                               author: author.isEmpty ? [] : [TextRun(text: author)]))
+    }
+
+    /// A range covering ALL of a block quote's children takes its author, as a pull quote's whole body
+    /// does — the engine's gate drops such a quote whole, author included, and its Copy is widened to
+    /// match. Without that the copy left the author behind and the complement kept it as a body
+    /// paragraph: `[quote … by ""] [p "Auth"]` after an AI edit answered unchanged (review of the fix
+    /// wave, 2026-10-12).
+    func test_aRangeThroughABlockQuotesWholeBody_replacedWithItsOwnCopy_changesNothing() {
+        let document = Document(blocks: [para("intro"), blockQuote("q", ["body"], author: "Auth")])
+        let lo = 3   // inside "intro"
+        let quoteStart = document.globalTextStart(ofBlockAt: 1) - 1   // the quote's own open token
+        let hi = quoteStart + 1 + DocumentTree.documentSize(Document(blocks: [para("body")])) - 1   // the end of "body"
+        XCTAssertEqual(describe(replacedWithItsOwnCopy(document, lo, hi)),
+                       ["p \"intro\"", "quote [\"body\"] by \"Auth\""], "\(lo)..<\(hi)")
+    }
+
+    func test_deletingThroughABlockQuotesWholeBody_leavesNoAuthorParagraph() {
+        let document = Document(blocks: [para("intro"), blockQuote("q", ["one", "two"], author: "Auth"), para("after")])
+        let hi = position(document, .paragraph(childID(document, quoteAt: 1, child: 1)), 3)   // the end of "two"
+        let deleted = document.replacingRange(globalFrom: 3, globalTo: hi, with: Document(blocks: [])).document
+        XCTAssertEqual(describe(deleted), ["p \"in\"", "p \"after\""],
+                       "the range covers every child (its copy takes the author): nothing of the quote is left as body text")
+    }
+
+    /// Control: a range entering only PART of the children leaves the author with the rest of them.
+    func test_controlARangeEnteringPartOfABlockQuoteKeepsTheAuthorWithTheRest() {
+        let document = Document(blocks: [para("intro"), blockQuote("q", ["one", "two"], author: "Auth")])
+        let hi = position(document, .paragraph(childID(document, quoteAt: 1, child: 0)), 2)   // inside "one"
+        let deleted = document.replacingRange(globalFrom: 3, globalTo: hi, with: Document(blocks: [])).document
+        XCTAssertEqual(describe(deleted), ["p \"in\"", "quote [\"e\", \"two\"] by \"Auth\""])
+        let copy = document.extractFragment(globalFrom: 3, globalTo: hi, carryingNonTextBlocks: true)
+        XCTAssertEqual(describe(copy), ["p \"tro\"", "quote [\"on\"] by \"\""], "a partial copy carries no uncovered author")
+    }
+
+    private func childID(_ document: Document, quoteAt index: Int, child: Int) -> BlockID {
+        guard case .blockQuote(let q) = document.blocks[index], case .paragraph(let p) = q.children[child] else {
+            preconditionFailure("not a quote of paragraphs")
+        }
+        return p.id
+    }
+
     // MARK: - A pull quote's author
 
     func test_aRangeThroughAPullQuotesWholeBody_replacedWithItsOwnCopy_changesNothing() {

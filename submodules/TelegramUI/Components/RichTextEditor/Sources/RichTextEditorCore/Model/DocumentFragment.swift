@@ -1424,11 +1424,27 @@ extension Document {
                     let authorA = max(lo, authorStart), authorB = min(hi, authorStart + bq.authorUTF16Count)
                     let authorSlice = authorA < authorB
                         ? sliceRuns(bq.author, fromUTF16: authorA - authorStart, toUTF16: authorB - authorStart) : []
+                    // A range covering ALL of the children's text takes the whole author, as the whole pull
+                    // text does: the engine's gate drops such a quote whole, author included
+                    // (`containerIsCovered`), and its Copy is widened to match. The replaced range's copy
+                    // then carries the author (`complementOf`), so the complement must not keep it as a
+                    // body paragraph: an AI edit handed back unchanged turned `[quote … by "Auth"]` into
+                    // `[quote … by ""] [p "Auth"]` (review of the fix wave, 2026-10-12,
+                    // `DocumentSecondaryLineReplaceTests`).
+                    let childrenText = primaryTextExtent(of: Document(blocks: bq.children))
+                    func coversAllChildren(_ r: (lo: Int, hi: Int)) -> Bool {
+                        guard let e = childrenText else { return false }
+                        let last = childrenStart + e.last
+                        // An empty last region is covered by the nested rule: the range must go past it.
+                        return r.lo <= childrenStart + e.first && (r.hi > last || (r.hi == last && !e.lastIsEmpty))
+                    }
+                    let authorIsRemoved = removed.map(coversAllChildren) ?? false
+                    let author = authorIsRemoved ? [] : (coversAllChildren((lo, hi)) ? bq.author : authorSlice)
                     if !inner.blocks.isEmpty {
                         out.append(.blockQuote(BlockQuote(id: .generate(), children: inner.blocks,
                                                           collapsed: false,
-                                                          author: authorSlice)))
-                    } else if !authorSlice.isEmpty {
+                                                          author: author)))
+                    } else if !authorSlice.isEmpty, !authorIsRemoved {
                         out.append(.paragraph(ParagraphBlock(id: .generate(), runs: regeneratingRunIdentities(authorSlice))))
                     }
                 }
@@ -1510,4 +1526,38 @@ extension Document {
         }
         return Document(blocks: out)
     }
+}
+
+/// The first and last positions of a document's PRIMARY text, relative to its own origin: the span a
+/// range must cover for every child of a container holding the document to be covered. A code
+/// block's language line and a quote's author are second lines and do not count — a range covering a
+/// container's primary text carries them (the engine's `containerIsCovered`). Nil for a document
+/// with no text at all (a lone caption-less atom).
+private func primaryTextExtent(of document: Document) -> (first: Int, last: Int, lastIsEmpty: Bool)? {
+    var first: Int?
+    var last: (end: Int, isEmpty: Bool)?
+    func walk(_ node: DocNode, _ contentStart: Int) {
+        var acc = 0
+        for child in node.children {
+            let childStart = contentStart + acc
+            switch child {
+            case .text(let length, let ref):
+                switch ref {
+                case .codeLanguage, .quoteAuthor:
+                    break
+                case .paragraph, .caption, .code, .pullQuote, .detailsTitle:
+                    if first == nil { first = childStart }
+                    last = (childStart + length, length == 0)
+                }
+            case .mediaAtom:
+                break
+            default:
+                walk(child, childStart + 1)
+            }
+            acc += child.nodeSize
+        }
+    }
+    walk(DocumentTree.build(from: document), 0)
+    guard let first, let last else { return nil }
+    return (first, last.end, last.isEmpty)
 }
