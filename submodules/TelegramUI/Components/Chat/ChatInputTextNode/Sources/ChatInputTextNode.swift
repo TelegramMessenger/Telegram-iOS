@@ -1026,7 +1026,10 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
                 let selectedRange = self.selectedRange
                 let preserveSelectedRange = selectedRange.location != self.textStorage.length
                 
-                let sameCharacters = self.textStorage.string == (value?.string ?? "")
+                // UTF-16 code units, which is what the in-place write below walks. Swift's `==`
+                // compares canonical equivalence, so precomposed "é" equalled "e" + U+0301 and the
+                // attribute walk ran past (or short of) the storage (`HarnessLegacyNormalizationSetTests`).
+                let sameCharacters = (self.textStorage.string as NSString).isEqual(to: value?.string ?? "")
                 if self.appliesTextInPlace || sameCharacters {
                     // A programmatic `attributedText` set clears UITextView's undo stack
                     // (`-[UITextInputController _textStorageDidProcessEditing:]` calls
