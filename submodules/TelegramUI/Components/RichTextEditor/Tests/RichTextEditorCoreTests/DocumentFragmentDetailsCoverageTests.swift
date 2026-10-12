@@ -86,6 +86,17 @@ final class DocumentFragmentDetailsCoverageTests: XCTestCase {
                        ["details \"Tit\" [\"p \\\"body\\\"\"]"])
     }
 
+    /// The same for a body of SEVERAL empty lines: the check read the joined body, and the line breaks
+    /// between the empty lines are text, so it pasted spaces into the title (review of the fix wave,
+    /// 2026-10-12).
+    func test_aDetailsWhoseBodyIsSeveralEmptyLines_pastedIntoATitle_addsNoSpaces() {
+        let document = Document(blocks: [details("d", "Tit", [para("body")])])
+        let start = position(document, .detailsTitle(BlockID("d")), 0)
+        let fragment = Document(blocks: [details("f", "T", [para(""), para(""), para("")])])
+        XCTAssertEqual(describe(document.replacingRange(globalFrom: start, globalTo: start + 1, with: fragment).document),
+                       ["details \"Tit\" [\"p \\\"body\\\"\"]"])
+    }
+
     // MARK: - Controls
 
     /// A range entering the title still copies a details, with the empty body line it needs to be

@@ -884,10 +884,12 @@ extension Document {
             // A body holding no text adds nothing, as in `blockPlainText`: the empty body line a copy of
             // part of a title carries (an expanded details always has one) went into the title it was
             // pasted back into as a space — replacing "T" in the title "Tit" with its own copy gave "T it".
+            // Asked of each line, never of the joined body: the breaks between several empty lines are
+            // text, and read together they made a body of empty lines count as text.
             let title = regeneratingRunIdentities(details.title)
-            let body = lines(details.children.map(blockInlineRuns), separator: "\n")
-            guard body.contains(where: { !$0.text.isEmpty }) else { return title }
-            return lines([title, body], separator: "\n")
+            let bodyLines = details.children.map(blockInlineRuns)
+            guard bodyLines.contains(where: { $0.contains { !$0.text.isEmpty } }) else { return title }
+            return lines([title, lines(bodyLines, separator: "\n")], separator: "\n")
         case .table(let table):
             return lines(table.rows.map { row in
                 lines(row.cells.map { cell in lines(cell.blocks.map(blockInlineRuns), separator: " ") }, separator: " ")
