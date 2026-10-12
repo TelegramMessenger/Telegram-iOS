@@ -919,6 +919,23 @@ extension Document {
             guard lo >= cursor, hi <= cursor + blockSize else { continue }
             switch block {
             case .code(let code):
+                // A range inside the LANGUAGE line edits the language: the fragment as one line of
+                // plain text, a details title's rule, and an emptied line is no language. Left to the
+                // complement model, the covered part was dropped from nowhere and the uncovered head
+                // came back as a body paragraph: deleting "yt" in "python" gave `[p "p"] [code python]`
+                // (the language line is on the axis since 0e12da1b82's copy rule). Always on the axis
+                // (`DocumentTree`), two tokens in: the container's open and the line's own.
+                let languageStart = cursor + 2
+                if lo >= languageStart, hi <= languageStart + code.languageUTF16Count {
+                    let inserted = runsPlainText(oneLineRuns(of: fragment))
+                    let language = ((code.language ?? "") as NSString)
+                        .replacingCharacters(in: NSRange(location: lo - languageStart, length: hi - lo), with: inserted)
+                    var newBlocks = blocks
+                    newBlocks[index] = .code(CodeBlock(id: code.id, language: language.isEmpty ? nil : language,
+                                                       runs: code.runs))
+                    return (Document(schemaVersion: schemaVersion, blocks: newBlocks),
+                            lo + (inserted as NSString).length, nil)
+                }
                 let codeStart = cursor + codeTextStartOffset(code)
                 guard lo >= codeStart, hi <= codeStart + code.utf16Count else { return nil }
                 let inserted = fragment.blocks.map(blockPlainText).joined(separator: "\n")
@@ -940,7 +957,38 @@ extension Document {
                 // `HarnessFragmentPasteIntoPullQuoteTests`). The text starts two tokens in: the
                 // container's open and the body paragraph's.
                 let textStart = cursor + 2
+                // A range inside the AUTHOR line edits the author, one line of runs (the details
+                // title's rule): left to the complement model, the author stayed whole and its
+                // uncovered tail came back as a body paragraph — deleting "ut" in "Author" gave
+                // `[pull "body" by "Author"] [p "hor"]`. The line is on the axis only while the quote
+                // has content (`DocumentTree`), so it is asked of the block's own size: absent, its
+                // start would be the boundary with the next block.
+                let authorStart = textStart + quote.utf16Count + 2
+                if blockSize == quote.utf16Count + quote.authorUTF16Count + 6,
+                   lo >= authorStart, hi <= authorStart + quote.authorUTF16Count {
+                    let inserted = oneLineRuns(of: fragment)
+                    let author = sliceRuns(quote.author, fromUTF16: 0, toUTF16: lo - authorStart) + inserted
+                        + sliceRuns(quote.author, fromUTF16: hi - authorStart, toUTF16: quote.authorUTF16Count)
+                    var newBlocks = blocks
+                    newBlocks[index] = .pullQuote(PullQuote(id: quote.id, runs: quote.runs, author: author))
+                    return (Document(schemaVersion: schemaVersion, blocks: newBlocks),
+                            lo + inserted.reduce(0) { $0 + $1.utf16Count }, nil)
+                }
                 guard lo >= textStart, hi <= textStart + quote.utf16Count else { return nil }
+                // **A range covering exactly the whole body is the pull quote**: its copy carries the
+                // whole author (`extractFragment`), so a PULL QUOTE replacing it replaces the author as
+                // well — spliced as runs below, the author line went into the body beside the author
+                // still there, and the AI edit handing back `[pull "pulled" by "Auth"]` unchanged gave
+                // `pull "pulled\nAuth" by "Auth"`. A replacement with no author keeps the one there.
+                if quote.utf16Count > 0, lo == textStart, hi == textStart + quote.utf16Count,
+                   fragment.blocks.count == 1, case .pullQuote(let replacement) = fragment.blocks[0] {
+                    let runs = regeneratingRunIdentities(replacement.runs)
+                    let author = replacement.author.isEmpty ? quote.author : regeneratingRunIdentities(replacement.author)
+                    var newBlocks = blocks
+                    newBlocks[index] = .pullQuote(PullQuote(id: quote.id, runs: runs, author: author))
+                    return (Document(schemaVersion: schemaVersion, blocks: newBlocks),
+                            textStart + runs.reduce(0) { $0 + $1.utf16Count }, nil)
+                }
                 // Every block as its runs (`blockInlineRuns`): a PULL-QUOTE fragment — what a copy made
                 // inside a pull quote is — took the plain-text branch here, and its custom emoji came
                 // back as a bare `U+FFFC` (composer harness p16, `HarnessPullQuoteFragmentAtomPasteTests`).
@@ -1072,6 +1120,20 @@ extension Document {
                 let childrenStart = cursor + 1
                 let children = Document(blocks: quote.children)
                 let childrenSize = DocumentTree.documentSize(children)
+                // A range inside the AUTHOR line edits the author — the pull quote's rule above. On the
+                // axis only while the quote has content, so asked of the block's own size.
+                let authorStart = childrenStart + childrenSize + 1
+                if blockSize == childrenSize + quote.authorUTF16Count + 4,
+                   lo >= authorStart, hi <= authorStart + quote.authorUTF16Count {
+                    let inserted = oneLineRuns(of: fragment)
+                    let author = sliceRuns(quote.author, fromUTF16: 0, toUTF16: lo - authorStart) + inserted
+                        + sliceRuns(quote.author, fromUTF16: hi - authorStart, toUTF16: quote.authorUTF16Count)
+                    var newBlocks = blocks
+                    newBlocks[index] = .blockQuote(BlockQuote(id: quote.id, children: quote.children,
+                                                              collapsed: false, author: author))
+                    return (Document(schemaVersion: schemaVersion, blocks: newBlocks),
+                            lo + inserted.reduce(0) { $0 + $1.utf16Count }, nil)
+                }
                 guard !quote.children.isEmpty, lo >= childrenStart, hi <= childrenStart + childrenSize else {
                     return nil
                 }

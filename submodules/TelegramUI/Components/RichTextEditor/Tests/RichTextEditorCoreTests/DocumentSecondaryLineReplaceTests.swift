@@ -29,6 +29,8 @@ final class DocumentSecondaryLineReplaceTests: XCTestCase {
             case .paragraph(let p): return "p \"\(p.text)\""
             case .code(let c): return "code \(c.language ?? "-") \"\(c.text)\""
             case .pullQuote(let q): return "pull \"\(q.text)\" by \"\(q.author.map(\.text).joined())\""
+            case .blockQuote(let q):
+                return "quote \(q.children.map(blockPlainText)) by \"\(q.author.map(\.text).joined())\""
             default: return "other"
             }
         }
@@ -112,5 +114,87 @@ final class DocumentSecondaryLineReplaceTests: XCTestCase {
         let hi = position(document, .code(BlockID("c")), 0)
         let deleted = document.replacingRange(globalFrom: 2, globalTo: hi, with: Document(blocks: [])).document
         XCTAssertEqual(describe(deleted), ["p \"t\"", "code swift \"let\""])
+    }
+
+    // MARK: - A range INSIDE a second line edits that line
+
+    func test_deletingInsideACodeLanguage_editsTheLanguage() {
+        let document = Document(blocks: [para("intro"), code("c", language: "python", "x = 1")])
+        let lo = position(document, .codeLanguage(BlockID("c")), 1)
+        let deleted = document.replacingRange(globalFrom: lo, globalTo: lo + 2, with: Document(blocks: []))
+        XCTAssertEqual(describe(deleted.document), ["p \"intro\"", "code phon \"x = 1\""])
+        XCTAssertEqual(deleted.caret, lo)
+        XCTAssertEqual(describe(replacedWithItsOwnCopy(document, lo, lo + 2)), describe(document))
+        let replaced = document.replacingRange(globalFrom: lo, globalTo: lo + 2, with: Document(blocks: [para("YT")]))
+        XCTAssertEqual(describe(replaced.document), ["p \"intro\"", "code pYThon \"x = 1\""])
+        XCTAssertEqual(replaced.caret, lo + 2)
+    }
+
+    func test_deletingAWholeCodeLanguage_leavesNoLanguage() {
+        let document = Document(blocks: [para("intro"), code("c", language: "swift", "let")])
+        let lo = position(document, .codeLanguage(BlockID("c")), 0)
+        let deleted = document.replacingRange(globalFrom: lo, globalTo: lo + 5, with: Document(blocks: [])).document
+        XCTAssertEqual(describe(deleted), ["p \"intro\"", "code - \"let\""])
+    }
+
+    func test_deletingInsideAPullQuotesAuthor_editsTheAuthor() {
+        let document = Document(blocks: [para("intro"), pullQuote("q", "body", author: "Author")])
+        let lo = position(document, .quoteAuthor(BlockID("q")), 1)
+        let deleted = document.replacingRange(globalFrom: lo, globalTo: lo + 2, with: Document(blocks: [])).document
+        XCTAssertEqual(describe(deleted), ["p \"intro\"", "pull \"body\" by \"Ahor\""])
+        XCTAssertEqual(describe(replacedWithItsOwnCopy(document, lo, lo + 2)), describe(document))
+    }
+
+    func test_deletingInsideABlockQuotesAuthor_editsTheAuthor() {
+        let quote = Block.blockQuote(BlockQuote(id: BlockID("b"), children: [para("child")], collapsed: false,
+                                                author: [TextRun(text: "Author")]))
+        let document = Document(blocks: [para("intro"), quote])
+        let lo = position(document, .quoteAuthor(BlockID("b")), 1)
+        let deleted = document.replacingRange(globalFrom: lo, globalTo: lo + 2, with: Document(blocks: [])).document
+        XCTAssertEqual(describe(deleted), ["p \"intro\"", "quote [\"child\"] by \"Ahor\""])
+        XCTAssertEqual(describe(replacedWithItsOwnCopy(document, lo, lo + 2)), describe(document))
+    }
+
+    /// Control: a caret at the boundary after an empty, authorless pull quote (which has no author
+    /// line on the axis) is not taken for a caret in its author.
+    func test_controlACaretAfterAnEmptyPullQuoteIsNotInItsAuthor() {
+        let document = Document(blocks: [pullQuote("q", "", author: ""), para("after")])
+        let boundary = DocumentTree.documentSize(Document(blocks: [document.blocks[0]]))
+        let pasted = document.replacingRange(globalFrom: boundary, globalTo: boundary,
+                                             with: Document(blocks: [para("X")])).document
+        XCTAssertFalse(describe(pasted).contains("pull \"\" by \"X\""), "\(describe(pasted))")
+    }
+
+    // MARK: - A pull quote's whole body is the pull quote
+
+    /// A range covering exactly a pull quote's body copies the pull quote WITH its author, so a pull
+    /// quote replacing that range replaces the author too — it is not spliced into the body as a line.
+    func test_aPullQuotesWholeBody_replacedWithItsOwnCopy_changesNothing() {
+        let document = Document(blocks: [para("intro"), pullQuote("q", "pulled", author: "Auth")])
+        let lo = position(document, .pullQuote(BlockID("q")), 0)
+        let result = replacedWithItsOwnCopy(document, lo, lo + 6)
+        XCTAssertEqual(describe(result), ["p \"intro\"", "pull \"pulled\" by \"Auth\""])
+        guard case .pullQuote(let quote) = result.blocks[1] else { return XCTFail() }
+        XCTAssertEqual(quote.id, BlockID("q"), "the pull quote keeps its identity")
+    }
+
+    func test_aPullQuoteReplacingAWholeBody_takesItsAuthor_orKeepsTheOneThereWhenItHasNone() {
+        let document = Document(blocks: [para("intro"), pullQuote("q", "pulled", author: "Auth")])
+        let lo = position(document, .pullQuote(BlockID("q")), 0)
+        let withAuthor = document.replacingRange(globalFrom: lo, globalTo: lo + 6,
+                                                 with: Document(blocks: [pullQuote("n", "new", author: "Other")]))
+        XCTAssertEqual(describe(withAuthor.document), ["p \"intro\"", "pull \"new\" by \"Other\""])
+        XCTAssertEqual(withAuthor.caret, lo + 3)
+        let withoutAuthor = document.replacingRange(globalFrom: lo, globalTo: lo + 6,
+                                                    with: Document(blocks: [pullQuote("n", "new", author: "")]))
+        XCTAssertEqual(describe(withoutAuthor.document), ["p \"intro\"", "pull \"new\" by \"Auth\""])
+    }
+
+    /// Control: a paragraph rewriting the whole body keeps the pull quote and its author.
+    func test_controlAParagraphReplacingAWholePullQuoteBodyKeepsTheAuthor() {
+        let document = Document(blocks: [para("intro"), pullQuote("q", "pulled", author: "Auth")])
+        let lo = position(document, .pullQuote(BlockID("q")), 0)
+        let result = document.replacingRange(globalFrom: lo, globalTo: lo + 6, with: Document(blocks: [para("new")]))
+        XCTAssertEqual(describe(result.document), ["p \"intro\"", "pull \"new\" by \"Auth\""])
     }
 }
