@@ -178,7 +178,9 @@ objc_library(
 # Until upstream 442f395 no target here could depend on `:RichTextInputDecUpstream`, because
 # `IDBlockTextView.m` declared a `+load` that ran before `main()` and `@throw`s on four paths — a
 # launch-time abort no runtime flag could gate. That commit moved the install into the initializer's
-# `@try`, so the throw is now a failed CONSTRUCTION a host can fall back from, and the edge is safe.
+# `@try`, so the throw is now a failed CONSTRUCTION, reached only when the `useInputDecEngine` Debug
+# Settings flag asks for this editor, and the edge is safe. No host falls back yet: with the flag on,
+# a construction that fails (a runtime whose private surface moved) raises through Swift.
 #
 # The guarantee is mechanically pinned, and the pin moved with the reason:
 # `Tests/RichTextEditorCoreTests/SourceBoundary/InputDecUpstreamAdapterBoundaryTests.swift` used to
@@ -212,15 +214,16 @@ swift_library(
     ], exclude = [
         # PHASE 2 OF THE INPUTDEC PORT — the adapter over the REAL upstream engine
         # (`IDUpstreamInputBackend`). It `import`s `RichTextInputDecUpstream`, so compiling it into
-        # this target would require a `deps` edge to that module, and that edge is exactly what
-        # phase 1 removed: `IDBlockTextView.m` has a `+load` that runs before `main()` on every
-        # launch for every user and `@throw`s an UNCAUGHT NSException if its private-protocol
-        # lookup fails. See the long note in `deps` below.
+        # this target would need a `deps` edge to that module, which this target does not take: the
+        # app build does not compile these files, and the SwiftPM package (TEST-ONLY here — Bazel
+        # builds the app) does, by adding the dependency there.
         #
-        # So the app build does not compile these files, deliberately, and the SwiftPM package
-        # (which is TEST-ONLY here — Bazel builds the app) does, by adding the dependency there.
-        # `bazel query 'somepath(//Telegram:Telegram, //…:RichTextInputDecUpstream)'` must keep
-        # returning `INFO: Empty results`.
+        # This exclusion is no longer what keeps the engine out of the app. The engine IS in the app,
+        # through `:RichTextEngineEditor` (see that target), so
+        # `bazel query 'somepath(//Telegram:Telegram, //…:RichTextInputDecUpstream)'` is NOT empty. And
+        # the reason this note used to give — `IDBlockTextView.m`'s pre-`main()` `+load` that
+        # `@throw`s an uncaught NSException — is gone: upstream 442f395 moved it into the
+        # initializer, and `test_thePortContainsNoLoadMethod` pins that no `+load` is left.
         #
         # THE DIVERGENCE IS MECHANICALLY PINNED, because "a file missing from a target's srcs
         # silently does not exist" is a trap this repo has paid for:
@@ -230,15 +233,15 @@ swift_library(
         # is a loud compile error (`no such module`); adding the edge is what the boundary test
         # catches.
         #
-        # Remove BOTH — this exclude and the `deps` prohibition — in the same commit, when the port
-        # is reachable behind `ExperimentalUISettings.inputDecTextBackend` and the `+load` has been
-        # assessed on a real launch.
+        # Remove BOTH — this exclude and the `deps` prohibition — in the same commit, if this
+        # adapter is ever to compile into the app.
         "Sources/RichTextEditorUIKit/InputBackend/InputDec/Upstream/**/*.swift",
     ]),
     # Task B6: enables the InputDec backend's isSupported() gate (Swift needs `swiftc -D`, not a
     # C preprocessor define, hence `copts` rather than `defines`). Mirrors Package.swift's
-    # `swiftSettings: [.define(...)]` on the same target. Safe at this stage: Stage B still has
-    # no production call site that selects anything but `.legacy` (RichTextInputCanvasFactory).
+    # `swiftSettings: [.define(...)]` on the same target. Production selects `.legacy` unless the
+    # Debug Settings flag `inputDecTextBackend` (default off) asks for `.inputDecIfSupported`
+    # (RichTextInputCanvasFactory).
     copts = [
         "-DTG_RICHTEXT_INPUTDEC_ENABLED",
     ],
@@ -248,26 +251,14 @@ swift_library(
     deps = [
         ":RichTextEditorCore",
         ":RichTextInputDecObjC",
-        # NO EDGE TO :RichTextInputDecUpstream, DELIBERATELY. Adding one puts the ported engine in
-        # the shipped app, and IDBlockTextView.m's `+load` then runs BEFORE main() on every launch
-        # for every user: it resolves the private UIKeyboardInput protocol by name and @throws an
-        # UNCAUGHT NSException if that lookup or class_addProtocol fails (IDPrivateUIKit.m:1413-1425).
-        # That is pre-main, so TGRichTextInputDecExceptionGuard cannot wrap it and no feature flag
-        # can turn it off -- a launch-time abort with no telemetry, while the port is reachable from
-        # nothing. Phase 1's brief says production must not move, and an edge here moves it.
+        # NO EDGE TO :RichTextInputDecUpstream, DELIBERATELY: the only files here that would need
+        # it are the excluded phase-2 adapter (see `exclude` above). The engine reaches the app
+        # through `:RichTextEngineEditor` instead. (This note used to forbid the edge because of a
+        # pre-`main()` `+load` in the engine; that `+load` is gone, upstream 442f395.)
         #
-        # The edge existed briefly as an anti-rot measure ("a file absent from a target's srcs
-        # silently does not exist"). What replaces it: the SwiftPM test target depends on this
-        # module and InputDecUpstreamHostSmokeTests cannot pass unless it compiles AND runs for iOS,
-        # and the target below is buildable on demand and verified green:
-        #   bazel build //submodules/TelegramUI/Components/RichTextEditor:RichTextInputDecUpstream \
-        #     --platforms=@build_bazel_apple_support//platforms:ios_sim_arm64
-        # That is weaker than the app build, and the honest reason it is enough is that this module
-        # depends on nothing in Telegram except the vendored kernel -- the dependency runs the other
-        # way -- so no change to Telegram code can break it without the test noticing.
-        #
-        # Restore the edge when the port is reachable behind ExperimentalUISettings.inputDecTextBackend
-        # AND the pre-main +load has been assessed on a real launch, not before.
+        # What keeps the adapter from rotting while it is out of the app build: the SwiftPM test
+        # target depends on the engine and InputDecUpstreamHostSmokeTests cannot pass unless it
+        # compiles AND runs for iOS.
         "//submodules/AppBundle",
         "//submodules/MosaicLayout:MosaicLayout",
     ],
