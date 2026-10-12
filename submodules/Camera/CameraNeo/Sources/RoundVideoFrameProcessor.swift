@@ -4,6 +4,7 @@ import CoreMedia
 import CoreVideo
 import Metal
 import MetalPerformanceShaders
+import QuartzCore
 import Camera
 
 private final class CameraBundleMarker: NSObject {
@@ -168,6 +169,58 @@ private final class RoundVideoMetalDecoration {
     }
 }
 
+private final class RoundVideoLanczosScaler {
+    let yTexture: MTLTexture
+    let cbcrTexture: MTLTexture
+    private let filter: MPSImageLanczosScale
+
+    init?(device: MTLDevice, width: Int, height: Int) {
+        // Keep intermediate samples in floating point, including Lanczos overshoot.
+        // Quantization and clamping happen in the existing final RGB conversion.
+        guard let yTexture = Self.makeTexture(device: device, format: .r16Float, width: width, height: height),
+              let cbcrTexture = Self.makeTexture(device: device, format: .rg16Float, width: width / 2, height: height / 2) else {
+            return nil
+        }
+        self.yTexture = yTexture
+        self.cbcrTexture = cbcrTexture
+        self.filter = MPSImageLanczosScale(device: device)
+        self.yTexture.label = "CameraNeo.Lanczos.Y"
+        self.cbcrTexture.label = "CameraNeo.Lanczos.CbCr"
+        self.filter.label = "CameraNeo.Lanczos"
+        self.filter.edgeMode = .clamp
+    }
+
+    func encode(commandBuffer: MTLCommandBuffer, y: MTLTexture, cbcr: MTLTexture) {
+        self.encode(commandBuffer: commandBuffer, source: y, destination: self.yTexture)
+        self.encode(commandBuffer: commandBuffer, source: cbcr, destination: self.cbcrTexture)
+    }
+
+    private func encode(commandBuffer: MTLCommandBuffer, source: MTLTexture, destination: MTLTexture) {
+        // Crop the same central square as sourceCoordinate() in CameraNeo.metal.
+        // MPS handles pixel centers; the translation is in destination pixels.
+        let side = Double(min(source.width, source.height))
+        let scaleX = Double(destination.width) / side
+        let scaleY = Double(destination.height) / side
+        var transform = MPSScaleTransform(
+            scaleX: scaleX,
+            scaleY: scaleY,
+            translateX: -0.5 * (Double(source.width) - side) * scaleX,
+            translateY: -0.5 * (Double(source.height) - side) * scaleY
+        )
+        withUnsafePointer(to: &transform) { transform in
+            self.filter.scaleTransform = transform
+        }
+        self.filter.encode(commandBuffer: commandBuffer, sourceTexture: source, destinationTexture: destination)
+    }
+
+    private static func makeTexture(device: MTLDevice, format: MTLPixelFormat, width: Int, height: Int) -> MTLTexture? {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: width, height: height, mipmapped: false)
+        descriptor.storageMode = .private
+        descriptor.usage = [.shaderRead, .shaderWrite]
+        return device.makeTexture(descriptor: descriptor)
+    }
+}
+
 final class RoundVideoFrameProcessor {
     static let outputWidth = 480
     static let outputHeight = 480
@@ -175,14 +228,17 @@ final class RoundVideoFrameProcessor {
     private let device: MTLDevice
     private let mediaQueue: DispatchQueue
     private let commandQueue: MTLCommandQueue
+    private let mode: NeoCameraImpl.RoundVideoMode
     private let plainPipelineState: MTLComputePipelineState
     private let decoration: RoundVideoMetalDecoration?
     private var textureCache: CVMetalTextureCache
     private let outputPool: CVPixelBufferPool
     private let outputPoolAuxiliaryAttributes: CFDictionary
     private var isRendering = false
+    private var primaryLanczosScaler: RoundVideoLanczosScaler?
+    private var secondaryLanczosScaler: RoundVideoLanczosScaler?
 
-    init?(mediaQueue: DispatchQueue, decorationResources: RoundVideoDecorationResources?) {
+    init?(mediaQueue: DispatchQueue, decorationResources: RoundVideoDecorationResources?, mode: NeoCameraImpl.RoundVideoMode) {
         guard let device = MTLCreateSystemDefaultDevice(), let commandQueue = device.makeCommandQueue() else {
             return nil
         }
@@ -238,6 +294,7 @@ final class RoundVideoFrameProcessor {
         self.device = device
         self.mediaQueue = mediaQueue
         self.commandQueue = commandQueue
+        self.mode = mode
         self.plainPipelineState = plainPipelineState
         self.decoration = decoration
         self.textureCache = textureCache
@@ -266,10 +323,20 @@ final class RoundVideoFrameProcessor {
         secondary: VideoFrameSource?,
         mixFactor: Float,
         animationTime: Double,
+        statistics: VideoRecordingStatistics,
         completion: @escaping (ProcessedVideoFrame?) -> Void
     ) {
+        let renderStart = CACurrentMediaTime()
         guard !self.isRendering else {
+            statistics.renderBusyDrops += 1
             return
+        }
+        var submitted = false
+        defer {
+            statistics.cpuEncodeWall.add(CACurrentMediaTime() - renderStart)
+            if !submitted {
+                statistics.renderSetupFailures += 1
+            }
         }
         guard self.isSupportedInput(primary.pixelBuffer), secondary.map({ self.isSupportedInput($0.pixelBuffer) }) ?? true else {
             return
@@ -302,15 +369,32 @@ final class RoundVideoFrameProcessor {
             return
         }
 
-        guard let primaryY = CVMetalTextureGetTexture(primaryTextures.y),
-              let primaryCbCr = CVMetalTextureGetTexture(primaryTextures.cbcr),
-              let secondaryY = CVMetalTextureGetTexture(secondaryTextures.y),
-              let secondaryCbCr = CVMetalTextureGetTexture(secondaryTextures.cbcr),
+        guard let primaryInputY = CVMetalTextureGetTexture(primaryTextures.y),
+              let primaryInputCbCr = CVMetalTextureGetTexture(primaryTextures.cbcr),
+              let secondaryInputY = CVMetalTextureGetTexture(secondaryTextures.y),
+              let secondaryInputCbCr = CVMetalTextureGetTexture(secondaryTextures.cbcr),
               let output = CVMetalTextureGetTexture(outputTexture),
               let commandBuffer = self.commandQueue.makeCommandBuffer() else {
             CVMetalTextureCacheFlush(self.textureCache, 0)
             return
         }
+
+        commandBuffer.label = "CameraNeo.\(self.mode.rawValue)"
+        guard let primaryInput = self.prepareInputTextures(y: primaryInputY, cbcr: primaryInputCbCr, commandBuffer: commandBuffer, secondary: false) else {
+            return
+        }
+        let secondaryInput: (y: MTLTexture, cbcr: MTLTexture)
+        if secondary == nil {
+            secondaryInput = primaryInput
+        } else if let input = self.prepareInputTextures(y: secondaryInputY, cbcr: secondaryInputCbCr, commandBuffer: commandBuffer, secondary: true) {
+            secondaryInput = input
+        } else {
+            return
+        }
+        let primaryY = primaryInput.y
+        let primaryCbCr = primaryInput.cbcr
+        let secondaryY = secondaryInput.y
+        let secondaryCbCr = secondaryInput.cbcr
 
         let primaryConversion = Self.colorConversion(for: primary)
         let secondaryConversion = Self.colorConversion(for: effectiveSecondary)
@@ -319,12 +403,12 @@ final class RoundVideoFrameProcessor {
             primaryRow1: primaryConversion.row1,
             primaryRow2: primaryConversion.row2,
             primaryOffset: primaryConversion.offset,
-            primarySource: Self.sourceDescription(for: primary),
+            primarySource: Self.sourceDescription(for: primary, texture: primaryY),
             secondaryRow0: secondaryConversion.row0,
             secondaryRow1: secondaryConversion.row1,
             secondaryRow2: secondaryConversion.row2,
             secondaryOffset: secondaryConversion.offset,
-            secondarySource: Self.sourceDescription(for: effectiveSecondary),
+            secondarySource: Self.sourceDescription(for: effectiveSecondary, texture: secondaryY),
             blend: SIMD4<Float>(max(0.0, min(1.0, mixFactor)), secondary == nil ? 0.0 : 1.0, 0.0, 0.0),
             decoration: SIMD4<Float>(0.0, 0.0, 0.0, 0.0)
         )
@@ -412,6 +496,15 @@ final class RoundVideoFrameProcessor {
             outputTexture
         ]
         self.isRendering = true
+        statistics.renderSubmitted += 1
+        statistics.pendingRenders += 1
+        if self.mode == .hdLanczos, min(primaryInputY.width, primaryInputY.height) > Self.outputWidth || (secondary != nil && min(secondaryInputY.width, secondaryInputY.height) > Self.outputWidth) {
+            statistics.lanczosFrames += 1
+        }
+        if self.decoration != nil {
+            statistics.decoratedFrames += 1
+        }
+        let mediaQueue = self.mediaQueue
         commandBuffer.addCompletedHandler { [weak self] commandBuffer in
             let processedFrame: ProcessedVideoFrame?
             if commandBuffer.status == .completed {
@@ -419,7 +512,11 @@ final class RoundVideoFrameProcessor {
             } else {
                 processedFrame = nil
             }
-            self?.mediaQueue.async { [weak self] in
+            let gpuStart = commandBuffer.gpuStartTime
+            let gpuEnd = commandBuffer.gpuEndTime
+            let gpuSeconds: Double? = gpuStart > 0.0 && gpuEnd > gpuStart ? gpuEnd - gpuStart : nil
+            mediaQueue.async { [weak self] in
+                statistics.renderFinished(gpuSeconds: gpuSeconds, elapsed: CACurrentMediaTime() - renderStart, succeeded: processedFrame != nil)
                 guard let self else {
                     return
                 }
@@ -431,6 +528,7 @@ final class RoundVideoFrameProcessor {
                 }
             }
         }
+        submitted = true
         commandBuffer.commit()
     }
 
@@ -462,6 +560,31 @@ final class RoundVideoFrameProcessor {
             pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ||
             pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
         )
+    }
+
+    private func prepareInputTextures(y: MTLTexture, cbcr: MTLTexture, commandBuffer: MTLCommandBuffer, secondary: Bool) -> (y: MTLTexture, cbcr: MTLTexture)? {
+        // VGA is already a 480-pixel square crop. Avoid a redundant filtering pass.
+        guard self.mode == .hdLanczos, min(y.width, y.height) > Self.outputWidth else {
+            return (y, cbcr)
+        }
+        let scaler: RoundVideoLanczosScaler
+        if let current = secondary ? self.secondaryLanczosScaler : self.primaryLanczosScaler {
+            scaler = current
+        } else {
+            guard let current = RoundVideoLanczosScaler(device: self.device, width: Self.outputWidth, height: Self.outputHeight) else {
+                return nil
+            }
+            if secondary {
+                self.secondaryLanczosScaler = current
+            } else {
+                self.primaryLanczosScaler = current
+            }
+            scaler = current
+        }
+        // All passes share one command buffer. The existing isRendering guard also
+        // prevents the next frame from overwriting these reusable working textures.
+        scaler.encode(commandBuffer: commandBuffer, y: y, cbcr: cbcr)
+        return (scaler.yTexture, scaler.cbcrTexture)
     }
 
     private func makeInputTextures(pixelBuffer: CVPixelBuffer) -> (y: CVMetalTexture, cbcr: CVMetalTexture)? {
@@ -515,9 +638,9 @@ final class RoundVideoFrameProcessor {
         return texture
     }
 
-    private static func sourceDescription(for source: VideoFrameSource) -> SIMD4<Float> {
-        let width = Float(CVPixelBufferGetWidth(source.pixelBuffer))
-        let height = Float(CVPixelBufferGetHeight(source.pixelBuffer))
+    private static func sourceDescription(for source: VideoFrameSource, texture: MTLTexture) -> SIMD4<Float> {
+        let width = Float(texture.width)
+        let height = Float(texture.height)
         let rotation: Float
         switch (source.orientation, source.position) {
         case (.portrait, .front):

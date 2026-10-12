@@ -3,6 +3,13 @@ import TelegramCore
 import SwiftSignalKit
 
 public struct ExperimentalUISettings: Codable, Equatable {
+    public enum VideoMessageCameraMode: String, CaseIterable {
+        case legacy
+        case vga
+        case hdBilinear
+        case hdLanczos
+    }
+
     public struct AccountReactionOverrides: Equatable, Codable {
         public struct Item: Equatable, Codable {
             public var key: MessageReaction.Reaction
@@ -80,6 +87,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var forceRLottieBackend: Bool
     public var respectSystemMicrophone: Bool
     public var useModernVideoMessagePipeline: Bool?
+    public var videoMessageCameraMode: VideoMessageCameraMode
 
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -190,7 +198,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         coreListChatBackend: Bool,
         forceRLottieBackend: Bool,
         respectSystemMicrophone: Bool,
-        useModernVideoMessagePipeline: Bool? = nil
+        useModernVideoMessagePipeline: Bool? = nil,
+        videoMessageCameraMode: VideoMessageCameraMode = .hdBilinear
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -244,6 +253,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceRLottieBackend = forceRLottieBackend
         self.respectSystemMicrophone = respectSystemMicrophone
         self.useModernVideoMessagePipeline = useModernVideoMessagePipeline
+        self.videoMessageCameraMode = videoMessageCameraMode
     }
     
     public init(from decoder: Decoder) throws {
@@ -301,6 +311,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.forceRLottieBackend = try container.decodeIfPresent(Bool.self, forKey: "forceRLottieBackend") ?? false
         self.respectSystemMicrophone = try container.decodeIfPresent(Bool.self, forKey: "respectSystemMicrophone") ?? false
         self.useModernVideoMessagePipeline = try container.decodeIfPresent(Bool.self, forKey: "useModernVideoMessagePipeline")
+        self.videoMessageCameraMode = (try container.decodeIfPresent(String.self, forKey: "videoMessageCameraMode")).flatMap(VideoMessageCameraMode.init(rawValue:)) ?? .hdBilinear
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -358,6 +369,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.forceRLottieBackend, forKey: "forceRLottieBackend")
         try container.encodeIfPresent(self.respectSystemMicrophone, forKey: "respectSystemMicrophone")
         try container.encodeIfPresent(self.useModernVideoMessagePipeline, forKey: "useModernVideoMessagePipeline")
+        try container.encode(self.videoMessageCameraMode.rawValue, forKey: "videoMessageCameraMode")
     }
 }
 

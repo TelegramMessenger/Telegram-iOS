@@ -110,6 +110,21 @@ private func presentPasscodeMigrationTest(arguments: DebugControllerArguments) {
     arguments.presentController(controller, nil)
 }
 
+private extension ExperimentalUISettings.VideoMessageCameraMode {
+    var debugTitle: String {
+        switch self {
+        case .legacy:
+            return "Legacy"
+        case .vga:
+            return "VGA (640×480)"
+        case .hdBilinear:
+            return "HD · Bilinear"
+        case .hdLanczos:
+            return "HD · Lanczos"
+        }
+    }
+}
+
 private enum DebugControllerSection: Int32 {
     case sticker
     case logs
@@ -170,6 +185,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case forceRLottieBackend(Bool)
     case respectSystemMicrophone(Bool)
     case useModernVideoMessagePipeline(Bool)
+    case videoMessageCameraMode(ExperimentalUISettings.VideoMessageCameraMode)
     case browserExperiment(Bool)
     case allForumsHaveTabs(Bool)
     case enableReactionOverrides(Bool)
@@ -213,7 +229,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .alwaysDisplayTyping, .debugRatingLayout, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .debugRichText, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .fakeGlass, .forceClearGlass, .debugRipple, .debugRichText, .coreListChatBackend, .forceRLottieBackend, .respectSystemMicrophone, .useModernVideoMessagePipeline, .videoMessageCameraMode, .browserExperiment, .allForumsHaveTabs, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .groupCallReferenceEngine, .playerV2, .devRequests, .enableUpdates, .pwa, .enableLocalTranslation, .testPasscodeMigration:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -274,92 +290,94 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 21
         case .useModernVideoMessagePipeline:
             return 22
-        case .crashOnSlowQueries:
+        case .videoMessageCameraMode:
             return 23
-        case .crashOnMemoryPressure:
+        case .crashOnSlowQueries:
             return 24
-        case .clearTips:
+        case .crashOnMemoryPressure:
             return 25
-        case .resetNotifications:
+        case .clearTips:
             return 26
-        case .crash:
+        case .resetNotifications:
             return 27
-        case .testPasscodeMigration:
+        case .crash:
             return 28
-        case .fillLocalSavedMessageCache:
+        case .testPasscodeMigration:
             return 29
-        case .resetDatabase:
+        case .fillLocalSavedMessageCache:
             return 30
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 31
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 32
-        case .resetTagHoles:
+        case .resetHoles:
             return 33
-        case .reindexUnread:
+        case .resetTagHoles:
             return 34
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 35
-        case .reindexCache:
+        case .resetCacheIndex:
             return 36
-        case .resetBiometricsData:
+        case .reindexCache:
             return 37
-        case .optimizeDatabase:
+        case .resetBiometricsData:
             return 38
-        case .photoPreview:
+        case .optimizeDatabase:
             return 39
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 40
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 41
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 42
-        case .fakeGlass:
+        case .enableDebugDataDisplay:
             return 43
-        case .forceClearGlass:
+        case .fakeGlass:
             return 44
-        case .debugRipple:
+        case .forceClearGlass:
             return 45
-        case .debugRichText:
+        case .debugRipple:
             return 46
-        case .browserExperiment:
+        case .debugRichText:
             return 47
-        case .allForumsHaveTabs:
+        case .browserExperiment:
             return 48
-        case .enableReactionOverrides:
+        case .allForumsHaveTabs:
             return 49
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 50
-        case .logTranslationRecognition:
-            return 64
-        case .resetTranslationStates:
-            return 65
-        case .compressedEmojiCache:
+        case .restorePurchases:
             return 51
-        case .storiesJpegExperiment:
+        case .logTranslationRecognition:
+            return 65
+        case .resetTranslationStates:
+            return 66
+        case .compressedEmojiCache:
             return 52
-        case .disableReloginTokens:
+        case .storiesJpegExperiment:
             return 53
-        case .checkSerializedData:
+        case .disableReloginTokens:
             return 54
-        case .enableQuickReactionSwitch:
+        case .checkSerializedData:
             return 55
-        case .liveStreamV2:
+        case .enableQuickReactionSwitch:
             return 56
-        case .experimentalCallMute:
+        case .liveStreamV2:
             return 57
-        case .groupCallReferenceEngine:
+        case .experimentalCallMute:
             return 58
-        case .playerV2:
+        case .groupCallReferenceEngine:
             return 59
-        case .devRequests:
+        case .playerV2:
             return 60
-        case .pwa:
+        case .devRequests:
             return 61
-        case .enableLocalTranslation:
+        case .pwa:
             return 62
-        case .enableUpdates:
+        case .enableLocalTranslation:
             return 63
+        case .enableUpdates:
+            return 64
         case .disableVideoAspectScaling:
             return 101
         case .enableNetworkFramework:
@@ -1451,9 +1469,40 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.useModernVideoMessagePipeline = value
+                        if value && settings.videoMessageCameraMode == .legacy {
+                            settings.videoMessageCameraMode = .hdBilinear
+                        }
                         return EnginePreferencesEntry(settings)
                     })
                 }).start()
+            })
+        case let .videoMessageCameraMode(value):
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: "Video Message Camera", label: value.debugTitle, sectionId: self.section, style: .blocks, action: {
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = [
+                    ActionSheetTextItem(title: "Reopen the camera to apply. VGA and HD use the Modern Video Message Pipeline and record 480×480 at 30 FPS.")
+                ]
+                for mode in ExperimentalUISettings.VideoMessageCameraMode.allCases {
+                    items.append(ActionSheetButtonItem(title: mode.debugTitle, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                            var settings = settings
+                            settings.useModernVideoMessagePipeline = mode != .legacy
+                            settings.videoMessageCameraMode = mode
+                            return settings
+                        }).start()
+                    }))
+                }
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                arguments.presentController(actionSheet, nil)
             })
         case let .browserExperiment(value):
             return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "Inline UI", value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -1838,7 +1887,9 @@ private func debugControllerEntries(context: AccountContext?, sharedContext: Sha
     entries.append(.coreListChatBackend(experimentalSettings.coreListChatBackend))
     entries.append(.forceRLottieBackend(experimentalSettings.forceRLottieBackend))
     entries.append(.respectSystemMicrophone(experimentalSettings.respectSystemMicrophone))
-    entries.append(.useModernVideoMessagePipeline(experimentalSettings.useModernVideoMessagePipeline ?? (context?.getAppConfigValue("ios_killswitch_disable_neo_round_camera_v2") == nil)))
+    let useModernVideoMessagePipeline = (experimentalSettings.useModernVideoMessagePipeline ?? (context?.getAppConfigValue("ios_killswitch_disable_neo_round_camera_v2") == nil)) && experimentalSettings.videoMessageCameraMode != .legacy
+    entries.append(.useModernVideoMessagePipeline(useModernVideoMessagePipeline))
+    entries.append(.videoMessageCameraMode(useModernVideoMessagePipeline ? experimentalSettings.videoMessageCameraMode : .legacy))
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     entries.append(.crashOnMemoryPressure(presentationData.theme, experimentalSettings.crashOnMemoryPressure))
     if isMainApp {

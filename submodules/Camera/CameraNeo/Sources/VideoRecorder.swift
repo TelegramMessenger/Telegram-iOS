@@ -5,6 +5,142 @@ import CoreMedia
 import CoreVideo
 import VideoToolbox
 import Camera
+import DeviceModel
+
+// Mutated only on the media queue. Each recording owns its statistics even when
+// the frame processor is reused or its last GPU command finishes after stopping.
+final class VideoRecordingStatistics {
+    struct Timing {
+        private var count = 0
+        private var total: Double = 0.0
+        private var maximum: Double = 0.0
+
+        mutating func add(_ seconds: Double) {
+            guard seconds.isFinite, seconds >= 0.0 else {
+                return
+            }
+            self.count += 1
+            self.total += seconds
+            self.maximum = max(self.maximum, seconds)
+        }
+
+        var milliseconds: [String: Any] {
+            guard self.count > 0 else {
+                return ["samples": 0, "mean": NSNull(), "max": NSNull()]
+            }
+            return ["samples": self.count, "mean": self.total * 1000.0 / Double(self.count), "max": self.maximum * 1000.0]
+        }
+    }
+
+    struct InputFormat: Hashable {
+        let position: Int
+        let width: Int
+        let height: Int
+    }
+
+    let startedAt = CACurrentMediaTime()
+    private let id = UUID().uuidString
+    private let mode: NeoCameraImpl.RoundVideoMode
+    private let usesMultiCam: Bool
+    private let log: ((String) -> Void)?
+    private let thermalStart = String(describing: ProcessInfo.processInfo.thermalState)
+    private var finalFields: [String: Any]?
+    private var didFinish = false
+
+    var inputFormats = Set<InputFormat>()
+    var activeFramesReceived = 0
+    var framesWritten = 0
+    var captureDrops: [String: Int] = [:]
+    var writerBackpressureDrops = 0
+    var writerAppendFailures = 0
+    var renderBusyDrops = 0
+    var renderSetupFailures = 0
+    var gpuFailures = 0
+    var renderSubmitted = 0
+    var renderCompleted = 0
+    var pendingRenders = 0
+    var lanczosFrames = 0
+    var decoratedFrames = 0
+    var firstFrameMs: Double?
+    var timelineMissingFrames = 0
+    var maximumFrameGap: Double = 0.0
+    var cpuEncodeWall = Timing()
+    var gpu = Timing()
+    var renderCallbackWall = Timing()
+
+    init(mode: NeoCameraImpl.RoundVideoMode, usesMultiCam: Bool, log: ((String) -> Void)?) {
+        self.mode = mode
+        self.usesMultiCam = usesMultiCam
+        self.log = log
+    }
+
+    func renderFinished(gpuSeconds: Double?, elapsed: Double, succeeded: Bool) {
+        self.pendingRenders -= 1
+        self.renderCompleted += 1
+        self.renderCallbackWall.add(elapsed)
+        if let gpuSeconds {
+            self.gpu.add(gpuSeconds)
+        }
+        if !succeeded {
+            self.gpuFailures += 1
+        }
+        self.logIfReady()
+    }
+
+    func finish(fields: [String: Any]) {
+        guard !self.didFinish else {
+            return
+        }
+        self.didFinish = true
+        self.finalFields = fields
+        self.logIfReady()
+    }
+
+    private func logIfReady() {
+        guard self.pendingRenders == 0, var fields = self.finalFields else {
+            return
+        }
+        self.finalFields = nil
+        guard let log = self.log else {
+            return
+        }
+        fields["id"] = self.id
+        fields["schemaVersion"] = 1
+        fields["mode"] = self.mode.rawValue
+        fields["multiCam"] = self.usesMultiCam
+        fields["device"] = String(describing: DeviceModel.current)
+        fields["iOS"] = UIDevice.current.systemVersion
+        fields["thermalStart"] = self.thermalStart
+        fields["output"] = "\(RoundVideoFrameProcessor.outputWidth)x\(RoundVideoFrameProcessor.outputHeight)"
+        fields["targetFps"] = roundVideoCaptureFrameRate
+        fields["inputFormats"] = self.inputFormats.map { "\($0.position == Camera.Position.front.rawValue ? "front" : "back"):\($0.width)x\($0.height)" }.sorted()
+        fields["receivedActiveFrames"] = self.activeFramesReceived
+        fields["writtenFrames"] = self.framesWritten
+        fields["captureDrops"] = self.captureDrops
+        fields["writerBackpressureDrops"] = self.writerBackpressureDrops
+        fields["writerAppendFailures"] = self.writerAppendFailures
+        fields["renderBusyDrops"] = self.renderBusyDrops
+        fields["renderSetupFailures"] = self.renderSetupFailures
+        fields["gpuFailures"] = self.gpuFailures
+        fields["renderSubmitted"] = self.renderSubmitted
+        fields["renderCompleted"] = self.renderCompleted
+        fields["lanczosFrames"] = self.lanczosFrames
+        fields["decoratedFrames"] = self.decoratedFrames
+        fields["firstFrameMs"] = self.firstFrameMs.map { $0 as Any } ?? NSNull()
+        // Gaps are inferred from written timestamps at 30 FPS, not another drop counter.
+        fields["timelineMissingFramesAt30Fps"] = self.timelineMissingFrames
+        fields["maxWrittenFrameGapMs"] = self.maximumFrameGap * 1000.0
+        // CPU-side wall time for preparing/encoding the Metal command buffer,
+        // not process CPU utilization or H.264 encoder time.
+        fields["cpuEncodeWallMs"] = self.cpuEncodeWall.milliseconds
+        fields["gpuMs"] = self.gpu.milliseconds
+        fields["renderCallbackWallMs"] = self.renderCallbackWall.milliseconds
+        if let data = try? JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys]),
+           let message = String(data: data, encoding: .utf8) {
+            log("recording_summary \(message)")
+        }
+    }
+}
 
 private extension CMSampleBuffer {
     var presentationTime: CMTime {
@@ -76,6 +212,7 @@ final class VideoRecorder {
 
     private let mediaQueue: DispatchQueue
     private let processor: RoundVideoFrameProcessor
+    private let statistics: VideoRecordingStatistics
     private let url: URL
     private let hasAudio: Bool
     private let durationUpdated: (Double) -> Void
@@ -121,6 +258,9 @@ final class VideoRecorder {
         url: URL,
         hasAudio: Bool,
         initialPosition: Camera.Position,
+        mode: NeoCameraImpl.RoundVideoMode,
+        usesMultiCam: Bool,
+        log: ((String) -> Void)?,
         durationUpdated: @escaping (Double) -> Void,
         transitionImageUpdated: @escaping (UIImage?) -> Void,
         runtimeFailure: @escaping (CameraRecordingError) -> Void,
@@ -128,6 +268,7 @@ final class VideoRecorder {
     ) {
         self.mediaQueue = mediaQueue
         self.processor = processor
+        self.statistics = VideoRecordingStatistics(mode: mode, usesMultiCam: usesMultiCam, log: log)
         self.url = url
         self.hasAudio = hasAudio
         self.activePosition = initialPosition
@@ -242,6 +383,15 @@ final class VideoRecorder {
         self.activePosition = position
     }
 
+    func noteDroppedVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer, position: Camera.Position) {
+        dispatchPrecondition(condition: .onQueue(self.mediaQueue))
+        guard !self.isTerminal, self.state != .finishing, !self.videoReachedStopTarget, position == self.activePosition else {
+            return
+        }
+        let reason = CMGetAttachment(sampleBuffer, key: kCMSampleBufferAttachmentKey_DroppedFrameReason, attachmentModeOut: nil) as? String ?? "unknown"
+        self.statistics.captureDrops[reason, default: 0] += 1
+    }
+
     func appendVideoSampleBuffer(
         _ sampleBuffer: CMSampleBuffer,
         position: Camera.Position,
@@ -262,6 +412,12 @@ final class VideoRecorder {
             return
         }
 
+        self.statistics.inputFormats.insert(VideoRecordingStatistics.InputFormat(
+            position: position.rawValue,
+            width: CVPixelBufferGetWidth(pixelBuffer),
+            height: CVPixelBufferGetHeight(pixelBuffer)
+        ))
+
         let source = VideoFrameSource(
             pixelBuffer: pixelBuffer,
             formatDescription: formatDescription,
@@ -272,6 +428,9 @@ final class VideoRecorder {
 
         guard position == self.activePosition else {
             return
+        }
+        if !self.videoReachedStopTarget {
+            self.statistics.activeFramesReceived += 1
         }
 
         let frame = PendingVideoFrame(
@@ -430,7 +589,7 @@ final class VideoRecorder {
         self.latestBackFrame = nil
         self.latestFrontFrame = nil
         try? FileManager.default.removeItem(at: self.url)
-        self.complete(.failed)
+        self.complete(.failed, status: "cancelled")
     }
 
     func failInitialization(_ error: CameraRecordingError) {
@@ -570,6 +729,7 @@ final class VideoRecorder {
             return
         }
         guard videoInput.isReadyForMoreMediaData else {
+            self.statistics.writerBackpressureDrops += 1
             return
         }
 
@@ -585,6 +745,7 @@ final class VideoRecorder {
             secondary: renderInputs.secondary,
             mixFactor: renderInputs.mixFactor,
             animationTime: animationTime,
+            statistics: self.statistics,
             completion: { [weak self] processedFrame in
                 guard let self else {
                     return
@@ -615,17 +776,28 @@ final class VideoRecorder {
             return
         }
         guard videoInput.isReadyForMoreMediaData else {
+            self.statistics.writerBackpressureDrops += 1
             return
         }
 
         guard videoAdaptor.append(processedFrame.pixelBuffer, withPresentationTime: frame.presentationTime) else {
+            self.statistics.writerAppendFailures += 1
             if self.assetWriter?.error != nil {
                 self.fail()
             }
             return
         }
 
+        self.statistics.framesWritten += 1
+        if let lastVideoTime = self.lastVideoTime {
+            let gap = (frame.presentationTime - lastVideoTime).seconds
+            if gap.isFinite, gap > 0.0 {
+                self.statistics.maximumFrameGap = max(self.statistics.maximumFrameGap, gap)
+                self.statistics.timelineMissingFrames += max(0, Int((gap * roundVideoCaptureFrameRate).rounded()) - 1)
+            }
+        }
         if self.recordingStartTime == nil {
+            self.statistics.firstFrameMs = (CACurrentMediaTime() - self.statistics.startedAt) * 1000.0
             self.recordingStartTime = frame.presentationTime
             self.updateStopTargetIfPossible()
         }
@@ -840,7 +1012,32 @@ final class VideoRecorder {
         self.complete(.failed)
     }
 
-    private func complete(_ result: Result) {
+    private func complete(_ result: Result, status: String? = nil) {
+        let duration: Double
+        if let recordingStartTime = self.recordingStartTime, let lastVideoTime = self.lastVideoTime {
+            duration = max(0.0, (lastVideoTime - recordingStartTime).seconds)
+        } else {
+            duration = 0.0
+        }
+        let resultStatus: String
+        let fileBytes: Int64?
+        switch result {
+        case .success:
+            resultStatus = "completed"
+            let attributes = try? FileManager.default.attributesOfItem(atPath: self.url.path)
+            fileBytes = (attributes?[.size] as? NSNumber)?.int64Value
+        case .failed:
+            resultStatus = "failed"
+            fileBytes = nil
+        }
+        let fps: Double? = duration > 0.0 && self.statistics.framesWritten > 1 ? Double(self.statistics.framesWritten - 1) / duration : nil
+        self.statistics.finish(fields: [
+            "status": status ?? resultStatus,
+            "durationSeconds": duration,
+            "writtenFps": fps.map { $0 as Any } ?? NSNull(),
+            "fileBytes": fileBytes.map { $0 as Any } ?? NSNull(),
+            "thermalEnd": String(describing: ProcessInfo.processInfo.thermalState)
+        ])
         self.latestBackFrame = nil
         self.latestFrontFrame = nil
         self.completion(result)
