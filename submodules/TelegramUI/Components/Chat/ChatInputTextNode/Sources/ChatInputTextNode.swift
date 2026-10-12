@@ -1086,7 +1086,15 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
     /// made every legacy Format command both un-undoable and a wipe of the typing history before it.
     /// Writing through the text storage leaves the stack alone, and restoring the exact pre-command
     /// text on undo keeps every older step consistent with the text it expects.
+    ///
+    /// Re-entrant: a call inside another one runs `body` and leaves the registering to the outer
+    /// call, so a command wrapped at two levels (the Format menu around the chat's own
+    /// `performUndoableInputChange`) is still ONE step.
     public func performUndoableTextChange(_ body: () -> Void) {
+        if self.appliesTextInPlace {
+            body()
+            return
+        }
         let before = NSAttributedString(attributedString: self.attributedText ?? NSAttributedString())
         let beforeSelection = self.selectedRange
         let previous = self.appliesTextInPlace

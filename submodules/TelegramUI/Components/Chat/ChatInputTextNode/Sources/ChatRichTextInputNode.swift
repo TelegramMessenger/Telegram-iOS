@@ -1060,6 +1060,15 @@ final class ChatRichTextInputNodeImpl: ASDisplayNode, ChatRichTextInputNode {
         Keyboard.applyAutocorrection(textView: self.textInputNodeImpl.textView)
     }
 
+    /// The chat's own edits — a keyboard format shortcut, autocomplete, the emoji keyboard, the date
+    /// editor, Translate — as ONE step on the text view's undo stack, the way the Format menu's
+    /// `performUndoableTextChange` makes its commands one. Run bare, the echo of an attribute-only
+    /// change kept UIKit's typing steps and recorded nothing for the change, so undo after ⌘B took
+    /// back the typing and left the bold on nothing (`HarnessLegacyFormatShortcutUndoTests`).
+    func performUndoableInputChange(_ body: () -> Void) {
+        self.textInputNodeImpl.textView.performUndoableTextChange(body)
+    }
+
     var usesNativeRichTextEngine: Bool { return false }
 
     // The legacy backend builds its menu via ChatTextInputPanelNode.chatInputTextNodeMenu; this hook is unused.
