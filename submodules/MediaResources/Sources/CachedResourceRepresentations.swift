@@ -389,3 +389,29 @@ public final class CachedPreparedSvgRepresentation: EngineRawCachedMediaResource
         }
     }
 }
+
+public final class CachedPassImageRepresentation: EngineRawCachedMediaResourceRepresentation {
+    public let keepDuration: EngineCachedMediaRepresentationKeepDuration = .general
+    
+    public let language: String
+    public let scale: Int
+    public let layoutVersion: Int
+    
+    public var uniqueId: String {
+        return "pass-image-v\(self.layoutVersion)-\(self.scale)x-\(self.language)"
+    }
+    
+    public init(language: String, scale: Int, layoutVersion: Int) {
+        self.language = String(language.filter { ($0.isASCII && $0.isLetter) || $0 == "-" }.prefix(16))
+        self.scale = scale
+        self.layoutVersion = layoutVersion
+    }
+    
+    public func isEqual(to: EngineRawCachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedPassImageRepresentation {
+            return self.language == to.language && self.scale == to.scale && self.layoutVersion == to.layoutVersion
+        } else {
+            return false
+        }
+    }
+}

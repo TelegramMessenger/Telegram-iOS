@@ -425,6 +425,10 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 )
             }
             
+            if let file = selectedMedia as? TelegramMediaFile, file.isDisplayablePass {
+                automaticDownload = .full
+            }
+            
             let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData, item.presentationData.dateTimeFormat, item.message, item.associatedData, item.attributes, selectedMedia!, selectedMediaIndex, dateAndStatus, automaticDownload, item.associatedData.automaticDownloadPeerType, item.associatedData.automaticDownloadPeerId, sizeCalculation, layoutConstants, contentMode, item.controllerInteraction.presentationContext)
             
             let forceFullCorners = false

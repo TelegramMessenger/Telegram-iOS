@@ -138,6 +138,7 @@ swift_library(
         "//submodules/DirectionalPanGesture:DirectionalPanGesture",
         "//submodules/UndoUI:UndoUI",
         "//submodules/PhotoResources:PhotoResources",
+        "//submodules/PassRenderer:PassRenderer",
         "//submodules/TinyThumbnail:TinyThumbnail",
         "//submodules/ImageTransparency:ImageTransparency",
         "//submodules/TelegramNotices:TelegramNotices",
