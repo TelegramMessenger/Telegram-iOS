@@ -203,6 +203,11 @@ func forYouPostCount(_ items: [EngineForYouItem]) -> Int {
     return count
 }
 
+/// The `feed.getForYou` limit for the next batch: a feed without posts opens with a larger one.
+func forYouBatchLimit(for items: [EngineForYouItem]) -> Int32 {
+    return forYouPostCount(items) == 0 ? 100 : 40
+}
+
 /// What is persisted: the top `maxItems` items, so a relaunch shows the same posts.
 func forYouSnapshotItems(_ list: [EngineForYouItem], maxItems: Int) -> [EngineForYouItem] {
     return Array(list.prefix(maxItems))

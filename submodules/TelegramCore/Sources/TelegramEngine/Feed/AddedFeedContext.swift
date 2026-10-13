@@ -5,6 +5,8 @@ import MtProtoKit
 internal import TelegramApi
 
 private let addedFeedPageLimit: Int32 = 40
+/// The first page, around the read mark, is larger so the feed opens with plenty to scroll.
+private let addedFeedInitialPageLimit: Int32 = 100
 private let addedFeedSnapshotLimit = 200
 
 private struct AddedFeedPage {
@@ -147,7 +149,7 @@ private final class AddedFeedContextImpl {
         self.state.isLoadingInitial = true
         self.state.hasError = false
         self.pushState()
-        let limit = addedFeedPageLimit
+        let limit = addedFeedInitialPageLimit
         self.initialDisposable.set((fetchAddedFeedPage(account: self.account, filterId: self.filterId, offsetToMaxRead: true, offsetPosition: nil, addOffset: -limit / 2, limit: limit)
         |> deliverOn(self.queue)).start(next: { [weak self] page in
             guard let self else {
