@@ -332,6 +332,8 @@ swift_library(
         "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
         "//submodules/TelegramUI/Components/CoreList:CoreList",
         "//submodules/TelegramUI/Components/CoreListComponentHost",
+        "//submodules/TelegramUI/Components/News/NewsScreen",
+        "//submodules/TelegramUI/Components/News/NewsFeedSupport",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
         "//submodules/TelegramUI/Components/CameraScreen",
         "//submodules/TelegramUI/Components/MediaEditorScreen",
