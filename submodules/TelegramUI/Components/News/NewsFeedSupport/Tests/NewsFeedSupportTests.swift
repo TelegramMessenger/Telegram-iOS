@@ -50,6 +50,15 @@ final class NewsFeedSupportTests: XCTestCase {
         XCTAssertEqual(newsAddedFirstUnreadIndex(entries: entries, readMarkPosition: EngineFeedPosition(date: 100, peerId: self.channel, id: 1)), 1)
     }
 
+    // The first emission after a window replacement still carries the previous window's messages.
+    func testWindowIsResolvedOnlyByItsOwnMessages() {
+        let previous = [self.entry(2, date: 200), self.entry(1, date: 100)]
+        let replaced = [self.entry(3, date: 300), self.entry(2, date: 200)]
+        XCTAssertFalse(newsWindowIsResolved(entries: replaced, loadedIds: previous.flatMap(\.messageIds)))
+        XCTAssertTrue(newsWindowIsResolved(entries: replaced, loadedIds: replaced.flatMap(\.messageIds)))
+        XCTAssertTrue(newsWindowIsResolved(entries: [], loadedIds: []))
+    }
+
     func testResolvedEntriesDropUnavailableMessages() {
         let album = EngineFeedEntry(position: EngineFeedPosition(date: 300, peerId: self.channel, id: 11), messageIds: [EngineMessage.Id(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: 10), EngineMessage.Id(peerId: self.channel, namespace: Namespaces.Message.Cloud, id: 11)], groupingKey: 5)
         let gone = self.entry(1, date: 100)

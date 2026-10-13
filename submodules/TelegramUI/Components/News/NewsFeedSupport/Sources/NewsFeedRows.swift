@@ -16,6 +16,12 @@ public func newsResolvedEntries(_ entries: [EngineFeedEntry], availableMessageId
     }
 }
 
+/// Whether the loaded messages are this window's own. A messages signal keyed on the window's ids first answers
+/// with the previous window's messages, and positioning a replaced window on that partial list would stick.
+public func newsWindowIsResolved(entries: [EngineFeedEntry], loadedIds: [EngineMessage.Id]) -> Bool {
+    return entries.flatMap(\.messageIds) == loadedIds
+}
+
 /// The oldest unread post of the Added list (entries newest first): the last one newer than
 /// `readMarkPosition`, the read mark captured when the window opened. The list opens with it just above
 /// the bottom of the viewport. nil when nothing is unread.

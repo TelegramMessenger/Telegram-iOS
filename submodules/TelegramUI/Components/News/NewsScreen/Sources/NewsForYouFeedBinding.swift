@@ -39,12 +39,12 @@ final class NewsForYouFeedBinding {
             return ids
         }
         self.stateDisposable = (combineLatest(state, newsFeedMessages(engine: engine, ids: ids))
-        |> deliverOnMainQueue).start(next: { [weak self] state, messages in
+        |> deliverOnMainQueue).start(next: { [weak self] state, loaded in
             guard let self else {
                 return
             }
             self.state = state
-            self.messages = messages
+            self.messages = loaded.messages
             self.updated?()
         })
         self.interestsDisposable = (engine.feed.interestCategories()

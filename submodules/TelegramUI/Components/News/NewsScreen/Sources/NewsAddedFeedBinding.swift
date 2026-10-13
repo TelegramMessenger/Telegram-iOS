@@ -37,13 +37,14 @@ final class NewsAddedFeedBinding {
             return state.entries.flatMap(\.messageIds)
         }
         self.stateDisposable = (combineLatest(state, newsFeedMessages(engine: engine, ids: ids))
-        |> deliverOnMainQueue).start(next: { [weak self] state, messages in
+        |> deliverOnMainQueue).start(next: { [weak self] state, loaded in
             guard let self else {
                 return
             }
             self.state = state
-            self.messages = messages
-            let windowReplaced = state.windowGeneration != self.appliedGeneration
+            self.messages = loaded.messages
+            // A replaced window is applied (and the list repositioned) once its own messages have loaded.
+            let windowReplaced = state.windowGeneration != self.appliedGeneration && newsWindowIsResolved(entries: state.entries, loadedIds: loaded.ids)
             if windowReplaced {
                 self.appliedGeneration = state.windowGeneration
                 self.readMarkPosition = state.windowReadMarkPosition

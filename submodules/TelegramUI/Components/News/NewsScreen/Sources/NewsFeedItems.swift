@@ -10,19 +10,26 @@ import NewsFeedComponents
 
 /// The feed's messages by id. Re-subscribes only when the set of ids changes: a state push that only moves
 /// the read mark or a loading flag (every newly read post pushes one) reuses the subscription.
-func newsFeedMessages(engine: TelegramEngine, ids: Signal<[EngineMessage.Id], NoError>) -> Signal<[EngineMessage.Id: EngineMessage], NoError> {
+/// The messages of a feed's entries, with the ids they were loaded for: an emission can still be for the
+/// previous ids (see `newsWindowIsResolved`).
+struct NewsFeedMessages {
+    var ids: [EngineMessage.Id]
+    var messages: [EngineMessage.Id: EngineMessage]
+}
+
+func newsFeedMessages(engine: TelegramEngine, ids: Signal<[EngineMessage.Id], NoError>) -> Signal<NewsFeedMessages, NoError> {
     return ids
     |> distinctUntilChanged
-    |> mapToSignal { ids -> Signal<[EngineMessage.Id: EngineMessage], NoError> in
+    |> mapToSignal { ids -> Signal<NewsFeedMessages, NoError> in
         return engine.data.subscribe(EngineDataMap(ids.map(TelegramEngine.EngineData.Item.Messages.Message.init)))
-        |> map { messages -> [EngineMessage.Id: EngineMessage] in
+        |> map { messages -> NewsFeedMessages in
             var result: [EngineMessage.Id: EngineMessage] = [:]
             for (id, message) in messages {
                 if let message {
                     result[id] = message
                 }
             }
-            return result
+            return NewsFeedMessages(ids: ids, messages: result)
         }
     }
 }
