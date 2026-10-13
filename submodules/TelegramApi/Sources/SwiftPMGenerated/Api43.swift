@@ -7275,9 +7275,11 @@ public extension Api.functions.wallet {
     }
 }
 public extension Api.functions.wallet {
-    static func setCardStickers(stickers: [Api.InputWalletCardSticker]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.Card>) {
+    static func setCardStickers(flags: Int32, stickers: [Api.InputWalletCardSticker], bgNftAddress: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.Card>) {
         let _tlObject = TLObjectAllocate(TLApiFunctionConstructorAt(839))
-        tlStoreReference(_tlObject, 24, stickers.map { item in item.tlObject } as NSArray)
+        tlStore(_tlObject, 24, flags)
+        tlStoreReference(_tlObject, 32, stickers.map { item in item.tlObject } as NSArray)
+        tlStoreReference(_tlObject, 40, bgNftAddress.map { value in value as NSString })
         return tlFunction(_tlObject)
     }
 }

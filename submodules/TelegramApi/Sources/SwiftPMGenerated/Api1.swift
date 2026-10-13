@@ -378,7 +378,7 @@ public extension Api.AttachMenuBotIconColor.Cons_attachMenuBotIconColor {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 24, as: Int32.self) } }
     }
     init(name: String, color: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(449))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(448))
         tlStoreReference(_tlObject, 32, name as NSString)
         tlStore(_tlObject, 24, color)
         self.init(tlObject: _tlObject)
@@ -437,7 +437,7 @@ public extension Api.AttachMenuBots.Cons_attachMenuBots {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.User.tlArray(self.tlObject, 40) } }
     }
     init(hash: Int64, bots: [Api.AttachMenuBot], users: [Api.User]) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(385))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(384))
         tlStore(_tlObject, 24, hash)
         tlStoreReference(_tlObject, 32, bots.map { item in item.tlObject } as NSArray)
         tlStoreReference(_tlObject, 40, users.map { item in item.tlObject } as NSArray)
@@ -526,13 +526,13 @@ public extension Api {
             case .attachMenuPeerTypeBotPM:
                 return TLObjectSingleton(TLApiConstructorAt(1302))
             case .attachMenuPeerTypeBroadcast:
-                return TLObjectSingleton(TLApiConstructorAt(800))
+                return TLObjectSingleton(TLApiConstructorAt(799))
             case .attachMenuPeerTypeChat:
                 return TLObjectSingleton(TLApiConstructorAt(34))
             case .attachMenuPeerTypePM:
                 return TLObjectSingleton(TLApiConstructorAt(1602))
             case .attachMenuPeerTypeSameBotPM:
-                return TLObjectSingleton(TLApiConstructorAt(809))
+                return TLObjectSingleton(TLApiConstructorAt(808))
             }
         }
 
@@ -594,7 +594,7 @@ public extension Api.AuctionBidLevel.Cons_auctionBidLevel {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlBase(self.tlObject).load(fromByteOffset: 28, as: Int32.self) } }
     }
     init(pos: Int32, amount: Int64, date: Int32) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(311))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(310))
         tlStore(_tlObject, 24, pos)
         tlStore(_tlObject, 32, amount)
         tlStore(_tlObject, 28, date)
@@ -812,7 +812,7 @@ public extension Api.AutoSaveException.Cons_autoSaveException {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.AutoSaveSettings(tlObject: tlObjectAt(self.tlObject, 32)) } }
     }
     init(peer: Api.Peer, settings: Api.AutoSaveSettings) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(832))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(831))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         tlStoreReference(_tlObject, 32, settings.tlObject)
         self.init(tlObject: _tlObject)
@@ -1103,7 +1103,7 @@ public extension Api {
         @usableFromInline var tlObject: TLObject {
             switch self {
             case .baseThemeArctic:
-                return TLObjectSingleton(TLApiConstructorAt(590))
+                return TLObjectSingleton(TLApiConstructorAt(589))
             case .baseThemeClassic:
                 return TLObjectSingleton(TLApiConstructorAt(1309))
             case .baseThemeDay:
@@ -1111,7 +1111,7 @@ public extension Api {
             case .baseThemeNight:
                 return TLObjectSingleton(TLApiConstructorAt(1209))
             case .baseThemeTinted:
-                return TLObjectSingleton(TLApiConstructorAt(699))
+                return TLObjectSingleton(TLApiConstructorAt(698))
             }
         }
 
@@ -1176,7 +1176,7 @@ public extension Api.Birthday.Cons_birthday {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 40, 0) ? tlBase(self.tlObject).load(fromByteOffset: 36, as: Int32.self) : nil } }
     }
     init(flags: Int32, day: Int32, month: Int32, year: Int32?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(695))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(694))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 28, day)
@@ -1288,7 +1288,7 @@ public extension Api.Boost.Cons_boost {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlIsPresent(self.tlObject, 80, 3) ? tlBase(self.tlObject).load(fromByteOffset: 72, as: Int64.self) : nil } }
     }
     init(flags: Int32, id: String, userId: Int64?, giveawayMsgId: Int32?, date: Int32, expires: Int32, usedGiftSlug: String?, multiplier: Int32?, stars: Int64?) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(484))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(483))
         var _tlPresent: UInt64 = 0
         tlStore(_tlObject, 24, flags)
         tlStoreReference(_tlObject, 48, id as NSString)
@@ -1331,7 +1331,7 @@ public extension Api {
             case .botApp(let _data):
                 return _data.tlObject
             case .botAppNotModified:
-                return TLObjectSingleton(TLApiConstructorAt(602))
+                return TLObjectSingleton(TLApiConstructorAt(601))
             }
         }
 
@@ -1633,9 +1633,9 @@ public extension Api {
             case .botCommandScopeChatAdmins:
                 return TLObjectSingleton(TLApiConstructorAt(1224))
             case .botCommandScopeChats:
-                return TLObjectSingleton(TLApiConstructorAt(714))
+                return TLObjectSingleton(TLApiConstructorAt(713))
             case .botCommandScopeDefault:
-                return TLObjectSingleton(TLApiConstructorAt(303))
+                return TLObjectSingleton(TLApiConstructorAt(302))
             case .botCommandScopePeer(let _data):
                 return _data.tlObject
             case .botCommandScopePeerAdmins(let _data):
@@ -1643,7 +1643,7 @@ public extension Api {
             case .botCommandScopePeerUser(let _data):
                 return _data.tlObject
             case .botCommandScopeUsers:
-                return TLObjectSingleton(TLApiConstructorAt(386))
+                return TLObjectSingleton(TLApiConstructorAt(385))
             }
         }
 
@@ -1672,7 +1672,7 @@ public extension Api.BotCommandScope.Cons_botCommandScopePeerAdmins {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.InputPeer(tlObject: tlObjectAt(self.tlObject, 24)) } }
     }
     init(peer: Api.InputPeer) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(414))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(413))
         tlStoreReference(_tlObject, 24, peer.tlObject)
         self.init(tlObject: _tlObject)
     }

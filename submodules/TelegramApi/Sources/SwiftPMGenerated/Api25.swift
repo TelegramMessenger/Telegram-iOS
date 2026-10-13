@@ -218,7 +218,7 @@ public extension Api.SecureValueError.Cons_secureValueError {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(type: Api.SecureValueType, hash: Buffer, text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(863))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(862))
         tlStoreReference(_tlObject, 24, type.tlObject)
         tlStoreReference(_tlObject, 32, hash.makeData() as NSData)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -258,7 +258,7 @@ public extension Api.SecureValueError.Cons_secureValueErrorFile {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(type: Api.SecureValueType, fileHash: Buffer, text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(787))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(786))
         tlStoreReference(_tlObject, 24, type.tlObject)
         tlStoreReference(_tlObject, 32, fileHash.makeData() as NSData)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -276,7 +276,7 @@ public extension Api.SecureValueError.Cons_secureValueErrorFiles {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(type: Api.SecureValueType, fileHash: [Buffer], text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(657))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(656))
         tlStoreReference(_tlObject, 24, type.tlObject)
         tlStoreReference(_tlObject, 32, fileHash.map { item in item.makeData() } as NSArray)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -312,7 +312,7 @@ public extension Api.SecureValueError.Cons_secureValueErrorReverseSide {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(type: Api.SecureValueType, fileHash: Buffer, text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(862))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(861))
         tlStoreReference(_tlObject, 24, type.tlObject)
         tlStoreReference(_tlObject, 32, fileHash.makeData() as NSData)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -366,7 +366,7 @@ public extension Api.SecureValueError.Cons_secureValueErrorTranslationFiles {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { tlStringAt(self.tlObject, 40) } }
     }
     init(type: Api.SecureValueType, fileHash: [Buffer], text: String) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(335))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(334))
         tlStoreReference(_tlObject, 24, type.tlObject)
         tlStoreReference(_tlObject, 32, fileHash.map { item in item.makeData() } as NSArray)
         tlStoreReference(_tlObject, 40, text as NSString)
@@ -479,17 +479,17 @@ public extension Api {
             case .secureValueTypeAddress:
                 return TLObjectSingleton(TLApiConstructorAt(1360))
             case .secureValueTypeBankStatement:
-                return TLObjectSingleton(TLApiConstructorAt(880))
+                return TLObjectSingleton(TLApiConstructorAt(879))
             case .secureValueTypeDriverLicense:
                 return TLObjectSingleton(TLApiConstructorAt(48))
             case .secureValueTypeEmail:
-                return TLObjectSingleton(TLApiConstructorAt(912))
+                return TLObjectSingleton(TLApiConstructorAt(911))
             case .secureValueTypeIdentityCard:
                 return TLObjectSingleton(TLApiConstructorAt(1054))
             case .secureValueTypeInternalPassport:
                 return TLObjectSingleton(TLApiConstructorAt(990))
             case .secureValueTypePassport:
-                return TLObjectSingleton(TLApiConstructorAt(392))
+                return TLObjectSingleton(TLApiConstructorAt(391))
             case .secureValueTypePassportRegistration:
                 return TLObjectSingleton(TLApiConstructorAt(992))
             case .secureValueTypePersonalDetails:
@@ -497,7 +497,7 @@ public extension Api {
             case .secureValueTypePhone:
                 return TLObjectSingleton(TLApiConstructorAt(1168))
             case .secureValueTypeRentalAgreement:
-                return TLObjectSingleton(TLApiConstructorAt(895))
+                return TLObjectSingleton(TLApiConstructorAt(894))
             case .secureValueTypeTemporaryRegistration:
                 return TLObjectSingleton(TLApiConstructorAt(1546))
             case .secureValueTypeUtilityBill:
@@ -722,7 +722,7 @@ public extension Api {
             case .sendMessageCancelAction:
                 return TLObjectSingleton(TLApiConstructorAt(1694))
             case .sendMessageChooseContactAction:
-                return TLObjectSingleton(TLApiConstructorAt(627))
+                return TLObjectSingleton(TLApiConstructorAt(626))
             case .sendMessageChooseStickerAction:
                 return TLObjectSingleton(TLApiConstructorAt(1149))
             case .sendMessageEmojiInteraction(let _data):
@@ -738,7 +738,7 @@ public extension Api {
             case .sendMessageRecordAudioAction:
                 return TLObjectSingleton(TLApiConstructorAt(1401))
             case .sendMessageRecordRoundAction:
-                return TLObjectSingleton(TLApiConstructorAt(877))
+                return TLObjectSingleton(TLApiConstructorAt(876))
             case .sendMessageRecordVideoAction:
                 return TLObjectSingleton(TLApiConstructorAt(1058))
             case .sendMessageRichMessageDraftAction(let _data):
@@ -841,7 +841,7 @@ public extension Api.SendMessageAction.Cons_sendMessageRichMessageDraftAction {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.RichMessage(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, randomId: Int64, richMessage: Api.RichMessage) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(534))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(533))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, randomId)
         tlStoreReference(_tlObject, 40, richMessage.tlObject)
@@ -869,7 +869,7 @@ public extension Api.SendMessageAction.Cons_sendMessageTextDraftAction {
         @inline(__always) get { withExtendedLifetime(self.tlObject) { Api.TextWithEntities(tlObject: tlObjectAt(self.tlObject, 40)) } }
     }
     init(flags: Int32, randomId: Int64, text: Api.TextWithEntities) {
-        let _tlObject = TLObjectAllocate(TLApiConstructorAt(344))
+        let _tlObject = TLObjectAllocate(TLApiConstructorAt(343))
         tlStore(_tlObject, 24, flags)
         tlStore(_tlObject, 32, randomId)
         tlStoreReference(_tlObject, 40, text.tlObject)
