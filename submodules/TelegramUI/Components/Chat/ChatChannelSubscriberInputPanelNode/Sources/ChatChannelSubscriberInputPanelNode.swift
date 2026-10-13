@@ -301,59 +301,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         
         switch action {
         case .join, .joinGroup, .applyToJoin:
-            self.isJoining = true
-            if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, maxOverlayHeight, isSecondary, metrics, deviceMetrics) = self.layoutData, let presentationInterfaceState = self.presentationInterfaceState {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, maxOverlayHeight: maxOverlayHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics, deviceMetrics: deviceMetrics, force: true)
-            }
-            var didJoin = false
-            self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peer.id, hash: nil)
-            |> afterDisposed { [weak self] in
-                Queue.mainQueue().async {
-                    if let strongSelf = self {
-                        strongSelf.isJoining = false
-                    }
-                }
-            }).startStrict(next: { [weak self] result in
-                guard let strongSelf = self else {
-                    return
-                }
-                switch result {
-                case .joined:
-                    didJoin = true
-                case let .webView(webView):
-                    strongSelf.openJoinWebView(webView, context: context, peer: EnginePeer(peer))
-                }
-            }, error: { [weak self] error in
-                self?.presentJoinError(error, context: context)
-            }, completed: { [weak self] in
-                guard let self else {
-                    return
-                }
-                if !didJoin {
-                    return
-                }
-                Queue.mainQueue().after(0.5) {
-                    if let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
-                        var canEditRank = false
-                        if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.editRank) {
-                            canEditRank = true
-                        } else if let group = peer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
-                            canEditRank = true
-                        }
-                        if canEditRank {
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: presentationData.strings.Chat_JoinedGroup_Text, cancel: presentationData.strings.Chat_JoinedGroup_AddTag, destructive: false), elevatedLayout: true, action: { action in
-                                if case .undo = action {
-                                    let tagController = context.sharedContext.makeChatCustomRankSetupScreen(context: context, peerId: peer.id, participantId: context.account.peerId, rank: nil, role: .member)
-                                    self.interfaceInteraction?.getNavigationController()?.pushViewController(tagController)
-                                }
-                                return true
-                            })
-                            self.interfaceInteraction?.presentController(controller, nil)
-                        }
-                    }
-                }
-            }))
+            self.startJoin(context: context, peer: EnginePeer(peer))
         case .addToNews:
             self.isAddingToNews = true
             self.relayoutPanel()
@@ -400,6 +348,64 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
     }
     
+    /// Join, Join Group, Apply to Join, and Add to Chats in the News menu: one path, so the menu gets the same
+    /// joining state, error alerts and join web view as the button.
+    private func startJoin(context: AccountContext, peer: EnginePeer) {
+        self.isJoining = true
+        if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, maxOverlayHeight, isSecondary, metrics, deviceMetrics) = self.layoutData, let presentationInterfaceState = self.presentationInterfaceState {
+            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, maxOverlayHeight: maxOverlayHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics, deviceMetrics: deviceMetrics, force: true)
+        }
+        var didJoin = false
+        self.actionDisposable.set((context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peer.id, hash: nil)
+        |> afterDisposed { [weak self] in
+            Queue.mainQueue().async {
+                if let strongSelf = self {
+                    strongSelf.isJoining = false
+                }
+            }
+        }).startStrict(next: { [weak self] result in
+            guard let strongSelf = self else {
+                return
+            }
+            switch result {
+            case .joined:
+                didJoin = true
+            case let .webView(webView):
+                strongSelf.openJoinWebView(webView, context: context, peer: peer)
+            }
+        }, error: { [weak self] error in
+            self?.presentJoinError(error, context: context)
+        }, completed: { [weak self] in
+            guard let self else {
+                return
+            }
+            if !didJoin {
+                return
+            }
+            Queue.mainQueue().after(0.5) {
+                if let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
+                    var canEditRank = false
+                    if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.editRank) {
+                        canEditRank = true
+                    } else if let group = peer as? TelegramGroup, !group.hasBannedPermission(.banEditRank) {
+                        canEditRank = true
+                    }
+                    if canEditRank {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: presentationData.strings.Chat_JoinedGroup_Text, cancel: presentationData.strings.Chat_JoinedGroup_AddTag, destructive: false), elevatedLayout: true, action: { action in
+                            if case .undo = action {
+                                let tagController = context.sharedContext.makeChatCustomRankSetupScreen(context: context, peerId: peer.id, participantId: context.account.peerId, rank: nil, role: .member)
+                                self.interfaceInteraction?.getNavigationController()?.pushViewController(tagController)
+                            }
+                            return true
+                        })
+                        self.interfaceInteraction?.presentController(controller, nil)
+                    }
+                }
+            }
+        }))
+    }
+
     private func openNewsMenu() {
         guard let context = self.context, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController(), let peer = self.presentationInterfaceState?.renderedPeer?.peer, let sourceView = (self.panel.view as? GlassControlPanelComponent.View)?.centerItemView?.itemView(id: AnyHashable(0)) else {
             return
@@ -414,8 +420,10 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             guard let self else {
                 return
             }
-            // A plain join on a News-only channel adds it to Chats (it stays muted).
-            self.newsActionDisposable.set(context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peerId, hash: nil).startStrict())
+            // A plain join on a light-joined channel adds it to Chats (it stays muted).
+            if !self.isJoining {
+                self.startJoin(context: context, peer: EnginePeer(peer))
+            }
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_RemoveFromNews, textColor: .destructive, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
