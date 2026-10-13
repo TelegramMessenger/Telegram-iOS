@@ -127,8 +127,8 @@ private final class ForYouFeedContextImpl {
         guard self.state.didLoadSnapshot, !self.state.isRefreshing else {
             return
         }
-        self.loadMoreDisposable.set(nil)
-        self.state.isLoadingMore = false
+        // A load-more in flight is left to land and append: the server never returns a batch again, so
+        // cancelling it would lose those posts. Only new load-mores wait for the refresh.
         self.state.isRefreshing = true
         self.state.hasError = false
         self.pushState()
