@@ -166,7 +166,7 @@ private final class WalletCardBundleMarker: NSObject {
 
 private var walletCardMetalLibraryValue: MTLLibrary?
 
-private func walletCardMetalLibrary(device: MTLDevice) -> MTLLibrary? {
+func walletCardMetalLibrary(device: MTLDevice) -> MTLLibrary? {
     if let walletCardMetalLibraryValue {
         return walletCardMetalLibraryValue
     }
@@ -260,6 +260,7 @@ private final class WalletCardMetalLayer: MetalEngineSubjectLayer, MetalEngineSu
     private var noiseTexture: MTLTexture?
     private var qrTexture: MTLTexture?
     private var vertexUniforms = VertexUniforms()
+    var giftStyle = WalletCardStyleUniforms()
     private var fragmentUniforms = FragmentUniforms()
     private var lens: WalletCardLens?
 
@@ -385,6 +386,7 @@ private final class WalletCardMetalLayer: MetalEngineSubjectLayer, MetalEngineSu
         )
         var currentVertexUniforms = self.vertexUniforms
         currentVertexUniforms.slices = self.sliceCount(drawableSize: drawableSize)
+        let currentGiftStyle = self.giftStyle
         let currentFragmentUniforms = self.fragmentUniforms
         let qrTexture = self.qrTexture ?? noiseTexture
 
@@ -430,6 +432,8 @@ private final class WalletCardMetalLayer: MetalEngineSubjectLayer, MetalEngineSu
                     length: MemoryLayout<FragmentUniforms>.stride,
                     index: 0
                 )
+                var giftStyle = currentGiftStyle
+                encoder.setFragmentBytes(&giftStyle, length: MemoryLayout<WalletCardStyleUniforms>.stride, index: 3)
                 // Diamond compute operations precede compositing, so read its current silhouette here.
                 var lensUniforms = LensUniforms()
                 var hull = [SIMD2<Float>(0.0, 0.0)]
@@ -488,6 +492,11 @@ private final class WalletCardMetalView: UIView {
 }
 
 final class WalletCardBackgroundView: UIView {
+    func updateGiftStyle(_ value: WalletCardStyleUniforms) {
+        self.metalView.metalLayer.giftStyle = value
+        self.metalView.metalLayer.setNeedsUpdate()
+    }
+
     static let projectionPadding: CGFloat = 56.0
 
     private let fallbackView = UIView()

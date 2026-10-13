@@ -615,18 +615,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 currentSavedMusic = cachedUserData.savedMusic
             }
         }
-        // Wallet amounts use 1_000_000_000 units per coin; show the strip starting at 0.1.
-        let currentWalletBalance: Int64?
-        if self.isMyProfile, !self.isSettings, peer?.id == self.context.account.peerId,
-           let balance = screenData?.walletBalance, balance >= 100_000_000 {
-            currentWalletBalance = balance
-        } else if !self.isSettings, let peer, peer.id != self.context.account.peerId,
-                  let userData = screenData?.cachedData as? CachedUserData,
-                  let balance = userData.gramBalance, balance >= 100_000_000 {
-            currentWalletBalance = balance
-        } else {
-            currentWalletBalance = nil
-        }
+        // A public card is present even when its cached balance is zero.
+        let currentWalletBalance = self.isSettings ? nil : (screenData?.cachedData as? CachedUserData)?.walletCard?.balance
         let musicHeight: CGFloat = hasBackground || self.isAvatarExpanded ? 24.0 : 16.0
         let bottomInset: CGFloat = currentSavedMusic != nil || currentWalletBalance != nil ? musicHeight : 0.0
         

@@ -486,6 +486,7 @@ public extension WalletContext {
             public let lottie: WalletNftFile?
             public let collectionName: String?
             public let collectionUrl: String?
+            public let nft: WalletNftItem?
             public let kind: Kind
 
             public init(
@@ -496,7 +497,8 @@ public extension WalletContext {
                 lottie: WalletNftFile? = nil,
                 collectionName: String? = nil,
                 collectionUrl: String? = nil,
-                kind: Kind
+                kind: Kind,
+                nft: WalletNftItem? = nil
             ) {
                 self.address = address
                 self.name = name
@@ -506,6 +508,7 @@ public extension WalletContext {
                 self.collectionName = collectionName
                 self.collectionUrl = collectionUrl
                 self.kind = kind
+                self.nft = nft
             }
         }
 
@@ -938,6 +941,86 @@ public extension WalletContext {
         case failed(FatalStorageError)
     }
 
+    struct CardGiftStyle: Codable, Equatable, Sendable {
+        public let innerColor: Int32
+        public let outerColor: Int32
+        public let patternColor: Int32
+        public let patternFile: Data?
+        public init(innerColor: Int32, outerColor: Int32, patternColor: Int32, patternFile: Data?) {
+            self.innerColor = innerColor
+            self.outerColor = outerColor
+            self.patternColor = patternColor
+            self.patternFile = patternFile
+        }
+    }
+
+    /// Editor geometry, relative to the untransformed card. Color remains local.
+    struct CardSticker: Codable, Equatable, Sendable {
+        public let gift: Collectible
+        public let x: Double
+        public let y: Double
+        public let angle: Double
+        public let scale: Double
+        /// Encoded TelegramMediaFile for the model, independent of the NFT composition.
+        public let modelFile: Data?
+        public let geometryVersion: Int?
+        public let aspectRatio: Double?
+        public let cornerRadius: Double?
+        public let style: CardGiftStyle?
+        public let giftStyle: CardGiftStyle?
+        public static let minimumScale = 32.0 / 83.4
+        public static let maximumScale = 1.1
+        public static let widthFraction = 83.4 / 361.0
+        /// Versionless layouts used an 80pt canvas and 22px inset in a 320px image.
+        public var renderedWidthFraction: Double {
+            self.geometryVersion == nil ? 80.0 / 370.0 * (276.0 / 298.0) * self.scale : Self.widthFraction * self.scale
+        }
+        public func updated(x: Double? = nil, y: Double? = nil, angle: Double? = nil, scale: Double? = nil,
+                            modelFile: Data? = nil, geometryVersion: Int? = nil) -> CardSticker {
+            CardSticker(gift: self.gift, x: x ?? self.x, y: y ?? self.y, angle: angle ?? self.angle,
+                scale: scale ?? self.scale, modelFile: modelFile ?? self.modelFile,
+                geometryVersion: geometryVersion ?? self.geometryVersion, style: self.style, giftStyle: self.giftStyle,
+                aspectRatio: self.aspectRatio, cornerRadius: self.cornerRadius)
+        }
+        public func withStyle(_ style: CardGiftStyle?) -> CardSticker {
+            CardSticker(gift: self.gift, x: self.x, y: self.y, angle: self.angle, scale: self.scale,
+                modelFile: self.modelFile, geometryVersion: self.geometryVersion, style: style, giftStyle: self.giftStyle ?? style,
+                aspectRatio: self.aspectRatio, cornerRadius: self.cornerRadius)
+        }
+
+        public init(gift: Collectible, x: Double, y: Double, angle: Double, scale: Double, modelFile: Data? = nil, geometryVersion: Int? = nil, style: CardGiftStyle? = nil, giftStyle: CardGiftStyle? = nil,
+                    aspectRatio: Double? = nil, cornerRadius: Double? = nil) {
+            self.gift = gift
+            self.x = x
+            self.y = y
+            self.angle = angle
+            self.scale = scale
+            self.modelFile = modelFile
+            self.geometryVersion = geometryVersion
+            self.aspectRatio = aspectRatio
+            self.cornerRadius = cornerRadius
+            self.style = style
+            self.giftStyle = giftStyle ?? style
+        }
+
+        public static func validated(_ stickers: [CardSticker]) -> [CardSticker] {
+            var seen = Set<String>()
+            var hasStyle = false
+            return Array(stickers.reversed().filter {
+                $0.gift.kind == .gift && !$0.gift.address.isEmpty
+                    && $0.x.isFinite && $0.y.isFinite && abs($0.x) <= 2 && abs($0.y) <= 2
+                    && $0.angle.isFinite && $0.scale.isFinite && ($0.geometryVersion == 2 ? ($0.scale > 0 && $0.renderedWidthFraction <= 1) : ($0.geometryVersion == nil ? (0.55 ... 1.8).contains($0.scale) : (Self.minimumScale ... Self.maximumScale).contains($0.scale)))
+                    && ($0.aspectRatio.map { $0.isFinite && $0 > 0 } ?? true)
+                    && seen.insert(walletCollectibleAddressKey($0.gift.address)).inserted
+            }.map { sticker in
+                guard sticker.style != nil else { return sticker }
+                if hasStyle { return sticker.withStyle(nil) }
+                hasStyle = true
+                return sticker
+            }.reversed())
+        }
+    }
+
     struct State: Equatable, Sendable {
         public let phase: Phase
         public let walletAddress: String?
@@ -948,6 +1031,11 @@ public extension WalletContext {
         public let activeOperation: ActiveOperation?
         public let fiat: FiatState
         public let gaslessInfo: Resource<WalletGaslessInfo>
+        public let cardStickers: [CardSticker]
+        public let cardStickerChangesPending: Bool
+        public let isSavingCardStickers: Bool
+        public let cardStickerSaveError: WalletCardUpdateError?
+        public var cardStyle: CardGiftStyle? { self.cardStickers.compactMap(\.style).last }
 
         public init(
             phase: Phase,
@@ -958,7 +1046,11 @@ public extension WalletContext {
             pendingTransfers: [PendingTransfer],
             activeOperation: ActiveOperation?,
             fiat: FiatState = .init(selectedCurrency: .usd, rates: .idle),
-            gaslessInfo: Resource<WalletGaslessInfo> = .idle
+            gaslessInfo: Resource<WalletGaslessInfo> = .idle,
+            cardStickers: [CardSticker] = [],
+            cardStickerChangesPending: Bool = false,
+            isSavingCardStickers: Bool = false,
+            cardStickerSaveError: WalletCardUpdateError? = nil
         ) {
             self.phase = phase
             switch phase {
@@ -976,6 +1068,10 @@ public extension WalletContext {
             self.activeOperation = activeOperation
             self.fiat = fiat
             self.gaslessInfo = gaslessInfo
+            self.cardStickers = cardStickers
+            self.cardStickerChangesPending = cardStickerChangesPending
+            self.isSavingCardStickers = isSavingCardStickers
+            self.cardStickerSaveError = cardStickerSaveError
         }
     }
 

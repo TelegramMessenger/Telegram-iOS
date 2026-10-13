@@ -1158,7 +1158,11 @@ struct WalletStreamingPresentationOverlay {
             pendingTransfers: state.pendingTransfers,
             activeOperation: state.activeOperation,
             fiat: state.fiat,
-            gaslessInfo: state.gaslessInfo
+            gaslessInfo: state.gaslessInfo,
+            cardStickers: state.cardStickers,
+            cardStickerChangesPending: state.cardStickerChangesPending,
+            isSavingCardStickers: state.isSavingCardStickers,
+            cardStickerSaveError: state.cardStickerSaveError
         )
     }
 }

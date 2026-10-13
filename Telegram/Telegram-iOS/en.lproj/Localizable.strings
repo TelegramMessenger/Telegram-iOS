@@ -17135,3 +17135,13 @@ Error: %8$@";
 "Channel.RemoveFromNews" = "Remove from News";
 "News.Empty.ForYou" = "No posts for you yet";
 "News.Refresh" = "Refresh";
+
+"Wallet.Sticker.AddToCard" = "Add to Card";
+"Wallet.Sticker.RemoveFromCard" = "Remove from Card";
+"Wallet.Sticker.ApplyColor" = "Apply Color";
+"Wallet.Sticker.RemoveColor" = "Remove Color";
+"Wallet.Sticker.Remove" = "Remove";
+
+"Wallet.Sticker.SaveErrorTitle" = "Couldn’t Save Card";
+"Wallet.Sticker.ProfileError" = "A gift displayed on your profile can’t also be a card sticker. Hide it from your profile first.";
+"Wallet.Sticker.InvalidError" = "One of these stickers can’t be used on the card. Only gifts owned by this wallet are supported.";

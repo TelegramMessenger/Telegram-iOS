@@ -48,8 +48,14 @@ public struct WalletNftItem: Codable, Equatable, Sendable {
     public let lottie: WalletNftFile?
     public let attributes: [WalletNftAttribute]?
     public let extra: String?
+    /// Stable Codable storage also keeps the actor-facing NFT value Sendable.
+    public let giftData: Data?
+    public var gift: StarGift.UniqueGift? {
+        guard let giftData else { return nil }
+        return try? JSONDecoder().decode(StarGift.UniqueGift.self, from: giftData)
+    }
 
-    public init(collectionAddress: String?, address: String, ownerAddress: String, index: String, name: String?, description: String?, image: WalletNftFile?, imageSmall: WalletNftFile?, contentUrl: WalletNftFile?, lottie: WalletNftFile?, attributes: [WalletNftAttribute]?, extra: String?) {
+    public init(collectionAddress: String?, address: String, ownerAddress: String, index: String, name: String?, description: String?, image: WalletNftFile?, imageSmall: WalletNftFile?, contentUrl: WalletNftFile?, lottie: WalletNftFile?, attributes: [WalletNftAttribute]?, extra: String?, gift: StarGift.UniqueGift? = nil) {
         self.collectionAddress = collectionAddress
         self.address = address
         self.ownerAddress = ownerAddress
@@ -62,6 +68,9 @@ public struct WalletNftItem: Codable, Equatable, Sendable {
         self.lottie = lottie
         self.attributes = attributes
         self.extra = extra
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        self.giftData = gift.flatMap { try? encoder.encode($0) }
     }
 
     init(apiItem: Api.wallet.NftItem) {
@@ -89,7 +98,11 @@ public struct WalletNftItem: Codable, Equatable, Sendable {
                         }
                     }
                 },
-                extra: extra
+                extra: extra,
+                gift: data.gift.flatMap { apiGift in
+                    guard case let .unique(gift) = StarGift(apiStarGift: apiGift) else { return nil }
+                    return gift
+                }
             )
         }
     }

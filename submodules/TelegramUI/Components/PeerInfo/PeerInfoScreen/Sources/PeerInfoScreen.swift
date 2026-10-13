@@ -1475,7 +1475,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if peer.id == self.context.account.peerId {
                 self.openSettings(section: .wallet)
             } else {
-                let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, balance: (self.data?.cachedData as? CachedUserData)?.gramBalance, sourceView: self.headerNode.walletBalance?.view, sendMoney: { [weak self] peerWalletScreen in
+                let screen = PeerWalletScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: peer, card: (self.data?.cachedData as? CachedUserData)?.walletCard, sourceView: self.headerNode.walletBalance?.view, sendMoney: { [weak self] peerWalletScreen in
                     guard let self, let controller = self.controller, let walletContext = self.context.walletContext else { return }
                     let sendController = WalletSendScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, useDefaultAccent: false, peer: peer, walletContext: walletContext, allowOpenRecipientChat: false, completed: { [weak self] in
                         guard let self, let navigationController = self.controller?.navigationController as? NavigationController else { return }
@@ -2457,34 +2457,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             reactionSourceMessage = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: reactionSourceMessageId))
         } else {
             reactionSourceMessage = .single(nil)
-        }
-
-        if !isSettings, peerId != context.account.peerId, peerId.namespace == Namespaces.Peer.CloudUser,
-           let walletContext = context.walletContext {
-            self.peerGramBalanceDisposable.set((context.engine.wallet.getUserAddresses(userIds: [peerId], force: false)
-            |> `catch` { _ -> Signal<[WalletUserAddress], NoError> in
-                return .complete()
-            }
-            |> mapToSignal { addresses -> Signal<Int64?, NoError> in
-                guard let address = addresses.first(where: { $0.userId == peerId })?.address, !address.isEmpty else {
-                    return .single(nil)
-                }
-                return walletContext.walletBalance(address: address)
-                |> map { balance -> Int64? in
-                    return balance
-                }
-                |> `catch` { _ -> Signal<Int64?, NoError> in
-                    return .complete()
-                }
-            }
-            |> mapToSignal { balance -> Signal<Void, NoError> in
-                return context.account.postbox.transaction { transaction -> Void in
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        let current = current as? CachedUserData ?? CachedUserData()
-                        return current.withUpdatedGramBalance(balance)
-                    })
-                }
-            }).startStrict())
         }
 
         self.dataDisposable = combineLatest(

@@ -26,7 +26,7 @@ public func walletCollectibleFragmentUrl(_ value: String?) -> String? {
 
 private let walletCollectibleLottieMaximumSize = 5 * 1024 * 1024
 
-func walletCollectibleLottieData(_ data: Data) -> Data? {
+public func walletCollectibleLottieData(_ data: Data) -> Data? {
     guard data.count <= walletCollectibleLottieMaximumSize else { return nil }
     let decoded: Data
     if data.starts(with: [0x1f, 0x8b]) {
@@ -40,24 +40,27 @@ func walletCollectibleLottieData(_ data: Data) -> Data? {
     return decoded
 }
 
-final class WalletRemoteLottieContent: LottieComponent.Content {
+public final class WalletRemoteLottieContent: LottieComponent.Content {
     let context: AccountContext
     let file: WalletNftFile
 
-    override var frameRange: Range<Double> { return 0.0 ..< 1.0 }
+    override public var frameRange: Range<Double> { return 0.0 ..< 1.0 }
+    // RLottie writes sRGB values directly; tagging them as Display P3 changes
+    // their appearance without converting the pixels and oversaturates gifts.
+    override public var renderingColorSpace: CGColorSpace? { CGColorSpace(name: CGColorSpace.sRGB) }
 
-    init(context: AccountContext, file: WalletNftFile) {
+    public init(context: AccountContext, file: WalletNftFile) {
         self.context = context
         self.file = file
         super.init()
     }
 
-    override func isEqual(to other: LottieComponent.Content) -> Bool {
+    override public func isEqual(to other: LottieComponent.Content) -> Bool {
         guard let other = other as? WalletRemoteLottieContent else { return false }
         return self.context === other.context && self.file == other.file
     }
 
-    override func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
+    override public func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
         let resources = self.context.engine.resources
         let resource = self.file.resource
         return Signal<Data, NoError> { subscriber in

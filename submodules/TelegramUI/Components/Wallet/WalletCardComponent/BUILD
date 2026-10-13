@@ -72,3 +72,5 @@ swift_library(
         "//visibility:public",
     ],
 )
+
+exports_files(["Sources/WalletStickerAnimation.swift"], visibility = ["//submodules/TelegramUI/Components/Wallet/WalletScreen:__pkg__"])

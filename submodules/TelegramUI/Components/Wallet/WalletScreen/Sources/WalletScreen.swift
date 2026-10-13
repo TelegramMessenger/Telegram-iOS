@@ -775,6 +775,7 @@ private final class WalletScreenComponent: Component {
         private var isUpdatingTransferAnimations = false
 
         private let collectiblesSection = WalletCollectiblesGridView()
+        private lazy var giftStickers = WalletGiftStickerCoordinator(host: self, scrollView: self.scrollView, grid: self.collectiblesSection)
         private let emptyTransactionsInfo = ComponentView<Empty>()
         private let emptyTransactionsFooter = ComponentView<Empty>()
         private let accountProtectionIcon = renderSettingsIcon(
@@ -922,6 +923,7 @@ private final class WalletScreenComponent: Component {
 
         override func didMoveToWindow() {
             super.didMoveToWindow()
+            if self.window == nil { self.giftStickers.cancel() }
             self.updatePendingTransferAnimations()
 
             if self.window == nil {
@@ -1161,6 +1163,32 @@ private final class WalletScreenComponent: Component {
             self.isOpeningWaltBalance = false
             self.isWaitingForWaltBalanceUrl = false
             self.waltBalanceBotAppDisposable.set(nil)
+        }
+
+        private func presentCardSaveError(_ error: WalletCardUpdateError) {
+            guard self.environment?.isVisible == true else { return }
+            guard let component = self.component, let controller = self.environment?.controller() else { return }
+            let data = self.currentPresentationData(for: component)
+            let strings = data.initial.strings
+            let text: String?
+            switch error {
+            case .limitExceeded: text = nil
+            case .savedInProfile: text = strings.Wallet_Sticker_ProfileError
+            case .invalidSticker, .notOwned, .duplicate, .invalidAddress, .invalidNft: text = strings.Wallet_Sticker_InvalidError
+            case .unavailable, .generic: text = strings.Login_UnknownError
+            case .floodWait: text = nil
+            }
+            controller.present(UndoOverlayController(
+                presentationData: data.initial,
+                content: .info(
+                    title: text == nil ? nil : strings.Wallet_Sticker_SaveErrorTitle,
+                    text: text ?? strings.Wallet_Sticker_SaveErrorTitle,
+                    timeout: nil,
+                    customUndoText: nil
+                ),
+                position: .bottom,
+                action: { _ in false }
+            ), in: .current)
         }
 
         private func presentWaltBalanceError() {
@@ -1420,10 +1448,12 @@ private final class WalletScreenComponent: Component {
         }
 
         private func hideSection(_ section: WalletCollectiblesGridView, transition: ComponentTransition) {
+            section.isUserInteractionEnabled = false
+            section.accessibilityElementsHidden = true
+            transition.setTransform(view: section, transform: CATransform3DMakeTranslation(UIAccessibility.isReduceMotionEnabled ? 0.0 : 28.0, 0.0, 0.0))
             transition.setAlpha(view: section, alpha: 0.0, completion: { [weak section] _ in
                 guard let section, section.alpha == 0.0 else { return }
                 section.removeFromSuperview()
-                section.clearVisibleItems()
             })
         }
 
@@ -1451,6 +1481,9 @@ private final class WalletScreenComponent: Component {
                 section.clearVisibleItems()
                 return
             }
+            section.isUserInteractionEnabled = false
+            section.accessibilityElementsHidden = true
+            transition.setTransform(view: section, transform: CATransform3DMakeTranslation(UIAccessibility.isReduceMotionEnabled ? 0.0 : -28.0, 0.0, 0.0))
             transition.setAlpha(view: section, alpha: 0.0, completion: { [weak section] _ in
                 guard let section, section.alpha == 0.0 else {
                     return
@@ -1482,8 +1515,12 @@ private final class WalletScreenComponent: Component {
             )
             if !wasVisible {
                 section.alpha = 1.0
+                ComponentTransition.immediate.setTransform(view: section, transform: CATransform3DMakeTranslation(UIAccessibility.isReduceMotionEnabled ? 0.0 : -28.0, 0.0, 0.0))
                 self.scrollView.addSubview(section)
             }
+            section.isUserInteractionEnabled = true
+            section.accessibilityElementsHidden = false
+            transition.setTransform(view: section, transform: CATransform3DIdentity)
             if !wasVisible && !transition.animation.isImmediate {
                 section.layer.allowsGroupOpacity = true
                 transition.animateAlpha(view: section, from: 0.0, to: 1.0, completion: { [weak section] _ in
@@ -1784,7 +1821,7 @@ private final class WalletScreenComponent: Component {
                             )),
                             badge: nil,
                             action: { [weak self] in
-                                guard let self, self.selectedSection != .transactions else {
+                                guard let self, self.selectedSection != .transactions, !self.giftStickers.isDragging else {
                                     return
                                 }
                                 self.selectedSection = .transactions
@@ -1800,7 +1837,7 @@ private final class WalletScreenComponent: Component {
                             )),
                             badge: nil,
                             action: { [weak self] in
-                                guard let self, self.selectedSection != .collectibles else {
+                                guard let self, self.selectedSection != .collectibles, !self.giftStickers.isDragging else {
                                     return
                                 }
                                 self.selectedSection = .collectibles
@@ -1871,6 +1908,7 @@ private final class WalletScreenComponent: Component {
         }
 
         func setTransferAnimationsVisible(_ visible: Bool) {
+            if !visible { self.giftStickers.cancel() }
             self.transferScreenVisible = visible
             if visible { self.isReturningForTransfer = false }
             self.updatePendingTransferAnimations()
@@ -2902,6 +2940,7 @@ private final class WalletScreenComponent: Component {
                     ))
                 )
             ]
+
             let primaryContent = ChatListHeaderComponent.Content(
                 title: "",
                 navigationBackTitle: nil,
@@ -3134,7 +3173,9 @@ private final class WalletScreenComponent: Component {
                     }
                     self.updateSuppressedCollectibles(walletState)
                     self.observePendingTransfers(walletState)
+                    let newCardError = walletState.cardStickerSaveError != self.walletState?.cardStickerSaveError
                     self.walletState = walletState
+                    if newCardError, let error = walletState.cardStickerSaveError { self.presentCardSaveError(error) }
                     if previousPhase != walletState.phase || previousWalletAddress != walletState.walletAddress {
                         if previousWalletAddress != walletState.walletAddress {
                             self.previousWalletsBalance = 0
@@ -3505,6 +3546,20 @@ private final class WalletScreenComponent: Component {
                 self.transactionTabsBackgroundView.removeFromSuperview()
             }
 
+            if self.selectedSection == .transactions && !collectibles.isEmpty {
+                let collectiblesFrame = CGRect(x: environment.safeInsets.left + sideInset,
+                    y: contentHeight + 12.0, width: cardWidth, height: 0.0)
+                let _ = self.collectiblesSection.update(
+                    context: component.context,
+                    theme: environment.theme,
+                    items: collectibles,
+                    width: cardWidth,
+                    visibleBounds: self.collectiblesVisibleBounds(for: collectiblesFrame, viewportSize: availableSize),
+                    transition: .immediate,
+                    openCollectible: { [weak self] collectible in self?.openCollectible(collectible) }
+                )
+            }
+
             if self.selectedSection == .transactions && !transactions.isEmpty {
                 self.hideSection(self.collectiblesSection, transition: transition)
 
@@ -3606,8 +3661,13 @@ private final class WalletScreenComponent: Component {
                     }
                 )
                 if !wasVisible {
+                    self.collectiblesSection.alpha = 0.0
+                    ComponentTransition.immediate.setTransform(view: self.collectiblesSection, transform: CATransform3DMakeTranslation(UIAccessibility.isReduceMotionEnabled ? 0.0 : 28.0, 0.0, 0.0))
                     self.scrollView.addSubview(self.collectiblesSection)
                 }
+                self.collectiblesSection.isUserInteractionEnabled = true
+                self.collectiblesSection.accessibilityElementsHidden = false
+                contentLayoutTransition.setTransform(view: self.collectiblesSection, transform: CATransform3DIdentity)
                 contentLayoutTransition.setAlpha(view: self.collectiblesSection, alpha: 1.0)
                 gridTransition.setPosition(view: self.collectiblesSection, position: CGPoint(x: collectiblesFrame.midX, y: collectiblesFrame.minY))
                 gridTransition.setBounds(view: self.collectiblesSection, bounds: CGRect(origin: .zero, size: collectiblesSectionSize))
@@ -3619,7 +3679,9 @@ private final class WalletScreenComponent: Component {
                     self.transactionTabsBackgroundView.removeFromSuperview()
                 }
                 self.collectiblesSection.removeFromSuperview()
-                self.collectiblesSection.clearVisibleItems()
+                if collectibles.isEmpty {
+                    self.collectiblesSection.clearVisibleItems()
+                }
                 self.hideSection(self.transactionsSection, transition: transition)
 
                 let titleColor = environment.theme.actionSheet.primaryTextColor
@@ -3766,7 +3828,7 @@ private final class WalletScreenComponent: Component {
                 frame: CGRect(origin: CGPoint(), size: availableSize)
             )
             contentHeight += (hasEmptyTransactions ? 16.0 : 24.0) + environment.safeInsets.bottom
-            self.scrollView.isScrollEnabled = !hasEmptyTransactions || contentHeight > availableSize.height + UIScreenPixel
+            self.scrollView.isScrollEnabled = !self.giftStickers.isDragging && (!hasEmptyTransactions || contentHeight > availableSize.height + UIScreenPixel)
             let minimumContentHeight = hasEmptyTransactions ? availableSize.height : availableSize.height + self.cardTransitionStart + self.cardTransitionDistance + 1.0
             let contentSize = CGSize(
                 width: availableSize.width,
@@ -3779,7 +3841,7 @@ private final class WalletScreenComponent: Component {
             if compensateAdditionalBalancesOffset {
                 contentOffset.y = max(0.0, contentOffset.y + self.cardTransitionStart - previousCardTransitionStart)
             }
-            if !self.scrollView.isScrollEnabled {
+            if !self.scrollView.isScrollEnabled && !self.giftStickers.isDragging {
                 contentOffset = .zero
             } else if !self.scrollView.isTracking && !self.scrollView.isDecelerating {
                 contentOffset.y = min(contentOffset.y, max(0.0, contentSize.height - availableSize.height))
@@ -3807,6 +3869,36 @@ private final class WalletScreenComponent: Component {
 
             self.revealPendingTransferIfNeeded()
             self.updatePendingTransferAnimations()
+            self.giftStickers.limitReached = { [weak self] in self?.presentCardSaveError(.limitExceeded) }
+            self.giftStickers.removeTitle = component.context.sharedContext.currentPresentationData.with { $0 }.strings.Wallet_Sticker_Remove
+            self.giftStickers.showMenu = { [weak self] source, onCard, styled, canStyle, placementAction, styleAction, dismissed in
+                guard let self, let component = self.component, let controller = self.environment?.controller() else { return nil }
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let strings = presentationData.strings
+                var items: [ContextMenuItem] = []
+                if canStyle || styled {
+                    items.append(.action(ContextMenuActionItem(
+                        text: styled ? strings.Wallet_Sticker_RemoveColor : strings.Wallet_Sticker_ApplyColor,
+                        icon: { theme in generateTintedImage(image: UIImage(systemName: "paintpalette"), color: theme.contextMenu.primaryColor) },
+                        action: { _, dismiss in dismiss(.default); styleAction() }
+                    )))
+                }
+                items.append(.action(ContextMenuActionItem(
+                    text: onCard ? strings.Wallet_Sticker_RemoveFromCard : strings.Wallet_Sticker_AddToCard,
+                    icon: { theme in generateTintedImage(image: UIImage(systemName: onCard ? "creditcard.trianglebadge.exclamationmark" : "creditcard"), color: theme.contextMenu.primaryColor) },
+                    action: { _, dismiss in dismiss(.default); placementAction() }
+                )))
+                // ContextUI adds 7 pt; add 10 pt in the enlarged cell's coordinates
+                // for the reference's 17 pt gap below the preview.
+                let menu = makeContextController(presentationData: presentationData,
+                    source: .reference(WalletContextReferenceContentSource(sourceView: source, bottomInset: -10.0 / 1.15)),
+                    items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+                menu.dismissed = dismissed
+                controller.presentInGlobalOverlay(menu)
+                return { [weak menu] in menu?.dismiss(completion: nil) }
+            }
+            self.giftStickers.update(context: component.context, wallet: component.walletContext,
+                state: self.walletState, card: self.card.view as? WalletCardComponent.View, visible: environment.isVisible)
             return availableSize
         }
     }
@@ -3940,17 +4032,20 @@ public final class WalletScreen: ViewControllerComponentContainer {
 
 private final class WalletContextReferenceContentSource: ContextReferenceContentSource {
     private let sourceView: UIView
+    private let bottomInset: CGFloat
 
     let forceDisplayBelowKeyboard = true
 
-    init(sourceView: UIView) {
+    init(sourceView: UIView, bottomInset: CGFloat = 0) {
         self.sourceView = sourceView
+        self.bottomInset = bottomInset
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(
             referenceView: self.sourceView,
             contentAreaInScreenSpace: mainWindowScreenBounds,
+            insets: UIEdgeInsets(top: 0, left: 0, bottom: self.bottomInset, right: 0),
             actionsPosition: .bottom
         )
     }
